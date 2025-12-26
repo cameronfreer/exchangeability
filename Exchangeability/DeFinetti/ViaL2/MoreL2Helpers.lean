@@ -1306,7 +1306,63 @@ lemma directing_measure_bridge
       rw [abs_of_nonneg (I_nonneg i j ω)]
       exact I_le_one i j ω
 
-    -- TODO: Continue with Steps 2-8
+    -- Step 2: L¹ convergence of each coordinate p N i → directing_measure ω (B' i)
+    -- Use directing_measure_integral for the indicator function
+
+    -- Helper: indicator functions are measurable and bounded
+    have I_meas : ∀ i, Measurable ((B' i).indicator (fun _ => (1 : ℝ))) := fun i =>
+      measurable_const.indicator (hB (σ i))
+    have I_bdd : ∀ i, ∃ M, ∀ x, |(B' i).indicator (fun _ => (1 : ℝ)) x| ≤ M := fun i =>
+      ⟨1, fun x => by by_cases h : x ∈ B' i <;> simp [Set.indicator, h]⟩
+
+    -- For each i, get L¹ limit and identification with directing measure
+    -- The limit α_i satisfies: p N i → α_i in L¹, and α_i = ν(·)(B' i) a.e.
+    have h_coord_conv : ∀ i : Fin (n + 1),
+        ∃ α_i : Ω → ℝ, Measurable α_i ∧ MemLp α_i 1 μ ∧
+          (∀ (N : ℕ), ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i k.val ω - α_i ω| ∂μ < ε) ∧
+          (∀ᵐ ω ∂μ, α_i ω = (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal) := by
+      intro i
+      -- Use directing_measure_integral for the indicator function
+      obtain ⟨α_i, hα_meas, hα_L1, hα_conv, hα_eq⟩ :=
+        directing_measure_integral X hX_contract hX_meas hX_L2
+          ((B' i).indicator (fun _ => 1)) (I_meas i) (I_bdd i)
+      refine ⟨α_i, hα_meas, hα_L1, ?_, ?_⟩
+      · -- Convergence: need to relate the averages from directing_measure_integral to p N i
+        -- directing_measure_integral uses index n + k.val + 1, we use k.val
+        -- Key: Cesàro averages over 0..m-1 and 1..m have same limit (differ by O(1/m))
+        intro _N ε hε
+        -- Get convergence for indices 1, 2, ..., m (n=0 case)
+        obtain ⟨M₁, hM₁⟩ := hα_conv 0 (ε / 2) (half_pos hε)
+        -- For the difference between index sets, need m large enough that 2/m < ε/2
+        -- Use tendsto_const_div_atTop to get this bound
+        have h_bound_exists : ∃ M₂ : ℕ, ∀ m : ℕ, m ≥ M₂ → (2 : ℝ) / m < ε / 2 := by
+          have h := Metric.tendsto_atTop.mp (tendsto_const_div_atTop_nhds_zero_nat (2 : ℝ))
+            (ε / 2) (half_pos hε)
+          simp only [Real.dist_eq, sub_zero] at h
+          obtain ⟨M₂, hM₂⟩ := h
+          refine ⟨M₂, fun m hm => ?_⟩
+          have := hM₂ m hm
+          rwa [abs_of_nonneg (by positivity : 0 ≤ (2 : ℝ) / m)] at this
+        obtain ⟨M₂, hM₂⟩ := h_bound_exists
+        refine ⟨max M₁ M₂, fun m hm => ?_⟩
+        -- The sum ∑_{k < m} I i k.val uses indices 0, 1, ..., m-1
+        -- The sum from directing_measure_integral (n=0) uses indices 1, 2, ..., m
+        -- i.e., (0 + k.val + 1) = k.val + 1 for k : Fin m
+        -- Difference: I i 0 - I i m, bounded by 2 since |I| ≤ 1
+        -- Key: Cesàro averages differ by O(1/m) → 0, standard analysis argument
+        -- |(1/m) ∑_{k<m} I k - α| ≤ |(1/m) ∑_{k<m} I k - (1/m) ∑_{k<m} I (k+1)| + |(1/m) ∑_{k<m} I (k+1) - α|
+        --                       ≤ 2/m + ε/2 < ε for large m
+        sorry -- Cesàro index shift: can be filled in later
+      · -- Identification: ∫ 1_B dν = ν(B)
+        filter_upwards [hα_eq] with ω hω
+        rw [hω]
+        -- ∫ 1_{B'_i}(x) d(ν ω) = ν ω (B' i)
+        -- Note: (fun _ => 1) = 1 definitionally for Pi types
+        -- and μ.real s = (μ s).toReal definitionally
+        convert MeasureTheory.integral_indicator_one (hB (σ i)) using 1
+
+    -- TODO: Continue with Steps 3-8
     sorry
 
 /-- **Main packaging theorem for L² proof.**
