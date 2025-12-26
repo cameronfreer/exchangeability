@@ -995,13 +995,44 @@ lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
     simp only [h, Nat.cast_zero]
     exact tendsto_const_nhds
   | succ n =>
-    -- For m ≥ 1, use the bound and squeeze theorem
-    -- PROOF STRATEGY:
-    -- 1. card_nonInjective_le: count ≤ m² * N^(m-1)
-    -- 2. So fraction ≤ m² * N^(m-1) / N^m = m² / N
-    -- 3. m² / N → 0 as N → ∞ (by tendsto_const_mul_inv_atTop)
-    -- 4. Apply squeeze theorem
-    sorry
+    -- For m = n+1 ≥ 1, use the bound and squeeze theorem
+    -- Upper bound: fraction ≤ (n+1)² * N^n / N^(n+1) = (n+1)² / N → 0
+    have h_bound : ∀ᶠ N in atTop, (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ)
+        / (N : ℝ)^(n+1) ≤ ((n+1)^2 : ℕ) / (N : ℝ) := by
+      filter_upwards [eventually_gt_atTop 0] with N hN
+      have hN_pos : (0 : ℕ) < N := hN
+      have hN_real : (0 : ℝ) < N := Nat.cast_pos.mpr hN
+      -- Apply card_nonInjective_le
+      have h_card : Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ}
+          ≤ (n+1) * (n+1) * N^n := card_nonInjective_le (n+1) N hN_pos
+      -- Convert to reals and divide
+      calc (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ) / (N : ℝ)^(n+1)
+          ≤ ((n+1) * (n+1) * N^n : ℕ) / (N : ℝ)^(n+1) := by
+            apply div_le_div_of_nonneg_right
+            · exact Nat.cast_le.mpr h_card
+            · exact le_of_lt (pow_pos hN_real (n+1))
+        _ = ((n+1)^2 : ℕ) * (N : ℝ)^n / (N : ℝ)^(n+1) := by
+            congr 1
+            push_cast
+            ring
+        _ = ((n+1)^2 : ℕ) / (N : ℝ) := by
+            have hN_ne : (N : ℝ) ≠ 0 := ne_of_gt hN_real
+            have hN_pow_ne : (N : ℝ)^n ≠ 0 := pow_ne_zero n hN_ne
+            rw [pow_succ]
+            field_simp
+            ring
+    -- Lower bound
+    have h_nonneg : ∀ᶠ N in atTop, 0 ≤ (Fintype.card {φ : Fin (n+1) → Fin N // ¬Function.Injective φ} : ℝ)
+        / (N : ℝ)^(n+1) := by
+      filter_upwards [eventually_gt_atTop 0] with N hN
+      apply div_nonneg
+      · exact Nat.cast_nonneg _
+      · exact pow_nonneg (Nat.cast_nonneg N) (n+1)
+    -- Upper bound limit
+    have h_lim : Tendsto (fun N : ℕ => ((n+1)^2 : ℕ) / (N : ℝ)) atTop (𝓝 0) :=
+      tendsto_const_div_atTop_nhds_zero_nat _
+    -- Apply squeeze
+    exact tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h_lim h_nonneg h_bound
 
 /-! ### Product L¹ Convergence
 
@@ -1051,6 +1082,12 @@ lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
                    (fun i => hf i.succ) (fun i => hg i.succ)
       _ = |f 0 - g 0| + ∑ i : Fin n, |f i.succ - g i.succ| := by ring
 
+/-- Helper: |a - b| ≤ |a| + |b|. -/
+lemma abs_sub_le_abs_add (a b : ℝ) : |a - b| ≤ |a| + |b| := by
+  calc |a - b| = |a + (-b)| := by ring_nf
+    _ ≤ |a| + |-b| := abs_add_le a (-b)
+    _ = |a| + |b| := by rw [abs_neg]
+
 /-- Product of L¹-convergent bounded sequences converges in L¹.
 
 If f_n(i) → g(i) in L¹ for each i, and all functions are bounded by 1,
@@ -1069,8 +1106,8 @@ lemma prod_tendsto_L1_of_L1_tendsto
     {m : ℕ} (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
     (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
     (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
-    (_hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
-    (_hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
+    (hf_meas : ∀ n i, AEStronglyMeasurable (f n i) μ)
+    (hg_meas : ∀ i, AEStronglyMeasurable (g i) μ)
     (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0)) :
     Tendsto (fun n => ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ) atTop (𝓝 0) := by
   -- Step 1: Pointwise bound from abs_prod_sub_prod_le
@@ -1086,9 +1123,41 @@ lemma prod_tendsto_L1_of_L1_tendsto
     intro i _
     exact h_conv i
 
-  -- Step 3: Apply squeeze theorem (with integration details as sorry)
-  -- PROOF: Use h_pointwise to bound ∫|∏f-∏g| ≤ ∫∑|f-g| = ∑∫|f-g| → 0
-  sorry
+  -- Helper: |f n i - g i| is integrable
+  have h_diff_int : ∀ n i, Integrable (fun ω => |f n i ω - g i ω|) μ := by
+    intro n i
+    apply Integrable.abs
+    apply Integrable.of_bound (C := 2)
+    · exact (hf_meas n i).sub (hg_meas i)
+    · apply ae_of_all μ
+      intro ω
+      calc ‖f n i ω - g i ω‖ = |f n i ω - g i ω| := Real.norm_eq_abs _
+        _ ≤ |f n i ω| + |g i ω| := abs_sub_le_abs_add _ _
+        _ ≤ 1 + 1 := add_le_add (hf_bdd n i ω) (hg_bdd i ω)
+        _ = 2 := by ring
+
+  -- Step 3: Apply squeeze_zero
+  apply squeeze_zero
+  · -- Lower bound: ∫|...| ≥ 0
+    intro n
+    exact integral_nonneg (fun ω => abs_nonneg _)
+  · -- Upper bound: ∫|∏f-∏g| ≤ ∑∫|f-g|
+    intro n
+    have h_int_bound : ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ
+        ≤ ∫ ω, ∑ i : Fin m, |f n i ω - g i ω| ∂μ := by
+      apply integral_mono_of_nonneg
+      · exact ae_of_all μ (fun ω => abs_nonneg _)
+      · apply integrable_finset_sum
+        intro i _
+        exact h_diff_int n i
+      · exact ae_of_all μ (h_pointwise n)
+    calc ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ
+        ≤ ∫ ω, ∑ i : Fin m, |f n i ω - g i ω| ∂μ := h_int_bound
+      _ = ∑ i : Fin m, ∫ ω, |f n i ω - g i ω| ∂μ := by
+          rw [integral_finset_sum]
+          intro i _
+          exact h_diff_int n i
+  · exact h_sum_tendsto
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
