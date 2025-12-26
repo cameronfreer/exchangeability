@@ -6,34 +6,29 @@
 
 | Proof Approach | Sorries | Axioms | Admits | Status |
 |---------------|---------|--------|--------|--------|
-| **ViaMartingale** | 2 | 0 | 0 | **Closest to complete** |
+| **ViaMartingale** | **0** | 0 | 0 | **✅ COMPLETE** |
 | ViaL2 | 10 | 0 | 0 | Moderate work remaining |
 | ViaKoopman | 10 | 1 | 1 | Significant work remaining |
 | Shared/Other | 6 | 0 | 0 | Mixed |
 
-**Total:** 28 sorries, 1 axiom, 1 admit
+**Total:** 26 sorries, 1 axiom, 1 admit
 
 ---
 
-## ViaMartingale (Recommended Focus)
+## ViaMartingale ✅ COMPLETE
 
-**Status:** Only 2 sorries remain, both in `CondIndep/Bounded.lean`
+**Status:** All sorries filled! First complete proof of de Finetti's theorem.
 
-### Blocking Sorries
-
-| File | Line | Lemma | Description |
-|------|------|-------|-------------|
-| `CondIndep/Bounded.lean` | 255 | `condIndep_of_indep_fun_pair` | Independence → conditional independence |
-| `CondIndep/Bounded.lean` | 582 | `condExp_project_of_condIndep` | Projection lemma for conditional independence |
-
-### Recent Progress
+### Completed Work
 - **Fixed:** Removed false `kernel_eval_ae_eq_of_kernel_eq` lemma (was mathematically incorrect)
 - **Fixed:** `JointLawEq.lean` now uses correct drop-info lemma (Kallenberg 1.3)
-- **Result:** Reduced from 3 sorries to 2 sorries
+- **Filled:** `condIndep_of_indep_fun_pair` - independence → conditional independence
+- **Filled:** `condExp_project_of_condIndep` - projection lemma for conditional independence
 
-### Strategy to Complete
-1. Prove `condIndep_of_indep_fun_pair` - needs to show that independence of (Y,Z) from W implies conditional independence Y ⊥⊥_W Z
-2. Prove `condExp_project_of_condIndep` - projection lemma using conditional independence
+### Verification
+```bash
+lake build Exchangeability.DeFinetti.ViaMartingale  # ✅ Builds successfully
+```
 
 ---
 
@@ -118,14 +113,8 @@
 
 ## Recommended Action Plan
 
-### Phase 1: Complete ViaMartingale (Highest Priority)
-1. **Fill `condIndep_of_indep_fun_pair`** (line 255)
-   - This is the core lemma connecting independence to conditional independence
-   - Should follow from definitions + indicator function manipulation
-
-2. **Fill `condExp_project_of_condIndep`** (line 582)
-   - Projection property using conditional independence
-   - May need tower property of conditional expectation
+### Phase 1: Complete ViaMartingale ✅ DONE
+First complete proof achieved!
 
 ### Phase 2: Clean Up Shared Infrastructure
 1. Review `CondIndepHelpers.lean` - 4 sorries that may be reusable
@@ -140,9 +129,9 @@
 ## File Dependency Summary
 
 ```
-ViaMartingale.lean
-├── CondIndep/Bounded.lean (2 sorries) ← BLOCKING
-├── ConditionalKernel/JointLawEq.lean (✓ fixed)
+ViaMartingale.lean ✅ COMPLETE
+├── CondIndep/Bounded.lean (✓ complete)
+├── ConditionalKernel/JointLawEq.lean (✓ complete)
 ├── TripleLawDropInfo/DropInfo.lean (✓ complete)
 └── Martingale/* (✓ complete)
 
