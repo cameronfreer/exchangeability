@@ -1306,8 +1306,143 @@ lemma directing_measure_bridge
       rw [abs_of_nonneg (I_nonneg i j ω)]
       exact I_le_one i j ω
 
-    -- TODO: Continue with Steps 2-8
-    sorry
+    -- Step 2: L¹ convergence of each coordinate p N i → directing_measure ω (B' i)
+    -- Use directing_measure_integral for the indicator function
+
+    -- Helper: indicator functions are measurable and bounded
+    have I_meas : ∀ i, Measurable ((B' i).indicator (fun _ => (1 : ℝ))) := fun i =>
+      measurable_const.indicator (hB (σ i))
+    have I_bdd : ∀ i, ∃ M, ∀ x, |(B' i).indicator (fun _ => (1 : ℝ)) x| ≤ M := fun i =>
+      ⟨1, fun x => by by_cases h : x ∈ B' i <;> simp [Set.indicator, h]⟩
+
+    -- For each i, get L¹ limit and identification with directing measure
+    -- The limit α_i satisfies: p N i → α_i in L¹, and α_i = ν(·)(B' i) a.e.
+    have h_coord_conv : ∀ i : Fin (n + 1),
+        ∃ α_i : Ω → ℝ, Measurable α_i ∧ MemLp α_i 1 μ ∧
+          (∀ (N : ℕ), ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i k.val ω - α_i ω| ∂μ < ε) ∧
+          (∀ᵐ ω ∂μ, α_i ω = (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal) := by
+      intro i
+      -- Use directing_measure_integral for the indicator function
+      obtain ⟨α_i, hα_meas, hα_L1, hα_conv, hα_eq⟩ :=
+        directing_measure_integral X hX_contract hX_meas hX_L2
+          ((B' i).indicator (fun _ => 1)) (I_meas i) (I_bdd i)
+      refine ⟨α_i, hα_meas, hα_L1, ?_, ?_⟩
+      · -- Convergence: need to relate the averages from directing_measure_integral to p N i
+        -- directing_measure_integral uses index n + k.val + 1, we use k.val
+        -- Key: Cesàro averages over 0..m-1 and 1..m have same limit (differ by O(1/m))
+        intro _N ε hε
+        -- Get convergence for indices 1, 2, ..., m (n=0 case)
+        obtain ⟨M₁, hM₁⟩ := hα_conv 0 (ε / 2) (half_pos hε)
+        -- For the difference between index sets, need m large enough that 2/m < ε/2
+        -- Use tendsto_const_div_atTop to get this bound
+        have h_bound_exists : ∃ M₂ : ℕ, ∀ m : ℕ, m ≥ M₂ → (2 : ℝ) / m < ε / 2 := by
+          have h := Metric.tendsto_atTop.mp (tendsto_const_div_atTop_nhds_zero_nat (2 : ℝ))
+            (ε / 2) (half_pos hε)
+          simp only [Real.dist_eq, sub_zero] at h
+          obtain ⟨M₂, hM₂⟩ := h
+          refine ⟨M₂, fun m hm => ?_⟩
+          have := hM₂ m hm
+          rwa [abs_of_nonneg (by positivity : 0 ≤ (2 : ℝ) / m)] at this
+        obtain ⟨M₂, hM₂⟩ := h_bound_exists
+        refine ⟨max M₁ M₂, fun m hm => ?_⟩
+        -- The sum ∑_{k < m} I i k.val uses indices 0, 1, ..., m-1
+        -- The sum from directing_measure_integral (n=0) uses indices 1, 2, ..., m
+        -- i.e., (0 + k.val + 1) = k.val + 1 for k : Fin m
+        -- Difference: I i 0 - I i m, bounded by 2 since |I| ≤ 1
+        -- Key: Cesàro averages differ by O(1/m) → 0, standard analysis argument
+        -- |(1/m) ∑_{k<m} I k - α| ≤ |(1/m) ∑_{k<m} I k - (1/m) ∑_{k<m} I (k+1)| + |(1/m) ∑_{k<m} I (k+1) - α|
+        --                       ≤ 2/m + ε/2 < ε for large m
+        sorry -- Cesàro index shift: can be filled in later
+      · -- Identification: ∫ 1_B dν = ν(B)
+        filter_upwards [hα_eq] with ω hω
+        rw [hω]
+        -- ∫ 1_{B'_i}(x) d(ν ω) = ν ω (B' i)
+        -- Note: (fun _ => 1) = 1 definitionally for Pi types
+        -- and μ.real s = (μ s).toReal definitionally
+        convert MeasureTheory.integral_indicator_one (hB (σ i)) using 1
+
+    -- Step 3: Use contractability to reduce LHS to identity case
+    -- Since k ∘ σ is strictly monotone, by Contractable.allStrictMono_eq:
+    -- Distribution of (X_{(k∘σ)(0)}, ..., X_{(k∘σ)(n)}) = Distribution of (X_0, ..., X_n)
+
+    -- Define the strictly monotone k' = k ∘ σ
+    let k' : Fin (n + 1) → ℕ := k ∘ σ
+
+    -- k' is strictly monotone
+    have hk'_mono : StrictMono k' := hσ_mono
+
+    -- The identity function on Fin (n+1) is strictly monotone
+    have hid_mono : StrictMono (fun i : Fin (n + 1) => (i : ℕ)) := fun i j hij => hij
+
+    -- By contractability, the measures are equal
+    have h_map_eq := hX_contract.allStrictMono_eq (n + 1) k' (fun i => i.val) hk'_mono hid_mono
+
+    -- This gives us that for any measurable function f:
+    -- ∫ f(X_{k'(0)}, ..., X_{k'(n)}) dμ = ∫ f(X_0, ..., X_n) dμ
+
+    -- Apply this to reduce LHS to identity case
+    -- Goal becomes: ∫⁻ ∏_i 1_{B(σi)}(X_i) dμ = ∫⁻ ∏_i ν(·)(B(σi)) dμ
+    -- which is the identity case with B' i = B (σ i)
+
+    -- Step 4: Obtain limiting functions from h_coord_conv
+    -- For each i, we have α_i → ν(·)(B' i) a.e.
+    -- We need to apply prod_tendsto_L1_of_L1_tendsto
+
+    -- Choose the limiting functions
+    choose α_funcs hα_funcs using h_coord_conv
+    -- Each hα_funcs i provides:
+    -- - (hα_funcs i).1 : Measurable (α_funcs i)
+    -- - (hα_funcs i).2.1 : MemLp (α_funcs i) 1 μ
+    -- - (hα_funcs i).2.2.1 : L¹ convergence ε-δ form
+    -- - (hα_funcs i).2.2.2 : α_funcs i = ν(·)(B' i).toReal a.e.
+
+    -- Step 4: The identity case target
+    -- LHS: ∫⁻ ∏_i 1_{B'_i}(X_i) dμ
+    -- RHS: ∫⁻ ∏_i ν(·)(B' i) dμ
+
+    -- Key: Since hk : k ∘ σ = id, we have k (σ i) = i for all i
+    -- So the LHS of the main goal is exactly ∫⁻ ∏_i 1_{B(σi)}(X_i) dμ = ∫⁻ ∏_i 1_{B'_i}(X_i) dμ
+
+    -- Step 5: Use the a.e. equality of α_i and r_i := ν(·)(B' i).toReal
+    -- By h_coord_conv, α_funcs i = ν(·)(B' i).toReal a.e.
+    -- Therefore ∏_i α_funcs i = ∏_i ν(·)(B' i).toReal a.e.
+
+    -- Step 6: The collision bound argument (detailed in plan)
+    -- Shows E[q N] → E[∏_i I i i] as N → ∞
+    -- Together with E[q N] → E[∏_i α_funcs i], we get equality
+
+    -- Step 7: Use h_map_eq to rewrite LHS as identity case
+    -- Define the measurable function on (Fin (n+1) → ℝ)
+    let f : (Fin (n + 1) → ℝ) → ENNReal := fun x =>
+      ∏ j : Fin (n + 1), ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (x j))
+
+    -- LHS = ∫ f ∘ (fun ω j => X (k' j) ω) dμ
+    --     = ∫ f d(Measure.map (fun ω j => X (k' j) ω) μ)  by change of variables
+    -- Identity case = ∫ f ∘ (fun ω j => X j ω) dμ
+    --               = ∫ f d(Measure.map (fun ω j => X j ω) μ)  by change of variables
+    -- Since h_map_eq says these measures are equal, LHS = Identity case
+
+    -- The key theorem: by h_map_eq and lintegral_map_equiv or similar,
+    -- ∫⁻ ∏_j 1_{B(σj)}(X_{k'(j)}) dμ = ∫⁻ ∏_j 1_{B(σj)}(X_j) dμ
+
+    -- So our goal reduces to proving the IDENTITY CASE:
+    -- ∫⁻ ∏_j 1_{B(σj)}(X_j) dμ = ∫⁻ ∏_j ν(·)(B(σj)) dμ
+
+    -- Step 8: The identity case
+    -- By the U-statistic/collision bound argument:
+    -- - E[q N] → E[∏_i I i i] = E[∏_j 1_{B(σj)}(X_j)] (collision bound)
+    -- - E[q N] → E[∏_i α_funcs i] = E[∏_j ν(·)(B(σj)).toReal] (L¹ convergence)
+    -- - By uniqueness of limits: E[∏_j 1_{B(σj)}(X_j)] = E[∏_j ν(·)(B(σj)).toReal]
+    -- - Lift to ENNReal: the ENNReal integrals are equal
+
+    -- The full proof requires:
+    -- 1. Applying h_map_eq via lintegral_map to reduce to identity case
+    -- 2. The U-statistic expansion and collision bound argument
+    -- 3. Connecting L¹ convergence to integral equality
+    -- Each step is standard but involves significant bookkeeping
+
+    sorry -- Identity case: requires U-statistic expansion + collision bound
 
 /-- **Main packaging theorem for L² proof.**
 
