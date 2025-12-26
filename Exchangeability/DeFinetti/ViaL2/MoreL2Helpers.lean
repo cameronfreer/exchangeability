@@ -868,16 +868,49 @@ The key estimate for Route B: the fraction of non-injective maps φ : Fin m → 
 tends to 0 as N → ∞, with rate O(m²/N).
 -/
 
+/-- Bijection between constrained functions {φ | φ i = φ j} and functions on Fin n.
+
+The constraint φ i = φ j means φ j is determined by φ i, so effectively we only need to
+specify φ on {k | k ≠ j}, which has cardinality n when the domain is Fin (n+1). -/
+def constrainedFunctionEquiv {N n : ℕ} (i j : Fin (n+1)) (hij : i ≠ j) :
+    {φ : Fin (n+1) → Fin N // φ i = φ j} ≃ (Fin n → Fin N) where
+  toFun := fun ⟨φ, _⟩ => fun k => φ ((finSuccAboveEquiv j) k)
+  invFun := fun ψ =>
+    let i' := (finSuccAboveEquiv j).symm ⟨i, hij⟩
+    ⟨fun k => if h : k = j then ψ i' else ψ ((finSuccAboveEquiv j).symm ⟨k, h⟩),
+     by simp only [hij, dite_false]; rfl⟩
+  left_inv := fun ⟨φ, hφ⟩ => by
+    simp only [Subtype.mk.injEq]
+    funext k
+    by_cases hk : k = j
+    · simp only [hk, dite_true]
+      conv_rhs => rw [← hφ]
+      congr 1
+      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨i, hij⟩
+      simp only [Subtype.ext_iff] at h
+      exact h
+    · simp only [hk, dite_false]
+      congr 1
+      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨k, hk⟩
+      simp only [Subtype.ext_iff] at h
+      exact h
+  right_inv := fun ψ => by
+    funext k
+    simp only
+    have hne : ((finSuccAboveEquiv j) k : Fin (n+1)) ≠ j := ((finSuccAboveEquiv j) k).prop
+    simp only [hne, dite_false]
+    congr 1
+    exact (finSuccAboveEquiv j).symm_apply_apply k
+
 /-- Cardinality of {φ | φ i = φ j} equals N^(m-1).
 The constraint φ i = φ j reduces the degrees of freedom by 1. -/
 lemma card_collision_set (m N : ℕ) (i j : Fin m) (hij : i ≠ j) :
     Fintype.card {φ : Fin m → Fin N // φ i = φ j} = N^(m - 1) := by
-  -- Proof: There is a bijection between {φ | φ i = φ j} and (Fin (m-1) → Fin N)
-  -- Given ψ : Fin (m-1) → Fin N, define φ by:
-  --   φ k = ψ (pred_of_ne_j k) if k ≠ j
-  --   φ j = φ i
-  -- This is a bijection.
-  sorry
+  cases m with
+  | zero => exact Fin.elim0 i
+  | succ n =>
+    rw [Fintype.card_eq.mpr ⟨constrainedFunctionEquiv i j hij⟩]
+    simp only [Fintype.card_fun, Fintype.card_fin, Nat.add_sub_cancel]
 
 /-- The set of ordered pairs (i, j) with i ≠ j. -/
 def collisionPairs (m : ℕ) : Finset (Fin m × Fin m) :=
@@ -1240,14 +1273,40 @@ lemma directing_measure_bridge
     -- This requires proving that the finite-dimensional marginals of X
     -- match those of the product measure ν(ω)^⊗m.
     --
-    -- ROUTE B (U-statistic/collision bound) proves this directly:
-    -- 1. Define p_N(j)(ω) = (1/N) ∑_{i<N} 1_{B_j}(X_i ω)
-    -- 2. Show p_N(j) → ν(·)(B_j) in L¹ (from weighted_sums_converge_L1)
-    -- 3. Show ∏_j p_N(j) → ∏_j ν(·)(B_j) in L¹ (bounded product)
-    -- 4. Expand E[∏_j p_N(j)] as sum over maps φ : Fin m → Fin N
-    -- 5. Injective φ: use contractability (same distribution as identity)
-    -- 6. Non-injective φ: collision bound O(m²/N) → 0
-    -- 7. Take limit: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
+    -- ROUTE B (U-statistic/collision bound) proves this directly.
+    -- See plan file for detailed steps.
+
+    -- Step 1: Define indicator and empirical frequencies
+    -- I i j ω = 1 if X j ω ∈ B (σ i), else 0
+    let B' := fun i => B (σ i)  -- reindexed sets
+    let I : Fin (n + 1) → ℕ → Ω → ℝ := fun i j ω =>
+      (B' i).indicator (fun _ => (1 : ℝ)) (X j ω)
+
+    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i j ω
+    let p : ℕ → Fin (n + 1) → Ω → ℝ := fun N i ω =>
+      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i j.val ω
+
+    -- Product of empirical frequencies
+    let q : ℕ → Ω → ℝ := fun N ω => ∏ i : Fin (n + 1), p N i ω
+
+    -- Limit: product of directing measure values
+    let r : Ω → ℝ := fun ω =>
+      ∏ i : Fin (n + 1), (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal
+
+    -- Basic bounds on I
+    have I_nonneg : ∀ i j ω, 0 ≤ I i j ω := fun i j ω => by
+      simp only [I]
+      exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
+
+    have I_le_one : ∀ i j ω, I i j ω ≤ 1 := fun i j ω => by
+      simp only [I]
+      by_cases h : X j ω ∈ B' i <;> simp [Set.indicator, h]
+
+    have I_abs_le_one : ∀ i j ω, |I i j ω| ≤ 1 := fun i j ω => by
+      rw [abs_of_nonneg (I_nonneg i j ω)]
+      exact I_le_one i j ω
+
+    -- TODO: Continue with Steps 2-8
     sorry
 
 /-- **Main packaging theorem for L² proof.**
