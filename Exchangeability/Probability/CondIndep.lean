@@ -917,15 +917,20 @@ lemma condIndep_simpleFunc_left
   -- Step 5: Apply tendsto_condexp_L1
   have h_CE_sψZ_L1 : Filter.Tendsto (fun n => ∫ ω, |μ[sψ n ∘ Z | mW] ω - μ[ψ ∘ Z | mW] ω| ∂μ)
                      Filter.atTop (nhds 0) := by
-    -- Use tendsto_condexp_L1 from h_sψZ_L1
-    -- Need integrability of sψ n ∘ Z and ψ ∘ Z
+    -- Apply tendsto_condexp_L1 with:
+    -- - h_int_sψ: sψ n ∘ Z integrable (simple function on prob space)
+    -- - h_int_ψ: ψ ∘ Z integrable (bounded by Mψ on prob space)
+    -- - h_sψZ_L1: L¹ convergence hypothesis
+    -- Note: Need mW ≤ m₀, which follows from W measurable (add hypothesis if needed)
     sorry
   -- Step 6: L¹ convergence of products (using boundedness of φ)
   have h_prod_L1 : Filter.Tendsto (fun n => ∫ ω, |(φ (Y ω)) * (sψ n (Z ω)) - (φ (Y ω)) * (ψ (Z ω))| ∂μ)
                    Filter.atTop (nhds 0) := by
-    -- |φ| ≤ Mφ := (φ.range.sup nnnorm).toReal
-    -- |(φY)(sψn Z) - (φY)(ψZ)| = |φY||sψn Z - ψZ| ≤ Mφ|sψn Z - ψZ|
-    -- So ∫|...| ≤ Mφ * ∫|sψn Z - ψZ| → 0
+    -- Proof sketch:
+    -- 1. Mφ := (φ.range.sup nnnorm).toReal bounds |φ|
+    -- 2. |(φY)(sψn Z) - (φY)(ψZ)| = |φY| * |sψn Z - ψZ| ≤ Mφ * |sψn Z - ψZ|
+    -- 3. Integrate: ∫|...| ≤ Mφ * ∫|sψn Z - ψZ|
+    -- 4. Apply squeeze: 0 ≤ ∫|...| ≤ Mφ * h_sψZ_L1 → 0
     sorry
   -- Step 7: CE of product converges in L¹
   have h_CE_prod_L1 : Filter.Tendsto
