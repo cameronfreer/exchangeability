@@ -868,16 +868,49 @@ The key estimate for Route B: the fraction of non-injective maps φ : Fin m → 
 tends to 0 as N → ∞, with rate O(m²/N).
 -/
 
+/-- Bijection between constrained functions {φ | φ i = φ j} and functions on Fin n.
+
+The constraint φ i = φ j means φ j is determined by φ i, so effectively we only need to
+specify φ on {k | k ≠ j}, which has cardinality n when the domain is Fin (n+1). -/
+def constrainedFunctionEquiv {N n : ℕ} (i j : Fin (n+1)) (hij : i ≠ j) :
+    {φ : Fin (n+1) → Fin N // φ i = φ j} ≃ (Fin n → Fin N) where
+  toFun := fun ⟨φ, _⟩ => fun k => φ ((finSuccAboveEquiv j) k)
+  invFun := fun ψ =>
+    let i' := (finSuccAboveEquiv j).symm ⟨i, hij⟩
+    ⟨fun k => if h : k = j then ψ i' else ψ ((finSuccAboveEquiv j).symm ⟨k, h⟩),
+     by simp only [hij, dite_false]; rfl⟩
+  left_inv := fun ⟨φ, hφ⟩ => by
+    simp only [Subtype.mk.injEq]
+    funext k
+    by_cases hk : k = j
+    · simp only [hk, dite_true]
+      conv_rhs => rw [← hφ]
+      congr 1
+      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨i, hij⟩
+      simp only [Subtype.ext_iff] at h
+      exact h
+    · simp only [hk, dite_false]
+      congr 1
+      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨k, hk⟩
+      simp only [Subtype.ext_iff] at h
+      exact h
+  right_inv := fun ψ => by
+    funext k
+    simp only
+    have hne : ((finSuccAboveEquiv j) k : Fin (n+1)) ≠ j := ((finSuccAboveEquiv j) k).prop
+    simp only [hne, dite_false]
+    congr 1
+    exact (finSuccAboveEquiv j).symm_apply_apply k
+
 /-- Cardinality of {φ | φ i = φ j} equals N^(m-1).
 The constraint φ i = φ j reduces the degrees of freedom by 1. -/
 lemma card_collision_set (m N : ℕ) (i j : Fin m) (hij : i ≠ j) :
     Fintype.card {φ : Fin m → Fin N // φ i = φ j} = N^(m - 1) := by
-  -- Proof: There is a bijection between {φ | φ i = φ j} and (Fin (m-1) → Fin N)
-  -- Given ψ : Fin (m-1) → Fin N, define φ by:
-  --   φ k = ψ (pred_of_ne_j k) if k ≠ j
-  --   φ j = φ i
-  -- This is a bijection.
-  sorry
+  cases m with
+  | zero => exact Fin.elim0 i
+  | succ n =>
+    rw [Fintype.card_eq.mpr ⟨constrainedFunctionEquiv i j hij⟩]
+    simp only [Fintype.card_fun, Fintype.card_fin, Nat.add_sub_cancel]
 
 /-- The set of ordered pairs (i, j) with i ≠ j. -/
 def collisionPairs (m : ℕ) : Finset (Fin m × Fin m) :=
