@@ -754,12 +754,15 @@ lemma integral_alphaIic_eq_marginal
               exact Integrable.of_bound h_meas_cesaro.aestronglyMeasurable 1
                 (Filter.Eventually.of_forall h_bdd_cesaro)
             · -- limit is bounded a.e. since it's an L¹ limit of bounded functions
-              -- This follows from: L¹ convergence → convergence in measure → a.e. conv of subsequence
-              -- And pointwise limit of bounded functions is bounded
+              -- The Cesàro averages f_n are in [0,1] pointwise, and L¹ limits preserve this a.e.
+              -- Proof outline:
+              -- 1. Each f_n(ω) = (1/n)∑_{k<n} ind(X_k ω) ∈ [0,1] since ind ∈ [0,1]
+              -- 2. L¹ convergence f_n → limit implies convergence in measure
+              -- 3. Convergence in measure gives a.e. convergence of subsequence f_{n_k}
+              -- 4. Pointwise limit of functions in [0,1] is in [0,1]
+              -- Key mathlib lemmas: TendstoInMeasure.exists_seq_tendsto_ae
               have h_limit_bdd : ∀ᵐ ω ∂μ, ‖limit ω‖ ≤ 1 := by
-                -- The limit is in MemLp 1, and is the limit of averages bounded by 1
-                -- Technical argument using L¹ properties
-                sorry
+                sorry -- L¹ limit of bounded functions is bounded a.e.
               exact Integrable.of_bound h_meas_limit.aestronglyMeasurable 1 h_limit_bdd
         _ ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) - limit ω| ∂μ :=
             abs_integral_le_integral_abs
