@@ -1273,14 +1273,40 @@ lemma directing_measure_bridge
     -- This requires proving that the finite-dimensional marginals of X
     -- match those of the product measure ν(ω)^⊗m.
     --
-    -- ROUTE B (U-statistic/collision bound) proves this directly:
-    -- 1. Define p_N(j)(ω) = (1/N) ∑_{i<N} 1_{B_j}(X_i ω)
-    -- 2. Show p_N(j) → ν(·)(B_j) in L¹ (from weighted_sums_converge_L1)
-    -- 3. Show ∏_j p_N(j) → ∏_j ν(·)(B_j) in L¹ (bounded product)
-    -- 4. Expand E[∏_j p_N(j)] as sum over maps φ : Fin m → Fin N
-    -- 5. Injective φ: use contractability (same distribution as identity)
-    -- 6. Non-injective φ: collision bound O(m²/N) → 0
-    -- 7. Take limit: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
+    -- ROUTE B (U-statistic/collision bound) proves this directly.
+    -- See plan file for detailed steps.
+
+    -- Step 1: Define indicator and empirical frequencies
+    -- I i j ω = 1 if X j ω ∈ B (σ i), else 0
+    let B' := fun i => B (σ i)  -- reindexed sets
+    let I : Fin (n + 1) → ℕ → Ω → ℝ := fun i j ω =>
+      (B' i).indicator (fun _ => (1 : ℝ)) (X j ω)
+
+    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i j ω
+    let p : ℕ → Fin (n + 1) → Ω → ℝ := fun N i ω =>
+      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i j.val ω
+
+    -- Product of empirical frequencies
+    let q : ℕ → Ω → ℝ := fun N ω => ∏ i : Fin (n + 1), p N i ω
+
+    -- Limit: product of directing measure values
+    let r : Ω → ℝ := fun ω =>
+      ∏ i : Fin (n + 1), (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal
+
+    -- Basic bounds on I
+    have I_nonneg : ∀ i j ω, 0 ≤ I i j ω := fun i j ω => by
+      simp only [I]
+      exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
+
+    have I_le_one : ∀ i j ω, I i j ω ≤ 1 := fun i j ω => by
+      simp only [I]
+      by_cases h : X j ω ∈ B' i <;> simp [Set.indicator, h]
+
+    have I_abs_le_one : ∀ i j ω, |I i j ω| ≤ 1 := fun i j ω => by
+      rw [abs_of_nonneg (I_nonneg i j ω)]
+      exact I_le_one i j ω
+
+    -- TODO: Continue with Steps 2-8
     sorry
 
 /-- **Main packaging theorem for L² proof.**
