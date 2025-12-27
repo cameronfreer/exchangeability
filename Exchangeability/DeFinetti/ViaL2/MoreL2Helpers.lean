@@ -52,15 +52,6 @@ Each sorry can be replaced with a proper proof from mathlib or a local implement
 -- and weighted_sums_converge_L1 are in MainConvergence.lean and will be available when
 -- MainConvergence imports MoreL2Helpers.
 
--- Forward declaration for alphaFrom (not yet implemented in MainConvergence)
--- TODO: Define as the L¹ limit of block averages, or as conditional expectation
-def alphaFrom {Ω : Type*} [MeasurableSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
-  (_hX_meas : ∀ i, Measurable (X i)) (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (_f : ℝ → ℝ) : Ω → ℝ :=
-  fun _ => 0  -- Placeholder definition; the actual value requires construction
-
 -- Axiom for CDF limit behavior.
 --
 -- **MATHEMATICAL NOTE:** This axiom requires the CDF limits to hold for ALL ω.
@@ -271,40 +262,6 @@ private lemma aestrong_iSup_real
     exact (h i).aemeasurable
   exact h_ae.aestronglyMeasurable
 
-/-! ### Incomplete lemmas for deep steps
-
-These are the genuinely hard parts (reverse martingale, kernel measurability,
-endpoint limits, identification). Keep them here so the main file stays tidy.
-Replace the sorries with real proofs when available.
--/
-
-/-- **Kernel measurability (TODO):**
-For every measurable set `s`, the map ω ↦ ν(ω)(s) is measurable.
-
-This follows from `directing_measure_measurable` defined below for measurable sets.
-For non-measurable sets, the sorry in `directing_measure_measurable` needs resolution. -/
-lemma directing_measure_eval_measurable
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-  ∀ s : Set ℝ, MeasurableSet s → Measurable
-    (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s) := by
-  -- Uses directing_measure_measurable defined below via π-λ theorem
-  sorry
-
-/-- **Identification (TODO):**
-For bounded measurable `f`, α_f(ω) agrees a.e. with `∫ f dν(ω)`.
-
-This requires completing the monotone class argument in `directing_measure_integral`. -/
-lemma directing_measure_identification
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i)) (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (f : ℝ → ℝ) (_hf_meas : Measurable f) (_hf_bdd : ∀ x, |f x| ≤ 1) :
-  ∀ᵐ ω ∂μ, alphaFrom X hX_contract hX_meas hX_L2 f ω
-             = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-  sorry
-
 end Helpers
 
 /-- For each fixed t, ω ↦ ν(ω)((-∞,t]) is measurable.
@@ -333,26 +290,19 @@ lemma directing_measure_eval_Iic_measurable
   simp_rw [h_eq]
   exact ENNReal.measurable_ofReal.comp hmeas
 
-/-- For each set s, the map ω ↦ ν(ω)(s) is measurable.
+/-- For each measurable set s, the map ω ↦ ν(ω)(s) is measurable.
 
 This is the key measurability property needed for complete_from_directing_measure.
-
-For measurable sets: Uses monotone class theorem (π-λ theorem) - prove for intervals,
-extend to all Borel sets.
-
-For non-measurable sets: The measure is 0 by outer regularity, so the function is
-the constant zero function (hence measurable).
+Uses monotone class theorem (π-λ theorem) - prove for intervals, extend to all Borel sets.
 -/
 lemma directing_measure_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (s : Set ℝ) :
+    (s : Set ℝ) (hs : MeasurableSet s) :
     Measurable (fun ω => directing_measure X hX_contract hX_meas hX_L2 ω s) := by
   classical
-  by_cases hs : MeasurableSet s
-  ·
     -- π–λ theorem approach:
     -- Define the class of "good" measurable sets G = {s measurable | ω ↦ ν(ω)(s) is measurable}
     -- We restrict to measurable sets so that measure properties (compl, union) can be used
@@ -465,29 +415,6 @@ lemma directing_measure_measurable
 
     -- Apply to s to conclude
     exact (h_induction s hs).2
-  ·
-    -- NON-MEASURABLE CASE: s is not a measurable set
-    --
-    -- Context: directing_measure ω is defined as F_ω.measure where F_ω is a StieltjesFunction.
-    -- In Lean, StieltjesFunction.measure extends to a complete measure via Carathéodory's
-    -- extension theorem, so it's defined on ALL sets (not just measurable ones).
-    --
-    -- Mathematical fact: For non-measurable sets, the measure equals the outer measure:
-    --   μ(s) = inf{μ(A) : A ⊇ s, A measurable}
-    --
-    -- The function ω ↦ directing_measure ω s should be measurable because:
-    -- 1. The construction is uniform in ω (same Stieltjes CDF process for all ω)
-    -- 2. The outer measure is σ-additive from below, inheriting measurability
-    -- 3. For each ω, F_ω is constructed from cdf_from_alpha ω, which is measurable in ω
-    --
-    -- To prove this rigorously would require:
-    -- - Showing outer measures preserve measurability in parameters
-    -- - Using that the Carathéodory extension is functorial in the base measure
-    -- - Possibly: showing the function equals a measurable function a.e.
-    --
-    -- This is a deep result in measure theory about parameter-dependent measures.
-    -- For now, accept as sorry:
-    sorry
 
 /-- The directing measure integrates to give α_f.
 
@@ -638,17 +565,18 @@ lemma integral_alphaIic_eq_marginal
   -- (a) limit' =ᵐ limit (both are L¹ limits of the same Cesàro averages)
   -- (b) limit ∈ [0,1] a.e. (as L¹ limit of averages in [0,1])
   have h_alphaIic_eq : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω = limit ω := by
-    -- alphaIic uses its own .choose witness, which may differ from our limit
-    -- But both converge to the same L¹ limit, so they're a.e. equal
-    -- Then clipping has no effect since the limit is a.e. in [0,1]
+    -- The clip trick: L¹ limit of [0,1]-bounded Cesàro averages is in [0,1] a.e.
+    -- Step 1a: Show limit ∈ [0,1] a.e.
+    -- L¹ convergence → convergence in measure → a.e. convergent subsequence
+    -- Pointwise limit of [0,1] functions is in [0,1]
     --
-    -- The detailed proof would require:
-    -- 1. Show limit' from alphaIic's definition equals limit a.e. (L¹ uniqueness)
-    -- 2. Show limit ∈ [0,1] a.e. (as L¹ limit of averages bounded in [0,1])
-    -- 3. Conclude max 0 (min 1 limit') = limit' = limit a.e.
+    -- Step 1b: alphaIic uses indIic which equals our ind definitionally
+    -- Both .choose witnesses are L¹ limits of the same sequence, hence a.e. equal
+    -- With limit ∈ [0,1] a.e., clipping has no effect: max 0 (min 1 limit) = limit a.e.
     --
-    -- For now, accept this as it's a technical boundedness/uniqueness argument
-    -- The key mathematical content is correct
+    -- This is a standard boundedness/uniqueness argument for L¹ limits.
+    -- The technical details use TendstoInMeasure.exists_seq_tendsto_ae and
+    -- the fact that pointwise limits preserve bounds.
     sorry
 
   -- Step 2: Show ∫ limit = μ(X_0 ∈ Iic t).toReal
@@ -1362,13 +1290,24 @@ lemma directing_measure_bridge
         -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
         --                ≤ 2/m + ε/2 < ε  for m ≥ max(M₁, M₂)
 
-        -- The argument is standard but the bookkeeping is tedious
-        -- Key facts used:
-        -- 1. |I i j ω| ≤ 1 for all i, j, ω
+        -- Key facts used in the proof:
+        -- 1. |I i j ω| ≤ 1 for all i, j, ω (from I_abs_le_one)
         -- 2. hM₁: ∫|their_avg - α| < ε/2 for m ≥ M₁
         -- 3. hM₂: 2/m < ε/2 for m ≥ M₂
-
-        sorry -- Cesàro shift: standard analysis, integrability bookkeeping
+        --
+        -- PROOF STRUCTURE (triangle inequality + telescoping):
+        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
+        --
+        -- Term 1: The two averages differ by O(1/m) due to telescoping:
+        --   our_avg = (1/m) ∑_{k<m} I i k (indices 0, 1, ..., m-1)
+        --   their_avg = (1/m) ∑_{k<m} I i (k+1) (indices 1, 2, ..., m)
+        --   Difference = (1/m)(I i 0 - I i m), bounded by 2/m since |I| ≤ 1
+        --   So ∫|our_avg - their_avg| ≤ 2/m < ε/2 for m ≥ M₂
+        --
+        -- Term 2: By hM₁, ∫|their_avg - α| < ε/2 for m ≥ M₁
+        --
+        -- Sum: < ε/2 + ε/2 = ε for m ≥ max(M₁, M₂)
+        sorry -- Cesàro shift: triangle inequality + telescoping bound
       · -- Identification: ∫ 1_B dν = ν(B)
         filter_upwards [hα_eq] with ω hω
         rw [hω]
@@ -1444,20 +1383,48 @@ lemma directing_measure_bridge
     -- So our goal reduces to proving the IDENTITY CASE:
     -- ∫⁻ ∏_j 1_{B(σj)}(X_j) dμ = ∫⁻ ∏_j ν(·)(B(σj)) dμ
 
-    -- Step 8: The identity case
-    -- By the U-statistic/collision bound argument:
-    -- - E[q N] → E[∏_i I i i] = E[∏_j 1_{B(σj)}(X_j)] (collision bound)
-    -- - E[q N] → E[∏_i α_funcs i] = E[∏_j ν(·)(B(σj)).toReal] (L¹ convergence)
-    -- - By uniqueness of limits: E[∏_j 1_{B(σj)}(X_j)] = E[∏_j ν(·)(B(σj)).toReal]
-    -- - Lift to ENNReal: the ENNReal integrals are equal
+    -- Step 8: The identity case (U-statistic expansion)
+    --
+    -- **Goal:** Prove E[∏_j 1_{B(σj)}(X_j)] = E[∏_j ν(·)(B(σj))]
+    --
+    -- **Available Infrastructure:**
+    -- - `nonInjective_fraction_tendsto_zero` (line 942): collision bound
+    -- - `prod_tendsto_L1_of_L1_tendsto` (line 1068): product L¹ convergence
+    -- - `Finset.prod_univ_sum`: ∏ i, ∑ j, f i j = ∑ φ, ∏ i, f i (φ i)
+    -- - `Contractable.allStrictMono_eq`: contractability reduction (line 1333)
+    --
+    -- **Proof outline:**
+    --
+    -- 1. EXPAND q_N: The empirical product q N ω = ∏_i p N i ω where
+    --    p N i ω = (1/N) ∑_{j<N} I i j ω
+    --    By Finset.prod_univ_sum: q N = (1/N^m) ∑_{φ : Fin m → Fin N} ∏_i I i (φ i)
+    --
+    -- 2. SPLIT by injectivity of φ:
+    --    ∑_φ = ∑_{φ injective} + ∑_{φ non-injective}
+    --
+    -- 3. INJECTIVE CASE: For injective φ, by contractability (allStrictMono_eq),
+    --    E[∏_i I i (φ i)] = E[∏_i I i i] (the identity case)
+    --    So injective sum contributes: (# injective) × E[∏_i I i i]
+    --
+    -- 4. NON-INJECTIVE CASE: Each |∏_i I i (φ i)| ≤ 1, so
+    --    |∑_{φ non-inj}| ≤ (# non-injective)
+    --    After division by N^m: → 0 by nonInjective_fraction_tendsto_zero
+    --
+    -- 5. LIMIT: As N → ∞,
+    --    - E[q N] → E[∏_i I i i] (from steps 3-4 + falling factorial limit)
+    --    - E[q N] → E[∏_i α_funcs i] (by prod_tendsto_L1_of_L1_tendsto)
+    --    - By uniqueness of limits: E[∏_i I i i] = E[∏_i α_funcs i]
+    --
+    -- 6. A.E. EQUALITY: α_funcs i = ν(·)(B' i).toReal a.e. (from h_coord_conv)
+    --    So E[∏_i α_funcs i] = E[∏_i ν(·)(B' i).toReal]
+    --
+    -- 7. ENNREAL: Convert real integrals to ENNReal using lintegral_ofReal
+    --    (products of [0,1] values are in [0,1])
+    --
+    -- Each step is standard but involves significant bookkeeping.
+    -- The mathematical content is validated by the infrastructure lemmas above.
 
-    -- The full proof requires:
-    -- 1. Applying h_map_eq via lintegral_map to reduce to identity case
-    -- 2. The U-statistic expansion and collision bound argument
-    -- 3. Connecting L¹ convergence to integral equality
-    -- Each step is standard but involves significant bookkeeping
-
-    sorry -- Identity case: requires U-statistic expansion + collision bound
+    sorry -- Identity case: U-statistic expansion (see proof outline above)
 
 /-- **Main packaging theorem for L² proof.**
 
@@ -1490,7 +1457,7 @@ theorem directing_measure_satisfies_requirements
   · exact directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
   -- Property 2: ω ↦ ν(ω)(s) is measurable for measurable s
   · intro s hs
-    exact directing_measure_measurable X hX_contract hX_meas hX_L2 s
+    exact directing_measure_measurable X hX_contract hX_meas hX_L2 s hs
   -- Property 3: Bridge property (requires injectivity of k)
   · intro m k hk_inj B hB
     exact directing_measure_bridge X hX_contract hX_meas hX_L2 k hk_inj B hB
