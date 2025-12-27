@@ -17,7 +17,6 @@ import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.MeasureTheory.Integral.SetIntegral
 import Mathlib.Analysis.InnerProductSpace.MeanErgodic
-import Canonical
 
 /-!
 # Cesàro Convergence via L² Bounds

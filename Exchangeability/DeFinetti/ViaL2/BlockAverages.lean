@@ -29,7 +29,6 @@ import Mathlib.Probability.Kernel.Condexp
 import Mathlib.Probability.Kernel.Disintegration.CondCDF
 import Mathlib.Probability.CDF
 import Mathlib.Algebra.Order.Group.MinMax
-import Canonical
 
 /-!
 # de Finetti's Theorem via L² Contractability

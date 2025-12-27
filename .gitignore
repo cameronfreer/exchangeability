@@ -12,6 +12,13 @@ lake-manifest.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+# Test scratch files
+test_*.lean
 # Claude Code editor files
 .claude/
 
