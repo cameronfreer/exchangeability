@@ -447,37 +447,58 @@ lemma directing_measure_integral
         = ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
     intro t
-    -- TODO: Prove alphaIic t ω = ∫ 1_{Iic t} dν(ω) a.e.
+    -- The proof uses three key identities:
+    -- 1. ∫ 1_{Iic t} dν = ν.real (Iic t) = (ν (Iic t)).toReal  [integral_indicator_one]
+    -- 2. directing_measure ω (Iic t) = ofReal (F_ω t) where F_ω is the Stieltjes CDF
+    --    [measure_stieltjesOfMeasurableRat_Iic]
+    -- 3. F_ω t = alphaIic t ω a.e. (Stieltjes extension agrees with alphaIic)
     --
-    -- PROOF STRATEGY (3 steps):
-    --
-    -- STEP 1: Integral of indicator equals measure
-    -- For any measure ν and measurable set S:
-    --   ∫ 1_S dν = ν(S)
-    -- This is a fundamental property: MeasureTheory.integral_indicator_one
-    -- Applied here:
-    --   ∫ 1_{Iic t} d(directing_measure ω) = directing_measure ω (Iic t)
-    --
-    -- STEP 2: Directing measure value equals CDF
-    -- By construction of directing_measure via Measure.ofCDF:
-    --   directing_measure ω (Iic t) = cdf_from_alpha ω t
-    -- This follows from the definition of Measure.ofCDF applied to the
-    -- Stieltjes function cdf_from_alpha ω.
-    -- Required lemma: Measure.ofCDF_of_Iic or similar
-    --
-    -- STEP 3: alphaIic approximates cdf_from_alpha
-    -- By definition, alphaIic t ω is constructed as:
-    --   alphaIic t ω = inf { cdf_from_alpha ω q | q ∈ ℚ, q ≥ t }
-    -- For right-continuous CDFs (which cdf_from_alpha is), we have:
-    --   F(t) = inf { F(q) | q ∈ ℚ, q > t } = lim_{q↓t, q∈ℚ} F(q)
-    -- This gives alphaIic t ω = cdf_from_alpha ω t.
-    --
-    -- REQUIRED MATHLIB LEMMAS:
-    -- - MeasureTheory.integral_indicator_one: ∫ 1_S dν = ν(S)
-    -- - StieltjesFunction.measure_Iic: ν(Iic t) = F(t) for Stieltjes measure
-    -- - Filter.tendsto_atTop_ciInf: infimum over rationals equals limit
-    -- - Right-continuity property of CDFs
-    sorry
+    -- Combined: ∫ 1_{Iic t} dν(ω) = (ofReal (F_ω t)).toReal = F_ω t = alphaIic t ω (a.e.)
+
+    -- Step 1: Simplify the integral using integral_indicator_one
+    have h_integral_eq : ∀ ω, ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+        (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal := by
+      intro ω
+      -- (fun _ => 1) = 1 for indicator purposes
+      have h_eq : (Set.Iic t).indicator (fun _ : ℝ => (1 : ℝ)) = (Set.Iic t).indicator 1 := rfl
+      rw [h_eq, integral_indicator_one measurableSet_Iic, Measure.real_def]
+
+    -- Step 2: The directing measure value on Iic t equals F_ω t (Stieltjes CDF)
+    -- This follows from measure_stieltjesOfMeasurableRat_Iic
+    have h_meas_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal =
+        (ProbabilityTheory.stieltjesOfMeasurableRat
+          (alphaIicRat X hX_contract hX_meas hX_L2)
+          (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
+      intro ω
+      unfold directing_measure
+      rw [ProbabilityTheory.measure_stieltjesOfMeasurableRat_Iic]
+      -- ofReal applied to a nonneg value, then toReal gives back the value
+      have h_nonneg : 0 ≤ (ProbabilityTheory.stieltjesOfMeasurableRat
+            (alphaIicRat X hX_contract hX_meas hX_L2)
+            (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t :=
+        ProbabilityTheory.stieltjesOfMeasurableRat_nonneg _ _ _
+      exact ENNReal.toReal_ofReal h_nonneg
+
+    -- Step 3: The Stieltjes extension equals alphaIic a.e.
+    -- This is the key technical step: stieltjesOfMeasurableRat agrees with alphaIicRat
+    -- at rational points, and both are right-continuous, so they agree everywhere.
+    have h_stieltjes_eq : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω =
+        (ProbabilityTheory.stieltjesOfMeasurableRat
+          (alphaIicRat X hX_contract hX_meas hX_L2)
+          (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
+      -- TODO: This requires showing that the Stieltjes extension of alphaIicRat
+      -- (which is defined at rationals) agrees with alphaIic (defined at all reals).
+      -- Key properties:
+      -- - alphaIicRat ω q = alphaIic (q : ℝ) ω for rational q
+      -- - Both functions are right-continuous in the real parameter
+      -- - stieltjesOfMeasurableRat is the right-continuous extension from rationals
+      -- - At Stieltjes points (a.e.), the extension equals the input at rationals
+      sorry
+
+    -- Combine the three steps
+    filter_upwards [h_stieltjes_eq] with ω hω
+    rw [h_integral_eq ω, h_meas_eq ω, ← hω]
 
   -- TODO: Complete monotone class argument
   --
