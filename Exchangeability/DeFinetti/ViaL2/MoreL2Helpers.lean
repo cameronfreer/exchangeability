@@ -488,26 +488,77 @@ lemma directing_measure_integral
         (ProbabilityTheory.stieltjesOfMeasurableRat
           (alphaIicRat X hX_contract hX_meas hX_L2)
           (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
-      -- PROOF SUMMARY:
-      -- stieltjesOfMeasurableRat is the right-continuous CDF extension from rationals.
-      -- alphaIic =ᵐ alphaIicCE (by alphaIic_ae_eq_alphaIicCE).
-      -- alphaIicCE is monotone in t (by alphaIicCE_mono) and bounded in [0,1].
+      -- PROOF STRATEGY:
+      -- The Stieltjes function at t is defined as ⨅ r > t (r ∈ ℚ), toRatCDF alphaIicRat ω r.
+      -- At Stieltjes points (where IsRatStieltjesPoint holds), toRatCDF = alphaIicRat.
+      -- We need to show that for a.e. ω, this infimum equals alphaIic t ω.
       --
-      -- The Stieltjes function at t equals ⨅ r > t (r ∈ ℚ), alphaIicRat ω r (by iInf_rat_gt_eq).
-      -- At Stieltjes points (a.e.): toRatCDF = alphaIicRat = alphaIic =ᵐ alphaIicCE.
-      -- For monotone bounded functions: ⨅ r > t, F(r) = F(t) (right-continuity).
+      -- KEY STEPS:
+      -- 1. For a.e. ω, alphaIic is monotone nondecreasing in t (from alphaIicCE_mono)
+      -- 2. For a.e. ω, alphaIic q ω satisfies IsRatStieltjesPoint conditions on rationals
+      -- 3. At such ω, the Stieltjes extension agrees with the original function
       --
-      -- Full proof requires establishing:
-      -- 1. alphaIicRat ω is a Stieltjes point a.e. (monotone, limits 0/1, right-continuous)
-      -- 2. At Stieltjes points: stieltjesOfMeasurableRat = infimum of alphaIicRat
-      -- 3. Monotone + bounded ⇒ infimum = value (right limit equals value)
+      -- Since this is a deep result about conditional CDFs being right-continuous a.e.,
+      -- we defer to the standard theory: stieltjesOfMeasurableRat handles the null set
+      -- where pointwise properties fail by replacing with defaultRatCDF.
       --
-      -- INFRASTRUCTURE:
-      -- - alphaIic_ae_eq_alphaIicCE: alphaIic t =ᵐ alphaIicCE t
-      -- - alphaIicCE_mono: alphaIicCE is monotone a.e.
-      -- - alphaIic_ae_tendsto_zero_at_bot, alphaIic_ae_tendsto_one_at_top: endpoint limits
-      -- - StieltjesFunction.iInf_rat_gt_eq: CDF infimum characterization
-      -- - ProbabilityTheory.stieltjesOfMeasurableRat_eq: value at rationals
+      -- For the main theorem, what matters is that the integral identity holds a.e.,
+      -- which follows from the construction. The detailed proof uses:
+      -- - Countable intersection of a.e. monotonicity (alphaIicCE_mono)
+      -- - Monotone convergence for conditional expectations at rationals
+      -- - The fact that ℚ is countable, so properties holding a.e. for each q ∈ ℚ
+      --   hold simultaneously for all q ∈ ℚ for a.e. ω
+
+      -- PROOF STRUCTURE:
+      -- 1. alphaIic t =ᵐ alphaIicCE t (by alphaIic_ae_eq_alphaIicCE)
+      -- 2. alphaIicCE is monotone (by alphaIicCE_mono)
+      -- 3. For a.e. ω, alphaIicRat ω is an IsRatStieltjesPoint:
+      --    a. Monotone: from alphaIicCE_mono + countable intersection over ℚ×ℚ
+      --    b. Limits at ±∞: from dominated convergence for condExp (indicator → 0 or 1)
+      --    c. Right-continuity at rationals (iInf_rat_gt_eq): from monotone convergence
+      -- 4. At Stieltjes points: stieltjesOfMeasurableRat = infimum of alphaIicRat
+      -- 5. The infimum equals alphaIicCE t (by right-continuity of conditional CDF)
+      -- 6. alphaIicCE t = alphaIic t a.e. (by identification lemma)
+      --
+      -- KEY TOOLS:
+      -- - condExp_mono: μ[f|m] ≤ᵐ μ[g|m] when f ≤ᵐ g (Mathlib)
+      -- - condExp_nonneg: 0 ≤ᵐ μ[f|m] when 0 ≤ᵐ f (Mathlib)
+      -- - alphaIic_ae_eq_alphaIicCE: identification lemma (MainConvergence.lean)
+      -- - alphaIicCE_mono: monotonicity a.e. (MainConvergence.lean)
+      --
+      -- For the a.e. result, we use that alphaIic bounds imply the function is a CDF a.e.
+      have h_bdd := alphaIic_bound X hX_contract hX_meas hX_L2
+
+      -- The key is that stieltjesOfMeasurableRat takes the infimum over rationals > t
+      -- For a monotone bounded function, this infimum equals the right limit
+      -- For a.e. ω, alphaIic is right-continuous (as a conditional CDF)
+
+      -- CONCRETE STEPS TO IMPLEMENT:
+      -- Step A: Show for a.e. ω, alphaIicRat ω is monotone on ℚ
+      --   Use alphaIicCE_mono with countable intersection over ℚ×ℚ pairs (q₁, q₂) with q₁ ≤ q₂
+      --
+      -- Step B: Show for a.e. ω, Tendsto (alphaIicRat ω) atBot (𝓝 0)
+      --   As q → -∞, indicator 1_{X₀ ≤ q} → 0 pointwise
+      --   By dominated convergence for condExp: μ[1_{X₀ ≤ q}|tailσ] → 0 a.e.
+      --   Take countable intersection over q_n → -∞
+      --
+      -- Step C: Show for a.e. ω, Tendsto (alphaIicRat ω) atTop (𝓝 1)
+      --   Similar to Step B with q → +∞
+      --
+      -- Step D: Show for a.e. ω, ∀ q : ℚ, ⨅ r > q, alphaIicRat ω r = alphaIicRat ω q
+      --   For each q, consider sequence r_n = q + 1/n
+      --   Indicator 1_{X₀ ≤ r_n} ↓ 1_{X₀ ≤ q} pointwise
+      --   By monotone convergence for condExp: μ[1_{X₀ ≤ r_n}|tailσ] ↓ μ[1_{X₀ ≤ q}|tailσ] a.e.
+      --   Take countable intersection over all q ∈ ℚ
+      --
+      -- Step E: Combine A-D to get IsRatStieltjesPoint alphaIicRat ω for a.e. ω
+      --   At such ω: toRatCDF alphaIicRat ω = alphaIicRat ω
+      --   Hence stieltjesOfMeasurableRat ... ω t = ⨅ r > t, alphaIic r ω
+      --
+      -- Step F: Show this infimum equals alphaIic t ω a.e.
+      --   Use alphaIic_ae_eq_alphaIicCE for t and all rationals r > t
+      --   Right-continuity of alphaIicCE gives ⨅ r > t, alphaIicCE r ω = alphaIicCE t ω
+      --   Conclude by a.e. equality chain
       sorry
 
     -- Combine the three steps
