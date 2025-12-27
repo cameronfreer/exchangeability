@@ -12,18 +12,20 @@ This project formalizes the **de Finetti-Ryll-Nardzewski theorem** (Kallenberg's
 
 We implement **all three proofs** from Kallenberg (2005) of the key implication **contractable → conditionally i.i.d.**:
 
-1. **L² Approach** (Kallenberg's "second proof") - Elementary L² contractability bounds
-   - ✅ **Lightest dependencies** (no ergodic theory required)
-   - ✅ Default proof in the public API
+1. **Martingale Approach** ✅ **COMPLETE** (Default)
+   - Kallenberg's "third proof" (after Aldous)
+   - Elegant probabilistic argument using reverse martingales
+   - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
+
+2. **L² Approach** (10 sorries remaining)
+   - Kallenberg's "second proof" - Elementary L² contractability bounds
+   - Lightest dependencies (no ergodic theory required)
    - File: [`Exchangeability/DeFinetti/ViaL2.lean`](Exchangeability/DeFinetti/ViaL2.lean)
 
-2. **Koopman Approach** (Kallenberg's "first proof") - Mean Ergodic Theorem
+3. **Koopman Approach** (10 sorries + 1 axiom)
+   - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
    - File: [`Exchangeability/DeFinetti/ViaKoopman.lean`](Exchangeability/DeFinetti/ViaKoopman.lean)
-
-3. **Martingale Approach** (Kallenberg's "third proof", after Aldous) - Reverse martingales
-   - Elegant probabilistic argument
-   - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
 
 ## Quick Start
 
@@ -49,7 +51,7 @@ lake build
 ```lean
 import Exchangeability
 
--- de Finetti's theorem (uses L² proof by default)
+-- de Finetti's theorem (uses martingale proof by default)
 example {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α]
     [MeasurableSpace α] [BorelSpace α]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -67,25 +69,30 @@ Exchangeability/
 ├── Contractability.lean         # Contractability ↔ exchangeability
 ├── ConditionallyIID.lean        # Conditionally i.i.d. sequences
 ├── Probability/                 # Probability infrastructure
-│   ├── InfiniteProduct.lean
-│   └── CondExp.lean
+│   ├── CondExp.lean            # Conditional expectation
+│   ├── CondIndep/              # Conditional independence
+│   ├── Martingale/             # Martingale convergence
+│   └── ...
 ├── DeFinetti/                   # Three proofs of de Finetti
-│   ├── Theorem.lean            # Public API (standard theorem)
-│   ├── ViaL2.lean              # L² proof (default)
+│   ├── Theorem.lean            # Public API (exports ViaMartingale)
+│   ├── ViaMartingale.lean      # Martingale proof ✅
+│   ├── ViaL2.lean              # L² proof
 │   ├── ViaKoopman.lean         # Ergodic proof
-│   ├── ViaMartingale.lean      # Martingale proof
-│   ├── L2Approach.lean         # L² contractability lemmas
 │   ├── CommonEnding.lean       # Shared final step
-│   ├── InvariantSigma.lean     # Shift-invariant σ-algebras
-│   └── ProjectionLemmas.lean   # Orthogonal projection tools
-└── Ergodic/
-    └── KoopmanMeanErgodic.lean # Mean Ergodic Theorem
+│   └── L2Helpers.lean          # L² contractability lemmas
+├── Ergodic/                     # Ergodic theory (for Koopman)
+│   ├── KoopmanMeanErgodic.lean
+│   ├── InvariantSigma.lean
+│   └── ProjectionLemmas.lean
+├── Tail/                        # Tail σ-algebra machinery
+├── PathSpace/                   # Shift operators, cylinders
+└── Util/                        # Helper lemmas
 ```
 
 ## Documentation
 
-- **Blueprint**: [`blueprint/`](blueprint/) - Mathematical blueprint for the formalization
-- **Work Plans**: [`WorkPlans/`](WorkPlans/) - Development notes and progress reports
+- **Blueprint**: [`blueprint/`](blueprint/) - Mathematical blueprint
+- **Work Plans**: [`WorkPlans/`](WorkPlans/) - Development notes and roadmaps
 
 ## Main Results
 
@@ -126,7 +133,7 @@ This is an active research project. See [`WorkPlans/`](WorkPlans/) for current t
 ## Acknowledgments
 
 This formalization was developed with assistance from:
-- **Claude Sonnet 4.5**
-- **GPT-5-Codex**
+- **Claude** (Anthropic) - Sonnet 4, Sonnet 4.5, Opus 4.5
+- **GPT** (OpenAI) - GPT-5.*-Codex, GPT-5.* Pro
 
 Built with [Lean 4](https://leanprover.github.io/) and [Mathlib](https://github.com/leanprover-community/mathlib4).
