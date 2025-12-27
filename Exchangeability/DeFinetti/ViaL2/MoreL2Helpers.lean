@@ -10,6 +10,7 @@ import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.Data.Finset.Sort
+import Mathlib.Analysis.SpecialFunctions.Choose
 
 /-!
 # Additional L² Helpers and Incomplete Lemmas
@@ -487,13 +488,26 @@ lemma directing_measure_integral
         (ProbabilityTheory.stieltjesOfMeasurableRat
           (alphaIicRat X hX_contract hX_meas hX_L2)
           (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
-      -- TODO: This requires showing that the Stieltjes extension of alphaIicRat
-      -- (which is defined at rationals) agrees with alphaIic (defined at all reals).
-      -- Key properties:
-      -- - alphaIicRat ω q = alphaIic (q : ℝ) ω for rational q
-      -- - Both functions are right-continuous in the real parameter
-      -- - stieltjesOfMeasurableRat is the right-continuous extension from rationals
-      -- - At Stieltjes points (a.e.), the extension equals the input at rationals
+      -- PROOF SUMMARY:
+      -- stieltjesOfMeasurableRat is the right-continuous CDF extension from rationals.
+      -- alphaIic =ᵐ alphaIicCE (by alphaIic_ae_eq_alphaIicCE).
+      -- alphaIicCE is monotone in t (by alphaIicCE_mono) and bounded in [0,1].
+      --
+      -- The Stieltjes function at t equals ⨅ r > t (r ∈ ℚ), alphaIicRat ω r (by iInf_rat_gt_eq).
+      -- At Stieltjes points (a.e.): toRatCDF = alphaIicRat = alphaIic =ᵐ alphaIicCE.
+      -- For monotone bounded functions: ⨅ r > t, F(r) = F(t) (right-continuity).
+      --
+      -- Full proof requires establishing:
+      -- 1. alphaIicRat ω is a Stieltjes point a.e. (monotone, limits 0/1, right-continuous)
+      -- 2. At Stieltjes points: stieltjesOfMeasurableRat = infimum of alphaIicRat
+      -- 3. Monotone + bounded ⇒ infimum = value (right limit equals value)
+      --
+      -- INFRASTRUCTURE:
+      -- - alphaIic_ae_eq_alphaIicCE: alphaIic t =ᵐ alphaIicCE t
+      -- - alphaIicCE_mono: alphaIicCE is monotone a.e.
+      -- - alphaIic_ae_tendsto_zero_at_bot, alphaIic_ae_tendsto_one_at_top: endpoint limits
+      -- - StieltjesFunction.iInf_rat_gt_eq: CDF infimum characterization
+      -- - ProbabilityTheory.stieltjesOfMeasurableRat_eq: value at rationals
       sorry
 
     -- Combine the three steps
@@ -537,9 +551,20 @@ lemma directing_measure_integral
   --
   -- REQUIRED MATHLIB LEMMAS:
   -- - MeasureTheory.integral_add, integral_const_mul: integral linearity
-  -- - MeasureTheory.tendsto_integral_of_monotone_convergence
-  -- - IsPiSystem.of_measurableSet_indicators: half-lines form π-system
-  -- - MonotoneClass theorem (may need to prove variant or use existing API)
+  -- - MeasureTheory.tendsto_integral_of_dominated_of_ae_tendsto: monotone limit interchange
+  -- - SimpleFunc.approxOn, SimpleFunc.tendsto_approxOn: approximate f with simple functions
+  -- - MeasurableSpace.induction_on_inter: π-λ theorem for measurable sets
+  --
+  -- PROOF SKETCH FOR FUNCTION MONOTONE CLASS:
+  -- 1. Use SimpleFunc.approxOn to approximate f with simple functions f_n
+  -- 2. Each simple function is a finite linear combination of indicators
+  -- 3. Indicators of measurable sets are limits of indicators of π-system sets
+  --    (via induction_on_inter / π-λ theorem)
+  -- 4. By linearity (step 4) and bounded convergence (step 5), the property passes
+  --    from half-line indicators to all bounded measurable functions
+  --
+  -- Note: The base case (line 511) establishes the property for half-line indicators.
+  -- The extension to general bounded measurable f follows the standard machinery.
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
@@ -1474,7 +1499,33 @@ lemma directing_measure_bridge
     -- Each step is standard but involves significant bookkeeping.
     -- The mathematical content is validated by the infrastructure lemmas above.
 
-    sorry -- Identity case: U-statistic expansion (see proof outline above)
+    -- IDENTITY CASE: U-statistic expansion
+    --
+    -- Goal: ∫⁻ ∏_j 1_{B'_j}(X_{k'_j}) dμ = ∫⁻ ∏_j ν(·)(B'_j) dμ
+    --
+    -- PROOF STRUCTURE:
+    -- 1. Use h_map_eq (contractability) to reduce LHS: ∫⁻ f(X_{k'}) dμ = ∫⁻ f(X_id) dμ
+    -- 2. The identity case ∫⁻ ∏_j 1_{B'_j}(X_j) dμ = ∫⁻ ∏_j ν(·)(B'_j) dμ follows from:
+    --    a. E[q N] → E[∏_i I i i] via U-stat expansion + collision bound
+    --    b. E[q N] → E[∏_i α_funcs i] via prod_tendsto_L1_of_L1_tendsto
+    --    c. By uniqueness of limits: E[∏_i I i i] = E[∏_i α_funcs i]
+    --    d. By a.e. equality (h_coord_conv): E[∏_i α_funcs i] = E[r]
+    -- 3. Convert between ENNReal lintegrals and Real integrals
+    --
+    -- INFRASTRUCTURE AVAILABLE (all built above):
+    -- - I, p, q, r: indicator functions and empirical/limit products
+    -- - h_coord_conv: L¹ convergence and a.e. equality for each coordinate
+    -- - nonInjective_fraction_tendsto_zero (line 1029): collision bound → 0
+    -- - prod_tendsto_L1_of_L1_tendsto (line 1155): product of L¹ limits
+    -- - Contractable.allStrictMono_eq: contractability equality of measures
+    -- - isEquivalent_descFactorial: falling factorial asymptotics N!/(N-m)! ~ N^m
+    --
+    -- The full implementation requires careful bookkeeping of:
+    -- - Index shifts (p uses indices 1..N+1 to match directing_measure_integral)
+    -- - Finset.prod_univ_sum for expanding products of sums
+    -- - Finset.sum_filter_add_sum_filter_not for splitting by injectivity
+    -- - Real ↔ ENNReal conversions via ofReal_integral_eq_lintegral_ofReal
+    sorry
 
 /-- **Main packaging theorem for L² proof.**
 
