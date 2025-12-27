@@ -117,21 +117,20 @@ theorem l2_contractability_bound ...
 
 ---
 
-## Shared Infrastructure Sorries (Not Blocking)
+## Extra Files (Not on Critical Path)
 
-### `CondIndepHelpers.lean` (4 sorries)
-Lines: 85, 120, 154, 207
-
-### `Tail/ShiftInvariance.lean` (1 sorry)
-Line 1327 - Blocked by circular import
-
-### `ContractableVsExchangeable.lean` (2 sorries)
+### `ContractableVsExchangeable_Extras.lean` (2 sorries)
 Lines: 106, 234
+Pedagogical documentation of contractable↔exchangeable relationship.
 
 ### `ViaKoopman/Infrastructure.lean` (1 sorry)
-Line 492
+Line 492 - Supporting infrastructure for ViaKoopman.
 
-**Note:** These files are not imported by ViaMartingale.
+**Deleted:**
+- ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
+
+**Reclassified:**
+- `Tail/ShiftInvariance.lean` - Now counted under ViaL2 (imported by BlockAverages and CesaroConvergence).
 
 ---
 
@@ -154,6 +153,6 @@ grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
 
 ## Priority for Further Work
 
-1. **ViaL2** - 4 infrastructure sorries, core done
-2. **ViaKoopman** - 12 sorries but ergodic infrastructure complete
-3. **Shared helpers** - Not blocking any theorem
+1. **ViaL2** - 7 sorries (4 in ViaL2/*, 3 in Tail/ShiftInvariance), core L² bound done
+2. **ViaKoopman** - 15 sorries + 1 admit, ergodic infrastructure complete
+3. **Extras** - 2 sorries in pedagogical content, not blocking
