@@ -533,33 +533,92 @@ lemma directing_measure_integral
       -- For a monotone bounded function, this infimum equals the right limit
       -- For a.e. ω, alphaIic is right-continuous (as a conditional CDF)
 
-      -- CONCRETE STEPS TO IMPLEMENT:
-      -- Step A: Show for a.e. ω, alphaIicRat ω is monotone on ℚ
-      --   Use alphaIicCE_mono with countable intersection over ℚ×ℚ pairs (q₁, q₂) with q₁ ≤ q₂
+      -- ═══════════════════════════════════════════════════════════════════════════════
+      -- IMPLEMENTATION: Show alphaIicRat ω is an IsRatStieltjesPoint for a.e. ω
+      -- ═══════════════════════════════════════════════════════════════════════════════
+
+      -- Step A: alphaIic = alphaIicCE a.e. at all rationals (countable intersection)
+      have h_ae_eq_rat : ∀ᵐ ω ∂μ, ∀ q : ℚ,
+          alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω =
+          alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+        rw [ae_all_iff]
+        intro q
+        exact alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ)
+
+      -- Step B: Monotonicity on ℚ (from alphaIicCE_mono + countable intersection)
+      have h_mono_rat : ∀ᵐ ω ∂μ, ∀ q₁ q₂ : ℚ, q₁ ≤ q₂ →
+          alphaIicRat X hX_contract hX_meas hX_L2 ω q₁ ≤
+          alphaIicRat X hX_contract hX_meas hX_L2 ω q₂ := by
+        -- Countable intersection over all pairs (q₁, q₂) with q₁ ≤ q₂
+        have h_pairs : ∀ q₁ q₂ : ℚ, q₁ ≤ q₂ → ∀ᵐ ω ∂μ,
+            alphaIicCE X hX_contract hX_meas hX_L2 (q₁ : ℝ) ω ≤
+            alphaIicCE X hX_contract hX_meas hX_L2 (q₂ : ℝ) ω := by
+          intro q₁ q₂ hq
+          exact alphaIicCE_mono X hX_contract hX_meas hX_L2 (q₁ : ℝ) (q₂ : ℝ) (by exact_mod_cast hq)
+        -- Take countable intersection
+        rw [ae_all_iff]; intro q₁
+        rw [ae_all_iff]; intro q₂
+        by_cases hq : q₁ ≤ q₂
+        · filter_upwards [h_ae_eq_rat, h_pairs q₁ q₂ hq] with ω h_eq h_le _
+          simp only [alphaIicRat]
+          rw [h_eq q₁, h_eq q₂]
+          exact h_le
+        · filter_upwards with ω hq'
+          exact absurd hq' hq
+
+      -- Step C: Limit 0 at -∞ (from alphaIic_ae_tendsto_zero_at_bot)
+      -- PROOF STRATEGY:
+      -- 1. Use tendsto_atBot_ciInf: for monotone f with bdd below range, lim = inf
+      -- 2. Show inf = 0: bounded below by 0, and alphaIicRat(-(n:ℤ)) → 0
       --
-      -- Step B: Show for a.e. ω, Tendsto (alphaIicRat ω) atBot (𝓝 0)
-      --   As q → -∞, indicator 1_{X₀ ≤ q} → 0 pointwise
-      --   By dominated convergence for condExp: μ[1_{X₀ ≤ q}|tailσ] → 0 a.e.
-      --   Take countable intersection over q_n → -∞
+      -- KEY FACTS:
+      -- - alphaIicRat(-(n:ℤ):ℚ) = alphaIic(-(n:ℝ)) by definition
+      -- - h_int_lim: alphaIic(-(n:ℝ)) → 0 as n → ∞
+      -- - h_mono: alphaIicRat is monotone
+      -- - h_bdd: 0 ≤ alphaIicRat ≤ 1
       --
-      -- Step C: Show for a.e. ω, Tendsto (alphaIicRat ω) atTop (𝓝 1)
-      --   Similar to Step B with q → +∞
-      --
-      -- Step D: Show for a.e. ω, ∀ q : ℚ, ⨅ r > q, alphaIicRat ω r = alphaIicRat ω q
-      --   For each q, consider sequence r_n = q + 1/n
-      --   Indicator 1_{X₀ ≤ r_n} ↓ 1_{X₀ ≤ q} pointwise
-      --   By monotone convergence for condExp: μ[1_{X₀ ≤ r_n}|tailσ] ↓ μ[1_{X₀ ≤ q}|tailσ] a.e.
-      --   Take countable intersection over all q ∈ ℚ
-      --
-      -- Step E: Combine A-D to get IsRatStieltjesPoint alphaIicRat ω for a.e. ω
-      --   At such ω: toRatCDF alphaIicRat ω = alphaIicRat ω
-      --   Hence stieltjesOfMeasurableRat ... ω t = ⨅ r > t, alphaIic r ω
-      --
-      -- Step F: Show this infimum equals alphaIic t ω a.e.
-      --   Use alphaIic_ae_eq_alphaIicCE for t and all rationals r > t
-      --   Right-continuity of alphaIicCE gives ⨅ r > t, alphaIicCE r ω = alphaIicCE t ω
-      --   Conclude by a.e. equality chain
-      sorry
+      -- MATHLIB: tendsto_atBot_ciInf, csInf_eq_bot_iff, or squeeze argument
+      have h_tendsto_bot : ∀ᵐ ω ∂μ, Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) := by
+        filter_upwards [h_mono_rat, alphaIic_ae_tendsto_zero_at_bot X hX_contract hX_meas hX_L2,
+                        h_ae_eq_rat] with ω h_mono h_int_lim _
+        -- Bounded below by 0, so limit at atBot exists and equals infimum
+        -- alphaIicRat(-(n:ℤ)) → 0 implies infimum = 0
+        sorry  -- Use tendsto_atBot_ciInf h_mono ⟨0, ...⟩ then show ⨅ = 0
+
+      -- Step D: Limit 1 at +∞ (symmetric to Step C)
+      -- PROOF STRATEGY: Use tendsto_atTop_ciSup, show sup = 1
+      have h_tendsto_top : ∀ᵐ ω ∂μ, Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1) := by
+        filter_upwards [h_mono_rat, alphaIic_ae_tendsto_one_at_top X hX_contract hX_meas hX_L2,
+                        h_ae_eq_rat] with ω h_mono h_int_lim _
+        -- Bounded above by 1, limit at atTop exists and equals supremum
+        -- alphaIicRat(n:ℤ) → 1 implies supremum = 1
+        sorry  -- Use tendsto_atTop_ciSup h_mono ⟨1, ...⟩ then show ⨆ = 1
+
+      -- Step E: Right-continuity at each rational (⨅ r > q, f r = f q)
+      -- PROOF STRATEGY: alphaIicCE is right-continuous as conditional CDF
+      -- Use Monotone.tendsto_nhdsGT: lim_{r→q+} f(r) = inf_{r>q} f(r)
+      -- For conditional CDFs, this infimum equals f(q) a.e.
+      have h_right_cont : ∀ᵐ ω ∂μ, ∀ q : ℚ,
+          ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r =
+          alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
+        -- Right-continuity is standard for conditional CDFs
+        -- See: Mathlib/Probability/Kernel/Disintegration/MeasurableStieltjes.lean
+        sorry  -- alphaIicCE right-continuity transfers to alphaIic a.e.
+
+      -- Step F: Combine to show IsRatStieltjesPoint a.e.
+      have h_is_stieltjes : ∀ᵐ ω ∂μ, ProbabilityTheory.IsRatStieltjesPoint
+          (alphaIicRat X hX_contract hX_meas hX_L2) ω := by
+        filter_upwards [h_mono_rat, h_tendsto_bot, h_tendsto_top, h_right_cont]
+          with ω h_mono h_bot h_top h_rc
+        -- Constructor order: mono, atTop_one, atBot_zero, iInf_rat_gt_eq
+        exact ⟨h_mono, h_top, h_bot, h_rc⟩
+
+      -- Step G: At IsRatStieltjesPoint, stieltjes = infimum = alphaIic
+      filter_upwards [h_is_stieltjes, h_ae_eq_rat] with ω h_sp h_eq
+      -- stieltjesOfMeasurableRat uses toRatCDF which equals original at Stieltjes points
+      have h_toRatCDF := ProbabilityTheory.toRatCDF_of_isRatStieltjesPoint h_sp
+      -- For right-continuous function, infimum over r > t equals value at t
+      sorry  -- Final: stieltjesOfMeasurableRat.toFun = infimum = alphaIic t
 
     -- Combine the three steps
     filter_upwards [h_stieltjes_eq] with ω hω
