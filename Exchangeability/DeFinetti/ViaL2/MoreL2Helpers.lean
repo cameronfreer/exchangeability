@@ -688,26 +688,37 @@ lemma directing_measure_integral
         -- right-continuity from the conditional expectation structure.
         rw [ae_all_iff]
         intro q
-        filter_upwards [h_mono_rat, h_ae_eq_rat] with ω h_mono h_eq
-        -- STRATEGY: Show ⨅_{r > q} alphaIicRat(r) = alphaIicRat(q)
-        -- This is right-continuity of conditional CDFs, which holds a.e.
-        --
-        -- PROOF APPROACH (to be implemented):
-        -- 1. For r_n = q + 1/(n+1): indIic(r_n) ↘ indIic(q) pointwise
-        -- 2. By dominated convergence: E[indIic(r_n) ∘ X_0 | G] → E[indIic(q) ∘ X_0 | G] in L¹
-        -- 3. Monotone L¹-convergent sequences converge a.e.
-        -- 4. At ω where h_eq holds: alphaIicRat = alphaIicCE at rationals
-        -- 5. So ⨅_{r>q} alphaIicRat(r) = lim alphaIicRat(r_n) = alphaIicRat(q)
-        --
+        -- For this fixed q, we need a.e. right-continuity of alphaIicCE at q
+        -- This follows from dominated convergence for conditional expectations:
+        -- - indIic(q + 1/n) ↘ indIic(q) pointwise
+        -- - By dominated convergence: E[indIic(q + 1/n) | G] → E[indIic(q) | G] in L¹
+        -- - Monotone L¹-convergent sequences converge a.e.
+        have h_CE_right_cont_q : ∀ᵐ ω ∂μ,
+            ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
+            alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+          -- TODO: Prove using tendsto_condExpL1_of_dominated_convergence
+          -- + monotone L¹ convergence implies a.e. convergence
+          sorry -- A.e. right-continuity via dominated convergence
+        -- Add right-continuity to filter_upwards
+        filter_upwards [h_mono_rat, h_ae_eq_rat, h_CE_right_cont_q] with ω h_mono h_eq h_rc_CE
         -- Lower bound by monotonicity
         have h_le : alphaIicRat X hX_contract hX_meas hX_L2 ω q ≤
             ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r := by
           apply le_ciInf; intro ⟨r, hr⟩; simp only [alphaIicRat]
           exact h_mono q r (le_of_lt hr)
-        -- Upper bound: right-continuity from condexp dominated convergence
+        -- Upper bound: use h_rc_CE and h_eq to transfer to alphaIicRat
         have h_ge : ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r ≤
             alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
-          sorry -- Right-continuity from condexp dominated convergence
+          -- h_rc_CE: ⨅_{r > q} alphaIicCE(r) = alphaIicCE(q)
+          -- h_eq: alphaIic(r) = alphaIicCE(r) for all r ∈ ℚ
+          -- alphaIicRat is defined as alphaIic on ℚ
+          -- First show the infimums are equal
+          have h_inf_eq : ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r =
+              ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r.val : ℝ) ω := by
+            apply iInf_congr; intro ⟨r, hr⟩
+            simp only [alphaIicRat, Subtype.coe_mk]; exact h_eq r
+          rw [h_inf_eq, h_rc_CE]
+          simp only [alphaIicRat]; exact (h_eq q).symm.le
         exact le_antisymm h_ge h_le
 
       -- Step F: Combine to show IsRatStieltjesPoint a.e.
