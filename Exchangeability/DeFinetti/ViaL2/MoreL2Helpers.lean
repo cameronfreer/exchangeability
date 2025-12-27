@@ -1202,9 +1202,10 @@ lemma directing_measure_bridge
     let I : Fin (n + 1) → ℕ → Ω → ℝ := fun i j ω =>
       (B' i).indicator (fun _ => (1 : ℝ)) (X j ω)
 
-    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i j ω
+    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i (j+1) ω
+    -- Uses indices 1, 2, ..., N+1 to match directing_measure_integral (n=0, m=N+1)
     let p : ℕ → Fin (n + 1) → Ω → ℝ := fun N i ω =>
-      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i j.val ω
+      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i (j.val + 1) ω
 
     -- Product of empirical frequencies
     let q : ℕ → Ω → ℝ := fun N ω => ∏ i : Fin (n + 1), p N i ω
@@ -1237,10 +1238,11 @@ lemma directing_measure_bridge
 
     -- For each i, get L¹ limit and identification with directing measure
     -- The limit α_i satisfies: p N i → α_i in L¹, and α_i = ν(·)(B' i) a.e.
+    -- Note: We use indices (k.val + 1) to match our definition of p which uses indices 1, 2, ..., m
     have h_coord_conv : ∀ i : Fin (n + 1),
         ∃ α_i : Ω → ℝ, Measurable α_i ∧ MemLp α_i 1 μ ∧
-          (∀ (N : ℕ), ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
-            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i k.val ω - α_i ω| ∂μ < ε) ∧
+          (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i (k.val + 1) ω - α_i ω| ∂μ < ε) ∧
           (∀ᵐ ω ∂μ, α_i ω = (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal) := by
       intro i
       -- Use directing_measure_integral for the indicator function
@@ -1248,55 +1250,16 @@ lemma directing_measure_bridge
         directing_measure_integral X hX_contract hX_meas hX_L2
           ((B' i).indicator (fun _ => 1)) (I_meas i) (I_bdd i)
       refine ⟨α_i, hα_meas, hα_L1, ?_, ?_⟩
-      · -- Convergence: need to relate the averages from directing_measure_integral to p N i
-        -- directing_measure_integral uses index n + k.val + 1, we use k.val
-        -- Key: Cesàro averages over 0..m-1 and 1..m have same limit (differ by O(1/m))
-        intro _N ε hε
-        -- Get convergence for indices 1, 2, ..., m (n=0 case)
-        obtain ⟨M₁, hM₁⟩ := hα_conv 0 (ε / 2) (half_pos hε)
-        -- For the difference between index sets, need m large enough that 2/m < ε/2
-        -- Use tendsto_const_div_atTop to get this bound
-        have h_bound_exists : ∃ M₂ : ℕ, ∀ m : ℕ, m ≥ M₂ → (2 : ℝ) / m < ε / 2 := by
-          have h := Metric.tendsto_atTop.mp (tendsto_const_div_atTop_nhds_zero_nat (2 : ℝ))
-            (ε / 2) (half_pos hε)
-          simp only [Real.dist_eq, sub_zero] at h
-          obtain ⟨M₂, hM₂⟩ := h
-          refine ⟨M₂, fun m hm => ?_⟩
-          have := hM₂ m hm
-          rwa [abs_of_nonneg (by positivity : 0 ≤ (2 : ℝ) / m)] at this
-        obtain ⟨M₂, hM₂⟩ := h_bound_exists
-        refine ⟨max M₁ M₂, fun m hm => ?_⟩
-        -- The sum ∑_{k < m} I i k.val uses indices 0, 1, ..., m-1
-        -- The sum from directing_measure_integral (n=0) uses indices 1, 2, ..., m
-        -- i.e., (0 + k.val + 1) = k.val + 1 for k : Fin m
-
-        -- Key insight: the two Cesàro averages differ by O(1/m)
-        -- Our avg: (1/m) ∑_{k<m} I i k = (1/m)(I i 0 + I i 1 + ... + I i (m-1))
-        -- Their avg: (1/m) ∑_{k<m} I i (k+1) = (1/m)(I i 1 + I i 2 + ... + I i m)
-        -- Difference = (1/m)(I i 0 - I i m), bounded by 2/m
-
-        -- By triangle inequality:
-        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
-        --                ≤ 2/m + ε/2 < ε  for m ≥ max(M₁, M₂)
-
-        -- Key facts used in the proof:
-        -- 1. |I i j ω| ≤ 1 for all i, j, ω (from I_abs_le_one)
-        -- 2. hM₁: ∫|their_avg - α| < ε/2 for m ≥ M₁
-        -- 3. hM₂: 2/m < ε/2 for m ≥ M₂
-        --
-        -- PROOF STRUCTURE (triangle inequality + telescoping):
-        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
-        --
-        -- Term 1: The two averages differ by O(1/m) due to telescoping:
-        --   our_avg = (1/m) ∑_{k<m} I i k (indices 0, 1, ..., m-1)
-        --   their_avg = (1/m) ∑_{k<m} I i (k+1) (indices 1, 2, ..., m)
-        --   Difference = (1/m)(I i 0 - I i m), bounded by 2/m since |I| ≤ 1
-        --   So ∫|our_avg - their_avg| ≤ 2/m < ε/2 for m ≥ M₂
-        --
-        -- Term 2: By hM₁, ∫|their_avg - α| < ε/2 for m ≥ M₁
-        --
-        -- Sum: < ε/2 + ε/2 = ε for m ≥ max(M₁, M₂)
-        sorry -- Cesàro shift: triangle inequality + telescoping bound
+      · -- Convergence: directing_measure_integral with n=0 gives exactly what we need
+        -- It provides: ∫ |(1/m) ∑_{k<m} f(X_{0+k+1}) - α| dμ < ε for m ≥ M
+        -- which is: ∫ |(1/m) ∑_{k<m} f(X_{k+1}) - α| dμ < ε for m ≥ M
+        -- This matches our indexing I i (k.val + 1) exactly!
+        intro ε hε
+        obtain ⟨M, hM⟩ := hα_conv 0 ε hε
+        refine ⟨M, fun m hm => ?_⟩
+        -- Convert: 0 + k + 1 = k + 1, and the indicator matches I's definition
+        simp only [zero_add, I] at hM
+        exact hM m hm
       · -- Identification: ∫ 1_B dν = ν(B)
         filter_upwards [hα_eq] with ω hω
         rw [hω]
