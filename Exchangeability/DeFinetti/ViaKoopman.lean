@@ -1602,13 +1602,14 @@ or some finite-index restriction of that.
 The "hard" step is constructing `h_indep_XY` from `hciid` using CondIndep.lean machinery.
 -/
 lemma condexp_product_factorization_ax
-    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
-              (∀ i, i ∈ S → MeasurableSet (f i)) →
-              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
-                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i))
+    (hciid : ∀ (S : Finset ℕ) (f : ℕ → Set α),
+              (∀ i ∈ S, MeasurableSet (f i)) →
+              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a)
+                (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
+                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) ({ω' | ω' i ∈ f i}))
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
@@ -5143,6 +5144,94 @@ private lemma condexp_pair_factorization_MET
     _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | mSI] ω * μ[(fun ω => g (ω 0)) | mSI] ω) := by
         filter_upwards with ω; ring
 
+/-- **Kernel independence for pairs of coordinates at (0,1)**.
+
+From `condexp_pair_factorization_MET`, for sets A, B ⊆ α:
+  CE[1_{ω₀ ∈ A} · 1_{ω₁ ∈ B} | ℐ] =ᵃᵉ CE[1_{ω₀ ∈ A} | ℐ] · CE[1_{ω₁ ∈ B} | ℐ]
+
+Using CE[1_S | ℐ] = κ(S) a.e. (where κ = condExpKernel):
+  κ({ω | ω₀ ∈ A ∧ ω₁ ∈ B}) =ᵃᵉ κ({ω | ω₀ ∈ A}) · κ({ω | ω₁ ∈ B})
+
+This is the kernel-level independence of coordinates 0 and 1.
+-/
+private lemma kernel_indep_pair_01
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ({ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B}) =
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 0 ∈ A}) *
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 1 ∈ B}) := by
+  -- Use indicator functions: 1_A ∘ (· 0) and 1_B ∘ (· 1)
+  let f : α → ℝ := Set.indicator A 1
+  let g : α → ℝ := Set.indicator B 1
+  have hf_meas : Measurable f := Measurable.indicator measurable_const hA
+  have hg_meas : Measurable g := Measurable.indicator measurable_const hB
+  have hf_bd : ∃ C, ∀ x, |f x| ≤ C := ⟨1, fun x => by
+    simp only [f, Set.indicator_apply, Pi.one_apply]
+    by_cases hx : x ∈ A <;> simp [hx]⟩
+  have hg_bd : ∃ C, ∀ x, |g x| ≤ C := ⟨1, fun x => by
+    simp only [g, Set.indicator_apply, Pi.one_apply]
+    by_cases hx : x ∈ B <;> simp [hx]⟩
+
+  -- Apply condexp_pair_factorization_MET
+  have h_factor := condexp_pair_factorization_MET hσ hExch f g hf_meas hf_bd hg_meas hg_bd
+
+  -- Strategy:
+  -- 1. h_factor gives: CE[f(ω₀)·g(ω₁) | ℐ] =ᵃᵉ CE[f(ω₀)|ℐ] · CE[g(ω₀)|ℐ]
+  -- 2. f(ω₀)·g(ω₁) = 1_{ω₀ ∈ A ∧ ω₁ ∈ B}
+  -- 3. CE[indicator|ℐ] = κ(set) a.e.
+  -- 4. By shift invariance: CE[g(ω₁)|ℐ] =ᵃᵉ CE[g(ω₀)|ℐ]
+  -- 5. Combine to get κ(A∩B) = κ(A) · κ(B) a.e.
+
+  -- The detailed proof requires:
+  -- - condExp_indicator_ae_eq_condExpKernel (relating CE of indicator to kernel measure)
+  -- - Chaining several a.e. equalities
+  -- - Converting from ℝ to ℝ≥0∞ (using that kernel measures are ≤ 1)
+
+  -- For now we leave as sorry - the key infrastructure (h_factor) is in place
+  sorry
+
+/-- **Kernel independence for pairs at arbitrary distinct coordinates (i,j)**.
+
+By exchangeability, the pair independence at (0,1) extends to any (i,j) with i ≠ j.
+-/
+private lemma kernel_indep_pair
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (i j : ℕ) (hij : i ≠ j)
+    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ({ω' | ω' i ∈ A ∧ ω' j ∈ B}) =
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ A}) *
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' j ∈ B}) := by
+  -- Use a permutation π that sends 0 ↦ i and 1 ↦ j
+  -- By exchangeability, the distribution is preserved under reindex π
+  -- So the pair independence at (0,1) gives pair independence at (i,j)
+  sorry
+
+/-- **Finite product factorization for kernel measures**.
+
+For any finite set S of distinct indices and measurable sets f(i) ⊆ α:
+  κ(⋂ i ∈ S, {ω | ω i ∈ f(i)}) =ᵃᵉ ∏ i ∈ S, κ({ω | ω i ∈ f(i)})
+
+This is the full kernel independence condition needed for `hciid`.
+-/
+private lemma kernel_indep_finset
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (S : Finset ℕ) (f : ℕ → Set α) (hf : ∀ i ∈ S, MeasurableSet (f i)) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
+      ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ f i}) := by
+  -- Proof by induction on |S|
+  -- Base: |S| = 0 → both sides = 1
+  -- Step: Use kernel_indep_pair to factor out one element
+  sorry
+
 end OptionB_L1Convergence
 
 section ExtremeMembers
@@ -6659,13 +6748,14 @@ Once `hciid` is properly implemented (currently `True`), the proof can be uncomm
 and refined. No immediate subdivision needed - the inductive structure is natural.
 -/
 theorem condexp_product_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
-              (∀ i, i ∈ S → MeasurableSet (f i)) →
-              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
-                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i))
+    (hciid : ∀ (S : Finset ℕ) (f : ℕ → Set α),
+              (∀ i ∈ S, MeasurableSet (f i)) →
+              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a)
+                (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
+                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) ({ω' | ω' i ∈ f i}))
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
@@ -6946,7 +7036,7 @@ in a standard Borel space α, then there exists a regular conditional distributi
   "First proof" approach, pages 26-27
 -/
 theorem deFinetti_viaKoopman
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
     ∃ (ν : Ω[α] → Measure α),
@@ -6965,14 +7055,13 @@ theorem deFinetti_viaKoopman
     infer_instance
   · -- Conditional factorization
     intro m fs hmeas hbd
-    -- Apply condexp_product_factorization
-    -- The hciid argument requires proving kernel independence of coordinate functions
-    -- This is the main remaining blocker in ViaKoopman
-    have hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
-        (∀ i, i ∈ S → MeasurableSet (f i)) →
-        ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
-          ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i) := by
-      sorry
+    -- Apply condexp_product_factorization with kernel_indep_finset
+    have hciid : ∀ (S : Finset ℕ) (f : ℕ → Set α),
+        (∀ i ∈ S, MeasurableSet (f i)) →
+        ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a)
+          (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
+          ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) ({ω' | ω' i ∈ f i}) :=
+      kernel_indep_finset hσ hExch
     exact condexp_product_factorization hσ hExch hciid m fs hmeas hbd
 
 /-! ### Bridge Lemma: Connect conditional expectation factorization to measure products
