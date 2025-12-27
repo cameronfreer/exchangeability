@@ -5871,7 +5871,33 @@ lemma kernel_indep_pair_proof
     -- κ({y | y i ∈ A ∧ y j ∈ B}) corresponds to ∫ 1_A(y i) * 1_B(y j) dκ
     -- By h_ce_ij_eq_01, this equals the (0,1) case
     -- And by h01, the (0,1) case factors
-    filter_upwards [h01, h_i_eq_0, h_j_eq_1, h_ce_ij_eq_01] with ω h01ω hi0ω hj1ω hij01ω
+    -- CE values equal kernel integrals (moved before filter_upwards)
+    have hm : shiftInvariantSigma (α := α) ≤ MeasurableSpace.pi := shiftInvariantSigma_le (α := α)
+    have hfg_ij_int : Integrable (fun ω => f (ω i) * g (ω j)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact ((hf_meas.comp (measurable_pi_apply i)).mul
+          (hg_meas.comp (measurable_pi_apply j))).aestronglyMeasurable
+      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+        apply ae_of_all μ; intro ω'
+        calc |f (ω' i) * g (ω' j)| = |f (ω' i)| * |g (ω' j)| := abs_mul _ _
+          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                          (le_trans (abs_nonneg _) (hCf (ω' i)))
+    have h_ce_ij := condExp_ae_eq_integral_condExpKernel hm hfg_ij_int
+    have hfg_01_int : Integrable (fun ω => f (ω 0) * g (ω 1)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact ((hf_meas.comp (measurable_pi_apply 0)).mul
+          (hg_meas.comp (measurable_pi_apply 1))).aestronglyMeasurable
+      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+        apply ae_of_all μ; intro ω'
+        calc |f (ω' 0) * g (ω' 1)| = |f (ω' 0)| * |g (ω' 1)| := abs_mul _ _
+          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                          (le_trans (abs_nonneg _) (hCf (ω' 0)))
+    have h_ce_01 := condExp_ae_eq_integral_condExpKernel hm hfg_01_int
+    -- Now filter_upwards with all a.e. equalities including CE = kernel integral
+    filter_upwards [h01, h_i_eq_0, h_j_eq_1, h_ce_ij_eq_01, h_ce_ij, h_ce_01]
+      with ω h01ω hi0ω hj1ω hij01ω hce_ij_ω hce_01_ω
     -- We need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y i ∈ A} * κ ω {y | y j ∈ B}
     -- From h01ω: κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} = κ ω {y | y 0 ∈ A} * κ ω {y | y 1 ∈ B}
     -- From hi0ω, hj1ω: RHS of (i,j) = RHS of (0,1)
@@ -5898,42 +5924,14 @@ lemma kernel_indep_pair_proof
         simp only [f, g, Set.indicator_apply, Pi.one_apply, Set.mem_setOf_eq]
         by_cases hA0 : y 0 ∈ A <;> by_cases hB1 : y 1 ∈ B <;> simp [hA0, hB1]
       simp_rw [h_ind, integral_indicator_one hS_01, Measure.real]
-    -- CE values equal kernel integrals
-    have hm : shiftInvariantSigma (α := α) ≤ MeasurableSpace.pi := shiftInvariantSigma_le (α := α)
-    have hfg_ij_int : Integrable (fun ω => f (ω i) * g (ω j)) μ := by
-      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
-      constructor
-      · exact ((hf_meas.comp (measurable_pi_apply i)).mul
-          (hg_meas.comp (measurable_pi_apply j))).aestronglyMeasurable
-      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
-        apply ae_of_all μ; intro ω'
-        calc |f (ω' i) * g (ω' j)| = |f (ω' i)| * |g (ω' j)| := abs_mul _ _
-          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
-                          (le_trans (abs_nonneg _) (hCf (ω' i)))
-    have h_ce_ij := condExp_ae_eq_integral_condExpKernel hm hfg_ij_int
-    have hfg_01_int : Integrable (fun ω => f (ω 0) * g (ω 1)) μ := by
-      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
-      constructor
-      · exact ((hf_meas.comp (measurable_pi_apply 0)).mul
-          (hg_meas.comp (measurable_pi_apply 1))).aestronglyMeasurable
-      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
-        apply ae_of_all μ; intro ω'
-        calc |f (ω' 0) * g (ω' 1)| = |f (ω' 0)| * |g (ω' 1)| := abs_mul _ _
-          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
-                          (le_trans (abs_nonneg _) (hCf (ω' 0)))
-    have h_ce_01 := condExp_ae_eq_integral_condExpKernel hm hfg_01_int
-    -- The CE equality hij01ω gives us the kernel integral equality
-    -- (after using h_ce_ij and h_ce_01 to convert)
-    -- But we need to be at a specific ω, not just a.e.
-    -- Since we're inside filter_upwards, we have the a.e. equality at ω
-    -- We need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}
+    -- Use the filter_upwards hypotheses: hce_ij_ω and hce_01_ω
+    -- hce_ij_ω : CE[f(i)*g(j)|ℐ](ω) = ∫ f(y i)*g(y j) d(κ ω)
+    -- hce_01_ω : CE[f(0)*g(1)|ℐ](ω) = ∫ f(y 0)*g(y 1) d(κ ω)
+    -- hij01ω : CE[f(i)*g(j)|ℐ](ω) = CE[f(0)*g(1)|ℐ](ω)
     have h_meas_eq : (κ ω {y | y i ∈ A ∧ y j ∈ B}).toReal = (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal := by
       rw [← int_ij, ← int_01]
-      -- These kernel integrals equal the CE values at ω
-      -- But we need to use the CE equality hij01ω
-      -- We filtered through h_ce_ij and h_ce_01, but at a specific ω level
-      -- Actually, we need to add these to the filter_upwards
-      sorry  -- Will address in next iteration
+      -- Chain: ∫ f(i)*g(j) dκ = CE[..|ℐ](ω) = CE[..|ℐ](ω) = ∫ f(0)*g(1) dκ
+      rw [← hce_ij_ω, hij01ω, hce_01_ω]
     have h_ne_top_ij : κ ω {y | y i ∈ A ∧ y j ∈ B} ≠ ⊤ := measure_ne_top _ _
     have h_ne_top_01 : κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} ≠ ⊤ := measure_ne_top _ _
     have h_lhs_eq : κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} :=
