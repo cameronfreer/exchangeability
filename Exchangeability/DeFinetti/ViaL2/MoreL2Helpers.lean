@@ -581,18 +581,36 @@ lemma directing_measure_integral
       have h_tendsto_bot : ∀ᵐ ω ∂μ, Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω) atBot (𝓝 0) := by
         filter_upwards [h_mono_rat, alphaIic_ae_tendsto_zero_at_bot X hX_contract hX_meas hX_L2,
                         h_ae_eq_rat] with ω h_mono h_int_lim _
-        -- Bounded below by 0, so limit at atBot exists and equals infimum
-        -- alphaIicRat(-(n:ℤ)) → 0 implies infimum = 0
-        sorry  -- Use tendsto_atBot_ciInf h_mono ⟨0, ...⟩ then show ⨅ = 0
+        -- Bounded below by 0
+        have h_bdd_below : BddBelow (Set.range (alphaIicRat X hX_contract hX_meas hX_L2 ω)) := by
+          use 0; intro y ⟨q, hq⟩; rw [← hq]; exact (h_bdd (q : ℝ) ω).1
+        -- By tendsto_atBot_ciInf, limit = infimum
+        have h_lim := tendsto_atBot_ciInf h_mono h_bdd_below
+        -- Show infimum = 0:
+        -- 1. 0 ≤ inf (0 is lower bound)
+        -- 2. inf ≤ 0: alphaIicRat(-(n:ℤ)) = alphaIic(-(n:ℝ)) → 0, so inf ≤ liminf = 0
+        -- Key: alphaIicRat(-(n:ℤ):ℚ) = alphaIic(-(n:ℝ)) by definition of alphaIicRat
+        have h_inf_eq : ⨅ q : ℚ, alphaIicRat X hX_contract hX_meas hX_L2 ω q = 0 := by
+          sorry  -- le_antisymm: 0 ≤ ciInf (lower bdd) ∧ ciInf ≤ 0 (subsequence limit)
+        rw [h_inf_eq] at h_lim; exact h_lim
 
       -- Step D: Limit 1 at +∞ (symmetric to Step C)
       -- PROOF STRATEGY: Use tendsto_atTop_ciSup, show sup = 1
       have h_tendsto_top : ∀ᵐ ω ∂μ, Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω) atTop (𝓝 1) := by
         filter_upwards [h_mono_rat, alphaIic_ae_tendsto_one_at_top X hX_contract hX_meas hX_L2,
                         h_ae_eq_rat] with ω h_mono h_int_lim _
-        -- Bounded above by 1, limit at atTop exists and equals supremum
-        -- alphaIicRat(n:ℤ) → 1 implies supremum = 1
-        sorry  -- Use tendsto_atTop_ciSup h_mono ⟨1, ...⟩ then show ⨆ = 1
+        -- Bounded above by 1
+        have h_bdd_above : BddAbove (Set.range (alphaIicRat X hX_contract hX_meas hX_L2 ω)) := by
+          use 1; intro y ⟨q, hq⟩; rw [← hq]; exact (h_bdd (q : ℝ) ω).2
+        -- By tendsto_atTop_ciSup, limit = supremum
+        have h_lim := tendsto_atTop_ciSup h_mono h_bdd_above
+        -- Show supremum = 1:
+        -- 1. sup ≤ 1 (1 is upper bound)
+        -- 2. 1 ≤ sup: alphaIicRat(n:ℤ) = alphaIic(n:ℝ) → 1, so limsup ≤ sup
+        -- Key: alphaIicRat(n:ℤ:ℚ) = alphaIic(n:ℝ) by definition
+        have h_sup_eq : ⨆ q : ℚ, alphaIicRat X hX_contract hX_meas hX_L2 ω q = 1 := by
+          sorry  -- le_antisymm: ciSup ≤ 1 (upper bdd) ∧ 1 ≤ ciSup (subsequence limit)
+        rw [h_sup_eq] at h_lim; exact h_lim
 
       -- Step E: Right-continuity at each rational (⨅ r > q, f r = f q)
       -- PROOF STRATEGY: alphaIicCE is right-continuous as conditional CDF
