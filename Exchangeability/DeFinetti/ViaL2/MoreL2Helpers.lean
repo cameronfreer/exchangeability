@@ -555,164 +555,190 @@ lemma integral_alphaIic_eq_marginal
   have h_spec := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
       ind ind_meas ⟨1, ind_bdd⟩).choose_spec
   have h_meas_limit : Measurable limit := h_spec.1
-  have _h_L1 : MemLp limit 1 μ := h_spec.2.1
   have h_conv : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) - limit ω| ∂μ < ε :=
     h_spec.2.2
 
-  -- Step 1: alphaIic = max 0 (min 1 limit'), and we need to show this equals limit a.e.
-  -- This follows from two facts:
-  -- (a) limit' =ᵐ limit (both are L¹ limits of the same Cesàro averages)
-  -- (b) limit ∈ [0,1] a.e. (as L¹ limit of averages in [0,1])
-  have h_alphaIic_eq : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω = limit ω := by
-    -- The clip trick: L¹ limit of [0,1]-bounded Cesàro averages is in [0,1] a.e.
-    -- Step 1a: Show limit ∈ [0,1] a.e.
-    -- L¹ convergence → convergence in measure → a.e. convergent subsequence
-    -- Pointwise limit of [0,1] functions is in [0,1]
-    --
-    -- Step 1b: alphaIic uses indIic which equals our ind definitionally
-    -- Both .choose witnesses are L¹ limits of the same sequence, hence a.e. equal
-    -- With limit ∈ [0,1] a.e., clipping has no effect: max 0 (min 1 limit) = limit a.e.
-    --
-    -- This is a standard boundedness/uniqueness argument for L¹ limits.
-    -- The technical details use TendstoInMeasure.exists_seq_tendsto_ae and
-    -- the fact that pointwise limits preserve bounds.
-    sorry
+  -- SIMPLIFIED PROOF: Use the fact that limit is already L¹ from h_spec.2.1
+  --
+  -- Key insight: h_spec.2.1 gives us MemLp limit 1 μ, so limit is integrable!
+  -- alphaIic = clip01(limit) by definition, and clip01(limit) =ᵐ limit since
+  -- the Cesàro averages are in [0,1] and converge to limit in L¹.
+  -- By L¹ uniqueness, limit ∈ [0,1] a.e., so clip01(limit) =ᵐ limit.
 
-  -- Step 2: Show ∫ limit = μ(X_0 ∈ Iic t).toReal
-  -- The Cesàro average integrates to the marginal probability
-  have h_cesaro_integral : ∀ n m : ℕ, m > 0 →
-      ∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) ∂μ =
-        (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
-    intro n m hm
+  have h_limit_integrable : Integrable limit μ := h_spec.2.1.integrable le_rfl
+
+  -- alphaIic is integrable (bounded by 1, measurable)
+  have h_alphaIic_integrable : Integrable (alphaIic X hX_contract hX_meas hX_L2 t) μ := by
+    have h_meas := alphaIic_measurable X hX_contract hX_meas hX_L2 t
+    have h_bdd : ∀ ω, ‖alphaIic X hX_contract hX_meas hX_L2 t ω‖ ≤ 1 := by
+      intro ω
+      rw [Real.norm_eq_abs, abs_le]
+      have ⟨h0, h1⟩ := alphaIic_bound X hX_contract hX_meas hX_L2 t ω
+      constructor
+      · linarith
+      · exact h1
+    exact Integrable.of_bound h_meas.aestronglyMeasurable 1 (Filter.Eventually.of_forall h_bdd)
+
+  -- alphaIic = clip01(limit) pointwise
+  have h_alphaIic_def : ∀ ω, alphaIic X hX_contract hX_meas hX_L2 t ω =
+      max 0 (min 1 (limit ω)) := fun ω => rfl
+
+  -- The Cesàro averages are in [0,1] pointwise
+  let A : ℕ → Ω → ℝ := fun m ω => (1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω)
+  have h_A_in_01 : ∀ m : ℕ, m > 0 → ∀ ω, 0 ≤ A m ω ∧ A m ω ≤ 1 := by
+    intro m hm ω
+    have h_sum_nonneg : 0 ≤ ∑ k : Fin m, ind (X (0 + k.val + 1) ω) := by
+      apply Finset.sum_nonneg; intro k _; simp [ind, Set.indicator]; split_ifs <;> linarith
+    have h_sum_le_m : ∑ k : Fin m, ind (X (0 + k.val + 1) ω) ≤ m := by
+      calc ∑ k : Fin m, ind (X (0 + k.val + 1) ω)
+          ≤ ∑ _k : Fin m, (1 : ℝ) := by
+            apply Finset.sum_le_sum; intro k _; simp [ind, Set.indicator]; split_ifs <;> linarith
+        _ = m := by simp
+    constructor
+    · apply mul_nonneg; positivity; exact h_sum_nonneg
+    · calc A m ω = (1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) := rfl
+          _ ≤ (1/(m:ℝ)) * m := by apply mul_le_mul_of_nonneg_left h_sum_le_m; positivity
+          _ = 1 := by field_simp
+
+  -- limit is in [0,1] a.e. since it's the L¹ limit of functions in [0,1]
+  -- Proof: L¹ convergence → convergence in measure → a.e. convergent subsequence
+  -- → pointwise limit of [0,1]-valued functions is in [0,1]
+  have h_limit_in_01 : ∀ᵐ ω ∂μ, 0 ≤ limit ω ∧ limit ω ≤ 1 := by
+    -- Step 1: Each A m is measurable
+    have hA_meas : ∀ m, Measurable (A m) := fun m => by
+      apply Measurable.mul measurable_const
+      refine Finset.measurable_sum _ (fun k _ => ind_meas.comp (hX_meas _))
+
+    -- Step 2: L¹ convergence: ∫|A m - limit| → 0
+    have h_tendsto_L1 : Filter.Tendsto (fun m => ∫ ω, |A m ω - limit ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := h_conv 0 ε hε
+      refine ⟨M, fun m hm => ?_⟩
+      simp only [Real.dist_eq, sub_zero]
+      rw [abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+
+    have h_limit_meas : Measurable limit := h_spec.1
+
+    -- Step 3: L¹ convergence implies convergence in measure
+    -- Standard: L¹ convergence → convergence in measure via Markov's inequality
+    -- Then: convergence in measure → a.e. convergent subsequence
+    have h_tendstoInMeasure : TendstoInMeasure μ A atTop limit := by
+      -- Proof: Apply tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top with p=1
+      -- This requires showing that eLpNorm (A m - limit) 1 μ → 0, which follows
+      -- from h_tendsto_L1 since eLpNorm f 1 μ = ∫ ‖f‖ dμ for L¹.
+      -- Technical: Need to interface Bochner integral ∫|f|dμ with eLpNorm
+      sorry
+
+    -- Step 4: Convergence in measure implies a.e. convergent subsequence
+    obtain ⟨ns, hns_mono, hns_ae⟩ := h_tendstoInMeasure.exists_seq_tendsto_ae
+
+    -- Step 5: The subsequence A (ns k) → limit a.e., and each A (ns k) ∈ [0,1]
+    filter_upwards [hns_ae] with ω hω_conv
+    -- Each A (ns k) ω ∈ [0,1] for k > 0
+    have h_seq_in_01 : ∀ k, 0 ≤ A (ns k) ω ∧ A (ns k) ω ≤ 1 := fun k => by
+      by_cases hnsk : ns k = 0
+      · simp [A, hnsk]
+      · exact h_A_in_01 (ns k) (Nat.pos_of_ne_zero hnsk) ω
+    -- Limits preserve inequalities
+    constructor
+    · exact ge_of_tendsto hω_conv (Filter.Eventually.of_forall (fun k => (h_seq_in_01 k).1))
+    · exact le_of_tendsto hω_conv (Filter.Eventually.of_forall (fun k => (h_seq_in_01 k).2))
+
+  -- Therefore clip01(limit) =ᵐ limit
+  have h_clip_eq_limit : ∀ᵐ ω ∂μ, max 0 (min 1 (limit ω)) = limit ω := by
+    filter_upwards [h_limit_in_01] with ω ⟨h0, h1⟩
+    rw [min_eq_right h1, max_eq_right h0]
+
+  -- So alphaIic =ᵐ limit
+  have h_alphaIic_ae_eq : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω = limit ω := by
+    filter_upwards [h_clip_eq_limit] with ω hω
+    rw [h_alphaIic_def ω, hω]
+
+  -- Step 5: Show ∫ A_m = μ(X_0 ∈ Iic t).toReal for all m > 0
+  have h_cesaro_integral : ∀ m : ℕ, m > 0 →
+      ∫ ω, A m ω ∂μ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
+    intro m hm
     -- The integral of the average = average of the integrals
-    have h_int_sum : ∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (n + k.val + 1) ω) ∂μ =
-        (1/(m:ℝ)) * ∑ k : Fin m, ∫ ω, ind (X (n + k.val + 1) ω) ∂μ := by
+    have h_int_sum : ∫ ω, A m ω ∂μ =
+        (1/(m:ℝ)) * ∑ k : Fin m, ∫ ω, ind (X (0 + k.val + 1) ω) ∂μ := by
+      simp only [A]
       rw [integral_mul_left]
       congr 1
       rw [integral_finset_sum]
       intro k _
-      -- ind is bounded by 1 and measurable, so it's integrable
-      have h_meas_comp : Measurable (fun ω => ind (X (n + k.val + 1) ω)) :=
+      have h_meas_comp : Measurable (fun ω => ind (X (0 + k.val + 1) ω)) :=
         ind_meas.comp (hX_meas _)
-      have h_bdd : ∀ ω, ‖ind (X (n + k.val + 1) ω)‖ ≤ 1 := by
-        intro ω
-        rw [Real.norm_eq_abs]
-        exact ind_bdd _
+      have h_bdd : ∀ ω, ‖ind (X (0 + k.val + 1) ω)‖ ≤ 1 := by
+        intro ω; rw [Real.norm_eq_abs]; exact ind_bdd _
       exact Integrable.of_bound h_meas_comp.aestronglyMeasurable 1 (Filter.Eventually.of_forall h_bdd)
     rw [h_int_sum]
     -- Each integral equals μ(X_j ∈ Iic t)
-    have h_each : ∀ k : Fin m, ∫ ω, ind (X (n + k.val + 1) ω) ∂μ =
-        (μ (X (n + k.val + 1) ⁻¹' Set.Iic t)).toReal := by
+    have h_each : ∀ k : Fin m, ∫ ω, ind (X (0 + k.val + 1) ω) ∂μ =
+        (μ (X (0 + k.val + 1) ⁻¹' Set.Iic t)).toReal := by
       intro k
-      -- integral of indicator = measure of set
-      -- ind x = 1 if x ≤ t, 0 otherwise
-      -- So ∫ ind(X_j ω) dμ = ∫_{X_j ≤ t} 1 dμ = μ{X_j ≤ t}
-      have h_ind_eq : ∀ ω, ind (X (n + k.val + 1) ω) =
-          (X (n + k.val + 1) ⁻¹' Set.Iic t).indicator (fun _ => (1 : ℝ)) ω := by
-        intro ω
-        simp only [ind, Set.indicator, Set.mem_Iic, Set.mem_preimage]
+      have h_ind_eq : ∀ ω, ind (X (0 + k.val + 1) ω) =
+          (X (0 + k.val + 1) ⁻¹' Set.Iic t).indicator (fun _ => (1 : ℝ)) ω := by
+        intro ω; simp only [ind, Set.indicator, Set.mem_Iic, Set.mem_preimage]
       simp_rw [h_ind_eq]
-      rw [integral_indicator (hX_meas (n + k.val + 1) measurableSet_Iic)]
-      -- ∫ 1 dμ.restrict S = μ(S).toReal
+      rw [integral_indicator (hX_meas (0 + k.val + 1) measurableSet_Iic)]
       rw [setIntegral_const, smul_eq_mul, mul_one]
-      -- μ.real s = (μ s).toReal by definition
-      rfl
+      rfl  -- μ.real s = (μ s).toReal by definition
     simp_rw [h_each]
     -- By contractability, all marginals are equal
     have h_marginal_eq : ∀ j : ℕ, μ (X j ⁻¹' Set.Iic t) = μ (X 0 ⁻¹' Set.Iic t) := by
       intro j
       have h_map := L2Helpers.contractable_map_single X hX_contract hX_meas (i := j)
-      -- μ(X j ⁻¹' S) = (map X_j μ)(S) = (map X_0 μ)(S) = μ(X 0 ⁻¹' S)
       rw [← Measure.map_apply (hX_meas j) measurableSet_Iic]
       rw [h_map]
       rw [Measure.map_apply (hX_meas 0) measurableSet_Iic]
     simp_rw [h_marginal_eq]
-    -- Sum of m copies of the same value
     simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
     field_simp
 
-  -- Step 3: Use L¹ convergence to show ∫ limit = ∫ Cesàro (which = marginal)
+  -- Step 6: Compute ∫ alphaIic using ∫ alphaIic = ∫ limit and L¹ convergence of A_m → limit
+  -- Since alphaIic =ᵐ limit, we have ∫ alphaIic = ∫ limit
+  have h_int_eq_limit : ∫ ω, alphaIic X hX_contract hX_meas hX_L2 t ω ∂μ = ∫ ω, limit ω ∂μ :=
+    integral_congr_ae h_alphaIic_ae_eq
+
+  -- Show ∫ limit = marginal by L¹ convergence
   have h_limit_integral : ∫ ω, limit ω ∂μ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := by
-    -- The Cesàro average has constant integral, and converges to limit in L¹
-    -- By the continuity of integral under L¹ convergence, ∫ limit = limit of ∫ Cesàro
-    -- Since all ∫ Cesàro = μ(X_0 ∈ Iic t), we get ∫ limit = μ(X_0 ∈ Iic t)
-    --
-    -- Proof: For any ε > 0, eventually |∫ A_m - ∫ limit| < ε
-    -- Since ∫ A_m = μ(X_0 ∈ Iic t) for all m > 0, we have ∫ limit = μ(X_0 ∈ Iic t)
     by_contra h_ne
-    -- If ∫ limit ≠ marginal, then there's a positive gap
     have h_gap : ∃ δ > 0, |∫ ω, limit ω ∂μ - (μ (X 0 ⁻¹' Set.Iic t)).toReal| ≥ δ := by
       use |∫ ω, limit ω ∂μ - (μ (X 0 ⁻¹' Set.Iic t)).toReal|
-      constructor
-      · exact abs_pos.mpr (sub_ne_zero.mpr h_ne)
-      · exact le_refl _
+      exact ⟨abs_pos.mpr (sub_ne_zero.mpr h_ne), le_refl _⟩
     obtain ⟨δ, hδ_pos, hδ⟩ := h_gap
-    -- By L¹ convergence at n=0, eventually |∫ |A_m - limit|| < δ/2
-    have h_eventually := h_conv 0 (δ/2) (by linarith)
-    obtain ⟨M, hM⟩ := h_eventually
-    -- For large enough m, we have |∫ A_m - ∫ limit| < δ
-    have h_int_close : ∀ m ≥ M, m > 0 →
-        |∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) ∂μ - ∫ ω, limit ω ∂μ| < δ := by
-      intro m hm hm_pos
-      -- |∫ (A_m - limit)| ≤ ∫ |A_m - limit| < δ/2 < δ
-      have h_bound := hM m hm
-      calc |∫ ω, (1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) ∂μ - ∫ ω, limit ω ∂μ|
-          = |∫ ω, ((1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) - limit ω) ∂μ| := by
+    obtain ⟨M, hM⟩ := h_conv 0 (δ/2) (by linarith)
+    let m := max M 2
+    have hm_ge_M : m ≥ M := le_max_left M 2
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (by decide : 0 < 2) (le_max_right M 2)
+    have h_bound := hM m hm_ge_M
+    have h_int_eq := h_cesaro_integral m hm_pos
+    -- |∫ A_m - ∫ limit| ≤ ∫ |A_m - limit| < δ/2
+    have h_int_close : |∫ ω, A m ω ∂μ - ∫ ω, limit ω ∂μ| < δ/2 := by
+      calc |∫ ω, A m ω ∂μ - ∫ ω, limit ω ∂μ|
+          = |∫ ω, (A m ω - limit ω) ∂μ| := by
             congr 1
             rw [integral_sub]
-            · have h_meas_cesaro : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω)) := by
+            · -- A_m is integrable
+              have h_A_meas : Measurable (A m) := by
                 apply Measurable.const_mul
-                apply Finset.measurable_sum
-                intro k _
-                exact ind_meas.comp (hX_meas _)
-              have h_bdd_cesaro : ∀ ω, ‖(1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω)‖ ≤ 1 := by
-                intro ω
-                rw [Real.norm_eq_abs, abs_mul]
-                have h_sum_bdd : |∑ k : Fin m, ind (X (0 + k.val + 1) ω)| ≤ m := by
-                  -- Use triangle inequality: |∑ f| ≤ ∑ |f|, then ∑ |f| ≤ card * 1 = m
-                  calc |∑ k : Fin m, ind (X (0 + k.val + 1) ω)|
-                      ≤ ∑ k : Fin m, |ind (X (0 + k.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
-                    _ ≤ Finset.univ.card • (1 : ℝ) := Finset.sum_le_card_nsmul _ _ 1 (fun k _ => ind_bdd _)
-                    _ = (m : ℝ) := by simp only [Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one]
-                have hm_inv_pos : (1 : ℝ) / m > 0 := by positivity
-                calc |1/(m:ℝ)| * |∑ k : Fin m, ind (X (0 + k.val + 1) ω)|
-                    ≤ |1/(m:ℝ)| * m := mul_le_mul_of_nonneg_left h_sum_bdd (abs_nonneg _)
-                  _ = 1 := by rw [abs_of_pos hm_inv_pos]; field_simp
-              exact Integrable.of_bound h_meas_cesaro.aestronglyMeasurable 1
-                (Filter.Eventually.of_forall h_bdd_cesaro)
-            · -- limit is bounded a.e. since it's an L¹ limit of bounded functions
-              -- The Cesàro averages f_n are in [0,1] pointwise, and L¹ limits preserve this a.e.
-              -- Proof outline:
-              -- 1. Each f_n(ω) = (1/n)∑_{k<n} ind(X_k ω) ∈ [0,1] since ind ∈ [0,1]
-              -- 2. L¹ convergence f_n → limit implies convergence in measure
-              -- 3. Convergence in measure gives a.e. convergence of subsequence f_{n_k}
-              -- 4. Pointwise limit of functions in [0,1] is in [0,1]
-              -- Key mathlib lemmas: TendstoInMeasure.exists_seq_tendsto_ae
-              have h_limit_bdd : ∀ᵐ ω ∂μ, ‖limit ω‖ ≤ 1 := by
-                sorry -- L¹ limit of bounded functions is bounded a.e.
-              exact Integrable.of_bound h_meas_limit.aestronglyMeasurable 1 h_limit_bdd
-        _ ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, ind (X (0 + k.val + 1) ω) - limit ω| ∂μ :=
-            abs_integral_le_integral_abs
+                apply Finset.measurable_sum; intro k _; exact ind_meas.comp (hX_meas _)
+              exact Integrable.of_bound h_A_meas.aestronglyMeasurable 1
+                (Filter.Eventually.of_forall (fun ω => by
+                  rw [Real.norm_eq_abs, abs_le]
+                  have ⟨h0, h1⟩ := h_A_in_01 m hm_pos ω
+                  constructor <;> linarith))
+            · exact h_limit_integrable
+        _ ≤ ∫ ω, |A m ω - limit ω| ∂μ := abs_integral_le_integral_abs
         _ < δ/2 := h_bound
-        _ < δ := by linarith
-    -- Get contradiction at m' = max(M, 1)
-    let m' := max M 1
-    have hm'_ge_M : m' ≥ M := le_max_left M 1
-    have hm'_pos : m' > 0 := Nat.lt_of_lt_of_le (by decide : 0 < 1) (le_max_right M 1)
-    have h_int_eq := h_cesaro_integral 0 m' hm'_pos
-    have h_close := h_int_close m' hm'_ge_M hm'_pos
-    rw [h_int_eq] at h_close
-    -- Now: |marginal - ∫ limit| < δ but also |∫ limit - marginal| ≥ δ
-    rw [abs_sub_comm] at h_close
+    rw [h_int_eq] at h_int_close
+    rw [abs_sub_comm] at h_int_close
     linarith
 
-  -- Step 4: Combine: ∫ alphaIic = ∫ limit = μ(X_0 ∈ Iic t)
-  calc ∫ ω, alphaIic X hX_contract hX_meas hX_L2 t ω ∂μ
-      = ∫ ω, limit ω ∂μ := by
-        refine integral_congr_ae ?_
-        exact h_alphaIic_eq
-    _ = (μ (X 0 ⁻¹' Set.Iic t)).toReal := h_limit_integral
+  rw [h_int_eq_limit, h_limit_integral]
 
 /-! ### Injective to StrictMono via Sorting
 
@@ -1213,9 +1239,10 @@ lemma directing_measure_bridge
     let I : Fin (n + 1) → ℕ → Ω → ℝ := fun i j ω =>
       (B' i).indicator (fun _ => (1 : ℝ)) (X j ω)
 
-    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i j ω
+    -- Empirical frequency: p N i ω = (1/(N+1)) ∑_{j < N+1} I i (j+1) ω
+    -- Uses indices 1, 2, ..., N+1 to match directing_measure_integral (n=0, m=N+1)
     let p : ℕ → Fin (n + 1) → Ω → ℝ := fun N i ω =>
-      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i j.val ω
+      (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i (j.val + 1) ω
 
     -- Product of empirical frequencies
     let q : ℕ → Ω → ℝ := fun N ω => ∏ i : Fin (n + 1), p N i ω
@@ -1248,10 +1275,11 @@ lemma directing_measure_bridge
 
     -- For each i, get L¹ limit and identification with directing measure
     -- The limit α_i satisfies: p N i → α_i in L¹, and α_i = ν(·)(B' i) a.e.
+    -- Note: We use indices (k.val + 1) to match our definition of p which uses indices 1, 2, ..., m
     have h_coord_conv : ∀ i : Fin (n + 1),
         ∃ α_i : Ω → ℝ, Measurable α_i ∧ MemLp α_i 1 μ ∧
-          (∀ (N : ℕ), ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
-            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i k.val ω - α_i ω| ∂μ < ε) ∧
+          (∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, I i (k.val + 1) ω - α_i ω| ∂μ < ε) ∧
           (∀ᵐ ω ∂μ, α_i ω = (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal) := by
       intro i
       -- Use directing_measure_integral for the indicator function
@@ -1259,55 +1287,16 @@ lemma directing_measure_bridge
         directing_measure_integral X hX_contract hX_meas hX_L2
           ((B' i).indicator (fun _ => 1)) (I_meas i) (I_bdd i)
       refine ⟨α_i, hα_meas, hα_L1, ?_, ?_⟩
-      · -- Convergence: need to relate the averages from directing_measure_integral to p N i
-        -- directing_measure_integral uses index n + k.val + 1, we use k.val
-        -- Key: Cesàro averages over 0..m-1 and 1..m have same limit (differ by O(1/m))
-        intro _N ε hε
-        -- Get convergence for indices 1, 2, ..., m (n=0 case)
-        obtain ⟨M₁, hM₁⟩ := hα_conv 0 (ε / 2) (half_pos hε)
-        -- For the difference between index sets, need m large enough that 2/m < ε/2
-        -- Use tendsto_const_div_atTop to get this bound
-        have h_bound_exists : ∃ M₂ : ℕ, ∀ m : ℕ, m ≥ M₂ → (2 : ℝ) / m < ε / 2 := by
-          have h := Metric.tendsto_atTop.mp (tendsto_const_div_atTop_nhds_zero_nat (2 : ℝ))
-            (ε / 2) (half_pos hε)
-          simp only [Real.dist_eq, sub_zero] at h
-          obtain ⟨M₂, hM₂⟩ := h
-          refine ⟨M₂, fun m hm => ?_⟩
-          have := hM₂ m hm
-          rwa [abs_of_nonneg (by positivity : 0 ≤ (2 : ℝ) / m)] at this
-        obtain ⟨M₂, hM₂⟩ := h_bound_exists
-        refine ⟨max M₁ M₂, fun m hm => ?_⟩
-        -- The sum ∑_{k < m} I i k.val uses indices 0, 1, ..., m-1
-        -- The sum from directing_measure_integral (n=0) uses indices 1, 2, ..., m
-        -- i.e., (0 + k.val + 1) = k.val + 1 for k : Fin m
-
-        -- Key insight: the two Cesàro averages differ by O(1/m)
-        -- Our avg: (1/m) ∑_{k<m} I i k = (1/m)(I i 0 + I i 1 + ... + I i (m-1))
-        -- Their avg: (1/m) ∑_{k<m} I i (k+1) = (1/m)(I i 1 + I i 2 + ... + I i m)
-        -- Difference = (1/m)(I i 0 - I i m), bounded by 2/m
-
-        -- By triangle inequality:
-        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
-        --                ≤ 2/m + ε/2 < ε  for m ≥ max(M₁, M₂)
-
-        -- Key facts used in the proof:
-        -- 1. |I i j ω| ≤ 1 for all i, j, ω (from I_abs_le_one)
-        -- 2. hM₁: ∫|their_avg - α| < ε/2 for m ≥ M₁
-        -- 3. hM₂: 2/m < ε/2 for m ≥ M₂
-        --
-        -- PROOF STRUCTURE (triangle inequality + telescoping):
-        -- ∫|our_avg - α| ≤ ∫|our_avg - their_avg| + ∫|their_avg - α|
-        --
-        -- Term 1: The two averages differ by O(1/m) due to telescoping:
-        --   our_avg = (1/m) ∑_{k<m} I i k (indices 0, 1, ..., m-1)
-        --   their_avg = (1/m) ∑_{k<m} I i (k+1) (indices 1, 2, ..., m)
-        --   Difference = (1/m)(I i 0 - I i m), bounded by 2/m since |I| ≤ 1
-        --   So ∫|our_avg - their_avg| ≤ 2/m < ε/2 for m ≥ M₂
-        --
-        -- Term 2: By hM₁, ∫|their_avg - α| < ε/2 for m ≥ M₁
-        --
-        -- Sum: < ε/2 + ε/2 = ε for m ≥ max(M₁, M₂)
-        sorry -- Cesàro shift: triangle inequality + telescoping bound
+      · -- Convergence: directing_measure_integral with n=0 gives exactly what we need
+        -- It provides: ∫ |(1/m) ∑_{k<m} f(X_{0+k+1}) - α| dμ < ε for m ≥ M
+        -- which is: ∫ |(1/m) ∑_{k<m} f(X_{k+1}) - α| dμ < ε for m ≥ M
+        -- This matches our indexing I i (k.val + 1) exactly!
+        intro ε hε
+        obtain ⟨M, hM⟩ := hα_conv 0 ε hε
+        refine ⟨M, fun m hm => ?_⟩
+        -- Convert: 0 + k + 1 = k + 1, and the indicator matches I's definition
+        simp only [zero_add, I] at hM
+        exact hM m hm
       · -- Identification: ∫ 1_B dν = ν(B)
         filter_upwards [hα_eq] with ω hω
         rw [hω]
