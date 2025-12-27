@@ -591,7 +591,24 @@ lemma directing_measure_integral
         -- 2. inf ≤ 0: alphaIicRat(-(n:ℤ)) = alphaIic(-(n:ℝ)) → 0, so inf ≤ liminf = 0
         -- Key: alphaIicRat(-(n:ℤ):ℚ) = alphaIic(-(n:ℝ)) by definition of alphaIicRat
         have h_inf_eq : ⨅ q : ℚ, alphaIicRat X hX_contract hX_meas hX_L2 ω q = 0 := by
-          sorry  -- le_antisymm: 0 ≤ ciInf (lower bdd) ∧ ciInf ≤ 0 (subsequence limit)
+          -- Key: alphaIicRat(-(n:ℤ)) = alphaIic(-(n:ℝ)) by definition
+          have h_int_eq : ∀ n : ℕ, alphaIicRat X hX_contract hX_meas hX_L2 ω (-(n : ℤ) : ℚ) =
+              alphaIic X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω := by
+            intro n; simp only [alphaIicRat]; congr 1
+            simp only [Int.cast_natCast, Rat.cast_neg, Rat.cast_natCast]
+          -- h_int_lim in terms of alphaIicRat: alphaIicRat(-(n:ℤ)) → 0
+          have h_rat_lim : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω
+              (-(n : ℤ) : ℚ)) atTop (𝓝 0) := by
+            convert h_int_lim using 1; ext n; exact h_int_eq n
+          -- The sequence -(n:ℤ) tends to atBot in ℚ as n → ∞
+          have h_neg_tendsto : Tendsto (fun n : ℕ => (-(n : ℤ) : ℚ)) atTop atBot := by
+            simp only [Int.cast_natCast]
+            exact tendsto_neg_atTop_atBot.comp tendsto_natCast_atTop_atTop
+          -- Compose: alphaIicRat along -(n:ℤ) → iInf (by h_lim.comp h_neg_tendsto)
+          have h_lim_seq := h_lim.comp h_neg_tendsto
+          -- Two limits for same sequence: 0 and iInf
+          -- By uniqueness of limits in T2 space: iInf = 0
+          exact tendsto_nhds_unique h_lim_seq h_rat_lim
         rw [h_inf_eq] at h_lim; exact h_lim
 
       -- Step D: Limit 1 at +∞ (symmetric to Step C)
@@ -609,7 +626,22 @@ lemma directing_measure_integral
         -- 2. 1 ≤ sup: alphaIicRat(n:ℤ) = alphaIic(n:ℝ) → 1, so limsup ≤ sup
         -- Key: alphaIicRat(n:ℤ:ℚ) = alphaIic(n:ℝ) by definition
         have h_sup_eq : ⨆ q : ℚ, alphaIicRat X hX_contract hX_meas hX_L2 ω q = 1 := by
-          sorry  -- le_antisymm: ciSup ≤ 1 (upper bdd) ∧ 1 ≤ ciSup (subsequence limit)
+          -- Key: alphaIicRat(n:ℤ) = alphaIic(n:ℝ) by definition
+          have h_int_eq : ∀ n : ℕ, alphaIicRat X hX_contract hX_meas hX_L2 ω ((n : ℤ) : ℚ) =
+              alphaIic X hX_contract hX_meas hX_L2 (n : ℝ) ω := by
+            intro n; simp only [alphaIicRat, Int.cast_natCast, Rat.cast_natCast]
+          -- h_int_lim in terms of alphaIicRat: alphaIicRat(n:ℤ) → 1
+          have h_rat_lim : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω
+              ((n : ℤ) : ℚ)) atTop (𝓝 1) := by
+            simp only [h_int_eq]; exact h_int_lim
+          -- The sequence (n:ℤ) tends to atTop in ℚ as n → ∞
+          have h_pos_tendsto : Tendsto (fun n : ℕ => ((n : ℤ) : ℚ)) atTop atTop :=
+            tendsto_natCast_atTop_atTop.comp tendsto_natCast_atTop_atTop
+          -- Compose: alphaIicRat along (n:ℤ) → iSup (by h_lim.comp h_pos_tendsto)
+          have h_lim_seq := h_lim.comp h_pos_tendsto
+          -- Two limits for same sequence: 1 and iSup
+          -- By uniqueness of limits in T2 space: iSup = 1
+          exact tendsto_nhds_unique h_lim_seq h_rat_lim
         rw [h_sup_eq] at h_lim; exact h_lim
 
       -- Step E: Right-continuity at each rational (⨅ r > q, f r = f q)
