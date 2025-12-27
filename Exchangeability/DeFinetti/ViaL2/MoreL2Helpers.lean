@@ -605,10 +605,47 @@ lemma integral_alphaIic_eq_marginal
   -- Proof: L¹ convergence → convergence in measure → a.e. convergent subsequence
   -- → pointwise limit of [0,1]-valued functions is in [0,1]
   have h_limit_in_01 : ∀ᵐ ω ∂μ, 0 ≤ limit ω ∧ limit ω ≤ 1 := by
-    -- Technical: Use TendstoInMeasure.exists_seq_tendsto_ae' to extract an a.e. convergent
-    -- subsequence, then use that pointwise limits of [0,1]-valued functions are in [0,1].
-    -- This is a standard measure theory argument.
-    sorry
+    -- Step 1: Each A m is measurable
+    have hA_meas : ∀ m, Measurable (A m) := fun m => by
+      apply Measurable.mul measurable_const
+      refine Finset.measurable_sum _ (fun k _ => ind_meas.comp (hX_meas _))
+
+    -- Step 2: L¹ convergence: ∫|A m - limit| → 0
+    have h_tendsto_L1 : Filter.Tendsto (fun m => ∫ ω, |A m ω - limit ω| ∂μ) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := h_conv 0 ε hε
+      refine ⟨M, fun m hm => ?_⟩
+      simp only [Real.dist_eq, sub_zero]
+      rw [abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      exact hM m hm
+
+    have h_limit_meas : Measurable limit := h_spec.1
+
+    -- Step 3: L¹ convergence implies convergence in measure
+    -- Standard: L¹ convergence → convergence in measure via Markov's inequality
+    -- Then: convergence in measure → a.e. convergent subsequence
+    have h_tendstoInMeasure : TendstoInMeasure μ A atTop limit := by
+      -- Proof: Apply tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top with p=1
+      -- This requires showing that eLpNorm (A m - limit) 1 μ → 0, which follows
+      -- from h_tendsto_L1 since eLpNorm f 1 μ = ∫ ‖f‖ dμ for L¹.
+      -- Technical: Need to interface Bochner integral ∫|f|dμ with eLpNorm
+      sorry
+
+    -- Step 4: Convergence in measure implies a.e. convergent subsequence
+    obtain ⟨ns, hns_mono, hns_ae⟩ := h_tendstoInMeasure.exists_seq_tendsto_ae
+
+    -- Step 5: The subsequence A (ns k) → limit a.e., and each A (ns k) ∈ [0,1]
+    filter_upwards [hns_ae] with ω hω_conv
+    -- Each A (ns k) ω ∈ [0,1] for k > 0
+    have h_seq_in_01 : ∀ k, 0 ≤ A (ns k) ω ∧ A (ns k) ω ≤ 1 := fun k => by
+      by_cases hnsk : ns k = 0
+      · simp [A, hnsk]
+      · exact h_A_in_01 (ns k) (Nat.pos_of_ne_zero hnsk) ω
+    -- Limits preserve inequalities
+    constructor
+    · exact ge_of_tendsto hω_conv (Filter.Eventually.of_forall (fun k => (h_seq_in_01 k).1))
+    · exact le_of_tendsto hω_conv (Filter.Eventually.of_forall (fun k => (h_seq_in_01 k).2))
 
   -- Therefore clip01(limit) =ᵐ limit
   have h_clip_eq_limit : ∀ᵐ ω ∂μ, max 0 (min 1 (limit ω)) = limit ω := by
