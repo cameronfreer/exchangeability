@@ -661,10 +661,58 @@ lemma directing_measure_integral
       have h_right_cont : ∀ᵐ ω ∂μ, ∀ q : ℚ,
           ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r =
           alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
-        -- For conditional CDFs, right-continuity holds a.e. by kernel theory
-        -- The key is that alphaIicCE = μ[1_{Iic t} | tailSigma] defines a
-        -- measurable family of CDFs, which are right-continuous a.e.
-        sorry  -- Technical: connect to IsRatCondKernelCDF machinery
+        -- PROOF STRATEGY:
+        -- For a monotone bounded function f : ℚ → [0,1], right-continuity at q means
+        -- ⨅_{r > q} f(r) = f(q). We prove this using:
+        --
+        -- 1. The lower bound f(q) ≤ ⨅_{r > q} f(r) holds by monotonicity.
+        -- 2. For the upper bound, we use dominated convergence for conditional expectations:
+        --    - For r_n = q + 1/(n+1) ∈ ℚ, the indicators 1_{Iic r_n} ↘ 1_{Iic q} pointwise
+        --    - By dominated convergence: E[1_{Iic r_n}(X_0) | G] → E[1_{Iic q}(X_0) | G] in L¹
+        --    - Since the sequence is monotone decreasing, L¹ convergence implies a.e. convergence
+        --    - Therefore alphaIicCE(r_n) → alphaIicCE(q) a.e.
+        -- 3. Since alphaIic = alphaIicCE a.e. at rationals, the result transfers.
+        --
+        -- TECHNICAL DETAIL: The key mathlib lemma is tendsto_condExpL1_of_dominated_convergence
+        -- combined with the fact that monotone L¹-convergent sequences converge a.e.
+        --
+        -- For now, we document this approach and mark as requiring dominated convergence.
+        -- The implementation requires setting up the tailSigma machinery for condexp.
+        --
+        -- SIMPLIFICATION: Since alphaIicRat is defined via stieltjesOfMeasurableRat
+        -- applied to the same underlying data, the right-continuity follows from
+        -- the construction of Stieltjes functions which are right-continuous by definition.
+        --
+        -- The key insight is that at IsRatStieltjesPoint, the stieltjes regularization
+        -- agrees with the input function, and the input function (alphaIicRat) inherits
+        -- right-continuity from the conditional expectation structure.
+        rw [ae_all_iff]
+        intro q
+        -- For this q, show ⨅_{r > q} alphaIicRat(r) = alphaIicRat(q) a.e.
+        filter_upwards [h_mono_rat, h_ae_eq_rat] with ω h_mono h_eq
+        -- Lower bound: alphaIicRat(q) ≤ ⨅_{r > q} alphaIicRat(r) by monotonicity
+        have h_le : alphaIicRat X hX_contract hX_meas hX_L2 ω q ≤
+            ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r := by
+          apply le_ciInf
+          intro ⟨r, hr⟩
+          simp only [alphaIicRat]
+          exact h_mono q r (le_of_lt hr)
+        -- Upper bound: ⨅_{r > q} alphaIicRat(r) ≤ alphaIicRat(q) by right-continuity
+        -- For conditional CDFs (which alphaIicCE is), right-continuity holds a.e.
+        -- At ω where h_eq holds, alphaIicRat = alphaIicCE at all rationals.
+        -- The conditional expectation E[1_{Iic t}(X_0) | G] is right-continuous in t a.e.
+        -- because 1_{Iic r} ↘ 1_{Iic q} as r ↓ q, and by monotone/dominated convergence
+        -- for conditional expectations, the condexp converges a.e.
+        have h_ge : ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r ≤
+            alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
+          -- This is the content of right-continuity for conditional CDFs.
+          -- Technical proof using dominated convergence for condexp.
+          -- For r_n = q + 1/(n+1), alphaIicCE(r_n) → alphaIicCE(q) a.e.
+          -- At this ω (where h_eq holds for all rationals), this gives:
+          -- alphaIicRat(r_n) → alphaIicRat(q)
+          -- Since alphaIicRat is monotone: ⨅_{r > q} = lim_{r_n} = alphaIicRat(q)
+          sorry  -- Right-continuity from condexp dominated convergence
+        exact le_antisymm h_ge h_le
 
       -- Step F: Combine to show IsRatStieltjesPoint a.e.
       have h_is_stieltjes : ∀ᵐ ω ∂μ, ProbabilityTheory.IsRatStieltjesPoint
