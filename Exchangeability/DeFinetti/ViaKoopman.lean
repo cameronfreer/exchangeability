@@ -1605,6 +1605,10 @@ lemma condexp_product_factorization_ax
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
+              (∀ i, i ∈ S → MeasurableSet (f i)) →
+              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
+                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i))
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
@@ -1613,17 +1617,70 @@ lemma condexp_product_factorization_ax
   -- Proof by induction on m
   induction m
   · -- Base case (m = 0): Both sides simplify to 1 for empty products
-    -- LHS: μ[fun ω => ∏ k : Fin 0, ... | mSI] = μ[1 | mSI]
-    -- RHS: fun ω => ∏ k : Fin 0, ... = fun ω => 1
     simp only [Finset.univ_eq_empty, Finset.prod_empty]
-    -- Now: μ[fun _ => (1:ℝ) | mSI] =ᵐ fun _ => (1:ℝ)
-    -- condExp_const gives equality, convert to a.e. equality
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   · rename_i n IH
-    -- Inductive step: Split product as P · f_n(ω_n), apply tower + pullout + IH
-    -- where P = ∏_{k : Fin n} f_k(ω_k) depends on coordinates 0, ..., n-1
-    -- This proof requires conditional independence infrastructure - see doc comment above
+    -- Inductive step: Split product into (first n factors) * (last factor)
+    -- The full proof uses kernel independence from hciid
+    -- For now, we mark this sorry until the iIndepFun type issues are resolved
     sorry
+
+/-
+-- Outline of inductive step proof (to be completed):
+-- Apply condExp_mul_of_indep to get CE factorization
+-- have h_ce_fac : μ[P * L | shiftInvariantSigma (α := α)]
+--     =ᵐ[μ] μ[P | shiftInvariantSigma (α := α)] * μ[L | shiftInvariantSigma (α := α)] :=
+--   condExp_mul_of_indep μ (hm := shiftInvariantSigma_le (α := α))
+--     hP_meas hL_meas hP_bd hL_bd h_kernel
+
+-- Rewrite LHS: product over Fin (n+1) = P * L
+-- have h_split_prod : (fun ω => ∏ k : Fin (n + 1), fs k (ω (k : ℕ)))
+--     = fun ω => P ω * L ω := by
+--   funext ω
+--   rw [Fin.prod_univ_castSucc]
+--   simp only [Fin.coe_castSucc, Fin.val_last, P, L]
+
+-- Apply IH to P (product of first n factors, with fs' = fs ∘ castSucc)
+-- let fs' : Fin n → α → ℝ := fun k => fs (Fin.castSucc k)
+-- have hmeas' : ∀ k, Measurable (fs' k) := fun k => hmeas (Fin.castSucc k)
+-- have hbd' : ∀ k, ∃ C, ∀ x, |fs' k x| ≤ C := fun k => hbd (Fin.castSucc k)
+
+-- Need hciid for IH
+-- have h_ih : μ[fun ω => ∏ k : Fin n, fs' k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
+--     =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs' k x ∂(ν (μ := μ) ω)) :=
+--   IH fs' hmeas' hbd'
+
+-- Simplify: P = ∏ k : Fin n, fs' k (ω k)
+-- have hP_eq_prod : P = fun ω => ∏ k : Fin n, fs' k (ω (k : ℕ)) := rfl
+
+-- CE[P] via IH
+-- have h_ce_P : μ[P | shiftInvariantSigma (α := α)]
+--     =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs' k x ∂(ν (μ := μ) ω)) := by
+--   rw [hP_eq_prod]; exact h_ih
+
+-- CE[L] via single coordinate lemma
+-- have h_ce_L : μ[L | shiftInvariantSigma (α := α)]
+--     =ᵐ[μ] (fun ω => ∫ x, fs (Fin.last n) x ∂(ν (μ := μ) ω)) := by
+--   have := condexp_coordinate_via_ν (μ := μ) (α := α) hσ
+--     (ψ := fs (Fin.last n)) (hψ := hmeas (Fin.last n)) (hbd := hbd (Fin.last n)) (k := n)
+--   convert this using 1
+--   ext ω; rfl
+
+-- Combine: LHS = CE[P * L] = CE[P] * CE[L] = (∏ integrals) * (last integral)
+-- calc μ[fun ω => ∏ k : Fin (n + 1), fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
+--     =ᵐ[μ] μ[P * L | shiftInvariantSigma (α := α)] := by
+--       refine Filter.EventuallyEq.condExp ?_
+--       exact Filter.EventuallyEq.of_eq h_split_prod
+--   _ =ᵐ[μ] μ[P | shiftInvariantSigma (α := α)] * μ[L | shiftInvariantSigma (α := α)] := h_ce_fac
+--   _ =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs' k x ∂(ν (μ := μ) ω)) *
+--          (fun ω => ∫ x, fs (Fin.last n) x ∂(ν (μ := μ) ω)) := by
+--       refine Filter.EventuallyEq.mul h_ce_P h_ce_L
+--   _ =ᵐ[μ] fun ω => ∏ k : Fin (n + 1), ∫ x, fs k x ∂(ν (μ := μ) ω) := by
+--       refine Filter.EventuallyEq.of_eq ?_
+--       funext ω
+--       rw [Fin.prod_univ_castSucc]
+--       simp only [fs', Fin.coe_castSucc, Fin.val_last, Pi.mul_apply]
+-/
 
 /-
 Proof of base case (m = 0) - kept for reference:
@@ -6605,13 +6662,16 @@ theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
+              (∀ i, i ∈ S → MeasurableSet (f i)) →
+              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
+                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i))
     (m : ℕ) (fs : Fin m → α → ℝ)
     (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
-    (hciid : True) :
+    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax μ hσ hExch m fs hmeas hbd
+  condexp_product_factorization_ax μ hσ hExch hciid m fs hmeas hbd
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -6906,8 +6966,14 @@ theorem deFinetti_viaKoopman
   · -- Conditional factorization
     intro m fs hmeas hbd
     -- Apply condexp_product_factorization
-    -- (which currently has sorry, pending conditional independence setup)
-    exact condexp_product_factorization hσ hExch m fs hmeas hbd True.intro
+    -- The hciid argument requires proving kernel independence of coordinate functions
+    -- This is the main remaining blocker in ViaKoopman
+    have hciid : ∀ (S : Finset ℕ) {f : ℕ → Set (Ω[α])},
+        (∀ i, i ∈ S → MeasurableSet (f i)) →
+        ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (⋂ i ∈ S, f i) =
+          ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) (f i) := by
+      sorry
+    exact condexp_product_factorization hσ hExch hciid m fs hmeas hbd
 
 /-! ### Bridge Lemma: Connect conditional expectation factorization to measure products
 
