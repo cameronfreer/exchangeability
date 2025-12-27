@@ -645,15 +645,26 @@ lemma directing_measure_integral
         rw [h_sup_eq] at h_lim; exact h_lim
 
       -- Step E: Right-continuity at each rational (⨅ r > q, f r = f q)
-      -- PROOF STRATEGY: alphaIicCE is right-continuous as conditional CDF
-      -- Use Monotone.tendsto_nhdsGT: lim_{r→q+} f(r) = inf_{r>q} f(r)
-      -- For conditional CDFs, this infimum equals f(q) a.e.
+      --
+      -- PROOF STRATEGY:
+      -- alphaIicCE(t, ω) = μ[1_{Iic t} | tailSigma](ω) is a conditional CDF
+      -- Conditional CDFs satisfy right-continuity a.e. by kernel disintegration theory
+      --
+      -- KEY MATHLIB LEMMAS:
+      -- - IsRatCondKernelCDF.iInf_rat_gt_eq: conditional kernel CDFs are right-cont a.e.
+      -- - Monotone.tendsto_nhdsGT: monotone functions have right limits = infimum
+      --
+      -- PROOF OUTLINE:
+      -- 1. alphaIicCE corresponds to a conditional kernel CDF structure
+      -- 2. By IsRatCondKernelCDF.iInf_rat_gt_eq, right-continuity holds a.e.
+      -- 3. Transfer via alphaIic =ᵐ alphaIicCE at rationals
       have h_right_cont : ∀ᵐ ω ∂μ, ∀ q : ℚ,
           ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r =
           alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
-        -- Right-continuity is standard for conditional CDFs
-        -- See: Mathlib/Probability/Kernel/Disintegration/MeasurableStieltjes.lean
-        sorry  -- alphaIicCE right-continuity transfers to alphaIic a.e.
+        -- For conditional CDFs, right-continuity holds a.e. by kernel theory
+        -- The key is that alphaIicCE = μ[1_{Iic t} | tailSigma] defines a
+        -- measurable family of CDFs, which are right-continuous a.e.
+        sorry  -- Technical: connect to IsRatCondKernelCDF machinery
 
       -- Step F: Combine to show IsRatStieltjesPoint a.e.
       have h_is_stieltjes : ∀ᵐ ω ∂μ, ProbabilityTheory.IsRatStieltjesPoint
@@ -664,11 +675,22 @@ lemma directing_measure_integral
         exact ⟨h_mono, h_top, h_bot, h_rc⟩
 
       -- Step G: At IsRatStieltjesPoint, stieltjes = infimum = alphaIic
+      --
+      -- PROOF STRATEGY:
+      -- By StieltjesFunction.iInf_rat_gt_eq: F t = ⨅ r > t (r ∈ ℚ), F r
+      -- At Stieltjes points, toRatCDF = alphaIicRat, so F r = alphaIic (r:ℝ)
+      -- Thus: F t = ⨅ r > t (r ∈ ℚ), alphaIic (r:ℝ)
+      -- Need: alphaIic t = ⨅ r > t (r ∈ ℚ), alphaIic (r:ℝ) (right-continuity of alphaIic)
+      --
+      -- This is equivalent to Step E extended to all reals.
+      -- For conditional CDFs, right-continuity holds a.e. for all t.
       filter_upwards [h_is_stieltjes, h_ae_eq_rat] with ω h_sp h_eq
-      -- stieltjesOfMeasurableRat uses toRatCDF which equals original at Stieltjes points
       have h_toRatCDF := ProbabilityTheory.toRatCDF_of_isRatStieltjesPoint h_sp
-      -- For right-continuous function, infimum over r > t equals value at t
-      sorry  -- Final: stieltjesOfMeasurableRat.toFun = infimum = alphaIic t
+      -- At Stieltjes points: stieltjesOfMeasurableRat r = toRatCDF r = alphaIicRat r
+      -- By StieltjesFunction.iInf_rat_gt_eq: stieltjes t = ⨅ r > t, stieltjes r
+      -- = ⨅ r > t, alphaIicRat r = ⨅ r > t, alphaIic (r:ℝ)
+      -- Need: alphaIic t = ⨅ r > t, alphaIic (r:ℝ) (right-continuity)
+      sorry  -- Right-continuity: alphaIic t = ⨅ r > t (r ∈ ℚ), alphaIic (r:ℝ)
 
     -- Combine the three steps
     filter_upwards [h_stieltjes_eq] with ω hω
