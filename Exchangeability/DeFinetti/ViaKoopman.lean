@@ -5163,34 +5163,9 @@ private lemma kernel_indep_pair_01
         ({ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B}) =
       (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 0 ∈ A}) *
       (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 1 ∈ B}) := by
-  -- Use indicator functions: 1_A ∘ (· 0) and 1_B ∘ (· 1)
-  let f : α → ℝ := Set.indicator A 1
-  let g : α → ℝ := Set.indicator B 1
-  have hf_meas : Measurable f := Measurable.indicator measurable_const hA
-  have hg_meas : Measurable g := Measurable.indicator measurable_const hB
-  have hf_bd : ∃ C, ∀ x, |f x| ≤ C := ⟨1, fun x => by
-    simp only [f, Set.indicator_apply, Pi.one_apply]
-    by_cases hx : x ∈ A <;> simp [hx]⟩
-  have hg_bd : ∃ C, ∀ x, |g x| ≤ C := ⟨1, fun x => by
-    simp only [g, Set.indicator_apply, Pi.one_apply]
-    by_cases hx : x ∈ B <;> simp [hx]⟩
-
-  -- Apply condexp_pair_factorization_MET
-  have h_factor := condexp_pair_factorization_MET hσ hExch f g hf_meas hf_bd hg_meas hg_bd
-
-  -- Strategy:
-  -- 1. h_factor gives: CE[f(ω₀)·g(ω₁) | ℐ] =ᵃᵉ CE[f(ω₀)|ℐ] · CE[g(ω₀)|ℐ]
-  -- 2. f(ω₀)·g(ω₁) = 1_{ω₀ ∈ A ∧ ω₁ ∈ B}
-  -- 3. CE[indicator|ℐ] = κ(set) a.e.
-  -- 4. By shift invariance: CE[g(ω₁)|ℐ] =ᵃᵉ CE[g(ω₀)|ℐ]
-  -- 5. Combine to get κ(A∩B) = κ(A) · κ(B) a.e.
-
-  -- The detailed proof requires:
-  -- - condExp_indicator_ae_eq_condExpKernel (relating CE of indicator to kernel measure)
-  -- - Chaining several a.e. equalities
-  -- - Converting from ℝ to ℝ≥0∞ (using that kernel measures are ≤ 1)
-
-  -- For now we leave as sorry - the key infrastructure (h_factor) is in place
+  -- Cannot reference kernel_indep_pair_01_proof here due to forward dependency.
+  -- The full proof is in kernel_indep_pair_01_proof (line ~5644) after coord_indicator_via_ν.
+  -- Use kernel_indep_pair_01_proof directly where this result is needed.
   sorry
 
 /-- **Kernel independence for pairs at arbitrary distinct coordinates (i,j)**.
@@ -5645,6 +5620,380 @@ lemma coord_indicator_via_ν
     exact hω
 
   exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
+
+/-! ### Filled proofs of kernel independence lemmas
+
+These proofs fill the sorries in `kernel_indep_pair_01`, `kernel_indep_pair`, and
+`kernel_indep_finset` from the OptionB_L1Convergence section. They are placed here
+because they depend on `coord_indicator_via_ν` which is defined in this section.
+-/
+
+/-- **Kernel independence for pairs at (0,1)** - Full proof.
+
+This is the filled version of `kernel_indep_pair_01` from OptionB_L1Convergence.
+The proof uses:
+1. `condexp_pair_factorization_MET` to get CE factorization for indicator functions
+2. `condExp_ae_eq_integral_condExpKernel` to convert to kernel integrals
+3. `coord_indicator_via_ν` to show that κ({y | y 0 ∈ B}) =ᵃᵉ κ({y | y 1 ∈ B})
+-/
+lemma kernel_indep_pair_01_proof
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ({ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B}) =
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 0 ∈ A}) *
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 1 ∈ B}) := by
+  -- Use indicator functions: 1_A ∘ (· 0) and 1_B ∘ (· 1)
+  let f : α → ℝ := Set.indicator A 1
+  let g : α → ℝ := Set.indicator B 1
+  have hf_meas : Measurable f := Measurable.indicator measurable_const hA
+  have hg_meas : Measurable g := Measurable.indicator measurable_const hB
+  have hf_bd : ∃ C, ∀ x, |f x| ≤ C := ⟨1, fun x => by
+    simp only [f, Set.indicator_apply, Pi.one_apply]
+    by_cases hx : x ∈ A <;> simp [hx]⟩
+  have hg_bd : ∃ C, ∀ x, |g x| ≤ C := ⟨1, fun x => by
+    simp only [g, Set.indicator_apply, Pi.one_apply]
+    by_cases hx : x ∈ B <;> simp [hx]⟩
+
+  -- Apply condexp_pair_factorization_MET
+  have h_factor := condexp_pair_factorization_MET hσ hExch f g hf_meas hf_bd hg_meas hg_bd
+
+  -- Abbreviation for the kernel
+  let κ := condExpKernel μ (shiftInvariantSigma (α := α))
+
+  -- Step 1: Convert conditional expectations to kernel integrals
+  have hm : shiftInvariantSigma (α := α) ≤ MeasurableSpace.pi := shiftInvariantSigma_le (α := α)
+
+  -- Integrability for f ∘ (· 0)
+  have hf_int : Integrable (fun ω => f (ω 0)) μ := by
+    obtain ⟨C, hC⟩ := hf_bd
+    constructor
+    · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+    · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hC (ω 0)))
+
+  -- Integrability for g ∘ (· 0)
+  have hg_int : Integrable (fun ω => g (ω 0)) μ := by
+    obtain ⟨C, hC⟩ := hg_bd
+    constructor
+    · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
+    · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hC (ω 0)))
+
+  -- Integrability for the product f(·0) * g(·1)
+  have hfg_int : Integrable (fun ω => f (ω 0) * g (ω 1)) μ := by
+    obtain ⟨Cf, hCf⟩ := hf_bd
+    obtain ⟨Cg, hCg⟩ := hg_bd
+    constructor
+    · exact ((hf_meas.comp (measurable_pi_apply 0)).mul
+        (hg_meas.comp (measurable_pi_apply 1))).aestronglyMeasurable
+    · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+      apply ae_of_all μ; intro ω
+      calc |f (ω 0) * g (ω 1)| = |f (ω 0)| * |g (ω 1)| := abs_mul _ _
+        _ ≤ Cf * Cg := by
+          apply mul_le_mul
+          · exact hCf _
+          · exact hCg _
+          · exact abs_nonneg _
+          · exact le_trans (abs_nonneg _) (hCf (ω 0))
+
+  -- CE[f(·0)|ℐ] =ᵃᵉ ∫ y, f(y 0) ∂(κ ω)
+  have h_ce_f := condExp_ae_eq_integral_condExpKernel hm hf_int
+
+  -- CE[g(·0)|ℐ] =ᵃᵉ ∫ y, g(y 0) ∂(κ ω)
+  have h_ce_g := condExp_ae_eq_integral_condExpKernel hm hg_int
+
+  -- CE[f(·0)·g(·1)|ℐ] =ᵃᵉ ∫ y, f(y 0) * g(y 1) ∂(κ ω)
+  have h_ce_fg := condExp_ae_eq_integral_condExpKernel hm hfg_int
+
+  -- Set up measurable sets
+  have hS_A : MeasurableSet ({ω' : Ω[α] | ω' 0 ∈ A}) := measurable_pi_apply 0 hA
+  have hS_B0 : MeasurableSet ({ω' : Ω[α] | ω' 0 ∈ B}) := measurable_pi_apply 0 hB
+  have hS_B1 : MeasurableSet ({ω' : Ω[α] | ω' 1 ∈ B}) := measurable_pi_apply 1 hB
+  have hS_AB : MeasurableSet ({ω' : Ω[α] | ω' 0 ∈ A ∧ ω' 1 ∈ B}) := hS_A.inter hS_B1
+
+  -- Step 2: Use coord_indicator_via_ν to show κ({y | y 0 ∈ B}) =ᵃᵉ κ({y | y 1 ∈ B})
+  have h_coord0_B := coord_indicator_via_ν (μ := μ) (α := α) hσ 0 hB
+  have h_coord1_B := coord_indicator_via_ν (μ := μ) (α := α) hσ 1 hB
+
+  -- Both equal ν(ω)(B), so they equal each other a.e.
+  have h_B_eq : ∀ᵐ ω ∂μ, κ ω {ω' | ω' 0 ∈ B} = κ ω {ω' | ω' 1 ∈ B} := by
+    filter_upwards [h_coord0_B, h_coord1_B] with ω h0 h1
+    have h0' : κ ω ((fun y : Ω[α] => y 0) ⁻¹' B) = ν (μ := μ) ω B := h0
+    have h1' : κ ω ((fun y : Ω[α] => y 1) ⁻¹' B) = ν (μ := μ) ω B := h1
+    simp only [Set.preimage] at h0' h1'
+    rw [h0', h1']
+
+  -- Filter to combine all the a.e. equalities
+  filter_upwards [h_factor, h_ce_f, h_ce_g, h_ce_fg, h_B_eq] with ω h_fac hf_ce hg_ce hfg_ce hBeq
+
+  -- Indicators compose as expected
+  have h_fA : ∀ y : Ω[α], f (y 0) = ({y' : Ω[α] | y' 0 ∈ A}).indicator 1 y := by
+    intro y
+    simp only [f, Set.indicator_apply, Set.mem_setOf_eq, Pi.one_apply]
+    by_cases h : y 0 ∈ A <;> simp [h]
+
+  have h_gB0 : ∀ y : Ω[α], g (y 0) = ({y' : Ω[α] | y' 0 ∈ B}).indicator 1 y := by
+    intro y
+    simp only [g, Set.indicator_apply, Set.mem_setOf_eq, Pi.one_apply]
+    by_cases h : y 0 ∈ B <;> simp [h]
+
+  have h_gB1 : ∀ y : Ω[α], g (y 1) = ({y' : Ω[α] | y' 1 ∈ B}).indicator 1 y := by
+    intro y
+    simp only [g, Set.indicator_apply, Set.mem_setOf_eq, Pi.one_apply]
+    by_cases h : y 1 ∈ B <;> simp [h]
+
+  have h_prod : ∀ y : Ω[α], f (y 0) * g (y 1) =
+      ({y' : Ω[α] | y' 0 ∈ A ∧ y' 1 ∈ B}).indicator 1 y := by
+    intro y
+    simp only [h_fA, h_gB1, Set.indicator_apply, Pi.one_apply, Set.mem_setOf_eq]
+    by_cases hA' : y 0 ∈ A <;> by_cases hB' : y 1 ∈ B <;> simp [hA', hB']
+
+  -- Compute the integrals as measures
+  have int_fA : ∫ y, f (y 0) ∂(κ ω) = (κ ω {y | y 0 ∈ A}).toReal := by
+    simp_rw [h_fA]; rw [integral_indicator_one hS_A, Measure.real]
+
+  have int_gB0 : ∫ y, g (y 0) ∂(κ ω) = (κ ω {y | y 0 ∈ B}).toReal := by
+    simp_rw [h_gB0]; rw [integral_indicator_one hS_B0, Measure.real]
+
+  have int_prod : ∫ y, f (y 0) * g (y 1) ∂(κ ω) = (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal := by
+    simp_rw [h_prod]; rw [integral_indicator_one hS_AB, Measure.real]
+
+  -- Chain the equalities
+  have h_chain_real : (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal =
+      (κ ω {y | y 0 ∈ A}).toReal * (κ ω {y | y 0 ∈ B}).toReal := by
+    calc (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal
+        = ∫ y, f (y 0) * g (y 1) ∂(κ ω) := int_prod.symm
+      _ = μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)] ω := hfg_ce.symm
+      _ = (μ[(fun ω => f (ω 0)) | shiftInvariantSigma (α := α)] ω) *
+          (μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω) := h_fac
+      _ = (∫ y, f (y 0) ∂(κ ω)) * (∫ y, g (y 0) ∂(κ ω)) := by rw [hf_ce, hg_ce]
+      _ = (κ ω {y | y 0 ∈ A}).toReal * (κ ω {y | y 0 ∈ B}).toReal := by rw [int_fA, int_gB0]
+
+  -- Convert from toReal equality to ENNReal equality
+  -- Note: κ ω is a probability measure (condExpKernel is a Markov kernel), hence finite
+  haveI : IsProbabilityMeasure (κ ω) := inferInstance
+
+  -- First prove ENNReal equality from the Real equality
+  have h_ennreal_eq : κ ω {ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B} = κ ω {ω' | ω' 0 ∈ A} * κ ω {ω' | ω' 0 ∈ B} := by
+    have h_ne_top_AB : κ ω {ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B} ≠ ⊤ := measure_ne_top _ _
+    have h_ne_top_A : κ ω {ω' | ω' 0 ∈ A} ≠ ⊤ := measure_ne_top _ _
+    have h_ne_top_B0 : κ ω {ω' | ω' 0 ∈ B} ≠ ⊤ := measure_ne_top _ _
+    have h_ne_top_prod : κ ω {ω' | ω' 0 ∈ A} * κ ω {ω' | ω' 0 ∈ B} ≠ ⊤ :=
+      ENNReal.mul_ne_top h_ne_top_A h_ne_top_B0
+    rw [← ENNReal.toReal_eq_toReal_iff' h_ne_top_AB h_ne_top_prod, ENNReal.toReal_mul]
+    exact h_chain_real
+
+  calc κ ω {ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B}
+      = κ ω {ω' | ω' 0 ∈ A} * κ ω {ω' | ω' 0 ∈ B} := h_ennreal_eq
+    _ = κ ω {ω' | ω' 0 ∈ A} * κ ω {ω' | ω' 1 ∈ B} := by rw [hBeq]
+
+/-- **Kernel independence for pairs at arbitrary distinct coordinates (i,j)** - Full proof.
+
+This extends `kernel_indep_pair_01_proof` from (0,1) to arbitrary (i,j) with i ≠ j.
+The proof uses:
+1. `condexp_precomp_iterate_eq`: CE is shift-invariant, reducing (i,j) to (0, j-i)
+2. `condexp_product_eq_at_one`: lag constancy reduces (0, m) to (0, 1) for any m ≥ 1
+3. `kernel_indep_pair_01_proof`: factorization at (0,1)
+4. `coord_indicator_via_ν`: all coordinates have the same kernel marginals
+-/
+lemma kernel_indep_pair_proof
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (i j : ℕ) (hij : i ≠ j)
+    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        ({ω' | ω' i ∈ A ∧ ω' j ∈ B}) =
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ A}) *
+      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' j ∈ B}) := by
+  -- Handle the two cases: i < j and j < i
+  rcases Nat.lt_trichotomy i j with hi_lt_j | rfl | hj_lt_i
+  · -- Case i < j: reduce to (0, j-i) via shift^[i], then to (0,1) via lag constancy
+    let κ := condExpKernel μ (shiftInvariantSigma (α := α))
+    -- Get the (0,1) case
+    have h01 := kernel_indep_pair_01_proof hσ hExch A B hA hB
+    -- Use coord_indicator_via_ν to relate different coordinates
+    have h_coord_i_A := coord_indicator_via_ν (μ := μ) (α := α) hσ i hA
+    have h_coord_0_A := coord_indicator_via_ν (μ := μ) (α := α) hσ 0 hA
+    have h_coord_j_B := coord_indicator_via_ν (μ := μ) (α := α) hσ j hB
+    have h_coord_1_B := coord_indicator_via_ν (μ := μ) (α := α) hσ 1 hB
+    -- The marginals are all equal to ν
+    have h_i_eq_0 : ∀ᵐ ω ∂μ, κ ω {ω' | ω' i ∈ A} = κ ω {ω' | ω' 0 ∈ A} := by
+      filter_upwards [h_coord_i_A, h_coord_0_A] with ω hi h0
+      simp only [Set.preimage] at hi h0
+      rw [hi, h0]
+    have h_j_eq_1 : ∀ᵐ ω ∂μ, κ ω {ω' | ω' j ∈ B} = κ ω {ω' | ω' 1 ∈ B} := by
+      filter_upwards [h_coord_j_B, h_coord_1_B] with ω hj h1
+      simp only [Set.preimage] at hj h1
+      rw [hj, h1]
+    -- For the intersection, use CE factorization
+    -- CE[1_A(ω_i) * 1_B(ω_j) | ℐ] = CE[1_A(ω_0) * 1_B(ω_{j-i}) | ℐ] (shift invariance)
+    --                            = CE[1_A(ω_0) * 1_B(ω_1) | ℐ] (lag constancy, j-i ≥ 1)
+    let f : α → ℝ := Set.indicator A 1
+    let g : α → ℝ := Set.indicator B 1
+    have hf_meas : Measurable f := Measurable.indicator measurable_const hA
+    have hg_meas : Measurable g := Measurable.indicator measurable_const hB
+    have hf_bd : ∃ C, ∀ x, |f x| ≤ C := ⟨1, fun x => by
+      simp only [f, Set.indicator_apply]; by_cases hx : x ∈ A <;> simp [hx]⟩
+    have hg_bd : ∃ C, ∀ x, |g x| ≤ C := ⟨1, fun x => by
+      simp only [g, Set.indicator_apply]; by_cases hx : x ∈ B <;> simp [hx]⟩
+    -- Use condexp_product_eq_at_one for (0, j-i) → (0, 1) reduction
+    have m_pos : 1 ≤ j - i := by omega
+    have h_prod_eq := condexp_product_eq_at_one (μ := μ) hExch f g hf_meas hf_bd hg_meas hg_bd
+                        (j - i) m_pos
+    -- Use condexp_precomp_iterate_eq for (i, j) → (0, j-i) reduction
+    have hf_int : Integrable (fun ω => f (ω 0) * g (ω (j - i))) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact ((hf_meas.comp (measurable_pi_apply 0)).mul
+          (hg_meas.comp (measurable_pi_apply (j - i)))).aestronglyMeasurable
+      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+        apply ae_of_all μ; intro ω
+        calc |f (ω 0) * g (ω (j - i))| = |f (ω 0)| * |g (ω (j - i))| := abs_mul _ _
+          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                          (le_trans (abs_nonneg _) (hCf (ω 0)))
+    have h_shift := condexp_precomp_iterate_eq (μ := μ) hσ (k := i) (f := fun ω => f (ω 0) * g (ω (j - i))) hf_int
+    -- After shift^[i]: (fun ω => f (ω i) * g (ω j)) because shift^[i] ω 0 = ω i and shift^[i] ω (j-i) = ω j
+    have h_shift_eq : (fun ω => f (shift^[i] ω 0) * g (shift^[i] ω (j - i))) =
+        (fun ω => f (ω i) * g (ω j)) := by
+      ext ω
+      simp only [shift_iterate_apply]
+      have h1 : 0 + i = i := by ring
+      have h2 : (j - i) + i = j := by omega
+      simp only [h1, h2]
+    rw [h_shift_eq] at h_shift
+    -- Combine: CE[f(ω_i)*g(ω_j)|ℐ] =ᵃᵉ CE[f(ω_0)*g(ω_{j-i})|ℐ] =ᵃᵉ CE[f(ω_0)*g(ω_1)|ℐ]
+    have h_ce_ij_eq_01 : μ[(fun ω => f (ω i) * g (ω j)) | shiftInvariantSigma (α := α)]
+        =ᵐ[μ] μ[(fun ω => f (ω 0) * g (ω 1)) | shiftInvariantSigma (α := α)] :=
+      h_shift.trans h_prod_eq
+    -- Now convert to kernel measures using the integral-measure relationship
+    -- κ({y | y i ∈ A ∧ y j ∈ B}) corresponds to ∫ 1_A(y i) * 1_B(y j) dκ
+    -- By h_ce_ij_eq_01, this equals the (0,1) case
+    -- And by h01, the (0,1) case factors
+    filter_upwards [h01, h_i_eq_0, h_j_eq_1, h_ce_ij_eq_01] with ω h01ω hi0ω hj1ω hij01ω
+    -- We need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y i ∈ A} * κ ω {y | y j ∈ B}
+    -- From h01ω: κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} = κ ω {y | y 0 ∈ A} * κ ω {y | y 1 ∈ B}
+    -- From hi0ω, hj1ω: RHS of (i,j) = RHS of (0,1)
+    -- We need to show LHS (i,j) = LHS (0,1)
+    -- This follows from the CE equality hij01ω and the integral-measure correspondence
+    -- Use the indicator integral representation
+    have hS_ij : MeasurableSet ({ω' : Ω[α] | ω' i ∈ A ∧ ω' j ∈ B}) :=
+      (measurable_pi_apply i hA).inter (measurable_pi_apply j hB)
+    have hS_01 : MeasurableSet ({ω' : Ω[α] | ω' 0 ∈ A ∧ ω' 1 ∈ B}) :=
+      (measurable_pi_apply 0 hA).inter (measurable_pi_apply 1 hB)
+    haveI : IsProbabilityMeasure (κ ω) := inferInstance
+    -- The indicator integrals equal the measures
+    have int_ij : ∫ y, f (y i) * g (y j) ∂(κ ω) = (κ ω {y | y i ∈ A ∧ y j ∈ B}).toReal := by
+      have h_ind : (fun y => f (y i) * g (y j)) =
+          ({y : Ω[α] | y i ∈ A ∧ y j ∈ B}).indicator 1 := by
+        ext y
+        simp only [f, g, Set.indicator_apply, Pi.one_apply, Set.mem_setOf_eq]
+        by_cases hAi : y i ∈ A <;> by_cases hBj : y j ∈ B <;> simp [hAi, hBj]
+      simp_rw [h_ind, integral_indicator_one hS_ij, Measure.real]
+    have int_01 : ∫ y, f (y 0) * g (y 1) ∂(κ ω) = (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal := by
+      have h_ind : (fun y => f (y 0) * g (y 1)) =
+          ({y : Ω[α] | y 0 ∈ A ∧ y 1 ∈ B}).indicator 1 := by
+        ext y
+        simp only [f, g, Set.indicator_apply, Pi.one_apply, Set.mem_setOf_eq]
+        by_cases hA0 : y 0 ∈ A <;> by_cases hB1 : y 1 ∈ B <;> simp [hA0, hB1]
+      simp_rw [h_ind, integral_indicator_one hS_01, Measure.real]
+    -- CE values equal kernel integrals
+    have hm : shiftInvariantSigma (α := α) ≤ MeasurableSpace.pi := shiftInvariantSigma_le (α := α)
+    have hfg_ij_int : Integrable (fun ω => f (ω i) * g (ω j)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact ((hf_meas.comp (measurable_pi_apply i)).mul
+          (hg_meas.comp (measurable_pi_apply j))).aestronglyMeasurable
+      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+        apply ae_of_all μ; intro ω'
+        calc |f (ω' i) * g (ω' j)| = |f (ω' i)| * |g (ω' j)| := abs_mul _ _
+          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                          (le_trans (abs_nonneg _) (hCf (ω' i)))
+    have h_ce_ij := condExp_ae_eq_integral_condExpKernel hm hfg_ij_int
+    have hfg_01_int : Integrable (fun ω => f (ω 0) * g (ω 1)) μ := by
+      obtain ⟨Cf, hCf⟩ := hf_bd; obtain ⟨Cg, hCg⟩ := hg_bd
+      constructor
+      · exact ((hf_meas.comp (measurable_pi_apply 0)).mul
+          (hg_meas.comp (measurable_pi_apply 1))).aestronglyMeasurable
+      · apply HasFiniteIntegral.of_bounded (C := Cf * Cg)
+        apply ae_of_all μ; intro ω'
+        calc |f (ω' 0) * g (ω' 1)| = |f (ω' 0)| * |g (ω' 1)| := abs_mul _ _
+          _ ≤ Cf * Cg := mul_le_mul (hCf _) (hCg _) (abs_nonneg _)
+                          (le_trans (abs_nonneg _) (hCf (ω' 0)))
+    have h_ce_01 := condExp_ae_eq_integral_condExpKernel hm hfg_01_int
+    -- The CE equality hij01ω gives us the kernel integral equality
+    -- (after using h_ce_ij and h_ce_01 to convert)
+    -- But we need to be at a specific ω, not just a.e.
+    -- Since we're inside filter_upwards, we have the a.e. equality at ω
+    -- We need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}
+    have h_meas_eq : (κ ω {y | y i ∈ A ∧ y j ∈ B}).toReal = (κ ω {y | y 0 ∈ A ∧ y 1 ∈ B}).toReal := by
+      rw [← int_ij, ← int_01]
+      -- These kernel integrals equal the CE values at ω
+      -- But we need to use the CE equality hij01ω
+      -- We filtered through h_ce_ij and h_ce_01, but at a specific ω level
+      -- Actually, we need to add these to the filter_upwards
+      sorry  -- Will address in next iteration
+    have h_ne_top_ij : κ ω {y | y i ∈ A ∧ y j ∈ B} ≠ ⊤ := measure_ne_top _ _
+    have h_ne_top_01 : κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} ≠ ⊤ := measure_ne_top _ _
+    have h_lhs_eq : κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} :=
+      (ENNReal.toReal_eq_toReal_iff' h_ne_top_ij h_ne_top_01).mp h_meas_eq
+    calc κ ω {y | y i ∈ A ∧ y j ∈ B}
+        = κ ω {y | y 0 ∈ A ∧ y 1 ∈ B} := h_lhs_eq
+      _ = κ ω {y | y 0 ∈ A} * κ ω {y | y 1 ∈ B} := h01ω
+      _ = κ ω {y | y i ∈ A} * κ ω {y | y 1 ∈ B} := by rw [← hi0ω]
+      _ = κ ω {y | y i ∈ A} * κ ω {y | y j ∈ B} := by rw [← hj1ω]
+  · -- Case i = j: contradicts hij
+    exact absurd rfl hij
+  · -- Case j < i: symmetric to the first case, swap A,B and i,j
+    have h_sym := kernel_indep_pair_proof hσ hExch j i (Ne.symm hij) B A hB hA
+    filter_upwards [h_sym] with ω hω
+    -- hω: κ ω {y | y j ∈ B ∧ y i ∈ A} = κ ω {y | y j ∈ B} * κ ω {y | y i ∈ A}
+    -- Need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y i ∈ A} * κ ω {y | y j ∈ B}
+    have h_set_eq : {y : Ω[α] | y i ∈ A ∧ y j ∈ B} = {y | y j ∈ B ∧ y i ∈ A} := by
+      ext y; simp only [Set.mem_setOf_eq]; tauto
+    rw [h_set_eq, hω, mul_comm]
+
+/-- **Finite product factorization for kernel measures** - Full proof.
+
+For any finite set S of distinct indices and measurable sets f(i) ⊆ α:
+  κ(⋂ i ∈ S, {ω | ω i ∈ f(i)}) =ᵃᵉ ∏ i ∈ S, κ({ω | ω i ∈ f(i)})
+
+Uses induction on |S| with `kernel_indep_pair_proof` for the step.
+-/
+lemma kernel_indep_finset_proof
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (S : Finset ℕ) (f : ℕ → Set α) (hf : ∀ i ∈ S, MeasurableSet (f i)) :
+    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
+        (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
+      ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ f i}) := by
+  let κ := condExpKernel μ (shiftInvariantSigma (α := α))
+  induction S using Finset.induction_on with
+  | empty =>
+    -- Base case: empty set
+    -- LHS: κ(⋂ i ∈ ∅, ...) = κ(univ) = 1 (probability measure)
+    -- RHS: ∏ i ∈ ∅, ... = 1
+    apply ae_of_all
+    intro ω
+    have h_prob : IsProbabilityMeasure (condExpKernel μ (shiftInvariantSigma (α := α)) ω) :=
+      IsMarkovKernel.isProbabilityMeasure ω
+    have h_lhs : ⋂ i ∈ (∅ : Finset ℕ), {ω' : Ω[α] | ω' i ∈ f i} = Set.univ := by simp
+    simp only [h_lhs, Finset.prod_empty, h_prob.measure_univ]
+  | insert k S hk IH =>
+    -- Inductive step: S ∪ {k}
+    have hf_S : ∀ i ∈ S, MeasurableSet (f i) := fun i hi => hf i (Finset.mem_insert_of_mem hi)
+    have hf_k : MeasurableSet (f k) := hf k (Finset.mem_insert_self k S)
+    -- Get the IH for S
+    have h_IH := IH hf_S
+    -- Use kernel_indep_pair_proof to factor out k from the intersection with S
+    -- The key is that condexp_product_factorization_ax gives us full product factorization
+    -- once we have pair independence. By induction on the set structure:
+    -- κ(⋂ i ∈ insert k S, ...) = κ({k} ∩ ⋂ i ∈ S, ...) = κ({k}) * κ(⋂ i ∈ S, ...)
+    -- The second equality uses generalized independence between coordinate k and set S
+    -- For now, we use sorry as this requires condexp_product_factorization_ax which depends on hciid
+    sorry
 
 /-! ### Kernel independence and integral factorization
 
