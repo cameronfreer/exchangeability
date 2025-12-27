@@ -688,30 +688,26 @@ lemma directing_measure_integral
         -- right-continuity from the conditional expectation structure.
         rw [ae_all_iff]
         intro q
-        -- For this q, show ⨅_{r > q} alphaIicRat(r) = alphaIicRat(q) a.e.
         filter_upwards [h_mono_rat, h_ae_eq_rat] with ω h_mono h_eq
-        -- Lower bound: alphaIicRat(q) ≤ ⨅_{r > q} alphaIicRat(r) by monotonicity
+        -- STRATEGY: Show ⨅_{r > q} alphaIicRat(r) = alphaIicRat(q)
+        -- This is right-continuity of conditional CDFs, which holds a.e.
+        --
+        -- PROOF APPROACH (to be implemented):
+        -- 1. For r_n = q + 1/(n+1): indIic(r_n) ↘ indIic(q) pointwise
+        -- 2. By dominated convergence: E[indIic(r_n) ∘ X_0 | G] → E[indIic(q) ∘ X_0 | G] in L¹
+        -- 3. Monotone L¹-convergent sequences converge a.e.
+        -- 4. At ω where h_eq holds: alphaIicRat = alphaIicCE at rationals
+        -- 5. So ⨅_{r>q} alphaIicRat(r) = lim alphaIicRat(r_n) = alphaIicRat(q)
+        --
+        -- Lower bound by monotonicity
         have h_le : alphaIicRat X hX_contract hX_meas hX_L2 ω q ≤
             ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r := by
-          apply le_ciInf
-          intro ⟨r, hr⟩
-          simp only [alphaIicRat]
+          apply le_ciInf; intro ⟨r, hr⟩; simp only [alphaIicRat]
           exact h_mono q r (le_of_lt hr)
-        -- Upper bound: ⨅_{r > q} alphaIicRat(r) ≤ alphaIicRat(q) by right-continuity
-        -- For conditional CDFs (which alphaIicCE is), right-continuity holds a.e.
-        -- At ω where h_eq holds, alphaIicRat = alphaIicCE at all rationals.
-        -- The conditional expectation E[1_{Iic t}(X_0) | G] is right-continuous in t a.e.
-        -- because 1_{Iic r} ↘ 1_{Iic q} as r ↓ q, and by monotone/dominated convergence
-        -- for conditional expectations, the condexp converges a.e.
+        -- Upper bound: right-continuity from condexp dominated convergence
         have h_ge : ⨅ r : Set.Ioi q, alphaIicRat X hX_contract hX_meas hX_L2 ω r ≤
             alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
-          -- This is the content of right-continuity for conditional CDFs.
-          -- Technical proof using dominated convergence for condexp.
-          -- For r_n = q + 1/(n+1), alphaIicCE(r_n) → alphaIicCE(q) a.e.
-          -- At this ω (where h_eq holds for all rationals), this gives:
-          -- alphaIicRat(r_n) → alphaIicRat(q)
-          -- Since alphaIicRat is monotone: ⨅_{r > q} = lim_{r_n} = alphaIicRat(q)
-          sorry  -- Right-continuity from condexp dominated convergence
+          sorry -- Right-continuity from condexp dominated convergence
         exact le_antisymm h_ge h_le
 
       -- Step F: Combine to show IsRatStieltjesPoint a.e.
