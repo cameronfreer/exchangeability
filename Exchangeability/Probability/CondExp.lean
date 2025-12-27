@@ -455,12 +455,8 @@ lemma condexp_indicator_eq_of_pair_law_eq
       have := congr_arg (fun ν => ν (B ×ˢ E)) hpair
       simp only [Measure.map_apply (hY.prodMk hZ) (hB.prod hE),
                  Measure.map_apply (hY'.prodMk hZ) (hB.prod hE)] at this
-      -- Convert product preimage to intersection
-      have h1 : (fun ω => (Y ω, Z ω)) ⁻¹' (B ×ˢ E) = Y ⁻¹' B ∩ Z ⁻¹' E := by
-        ext ω; simp [Set.mem_prod]
-      have h2 : (fun ω => (Y' ω, Z ω)) ⁻¹' (B ×ˢ E) = Y' ⁻¹' B ∩ Z ⁻¹' E := by
-        ext ω; simp [Set.mem_prod]
-      rw [h1, h2] at this
+      -- Convert product preimage to intersection using Set.mk_preimage_prod (rfl)
+      simp only [Set.mk_preimage_prod] at this
       exact this
 
     -- LHS: ∫_{Z⁻¹(E)} f dμ = μ(Y⁻¹(B) ∩ Z⁻¹(E))
