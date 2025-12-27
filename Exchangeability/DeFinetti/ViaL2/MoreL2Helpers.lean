@@ -623,14 +623,54 @@ lemma integral_alphaIic_eq_marginal
     have h_limit_meas : Measurable limit := h_spec.1
 
     -- Step 3: L¹ convergence implies convergence in measure
-    -- Standard: L¹ convergence → convergence in measure via Markov's inequality
-    -- Then: convergence in measure → a.e. convergent subsequence
+    -- Use tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top with p = 1
+    have h_A_int : ∀ m, Integrable (A m) μ := fun m => by
+      refine ⟨(hA_meas m).aestronglyMeasurable, ?_⟩
+      apply hasFiniteIntegral_of_bounded (C := 1)
+      filter_upwards with ω
+      rw [Real.norm_eq_abs]
+      by_cases hm : m = 0
+      · simp only [A, hm, Nat.cast_zero, div_zero, Finset.univ_eq_empty, Finset.sum_empty,
+          mul_zero, abs_zero, zero_le_one]
+      · have ⟨h0, h1⟩ := h_A_in_01 m (Nat.pos_of_ne_zero hm) ω
+        rw [abs_of_nonneg h0]; exact h1
+    have h_diff_int : ∀ m, Integrable (fun ω => A m ω - limit ω) μ :=
+      fun m => (h_A_int m).sub h_limit_integrable
     have h_tendstoInMeasure : TendstoInMeasure μ A atTop limit := by
-      -- Proof: Apply tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top with p=1
-      -- This requires showing that eLpNorm (A m - limit) 1 μ → 0, which follows
-      -- from h_tendsto_L1 since eLpNorm f 1 μ = ∫ ‖f‖ dμ for L¹.
-      -- Technical: Need to interface Bochner integral ∫|f|dμ with eLpNorm
-      sorry
+      -- First show eLpNorm (A m - limit) 1 μ → 0
+      have h_eLpNorm_tendsto : Tendsto (fun m => eLpNorm (A m - limit) 1 μ) atTop (𝓝 0) := by
+        simp_rw [eLpNorm_one_eq_lintegral_enorm]
+        rw [ENNReal.tendsto_atTop_zero]
+        intro ε hε
+        -- Handle ε = ⊤ case (trivially true since lintegral is finite)
+        by_cases hε_top : ε = ⊤
+        · refine ⟨0, fun m _ => ?_⟩
+          rw [hε_top]
+          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) by rfl]
+          rw [← ofReal_integral_norm_eq_lintegral_enorm (h_diff_int m)]
+          exact le_top
+        · -- ε ≠ ⊤ case: use L¹ convergence
+          obtain ⟨M, hM⟩ := Metric.tendsto_atTop.mp h_tendsto_L1 ε.toReal
+            (ENNReal.toReal_pos hε.ne' hε_top)
+          refine ⟨M, fun m hm => ?_⟩
+          have := hM m hm
+          simp only [Real.dist_eq, sub_zero] at this
+          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) by rfl]
+          rw [← ofReal_integral_norm_eq_lintegral_enorm (h_diff_int m)]
+          have h_int_nonneg : 0 ≤ ∫ x, |A m x - limit x| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
+          have h_norm_eq_abs : ∫ x, ‖A m x - limit x‖ ∂μ = ∫ x, |A m x - limit x| ∂μ := by
+            apply integral_congr_ae; filter_upwards with ω; exact Real.norm_eq_abs _
+          rw [h_norm_eq_abs]
+          have h_lt : ∫ x, |A m x - limit x| ∂μ < ε.toReal := by
+            rwa [abs_of_nonneg h_int_nonneg] at this
+          have h_toReal_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' hε_top
+          have h1 : ENNReal.ofReal (∫ x, |A m x - limit x| ∂μ) < ENNReal.ofReal ε.toReal := by
+            rw [ENNReal.ofReal_lt_ofReal_iff h_toReal_pos]
+            exact h_lt
+          have h2 : ENNReal.ofReal ε.toReal ≤ ε := ENNReal.ofReal_toReal_le
+          exact le_of_lt (lt_of_lt_of_le h1 h2)
+      exact tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top one_ne_zero ENNReal.one_ne_top
+        (fun m => (hA_meas m).aestronglyMeasurable) h_limit_meas.aestronglyMeasurable h_eLpNorm_tendsto
 
     -- Step 4: Convergence in measure implies a.e. convergent subsequence
     obtain ⟨ns, hns_mono, hns_ae⟩ := h_tendstoInMeasure.exists_seq_tendsto_ae
