@@ -9,7 +9,7 @@
 | **ViaMartingale** | **0** | 0 | 0 | ✅ | **COMPLETE (Default)** |
 | ViaL2 | 6 | 0 | 0 | ✅ | ~85% complete |
 | ViaKoopman | 12 | 0 | 1 | ✅ | ~80% complete |
-| Shared/Orphan | 1 | 0 | 0 | ✅ | Not blocking theorems |
+| Shared/Orphan | 0 | 0 | 0 | ✅ | Complete |
 
 **All three approaches build successfully with no errors.**
 
@@ -124,8 +124,8 @@ theorem l2_contractability_bound ...
 Pedagogical documentation of contractable↔exchangeable relationship.
 Uses de Finetti theorem to prove swap invariance `(X 0, X 1) ~ (X 1, X 0)`.
 
-### `ViaKoopman/Infrastructure.lean` (1 sorry)
-Line 492 - Supporting infrastructure for ViaKoopman.
+### `ViaKoopman/Infrastructure.lean` ✅ COMPLETE
+Supporting infrastructure for ViaKoopman.
 
 **Deleted:**
 - ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
@@ -156,4 +156,4 @@ grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
 
 1. **ViaL2** - 6 sorries (all in ViaL2/*), core L² bound done
 2. **ViaKoopman** - 12 sorries + 1 admit, ergodic infrastructure complete
-3. **Extras** - 1 sorry in Infrastructure.lean, not blocking
+3. **Extras** - ✅ Complete
