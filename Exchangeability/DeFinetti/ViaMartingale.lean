@@ -1698,7 +1698,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
 
   -- Step 4: Apply Kallenberg 1.3 to get drop-info for U
   -- E[1_{U∈A} | σ(W')] = E[1_{U∈A} | σ(W)] for all measurable A
-  -- This uses condExp_indicator_eq_of_law_eq_of_comap_le (which has a sorry)
+  -- This uses condExp_indicator_eq_of_law_eq_of_comap_le (fully proved)
 
   -- Measurability facts
   have hU_meas : Measurable U := by measurability
@@ -1818,7 +1818,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
 
   -- Step 7: Apply the projection property
   -- If X_r ⊥⊥_W U, then E[1_{X_r∈B}|σ(U,W)] = E[1_{X_r∈B}|σ(W)]
-  -- Use condExp_project_of_condIndep (fully proved, no sorry)
+  -- Use condExp_project_of_condIndep
 
   -- The goal has σ(U) ⊔ σ(W) while condIndep_project uses σ((U,W)) = comap (U,W)
   -- Need to show these are equal

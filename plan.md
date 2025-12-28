@@ -1,164 +1,159 @@
 # Project Status: de Finetti Theorem Formalization
 
-**Last Updated:** 2025-12-26
+**Last Updated:** 2025-12-27
 
 ## Executive Summary
 
-| Proof Approach | Sorries | Axioms | Admits | Status |
-|---------------|---------|--------|--------|--------|
-| **ViaMartingale** | **0** | 0 | 0 | **✅ COMPLETE** |
-| ViaL2 | 10 | 0 | 0 | Moderate work remaining |
-| ViaKoopman | 10 | 1 | 1 | Significant work remaining |
-| Shared/Other | 6 | 0 | 0 | Mixed |
+| Proof Approach | Sorries | Axioms | Admits | Build | Status |
+|---------------|---------|--------|--------|-------|--------|
+| **ViaMartingale** | **0** | 0 | 0 | ✅ | **COMPLETE (Default)** |
+| ViaL2 | 4 | 0 | 0 | ✅ | ~90% complete |
+| ViaKoopman | 12 | 0 | 1 | ✅ | ~80% complete |
+| Shared/Orphan | 8 | 0 | 0 | ✅ | Not blocking theorems |
 
-**Total:** 26 sorries, 1 axiom, 1 admit
+**All three approaches build successfully with no errors.**
 
 ---
 
 ## ViaMartingale ✅ COMPLETE
 
-**Status:** All sorries filled! First complete proof of de Finetti's theorem.
+**Status:** Production-ready. Default proof in public API.
 
-### Completed Work
-- **Fixed:** Removed false `kernel_eval_ae_eq_of_kernel_eq` lemma (was mathematically incorrect)
-- **Fixed:** `JointLawEq.lean` now uses correct drop-info lemma (Kallenberg 1.3)
-- **Filled:** `condIndep_of_indep_fun_pair` - independence → conditional independence
-- **Filled:** `condExp_project_of_condIndep` - projection lemma for conditional independence
+**File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
 
-### Verification
-```bash
-lake build Exchangeability.DeFinetti.ViaMartingale  # ✅ Builds successfully
-```
+| Metric | Count |
+|--------|-------|
+| Sorries | **0** |
+| Admits | **0** |
+| Axioms | **0** |
+| Build | ✅ Success |
+
+### Dependencies - All Complete
+- `CondIndep/` - 0 sorries
+- `TripleLawDropInfo/` - 0 sorries
+- `ConditionalKernel/` - 0 sorries
+- `Martingale/` - 0 sorries
+- All other imports - 0 sorries
+
+### Key Theorems
+- `deFinetti_viaMartingale` - Main theorem
+- `contraction_independence` - Kallenberg Lemma 1.3
 
 ---
 
 ## ViaL2 (Elementary Approach)
 
-**Status:** 10 sorries across 2 files
+**Status:** 4 sorries remaining, core theorem complete
 
-### Sorries by File
+**Files:**
+- `ViaL2.lean` (hub) - clean
+- `L2Helpers.lean` (~930 lines) - complete
+- `ViaL2/` submodules - 4 sorries
 
-**`ViaL2/MoreL2Helpers.lean`** (9 sorries):
-| Line | Description |
-|------|-------------|
-| 293, 306 | L² norm bounds |
-| 490, 553 | Convergence lemmas |
-| 595, 652 | Integration helpers |
-| 762 | Nested sorry in proof |
-| 1356 | Cesàro index shift |
-| 1445 | U-statistic expansion + collision bound |
+### Sorry Locations
 
-**`ViaL2/BlockAverages.lean`** (1 sorry):
-| Line | Description |
-|------|-------------|
-| 1618 | Block average convergence |
+| File | Line | Context |
+|------|------|---------|
+| `ViaL2/BlockAverages.lean` | 1617 | `directing_measure_eq` |
+| `ViaL2/MoreL2Helpers.lean` | 511 | Stieltjes construction |
+| `ViaL2/MoreL2Helpers.lean` | 568 | Bounded measurable extension |
+| `ViaL2/MoreL2Helpers.lean` | 1528 | `directing_measure_bridge` |
 
-### Strategy
-- These are mostly technical L² lemmas
-- Could potentially use mathlib's `MeasureTheory.Lp` machinery more directly
+### Key Completed Theorem
+**Kallenberg's Lemma 1.2** (L2Helpers.lean:847) - FULLY PROVED
+```lean
+theorem l2_contractability_bound ...
+```
+
+### Dependencies
+- Lightest of all three approaches
+- No ergodic theory or martingale convergence required
 
 ---
 
 ## ViaKoopman (Ergodic Approach)
 
-**Status:** 10 sorries + 1 axiom + 1 admit
+**Status:** 12 sorries + 1 admit
 
-### Sorries
+**File:** `ViaKoopman.lean` (7,457 lines)
 
-**`ViaKoopman/Infrastructure.lean`**:
-| Line | Type | Description |
-|------|------|-------------|
-| 492 | sorry | Infrastructure lemma |
-| 805 | **axiom** | `condexp_precomp_iterate_eq_of_invariant` |
+### Sorry Locations (Clustered)
 
-**`ViaKoopman.lean`**:
-| Line | Type | Description |
-|------|------|-------------|
-| 1587 | **admit** | Active proof gap |
-| 1626, 1647, 1713 | sorry | Ergodic convergence lemmas |
-| 2372 | sorry | Mean ergodic application |
-| 4460, 4720, 5212 | sorry | Final assembly |
+**Kernel Independence (3):**
+| Line | Lemma |
+|------|-------|
+| 5169 | `kernel_indep_pair_01` |
+| 5188 | `kernel_indep_pair` |
+| 5208 | `kernel_indep_finset` |
 
-**`TheoremViaKoopman.lean`**:
-| Line | Description |
-|------|-------------|
-| 196, 215 | Contractability → path exchangeability |
+**Product Factorization (4):**
+| Line | Lemma |
+|------|-------|
+| 1627 | `condexp_product_factorization_ax` |
+| 1705 | `condexp_product_factorization_ax_integral` |
+| 1771 | `condexp_product_factorization_general` |
+| 2430 | `condexp_product_factorization_general_bounded` |
 
-### Blocking Issues
-- The axiom at line 805 is a significant gap
-- Heavy reliance on ergodic theory infrastructure
+**Convergence (3):**
+| Line | Lemma |
+|------|-------|
+| 4518 | `ce_lipschitz_convergence` |
+| 4778 | `h_tower_of_lagConst_from_one` |
+| 5994 | `indep_finset_insert` |
+
+**Other (2):**
+| Line | Lemma |
+|------|-------|
+| 5333 | `ν_measurable_tail` |
+| 7340 | `condexp_cylinder_factorizes` |
+
+### Supporting Ergodic Files - ALL COMPLETE
+| File | Lines | Sorries |
+|------|-------|---------|
+| `Ergodic/KoopmanMeanErgodic.lean` | 324 | 0 |
+| `Ergodic/InvariantSigma.lean` | 1048 | 0 |
+| `Ergodic/ProjectionLemmas.lean` | 221 | 0 |
+| `Ergodic/BirkhoffAvgCLM.lean` | 270 | 0 |
 
 ---
 
-## Shared Infrastructure Sorries
+## Shared Infrastructure Sorries (Not Blocking)
 
 ### `CondIndepHelpers.lean` (4 sorries)
-| Line | Description |
-|------|-------------|
-| 85, 120, 154, 207 | Conditional independence helper lemmas |
-
-**Note:** These may be used by multiple proof approaches.
+Lines: 85, 120, 154, 207
 
 ### `Tail/ShiftInvariance.lean` (1 sorry)
-| Line | Description |
-|------|-------------|
-| 1327 | Blocked by circular import with CesaroConvergence |
+Line 1327 - Blocked by circular import
 
-### `ContractableVsExchangeable.lean` (1 sorry)
-| Line | Description |
-|------|-------------|
-| 106 | Contractable ↔ Exchangeable direction |
+### `ContractableVsExchangeable.lean` (2 sorries)
+Lines: 106, 234
 
----
+### `ViaKoopman/Infrastructure.lean` (1 sorry)
+Line 492
 
-## Recommended Action Plan
-
-### Phase 1: Complete ViaMartingale ✅ DONE
-First complete proof achieved!
-
-### Phase 2: Clean Up Shared Infrastructure
-1. Review `CondIndepHelpers.lean` - 4 sorries that may be reusable
-2. Fix circular import in `ShiftInvariance.lean`
-
-### Phase 3: Choose Second Proof (Optional)
-- **ViaL2:** More elementary, 10 sorries but mostly technical
-- **ViaKoopman:** More elegant but has axiom dependency
-
----
-
-## File Dependency Summary
-
-```
-ViaMartingale.lean ✅ COMPLETE
-├── CondIndep/Bounded.lean (✓ complete)
-├── ConditionalKernel/JointLawEq.lean (✓ complete)
-├── TripleLawDropInfo/DropInfo.lean (✓ complete)
-└── Martingale/* (✓ complete)
-
-ViaL2.lean
-├── ViaL2/MoreL2Helpers.lean (9 sorries)
-├── ViaL2/BlockAverages.lean (1 sorry)
-└── CommonEnding.lean
-
-ViaKoopman.lean
-├── ViaKoopman/Infrastructure.lean (1 sorry + 1 axiom)
-├── TheoremViaKoopman.lean (2 sorries)
-└── Ergodic/* infrastructure
-```
+**Note:** These files are not imported by ViaMartingale.
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Build specific proof approach
-lake build Exchangeability.DeFinetti.ViaMartingale
+# Build specific approach
+lake build Exchangeability.DeFinetti.ViaMartingale  # ✅ Complete
 lake build Exchangeability.DeFinetti.ViaL2
 lake build Exchangeability.DeFinetti.ViaKoopman
 
-# Check for sorries in a file
-grep -n "sorry" Exchangeability/Probability/CondIndep/Bounded.lean
-
-# Build full project
+# Full project build
 lake build
+
+# Check for sorries
+grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
 ```
+
+---
+
+## Priority for Further Work
+
+1. **ViaL2** - 4 infrastructure sorries, core done
+2. **ViaKoopman** - 12 sorries but ergodic infrastructure complete
+3. **Shared helpers** - Not blocking any theorem
