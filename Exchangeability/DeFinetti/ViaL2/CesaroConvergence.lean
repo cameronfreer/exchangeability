@@ -3561,5 +3561,208 @@ theorem tendsto_integral_indicator_Iic
       simp only [Set.indicator, Set.mem_Iic]
       rw [if_neg (not_le.mpr hn), if_neg (not_le.mpr h_gt)]
 
+/-! ### Shifted Cesàro Convergence
+
+The following lemmas extend Cesàro convergence from the n=0 case to arbitrary shifts n.
+The key insight is that shifting the Cesàro window by n changes at most 2n terms
+(n removed from front, n added at back), each bounded by 1, giving an O(n/m) error.
+-/
+
+/-- Deterministic bound: shifting the Cesàro window by `n` changes the average by at most 2n/m.
+This follows from the fact that the shifted and unshifted sums differ by at most 2n terms. -/
+private lemma cesaro_shift_diff_pointwise
+    (X : ℕ → Ω → ℝ) (f : ℝ → ℝ) (hf_bdd : ∀ x, |f x| ≤ 1)
+    (n m : ℕ) :
+    ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω)
+          - (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ≤ (2*n:ℝ)/m := by
+  classical
+  intro ω
+  -- Abbreviate the real sequence a_i = f(X_i ω)
+  let a : ℕ → ℝ := fun i => f (X i ω)
+
+  -- Handle m = 0 case separately
+  rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+  · simp
+
+  -- Rewrite Fin sums as range sums
+  have hSshift : (∑ k : Fin m, a (n + k)) = ∑ i ∈ Finset.range m, a (n + i) := by
+    rw [Fin.sum_univ_eq_sum_range (fun k => a (n + k)) m]
+  have hS0 : (∑ k : Fin m, a k) = ∑ i ∈ Finset.range m, a i := by
+    rw [Fin.sum_univ_eq_sum_range a m]
+
+  -- Define the sums we'll work with
+  set Sshift : ℝ := ∑ i ∈ Finset.range m, a (n + i)
+  set S0 : ℝ := ∑ i ∈ Finset.range m, a i
+
+  -- Express via sum_range_add decomposition
+  -- ∑_{i < n+m} a_i = ∑_{i < n} a_i + ∑_{j < m} a_{n+j}
+  set SNM : ℝ := ∑ i ∈ Finset.range (n + m), a i
+  set Sn : ℝ := ∑ i ∈ Finset.range n, a i
+  set Tail : ℝ := ∑ i ∈ Finset.range n, a (m + i)
+
+  have hSNM₁ : SNM = Sn + Sshift := by
+    simp only [SNM, Sn, Sshift]
+    rw [Finset.sum_range_add]
+
+  -- Also: ∑_{i < n+m} a_i = ∑_{i < m} a_i + ∑_{j < n} a_{m+j}
+  have hSNM₂ : SNM = S0 + Tail := by
+    simp only [SNM, S0, Tail]
+    rw [add_comm n m, Finset.sum_range_add]
+
+  -- Compute Sshift - S0 = Tail - Sn
+  have hdiff : Sshift - S0 = Tail - Sn := by
+    have hSshift_eq : Sshift = SNM - Sn := by linarith [hSNM₁]
+    calc Sshift - S0 = (SNM - Sn) - S0 := by rw [hSshift_eq]
+      _ = ((S0 + Tail) - Sn) - S0 := by rw [hSNM₂]
+      _ = Tail - Sn := by ring
+
+  -- Bound |Sn| ≤ n using hf_bdd
+  have hSn_abs : |Sn| ≤ (n : ℝ) := by
+    calc |Sn| ≤ ∑ i ∈ Finset.range n, |a i| := Finset.abs_sum_le_sum_abs _ _
+      _ ≤ ∑ _ ∈ Finset.range n, (1 : ℝ) := Finset.sum_le_sum (fun i _ => hf_bdd (X i ω))
+      _ = n := by simp
+
+  have hTail_abs : |Tail| ≤ (n : ℝ) := by
+    calc |Tail| ≤ ∑ i ∈ Finset.range n, |a (m + i)| := Finset.abs_sum_le_sum_abs _ _
+      _ ≤ ∑ _ ∈ Finset.range n, (1 : ℝ) := Finset.sum_le_sum (fun i _ => hf_bdd (X (m + i) ω))
+      _ = n := by simp
+
+  have hsumdiff : |Sshift - S0| ≤ (2 * n : ℝ) := by
+    rw [hdiff]
+    -- Use |a - b| ≤ |a| + |b| (which follows from triangle inequality via 0)
+    have h_tri : |Tail - Sn| ≤ |Tail| + |Sn| := by
+      calc |Tail - Sn| ≤ |Tail - 0| + |0 - Sn| := abs_sub_le Tail 0 Sn
+        _ = |Tail| + |Sn| := by simp
+    linarith [h_tri, hTail_abs, hSn_abs]
+
+  -- Scale by 1/m
+  have hm_pos_real : (0 : ℝ) < m := Nat.cast_pos.mpr hm_pos
+  calc |(1/(m:ℝ)) * ∑ k : Fin m, a (n + k) - (1/(m:ℝ)) * ∑ k : Fin m, a k|
+      = |(1/(m:ℝ)) * (Sshift - S0)| := by
+        simp only [← mul_sub, hSshift, hS0]
+      _ = |1/(m:ℝ)| * |Sshift - S0| := abs_mul _ _
+      _ ≤ (1/(m:ℝ)) * (2 * n) := by
+        rw [abs_of_pos (one_div_pos.mpr hm_pos_real)]
+        exact mul_le_mul_of_nonneg_left hsumdiff (le_of_lt (one_div_pos.mpr hm_pos_real))
+      _ = (2 * n) / m := by ring
+
+/-- **Cesàro convergence for shifted sequences:**
+For contractable ℝ-valued sequences, the Cesàro average starting at position n converges
+to the same conditional expectation as the unshifted average.
+
+This resolves the circular import issue: the proof uses `cesaro_to_condexp_L1` (n=0 case)
+from this file, combined with a deterministic shift bound. -/
+lemma cesaro_convergence_all_shifts
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ)
+    (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ)
+    (hf_meas : Measurable f)
+    (hf_bdd : ∀ x, |f x| ≤ 1)
+    (n : ℕ) :
+    ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
+      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+           μ[f ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ < ε := by
+  classical
+  intro ε hε
+  have hε2 : 0 < ε / 2 := by linarith
+
+  -- Get M0 from cesaro_to_condexp_L1 (unshifted, n=0) for ε/2
+  obtain ⟨M0, hM0⟩ := cesaro_to_condexp_L1 hX_contract hX_meas f hf_meas hf_bdd (ε/2) hε2
+
+  -- Pick M1 such that (2n)/m < ε/2 when m ≥ M1
+  obtain ⟨M1, hM1_lt⟩ : ∃ M1 : ℕ, (4 * (n : ℝ)) / ε < (M1 : ℝ) :=
+    exists_nat_gt ((4 * (n : ℝ)) / ε)
+
+  refine ⟨max M0 M1, ?_⟩
+  intro m hm
+  have hm0 : M0 ≤ m := le_trans (le_max_left _ _) hm
+  have hm1 : M1 ≤ m := le_trans (le_max_right _ _) hm
+
+  -- Term 2 (unshifted Cesàro error): < ε/2
+  have hterm2 : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
+      μ[f ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ < ε / 2 :=
+    hM0 m hm0
+
+  -- Term 1 (shift error): bounded by 2n/m pointwise, so ≤ 2n/m in L¹
+  have hterm1_pointwise : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+      (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ≤ (2*n:ℝ)/m :=
+    cesaro_shift_diff_pointwise X f hf_bdd n m
+
+  have hterm1_le : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+      (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ∂μ ≤ (2*n:ℝ)/m := by
+    calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+           (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ∂μ
+        ≤ ∫ _, (2*n:ℝ)/m ∂μ :=
+          integral_mono_of_nonneg (ae_of_all μ (fun _ => abs_nonneg _))
+            (integrable_const _) (ae_of_all μ hterm1_pointwise)
+      _ = (2*n:ℝ)/m := by simp [measure_univ]
+
+  -- Show (2n)/m < ε/2
+  have hterm1_lt : (2*n:ℝ)/m < ε/2 := by
+    have h_big : (4 * (n : ℝ)) / ε < (m : ℝ) :=
+      lt_of_lt_of_le hM1_lt (Nat.cast_le.mpr hm1)
+    rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+    · -- m = 0 case: contradiction since 4n/ε ≥ 0 but h_big says < 0
+      simp only [Nat.cast_zero] at h_big
+      have h1 : (0 : ℝ) ≤ 4 * n := by positivity
+      have h2 : (0 : ℝ) < ε := hε
+      have h3 : (0 : ℝ) ≤ (4 * n) / ε := by positivity
+      linarith
+    have hmpos : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
+    have h_rearragne : 4 * n < m * ε := by
+      have := mul_lt_mul_of_pos_right h_big hε
+      field_simp at this ⊢
+      linarith
+    calc (2*n:ℝ)/m = (2 * n) / m := rfl
+      _ < (m * ε / 2) / m := by
+          apply div_lt_div_of_pos_right _ hmpos
+          linarith
+      _ = ε / 2 := by field_simp
+
+  have hterm1 : ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+      (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ∂μ < ε / 2 :=
+    lt_of_le_of_lt hterm1_le hterm1_lt
+
+  -- Triangle inequality in L¹
+  have htri_pointwise : ∀ ω,
+      |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+        μ[f ∘ X 0 | TailSigma.tailSigma X] ω|
+      ≤ |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) - (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|
+        + |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
+            μ[f ∘ X 0 | TailSigma.tailSigma X] ω| := by
+    intro ω
+    have := abs_sub_le ((1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω))
+      ((1/(m:ℝ)) * ∑ k : Fin m, f (X k ω))
+      (μ[f ∘ X 0 | TailSigma.tailSigma X] ω)
+    linarith [this]
+
+  -- Integrability proofs (bounded functions on probability spaces)
+  have hint1 : Integrable (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+      (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|) μ := by
+    -- Bounded by 2n/m ≤ 2 (from shift difference bound)
+    sorry
+  have hint2 : Integrable (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
+      μ[f ∘ X 0 | TailSigma.tailSigma X] ω|) μ := by
+    -- Cesàro average bounded by 1, condExp of bounded f is bounded
+    sorry
+
+  -- Integrate and combine
+  calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+        μ[f ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ
+      ≤ ∫ ω, (|(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) - (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|
+          + |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
+              μ[f ∘ X 0 | TailSigma.tailSigma X] ω|) ∂μ :=
+        integral_mono_of_nonneg (ae_of_all μ (fun _ => abs_nonneg _))
+          (hint1.add hint2)
+          (ae_of_all μ htri_pointwise)
+    _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) - (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)| ∂μ
+        + ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
+            μ[f ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ :=
+        integral_add hint1 hint2
+    _ < ε / 2 + ε / 2 := add_lt_add hterm1 hterm2
+    _ = ε := by ring
+
 end Exchangeability.DeFinetti.ViaL2
 

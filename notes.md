@@ -27,21 +27,19 @@
 | L2Helpers.lean | 0 | 0 | 0 |
 | ViaL2/BlockAverages.lean | 1 | 0 | 0 |
 | ViaL2/MoreL2Helpers.lean | 3 | 0 | 0 |
-| ViaL2/CesaroConvergence.lean | 0 | 0 | 0 |
+| ViaL2/CesaroConvergence.lean | 2 | 0 | 0 |
 | ViaL2/MainConvergence.lean | 0 | 0 | 0 |
-| Tail/ShiftInvariance.lean | 3 | 0 | 0 |
-| **Subtotal** | **7** | **0** | **0** |
+| Tail/ShiftInvariance.lean | 0 | 0 | 0 |
+| **Subtotal** | **6** | **0** | **0** |
 
 **Sorry Locations:**
 - BlockAverages.lean:1617 - `directing_measure_eq`
 - MoreL2Helpers.lean:511 - Stieltjes construction
 - MoreL2Helpers.lean:568 - Bounded measurable extension
 - MoreL2Helpers.lean:1528 - `directing_measure_bridge`
-- ShiftInvariance.lean:88 - `tailSigma_shift_invariant_for_contractable`
-- ShiftInvariance.lean:1125 - `condExp_shift_eq_condExp`
-- ShiftInvariance.lean:1327 - `setIntegral_comp_shift_eq` (circular import blocked)
+- CesaroConvergence.lean:3745, 3749 - Integrability of bounded functions (technical)
 
-**Status:** Core L² bound theorem complete. Infrastructure sorries remain.
+**Status:** Core L² bound theorem complete. 6 infrastructure sorries remain.
 
 ---
 
@@ -74,10 +72,10 @@
 
 | File | Sorries | Status |
 |------|---------|--------|
-| ContractableVsExchangeable_Extras.lean | 2 | Pedagogical |
+| ContractableVsExchangeable_Extras.lean | 0 | ✅ Complete |
 
 **Details:**
-- **ContractableVsExchangeable_Extras.lean**: Documents contractable↔exchangeable relationship. Mathematically interesting as pedagogical content even if not on critical path.
+- **ContractableVsExchangeable_Extras.lean**: Documents contractable↔exchangeable relationship. Now complete - uses de Finetti theorem to prove swap invariance.
 
 **Deleted:**
 - ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
@@ -89,8 +87,8 @@
 | Approach | Total Issues | Status |
 |----------|--------------|--------|
 | **ViaMartingale** | **0** | ✅ Complete (Default) |
-| ViaL2 | 7 sorries | ~85% complete |
+| ViaL2 | 6 sorries | ~85% complete |
 | ViaKoopman | 15 sorries + 1 admit | ~75% complete |
-| Extras | 2 sorries | Pedagogical |
+| Extras | 0 | ✅ Complete |
 
 **ViaMartingale is the default proof with 0 blocking issues.**

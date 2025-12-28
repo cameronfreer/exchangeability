@@ -6,6 +6,7 @@ Authors: Cameron Freer, Claude (Anthropic)
 import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.DeFinetti.L2Helpers
+import Exchangeability.DeFinetti.ViaL2
 import Mathlib.Probability.IdentDistrib
 
 /-!
@@ -101,9 +102,34 @@ de Finetti theorem! -/
 example :
     Measure.map (fun ω => (X 0 ω, X 1 ω)) μ =
     Measure.map (fun ω => (X 1 ω, X 0 ω)) μ := by
-  -- This is TRUE (by de Finetti), but we can't prove it from contractability alone
-  -- without going through the full de Finetti proof!
-  sorry
+  classical
+
+  -- De Finetti (proved in `Exchangeability.DeFinetti.ViaL2`):
+  -- contractable sequences on Borel spaces are exchangeable.
+  have hX_exch : Exchangeable μ X :=
+    exchangeable_of_contractable (μ := μ) (X := X) hX_contract hX_meas
+
+  -- Apply exchangeability to the transposition (0 1) on `Fin 2`.
+  let σ : Equiv.Perm (Fin 2) := Equiv.swap (0 : Fin 2) 1
+  have hσ :
+      Measure.map (fun ω i : Fin 2 => X (σ i : ℕ) ω) μ =
+        Measure.map (fun ω i : Fin 2 => X (i : ℕ) ω) μ :=
+    hX_exch 2 σ
+
+  -- Push forward both sides by the measurable map extracting the first two coordinates.
+  let p : (Fin 2 → ℝ) → ℝ × ℝ := fun y => (y 0, y 1)
+  have hp : Measurable p := by
+    exact (measurable_pi_apply (0 : Fin 2)).prod_mk (measurable_pi_apply (1 : Fin 2))
+  have h_meas_left : Measurable (fun ω i : Fin 2 => X (σ i : ℕ) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (σ i : ℕ))
+  have h_meas_right : Measurable (fun ω i : Fin 2 => X (i : ℕ) ω) :=
+    measurable_pi_lambda _ (fun i => hX_meas (i : ℕ))
+
+  have h := congrArg (fun ν => Measure.map p ν) hσ
+  rw [Measure.map_map hp h_meas_left, Measure.map_map hp h_meas_right] at h
+
+  -- `σ` swaps the two coordinates, so the LHS becomes `(X 1, X 0)`.
+  simpa [p, σ] using h.symm
 
 /-! ## Why Contractability Suffices for L² Bounds
 

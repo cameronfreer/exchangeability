@@ -1266,64 +1266,14 @@ lemma condExp_shift_eq_condExp
     -- g is tail-measurable
     · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
-/-! ## Application to Cesàro Averages
+/-! ## Note on Cesàro Averages
 
-This section shows how shift invariance immediately resolves the index mismatch
-in the asymptotic negligibility proof.
+The lemma `cesaro_convergence_all_shifts` showing that shifted Cesàro averages
+`(1/m) ∑_{k=0}^{m-1} f(X_{n+k})` converge to `μ[f∘X₀ | tailSigma X]` for all `n ∈ ℕ`
+is implemented in `Exchangeability.DeFinetti.ViaL2.CesaroConvergence`.
+
+It was moved there to resolve a circular import: that file already imports this one,
+so the proof (which uses `cesaro_to_condexp_L1` from CesaroConvergence) lives there.
 -/
-
-/-- **BONUS APPLICATION: All shifted Cesàro averages converge to the same limit.**
-
-For an exchangeable sequence, the Cesàro averages starting at different indices
-all converge to the same limit:
-
-  (1/m) ∑_{k=0}^{m-1} f(X_{n+k})  →  μ[f∘X₀ | tailSigma X]  in L¹
-
-for ALL n ∈ ℕ.
-
-**This solves the n≠0 case!** We already proved it for n=0 using asymptotic negligibility.
-Shift invariance shows that all starting indices give the same limit.
-
-**Proof strategy:**
-1. Apply cesaro_to_condexp_L1 for the n=0 case (already have this as axiom)
-2. Use shift invariance to show μ[f∘X_n | tail] = μ[f∘X_0 | tail]
-3. Conclude that the n≠0 case converges to the same limit
-
-**Status:** This is the payoff! Once we prove shift invariance, this follows immediately.
--/
-lemma cesaro_convergence_all_shifts
-    (X : ℕ → Ω → α)
-    (hX_contract : Exchangeability.Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (f : α → ℝ)
-    (hf_meas : Measurable f)
-    (hf_bdd : ∀ x, |f x| ≤ 1)
-    (n : ℕ) :
-    ∀ ε > 0, ∃ M : ℕ, ∀ m ≥ M,
-      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) - μ[f ∘ X 0 | tailProcess X] ω| ∂μ < ε := by
-  intro ε hε
-
-  -- **Proof Structure** (circular import prevents implementation here):
-  --
-  -- This lemma depends on `cesaro_to_condexp_L1` from CesaroConvergence.lean,
-  -- but CesaroConvergence.lean imports this file, creating a circular dependency.
-  --
-  -- The complete proof uses the triangle inequality:
-  -- |(1/m) ∑_{k<m} f(X_{n+k}) - μ[f∘X_0 | tail]|
-  -- ≤ |(1/m) ∑_{k<m} f(X_{n+k}) - (1/m) ∑_{k<m} f(X_k)| + |(1/m) ∑_{k<m} f(X_k) - μ[f∘X_0 | tail]|
-  --
-  -- Term 1 (asymptotic negligibility): bounded by 2n/m → 0 as m → ∞
-  --   The sums differ by at most 2n terms (n removed, n added), each bounded by 1.
-  --
-  -- Term 2: goes to 0 by cesaro_to_condexp_L1 (the n=0 case).
-  --
-  -- Alternatively: apply cesaro_to_condexp_L1 to shifted sequence Y := X ∘ (· + n),
-  -- which has the same tail σ-algebra and is also contractable.
-  -- Then use `condExp_shift_eq_condExp` to conclude the limit equals μ[f∘X_0 | tail].
-  --
-  -- **Resolution**: Either move this lemma to CesaroConvergence.lean, or
-  -- restructure the imports to allow access to cesaro_to_condexp_L1 here.
-
-  sorry -- Blocked by circular import with CesaroConvergence.lean
 
 end Exchangeability.Tail.ShiftInvariance

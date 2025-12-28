@@ -7,9 +7,9 @@
 | Proof Approach | Sorries | Axioms | Admits | Build | Status |
 |---------------|---------|--------|--------|-------|--------|
 | **ViaMartingale** | **0** | 0 | 0 | ✅ | **COMPLETE (Default)** |
-| ViaL2 | 4 | 0 | 0 | ✅ | ~90% complete |
+| ViaL2 | 6 | 0 | 0 | ✅ | ~85% complete |
 | ViaKoopman | 12 | 0 | 1 | ✅ | ~80% complete |
-| Shared/Orphan | 8 | 0 | 0 | ✅ | Not blocking theorems |
+| Shared/Orphan | 1 | 0 | 0 | ✅ | Not blocking theorems |
 
 **All three approaches build successfully with no errors.**
 
@@ -43,12 +43,12 @@
 
 ## ViaL2 (Elementary Approach)
 
-**Status:** 4 sorries remaining, core theorem complete
+**Status:** 6 sorries remaining, core theorem complete
 
 **Files:**
 - `ViaL2.lean` (hub) - clean
 - `L2Helpers.lean` (~930 lines) - complete
-- `ViaL2/` submodules - 4 sorries
+- `ViaL2/` submodules - 6 sorries
 
 ### Sorry Locations
 
@@ -58,6 +58,7 @@
 | `ViaL2/MoreL2Helpers.lean` | 511 | Stieltjes construction |
 | `ViaL2/MoreL2Helpers.lean` | 568 | Bounded measurable extension |
 | `ViaL2/MoreL2Helpers.lean` | 1528 | `directing_measure_bridge` |
+| `ViaL2/CesaroConvergence.lean` | 3745, 3749 | Integrability of bounded functions (technical) |
 
 ### Key Completed Theorem
 **Kallenberg's Lemma 1.2** (L2Helpers.lean:847) - FULLY PROVED
@@ -119,9 +120,9 @@ theorem l2_contractability_bound ...
 
 ## Extra Files (Not on Critical Path)
 
-### `ContractableVsExchangeable_Extras.lean` (2 sorries)
-Lines: 106, 234
+### `ContractableVsExchangeable_Extras.lean` ✅ COMPLETE
 Pedagogical documentation of contractable↔exchangeable relationship.
+Uses de Finetti theorem to prove swap invariance `(X 0, X 1) ~ (X 1, X 0)`.
 
 ### `ViaKoopman/Infrastructure.lean` (1 sorry)
 Line 492 - Supporting infrastructure for ViaKoopman.
@@ -129,8 +130,8 @@ Line 492 - Supporting infrastructure for ViaKoopman.
 **Deleted:**
 - ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
 
-**Reclassified:**
-- `Tail/ShiftInvariance.lean` - Now counted under ViaL2 (imported by BlockAverages and CesaroConvergence).
+**Complete:**
+- `Tail/ShiftInvariance.lean` - Now has 0 sorries. The `cesaro_convergence_all_shifts` lemma was moved to `CesaroConvergence.lean` to resolve circular import.
 
 ---
 
@@ -153,6 +154,6 @@ grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
 
 ## Priority for Further Work
 
-1. **ViaL2** - 7 sorries (4 in ViaL2/*, 3 in Tail/ShiftInvariance), core L² bound done
-2. **ViaKoopman** - 15 sorries + 1 admit, ergodic infrastructure complete
-3. **Extras** - 2 sorries in pedagogical content, not blocking
+1. **ViaL2** - 6 sorries (all in ViaL2/*), core L² bound done
+2. **ViaKoopman** - 12 sorries + 1 admit, ergodic infrastructure complete
+3. **Extras** - 1 sorry in Infrastructure.lean, not blocking
