@@ -28,7 +28,7 @@
 | Axioms | **0** |
 | Build | ✅ Success |
 
-### Extracted Submodules (1,261 lines total)
+### Extracted Submodules (1,993 lines total)
 
 | File | Lines | Description |
 |------|-------|-------------|
@@ -38,6 +38,8 @@
 | `ViaMartingale/FutureRectangles.lean` | 464 | π-system machinery, measure_ext_of_future_rectangles |
 | `ViaMartingale/CondExpConvergence.lean` | 186 | condexp_convergence, extreme_members_equal_on_tail |
 | `ViaMartingale/DirectingMeasure.lean` | 168 | directingMeasure, conditional_law_eq_directingMeasure |
+| `ViaMartingale/FiniteCylinders.lean` | 562 | finFutureSigma, contractable_finite_cylinder_measure |
+| `ViaMartingale/KallenbergLemma.lean` | 170 | indProd, indProd_integrable, indProd_measurable |
 
 ### Dependencies - All Complete
 - `CondIndep/` - 0 sorries
