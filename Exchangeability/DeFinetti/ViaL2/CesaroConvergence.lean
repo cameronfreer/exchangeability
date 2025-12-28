@@ -3741,12 +3741,42 @@ lemma cesaro_convergence_all_shifts
   -- Integrability proofs (bounded functions on probability spaces)
   have hint1 : Integrable (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
       (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|) μ := by
-    -- Bounded by 2n/m ≤ 2 (from shift difference bound)
-    sorry
+    -- Bounded by 2n/m (from shift difference bound), hence integrable on probability space
+    have h_meas : AEStronglyMeasurable (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+        (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|) μ := by
+      have h_sub_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+          (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)) := by
+        apply Measurable.sub <;>
+        (apply Measurable.const_mul
+         exact Finset.measurable_sum _ (fun k _ => hf_meas.comp (hX_meas _)))
+      -- Use Real.norm_eq_abs to convert |·| to ‖·‖, then use Measurable.norm
+      have : (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+          (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|) =
+          (fun ω => ‖(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+          (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)‖) := by
+        ext ω; exact (Real.norm_eq_abs _).symm
+      rw [this]
+      exact h_sub_meas.norm.aestronglyMeasurable
+    have h_bdd : ∀ᵐ ω ∂μ, ‖(fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
+        (1/(m:ℝ)) * ∑ k : Fin m, f (X k ω)|) ω‖ ≤ 2 * n / m := by
+      filter_upwards with ω
+      simp only [Real.norm_eq_abs, abs_abs]
+      exact hterm1_pointwise ω
+    exact Integrable.of_bound h_meas (2 * n / m) h_bdd
   have hint2 : Integrable (fun ω => |(1/(m:ℝ)) * ∑ k : Fin m, f (X k ω) -
       μ[f ∘ X 0 | TailSigma.tailSigma X] ω|) μ := by
-    -- Cesàro average bounded by 1, condExp of bounded f is bounded
-    sorry
+    -- Both terms are integrable: Cesàro average is bounded, condExp is integrable
+    apply Integrable.abs
+    apply Integrable.sub
+    · -- Cesàro average is integrable (bounded on probability space)
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      have h_bdd : ∀ᵐ ω ∂μ, ‖f (X k ω)‖ ≤ 1 := ae_of_all μ fun ω => by
+        rw [Real.norm_eq_abs]; exact hf_bdd _
+      exact Integrable.of_bound (hf_meas.comp (hX_meas k)).aestronglyMeasurable 1 h_bdd
+    · -- Conditional expectation is integrable
+      exact integrable_condExp
 
   -- Integrate and combine
   calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n+k) ω) -
