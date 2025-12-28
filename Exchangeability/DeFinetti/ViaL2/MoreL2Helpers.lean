@@ -697,20 +697,19 @@ lemma directing_measure_integral
             ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
             alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
           /-
-          PROOF STRATEGY (complete but technically complex to formalize):
+          PROOF STRUCTURE (verified by user, mathlib patterns confirmed):
 
-          1. Define decreasing sequence r_n = q + 1/(n+1) → q
+          1. Define sequence r_n = q + 1/(n+1) → q from above
           2. Let f_n ω := alphaIicCE(r_n, ω) and F ω := alphaIicCE(q, ω)
 
-          3. Key properties (all verified):
-             - f_n is antitone a.e. (from alphaIicCE_mono: conditional CDFs are monotone)
-             - F ≤ f_n a.e. (from monotonicity: q < r_n implies alphaIicCE(q) ≤ alphaIicCE(r_n))
-             - Each f_n and F are integrable (from integrable_condExp)
+          3. Key properties (all from existing lemmas):
+             - f_n is antitone a.e. (alphaIicCE_mono + countable intersection)
+             - F ≤ f_n a.e. (alphaIicCE_mono)
+             - Each f_n and F are integrable (integrable_condExp)
 
           4. Integral convergence:
-             - ∫ f_n = ∫ (1_{Iic r_n} ∘ X_0) by integral_condExp
-             - ∫ (1_{Iic r_n} ∘ X_0) → ∫ (1_{Iic q} ∘ X_0) by dominated convergence
-               (indicators bounded by 1, converge pointwise)
+             - ∫ f_n = ∫ (1_{Iic r_n} ∘ X_0) by integral_condExp hm_le
+             - ∫ (1_{Iic r_n} ∘ X_0) → ∫ (1_{Iic q} ∘ X_0) by tendsto_integral_of_dominated_convergence
              - Therefore ∫ f_n → ∫ F
 
           5. A.E. convergence:
@@ -718,23 +717,18 @@ lemma directing_measure_integral
                antitone + bounded below + integral convergence ⟹ a.e. convergence
              - So f_n → F a.e.
 
-          6. Infimum equals limit:
-             - For antitone bounded sequence: tendsto_atTop_ciInf gives f_n → ⨅_n f_n
-             - By tendsto_nhds_unique: ⨅_n f_n = F a.e.
-             - ⨅_{r > q} alphaIicCE(r) ≤ ⨅_n f_n (by iInf_mono': sequence is subset)
-             - ⨅_{r > q} alphaIicCE(r) ≥ F (by le_ciInf + monotonicity)
-             - Therefore equality holds a.e.
+          6. Infimum equals limit (user's pattern 3):
+             - tendsto_atTop_ciInf h_antitone h_bdd → f_n → ⨅_n f_n
+             - tendsto_nhds_unique → ⨅_n f_n = F a.e.
 
-          MATHLIB LEMMAS NEEDED:
-          - alphaIicCE_mono: conditional CDF monotonicity
-          - integrable_condExp: conditional expectations are integrable
-          - integral_condExp: integral of condexp = integral of original
-          - tendsto_integral_of_dominated_convergence: DCT for integrals
-          - tendsto_of_integral_tendsto_of_antitone: antitone + integral conv ⟹ a.e. conv
-          - tendsto_atTop_ciInf: antitone bounded → converges to iInf
-          - tendsto_nhds_unique: limits are unique in T2 spaces
-          - iInf_mono': compare infima when one index set contains the other
-          - le_ciInf: lower bound on infimum
+          7. Sequence infimum = general infimum:
+             - a.e. monotonicity over ℚ × ℚ (countable intersection)
+             - ciInf_le_of_le + le_ciInf to show equality
+
+          SIGMA-FINITENESS for integral_condExp:
+             - IsProbabilityMeasure μ ⟹ IsFiniteMeasure μ (infer_instance)
+             - μ.trim hm_le Set.univ ≤ μ Set.univ < ⊤ (by le_trim + measure_lt_top)
+             - IsFiniteMeasure (μ.trim hm_le) ⟹ SigmaFinite (infer_instance)
           -/
           sorry
         -- Add right-continuity to filter_upwards
