@@ -19,7 +19,7 @@
 
 **Status:** Production-ready. Default proof in public API.
 
-**File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
+**Main File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
 
 | Metric | Count |
 |--------|-------|
@@ -27,6 +27,17 @@
 | Admits | **0** |
 | Axioms | **0** |
 | Build | ✅ Success |
+
+### Extracted Submodules (1,261 lines total)
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `ViaMartingale/ShiftOperations.lean` | 126 | path, shiftRV, shiftProcess, shift_contractable |
+| `ViaMartingale/RevFiltration.lean` | 142 | revFiltration, tailSigma, revFiltration_antitone |
+| `ViaMartingale/FutureFiltration.lean` | 175 | futureFiltration, tailSigma_le, futureFiltration_antitone |
+| `ViaMartingale/FutureRectangles.lean` | 464 | π-system machinery, measure_ext_of_future_rectangles |
+| `ViaMartingale/CondExpConvergence.lean` | 186 | condexp_convergence, extreme_members_equal_on_tail |
+| `ViaMartingale/DirectingMeasure.lean` | 168 | directingMeasure, conditional_law_eq_directingMeasure |
 
 ### Dependencies - All Complete
 - `CondIndep/` - 0 sorries
