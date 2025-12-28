@@ -798,9 +798,21 @@ lemma directing_measure_integral
       -- The stieltjesOfMeasurableRat value equals the toRatCDF value at rationals,
       -- and equals the infimum over rationals > t by Stieltjes function properties.
       --
-      -- Need: alphaIic t = ⨅ r > t, alphaIic (r:ℝ) (right-continuity of alphaIic)
-      -- This follows from alphaIic =ᵐ alphaIicCE and right-continuity of conditional CDFs.
-      sorry  -- Right-continuity of alphaIic at all reals (extends Step E from ℚ to ℝ)
+      -- Need: alphaIic t = ⨅ r > t (r ∈ ℚ), alphaIic (r:ℝ) (right-continuity of alphaIic)
+      --
+      -- PROOF STRATEGY (extends Step E from ℚ to all ℝ):
+      -- 1. For any real t, define sequence r_n = t + 1/(n+1) of rationals converging to t from above
+      -- 2. alphaIicCE(r_n) → alphaIicCE(t) a.e. by same dominated convergence argument as Step E
+      --    (uses tendsto_of_integral_tendsto_of_antitone)
+      -- 3. alphaIic =ᵐ alphaIicCE, so alphaIic(r_n) → alphaIic(t) a.e.
+      -- 4. For monotone bounded sequence: lim = ⨅_n by tendsto_nhds_unique + tendsto_atTop_ciInf
+      -- 5. ⨅_n alphaIic(r_n) = ⨅_{q > t} alphaIic(q) (r_n is cofinal in rationals > t)
+      -- 6. Therefore alphaIic(t) = ⨅_{q > t} alphaIic(q) a.e.
+      --
+      -- Key difference from Step E: now t is an arbitrary real, not necessarily rational.
+      -- The same monotone convergence argument applies because indicators 1_{Iic r_n} ↘ 1_{Iic t}
+      -- pointwise for any t, and dominated convergence doesn't require t to be rational.
+      sorry  -- Right-continuity of alphaIic at all reals (uses same argument as Step E)
 
     -- Combine the three steps
     filter_upwards [h_stieltjes_eq] with ω hω
