@@ -470,28 +470,6 @@ private lemma integrable_comp_of_pushforward
   -- then pull integrability back along g
   simpa [Function.comp] using hH_map.comp_measurable hg
 
-/-
-Transport ae strong measurability across a pushforward equality and then pull back by composition.
-This would be the measurability analogue of `integrable_comp_of_pushforward`, but the sub-σ-algebra
-parameter in `AEStronglyMeasurable[m]` prevents the same `simpa [hpush]` trick from working.
-The issue is that `AEStronglyMeasurable[m] H μ` and `AEStronglyMeasurable[m] H (map g μ')` have
-different type class instance parameters that cannot be unified by rewriting.
-
-DEPRECATED: This lemma has type issues with sub-σ-algebras and is not currently used.
-The issue is that μ : Measure Ω is defined with respect to mΩ, not m.
-When working with sub-σ-algebras, we need proper coercions.
-
-private lemma aestronglyMeasurable_comp_of_pushforward
-    {Ω Ω' β : Type*} [mΩ : MeasurableSpace Ω] [mΩ' : MeasurableSpace Ω'] [TopologicalSpace β]
-    {μ : Measure Ω} {μ' : Measure Ω'} {g : Ω' → Ω} {H : Ω → β}
-    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
-    (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    (hH : @AEStronglyMeasurable Ω m β _ H μ) :
-    @AEStronglyMeasurable Ω' (MeasurableSpace.comap g m) β _ (H ∘ g) μ' := by
-  -- Unlike integrable_comp_of_pushforward, the sub-σ-algebra parameter blocks the simpa trick
-  sorry
--/
-
 /-! ### Instance-locking shims for conditional expectation
 
 These wrappers lock the ambient measurable space instance to prevent Lean from synthesizing

@@ -9,7 +9,7 @@
 | **ViaMartingale** | **0** | 0 | 0 | ✅ | **COMPLETE (Default)** |
 | ViaL2 | 6 | 0 | 0 | ✅ | ~85% complete |
 | ViaKoopman | 12 | 0 | 1 | ✅ | ~80% complete |
-| Shared/Orphan | 1 | 0 | 0 | ✅ | Not blocking theorems |
+| Shared/Orphan | 0 | 0 | 0 | ✅ | Complete |
 
 **All three approaches build successfully with no errors.**
 
@@ -19,7 +19,7 @@
 
 **Status:** Production-ready. Default proof in public API.
 
-**File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
+**Main File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
 
 | Metric | Count |
 |--------|-------|
@@ -27,6 +27,19 @@
 | Admits | **0** |
 | Axioms | **0** |
 | Build | ✅ Success |
+
+### Extracted Submodules (1,993 lines total)
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `ViaMartingale/ShiftOperations.lean` | 126 | path, shiftRV, shiftProcess, shift_contractable |
+| `ViaMartingale/RevFiltration.lean` | 142 | revFiltration, tailSigma, revFiltration_antitone |
+| `ViaMartingale/FutureFiltration.lean` | 175 | futureFiltration, tailSigma_le, futureFiltration_antitone |
+| `ViaMartingale/FutureRectangles.lean` | 464 | π-system machinery, measure_ext_of_future_rectangles |
+| `ViaMartingale/CondExpConvergence.lean` | 186 | condexp_convergence, extreme_members_equal_on_tail |
+| `ViaMartingale/DirectingMeasure.lean` | 168 | directingMeasure, conditional_law_eq_directingMeasure |
+| `ViaMartingale/FiniteCylinders.lean` | 562 | finFutureSigma, contractable_finite_cylinder_measure |
+| `ViaMartingale/KallenbergLemma.lean` | 170 | indProd, indProd_integrable, indProd_measurable |
 
 ### Dependencies - All Complete
 - `CondIndep/` - 0 sorries
@@ -124,8 +137,8 @@ theorem l2_contractability_bound ...
 Pedagogical documentation of contractable↔exchangeable relationship.
 Uses de Finetti theorem to prove swap invariance `(X 0, X 1) ~ (X 1, X 0)`.
 
-### `ViaKoopman/Infrastructure.lean` (1 sorry)
-Line 492 - Supporting infrastructure for ViaKoopman.
+### `ViaKoopman/Infrastructure.lean` ✅ COMPLETE
+Supporting infrastructure for ViaKoopman.
 
 **Deleted:**
 - ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
@@ -156,4 +169,4 @@ grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
 
 1. **ViaL2** - 6 sorries (all in ViaL2/*), core L² bound done
 2. **ViaKoopman** - 12 sorries + 1 admit, ergodic infrastructure complete
-3. **Extras** - 1 sorry in Infrastructure.lean, not blocking
+3. **Extras** - ✅ Complete

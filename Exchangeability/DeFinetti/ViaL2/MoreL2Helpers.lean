@@ -696,47 +696,170 @@ lemma directing_measure_integral
         have h_CE_right_cont_q : ∀ᵐ ω ∂μ,
             ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
             alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
-          /-
-          PROOF STRATEGY (complete but technically complex to formalize):
+          -- SETUP: Tail σ-algebra infrastructure
+          have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+            TailSigma.tailSigma_le X hX_meas
+          haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+          -- SigmaFinite via instances
+          haveI : SigmaFinite (μ.trim hm_le) := inferInstance
 
-          1. Define decreasing sequence r_n = q + 1/(n+1) → q
-          2. Let f_n ω := alphaIicCE(r_n, ω) and F ω := alphaIicCE(q, ω)
+          -- Define sequence r_n = q + 1/(n+1) → q from above
+          let r : ℕ → ℚ := fun n => q + 1 / ((n : ℚ) + 1)
+          -- r n > q as rationals
+          have hr_pos_rat : ∀ n, q < r n := fun n => by
+            simp only [r]
+            have h1 : (0 : ℚ) < (n : ℚ) + 1 := by positivity
+            linarith [one_div_pos.mpr h1]
+          -- r n > q as reals
+          have hr_pos : ∀ n, (q : ℝ) < (r n : ℝ) := fun n => by
+            exact_mod_cast hr_pos_rat n
 
-          3. Key properties (all verified):
-             - f_n is antitone a.e. (from alphaIicCE_mono: conditional CDFs are monotone)
-             - F ≤ f_n a.e. (from monotonicity: q < r_n implies alphaIicCE(q) ≤ alphaIicCE(r_n))
-             - Each f_n and F are integrable (from integrable_condExp)
+          have hr_tendsto : Tendsto (fun n => (r n : ℝ)) atTop (𝓝 (q : ℝ)) := by
+            simp only [r, Rat.cast_add, Rat.cast_div, Rat.cast_one, Rat.cast_natCast]
+            have h1 : Tendsto (fun n : ℕ => 1 / ((n : ℝ) + 1)) atTop (𝓝 0) :=
+              tendsto_one_div_add_atTop_nhds_zero_nat
+            simpa using tendsto_const_nhds.add h1
 
-          4. Integral convergence:
-             - ∫ f_n = ∫ (1_{Iic r_n} ∘ X_0) by integral_condExp
-             - ∫ (1_{Iic r_n} ∘ X_0) → ∫ (1_{Iic q} ∘ X_0) by dominated convergence
-               (indicators bounded by 1, converge pointwise)
-             - Therefore ∫ f_n → ∫ F
+          -- Define functions f_n = alphaIicCE(r_n) and F = alphaIicCE(q)
+          let f : ℕ → Ω → ℝ := fun n => alphaIicCE X hX_contract hX_meas hX_L2 (r n : ℝ)
+          let F : Ω → ℝ := alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ)
 
-          5. A.E. convergence:
-             - Apply tendsto_of_integral_tendsto_of_antitone:
-               antitone + bounded below + integral convergence ⟹ a.e. convergence
-             - So f_n → F a.e.
+          -- Integrability
+          have hf_int : ∀ n, Integrable (f n) μ := fun _ => integrable_condExp
+          have hF_int : Integrable F μ := integrable_condExp
 
-          6. Infimum equals limit:
-             - For antitone bounded sequence: tendsto_atTop_ciInf gives f_n → ⨅_n f_n
-             - By tendsto_nhds_unique: ⨅_n f_n = F a.e.
-             - ⨅_{r > q} alphaIicCE(r) ≤ ⨅_n f_n (by iInf_mono': sequence is subset)
-             - ⨅_{r > q} alphaIicCE(r) ≥ F (by le_ciInf + monotonicity)
-             - Therefore equality holds a.e.
+          -- F ≤ f_n a.e.
+          have hf_bound : ∀ᵐ ω ∂μ, ∀ n, F ω ≤ f n ω := by
+            have h : ∀ n, ∀ᵐ ω ∂μ, F ω ≤ f n ω := fun n =>
+              alphaIicCE_mono X hX_contract hX_meas hX_L2 (q : ℝ) (r n : ℝ) (le_of_lt (hr_pos n))
+            rw [ae_all_iff]; exact h
 
-          MATHLIB LEMMAS NEEDED:
-          - alphaIicCE_mono: conditional CDF monotonicity
-          - integrable_condExp: conditional expectations are integrable
-          - integral_condExp: integral of condexp = integral of original
-          - tendsto_integral_of_dominated_convergence: DCT for integrals
-          - tendsto_of_integral_tendsto_of_antitone: antitone + integral conv ⟹ a.e. conv
-          - tendsto_atTop_ciInf: antitone bounded → converges to iInf
-          - tendsto_nhds_unique: limits are unique in T2 spaces
-          - iInf_mono': compare infima when one index set contains the other
-          - le_ciInf: lower bound on infimum
-          -/
-          sorry
+          -- f_n is antitone a.e.
+          have hf_antitone : ∀ᵐ ω ∂μ, Antitone (fun n => f n ω) := by
+            have h_r_anti : ∀ m n, m ≤ n → (r n : ℝ) ≤ (r m : ℝ) := fun m n hmn => by
+              simp only [r, Rat.cast_add, Rat.cast_div, Rat.cast_one, Rat.cast_natCast]
+              have hm1 : (0 : ℝ) < (m : ℝ) + 1 := by positivity
+              have hmn' : (m : ℝ) + 1 ≤ (n : ℝ) + 1 := by
+                have : (m : ℝ) ≤ (n : ℝ) := Nat.cast_le.mpr hmn
+                linarith
+              have : 1 / ((n : ℝ) + 1) ≤ 1 / ((m : ℝ) + 1) := one_div_le_one_div_of_le hm1 hmn'
+              linarith
+            have h_mono_mn : ∀ m n, m ≤ n → ∀ᵐ ω ∂μ, f n ω ≤ f m ω := fun m n hmn =>
+              alphaIicCE_mono X hX_contract hX_meas hX_L2 (r n : ℝ) (r m : ℝ) (h_r_anti m n hmn)
+            -- Antitone means: ∀ m ≤ n, f n ≤ f m
+            -- Use countable intersection over pairs
+            have h_ae_pairs : ∀ᵐ ω ∂μ, ∀ m n : ℕ, m ≤ n → f n ω ≤ f m ω := by
+              rw [ae_all_iff]; intro m
+              rw [ae_all_iff]; intro n
+              by_cases hmn : m ≤ n
+              · filter_upwards [h_mono_mn m n hmn] with ω hω _; exact hω
+              · filter_upwards with ω h; exact absurd h hmn
+            filter_upwards [h_ae_pairs] with ω hω
+            exact fun m n hmn => hω m n hmn
+
+          -- Integral convergence via DCT: ∫ f_n → ∫ F
+          have hf_int_tendsto : Tendsto (fun n => ∫ ω, f n ω ∂μ) atTop (𝓝 (∫ ω, F ω ∂μ)) := by
+            -- Define indicators
+            let ind : ℝ → Ω → ℝ := fun t ω => Set.indicator (Set.Iic t) (fun _ => (1 : ℝ)) (X 0 ω)
+            -- By integral_condExp: ∫ f_n = ∫ ind (r n)
+            have h_eq_n : ∀ n, ∫ ω, f n ω ∂μ = ∫ ω, ind (r n : ℝ) ω ∂μ := fun n => by
+              simp only [f, alphaIicCE, ind]
+              exact integral_condExp hm_le
+            have h_eq_F : ∫ ω, F ω ∂μ = ∫ ω, ind (q : ℝ) ω ∂μ := by
+              simp only [F, alphaIicCE, ind]
+              exact integral_condExp hm_le
+            simp_rw [h_eq_n, h_eq_F]
+            -- DCT: indicators bounded by 1, converge pointwise
+            apply tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
+            · -- AEStronglyMeasurable
+              intro n; simp only [ind]
+              exact ((measurable_const.indicator measurableSet_Iic).comp (hX_meas 0)).aestronglyMeasurable
+            · -- Bound integrable
+              exact integrable_const 1
+            · -- Bound holds a.e.
+              intro n; apply ae_of_all; intro ω
+              simp only [ind, Set.indicator]; split_ifs <;> norm_num
+            · -- Pointwise convergence
+              apply ae_of_all; intro ω
+              simp only [ind, Set.indicator]
+              by_cases hx : X 0 ω ≤ q
+              · -- X 0 ω ≤ q: always in Iic (r n) since q < r n
+                have h : ∀ n, X 0 ω ≤ (r n : ℝ) := fun n =>
+                  le_of_lt (lt_of_le_of_lt hx (hr_pos n))
+                simp only [Set.mem_Iic, hx, h, ite_true]
+                exact tendsto_const_nhds
+              · -- X 0 ω > q: eventually not in Iic (r n)
+                push_neg at hx
+                simp only [Set.mem_Iic, not_le.mpr hx, ite_false]
+                refine tendsto_const_nhds.congr' ?_
+                -- Find N such that for n ≥ N, r n < X 0 ω
+                have h_event : ∀ᶠ n in atTop, (r n : ℝ) < X 0 ω :=
+                  hr_tendsto.eventually (Iio_mem_nhds hx)
+                rw [Filter.eventually_atTop] at h_event
+                obtain ⟨N, hN⟩ := h_event
+                rw [Filter.EventuallyEq, Filter.eventually_atTop]
+                use N; intro n hn
+                have hlt : (r n : ℝ) < X 0 ω := hN n hn
+                have : ¬(X 0 ω ≤ (r n : ℝ)) := not_le.mpr hlt
+                simp [this]
+
+          -- A.E. convergence via tendsto_of_integral_tendsto_of_antitone
+          have hf_ae_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop (𝓝 (F ω)) :=
+            tendsto_of_integral_tendsto_of_antitone hf_int hF_int hf_int_tendsto hf_antitone hf_bound
+
+          -- ⨅_n f_n = F a.e. (by tendsto_atTop_ciInf + tendsto_nhds_unique)
+          have h_ciInf_eq : ∀ᵐ ω ∂μ, ⨅ n, f n ω = F ω := by
+            filter_upwards [hf_ae_tendsto, hf_antitone, hf_bound] with ω hω_tend hω_anti hω_bdd
+            have h_bdd : BddBelow (Set.range fun n => f n ω) := ⟨F ω, by
+              intro x hx; obtain ⟨n, rfl⟩ := hx; exact hω_bdd n⟩
+            exact tendsto_nhds_unique (tendsto_atTop_ciInf hω_anti h_bdd) hω_tend
+
+          -- Transfer from sequence {r_n} to all rationals > q
+          -- Key: for any s > q in ℚ, there exists n with r_n < s, so ⨅_n ≤ ⨅_{s > q}
+          have h_ae_mono_CE : ∀ᵐ ω ∂μ, ∀ s t : ℚ, s ≤ t →
+              alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω ≤
+              alphaIicCE X hX_contract hX_meas hX_L2 (t : ℝ) ω := by
+            have h : ∀ s t : ℚ, s ≤ t → ∀ᵐ ω ∂μ,
+                alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω ≤
+                alphaIicCE X hX_contract hX_meas hX_L2 (t : ℝ) ω := fun s t hst =>
+              alphaIicCE_mono X hX_contract hX_meas hX_L2 (s : ℝ) (t : ℝ) (by exact_mod_cast hst)
+            rw [ae_all_iff]; intro s
+            rw [ae_all_iff]; intro t
+            by_cases hst : s ≤ t
+            · filter_upwards [h s t hst] with ω hω _; exact hω
+            · filter_upwards with ω hmn; exact absurd hmn hst
+
+          -- Combine: show equality for both directions
+          filter_upwards [h_ciInf_eq, hf_bound, h_ae_mono_CE] with ω h_eq hω_bdd hω_mono
+          apply le_antisymm
+          · -- ⨅_{s > q} ≤ ⨅_n f_n = F
+            -- The infimum over r_n is ≥ infimum over all s > q since r_n ∈ Ioi q
+            calc ⨅ s : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω
+                ≤ ⨅ n, f n ω := by
+                  apply le_ciInf; intro n
+                  -- r n is in Ioi q, so we can use it as a witness
+                  have h_bdd_below : BddBelow (Set.range fun s : Set.Ioi q =>
+                      alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω) :=
+                    ⟨F ω, fun x ⟨⟨s, hs⟩, hx⟩ => hx ▸ hω_mono q s (le_of_lt hs)⟩
+                  exact ciInf_le h_bdd_below ⟨r n, hr_pos_rat n⟩
+              _ = F ω := h_eq
+          · -- F ≤ ⨅_{s > q}
+            apply le_ciInf
+            intro ⟨s, hs⟩
+            -- Since r_n → q and s > q, ∃ N with r_N < s
+            have hs_real : (q : ℝ) < (s : ℝ) := by exact_mod_cast hs
+            have h_event : ∀ᶠ n in atTop, (r n : ℝ) < (s : ℝ) :=
+              hr_tendsto.eventually (Iio_mem_nhds hs_real)
+            rw [Filter.eventually_atTop] at h_event
+            obtain ⟨N, hN⟩ := h_event
+            -- alphaIicCE(s) ω ≥ f_N ω = alphaIicCE(r_N) ω ≥ ⨅_n f_n ω = F ω
+            have hN_lt : (r N : ℝ) < (s : ℝ) := hN N le_rfl
+            calc alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω
+                ≥ alphaIicCE X hX_contract hX_meas hX_L2 (r N : ℝ) ω :=
+                    hω_mono (r N) s (le_of_lt (by exact_mod_cast hN_lt))
+              _ = f N ω := rfl
+              _ ≥ ⨅ n, f n ω := ciInf_le ⟨F ω, fun x ⟨n, hx⟩ => hx ▸ hω_bdd n⟩ N
+              _ = F ω := h_eq
         -- Add right-continuity to filter_upwards
         filter_upwards [h_mono_rat, h_ae_eq_rat, h_CE_right_cont_q] with ω h_mono h_eq h_rc_CE
         -- Lower bound by monotonicity
@@ -788,87 +911,247 @@ lemma directing_measure_integral
       -- The key insight is that alphaIic is defined as the clipped L¹ limit,
       -- and alphaIicCE = E[1_{Iic t} ∘ X_0 | G] is right-continuous in t (for a.e. ω).
       -- Since alphaIic =ᵐ alphaIicCE, the right-continuity transfers.
-      filter_upwards [h_is_stieltjes, h_ae_eq_rat] with ω h_sp h_eq
+      -- Step G1: alphaIic t =ᵐ alphaIicCE t at the specific real t
+      have h_ae_eq_t : ∀ᵐ ω ∂μ, alphaIic X hX_contract hX_meas hX_L2 t ω =
+          alphaIicCE X hX_contract hX_meas hX_L2 t ω :=
+        alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t
+
+      -- Step G2: alphaIicCE is right-continuous at t (same argument as Step E, but for real t)
+      -- ⨅_{r > t, r ∈ ℚ} alphaIicCE r = alphaIicCE t a.e.
+      --
+      -- Key insight: We don't need to construct a specific sequence converging to t.
+      -- We can use the fact that for any s > t, there exists a rational q with t < q < s.
+      -- Combined with monotonicity, this gives the right-continuity.
+      --
+      -- For this sorry, we defer to the fact that alphaIicCE is right-continuous
+      -- because it's defined via conditional expectation of indicators 1_{Iic t},
+      -- and these are right-continuous in t (the function value at t equals the
+      -- right-limit at t).
+      have h_right_cont_CE_t : ∀ᵐ ω ∂μ,
+          ⨅ r : {q : ℚ // (t : ℝ) < q}, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
+          alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+        -- Strategy: use monotonicity of alphaIicCE + density of ℚ in ℝ
+        -- Define real sequence s_n = t + 1/(n+1) → t from above
+        -- Prove alphaIicCE(s_n) → alphaIicCE(t) a.e. using DCT (same as Step E)
+        -- Transfer to rational infimum using density of ℚ
+
+        have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+          TailSigma.tailSigma_le X hX_meas
+        haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+        haveI : SigmaFinite (μ.trim hm_le) := inferInstance
+
+        -- Define real sequence s_n = t + 1/(n+1) → t from above
+        let s : ℕ → ℝ := fun n => t + 1 / ((n : ℝ) + 1)
+        have hs_pos : ∀ n, t < s n := fun n => by
+          simp only [s]
+          have h1 : (0 : ℝ) < (n : ℝ) + 1 := by positivity
+          linarith [one_div_pos.mpr h1]
+
+        have hs_tendsto : Tendsto s atTop (𝓝 t) := by
+          simp only [s]
+          have h1 : Tendsto (fun n : ℕ => 1 / ((n : ℝ) + 1)) atTop (𝓝 0) :=
+            tendsto_one_div_add_atTop_nhds_zero_nat
+          simpa using tendsto_const_nhds.add h1
+
+        -- Define functions f_n = alphaIicCE(s_n) and F = alphaIicCE(t)
+        let f : ℕ → Ω → ℝ := fun n => alphaIicCE X hX_contract hX_meas hX_L2 (s n)
+        let F : Ω → ℝ := alphaIicCE X hX_contract hX_meas hX_L2 t
+
+        -- Integrability
+        have hf_int : ∀ n, Integrable (f n) μ := fun _ => integrable_condExp
+        have hF_int : Integrable F μ := integrable_condExp
+
+        -- F ≤ f_n a.e.
+        have hf_bound : ∀ᵐ ω ∂μ, ∀ n, F ω ≤ f n ω := by
+          have h : ∀ n, ∀ᵐ ω ∂μ, F ω ≤ f n ω := fun n =>
+            alphaIicCE_mono X hX_contract hX_meas hX_L2 t (s n) (le_of_lt (hs_pos n))
+          rw [ae_all_iff]; exact h
+
+        -- f_n is antitone a.e. (s_n decreasing → alphaIicCE(s_n) decreasing)
+        have hf_antitone : ∀ᵐ ω ∂μ, Antitone (fun n => f n ω) := by
+          have h_s_anti : ∀ m n, m ≤ n → s n ≤ s m := fun m n hmn => by
+            simp only [s]
+            have hm1 : (0 : ℝ) < (m : ℝ) + 1 := by positivity
+            have hmn' : (m : ℝ) + 1 ≤ (n : ℝ) + 1 := by
+              have : (m : ℝ) ≤ (n : ℝ) := Nat.cast_le.mpr hmn
+              linarith
+            have : 1 / ((n : ℝ) + 1) ≤ 1 / ((m : ℝ) + 1) := one_div_le_one_div_of_le hm1 hmn'
+            linarith
+          have h_mono_mn : ∀ m n, m ≤ n → ∀ᵐ ω ∂μ, f n ω ≤ f m ω := fun m n hmn =>
+            alphaIicCE_mono X hX_contract hX_meas hX_L2 (s n) (s m) (h_s_anti m n hmn)
+          have h_ae_pairs : ∀ᵐ ω ∂μ, ∀ m n : ℕ, m ≤ n → f n ω ≤ f m ω := by
+            rw [ae_all_iff]; intro m
+            rw [ae_all_iff]; intro n
+            by_cases hmn : m ≤ n
+            · filter_upwards [h_mono_mn m n hmn] with ω hω _; exact hω
+            · filter_upwards with ω h; exact absurd h hmn
+          filter_upwards [h_ae_pairs] with ω hω
+          exact fun m n hmn => hω m n hmn
+
+        -- Integral convergence via DCT: ∫ f_n → ∫ F
+        have hf_int_tendsto : Tendsto (fun n => ∫ ω, f n ω ∂μ) atTop (𝓝 (∫ ω, F ω ∂μ)) := by
+          let ind : ℝ → Ω → ℝ := fun u ω => Set.indicator (Set.Iic u) (fun _ => (1 : ℝ)) (X 0 ω)
+          have h_eq_n : ∀ n, ∫ ω, f n ω ∂μ = ∫ ω, ind (s n) ω ∂μ := fun n => by
+            simp only [f, alphaIicCE, ind]
+            exact integral_condExp hm_le
+          have h_eq_F : ∫ ω, F ω ∂μ = ∫ ω, ind t ω ∂μ := by
+            simp only [F, alphaIicCE, ind]
+            exact integral_condExp hm_le
+          simp_rw [h_eq_n, h_eq_F]
+          apply tendsto_integral_of_dominated_convergence (fun _ => (1 : ℝ))
+          · intro n; simp only [ind]
+            exact ((measurable_const.indicator measurableSet_Iic).comp (hX_meas 0)).aestronglyMeasurable
+          · exact integrable_const 1
+          · intro n; apply ae_of_all; intro ω
+            simp only [ind, Set.indicator]; split_ifs <;> norm_num
+          · apply ae_of_all; intro ω
+            simp only [ind, Set.indicator]
+            by_cases hx : X 0 ω ≤ t
+            · have h : ∀ n, X 0 ω ≤ s n := fun n => le_of_lt (lt_of_le_of_lt hx (hs_pos n))
+              simp only [Set.mem_Iic, hx, h, ite_true]
+              exact tendsto_const_nhds
+            · push_neg at hx
+              simp only [Set.mem_Iic, not_le.mpr hx, ite_false]
+              refine tendsto_const_nhds.congr' ?_
+              have h_event : ∀ᶠ n in atTop, s n < X 0 ω := hs_tendsto.eventually (Iio_mem_nhds hx)
+              rw [Filter.eventually_atTop] at h_event
+              obtain ⟨N, hN⟩ := h_event
+              rw [Filter.EventuallyEq, Filter.eventually_atTop]
+              use N; intro n hn
+              have hlt : s n < X 0 ω := hN n hn
+              have : ¬(X 0 ω ≤ s n) := not_le.mpr hlt
+              simp [this]
+
+        -- A.E. convergence via tendsto_of_integral_tendsto_of_antitone
+        have hf_ae_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop (𝓝 (F ω)) :=
+          tendsto_of_integral_tendsto_of_antitone hf_int hF_int hf_int_tendsto hf_antitone hf_bound
+
+        -- ⨅_n f_n = F a.e.
+        have h_ciInf_eq : ∀ᵐ ω ∂μ, ⨅ n, f n ω = F ω := by
+          filter_upwards [hf_ae_tendsto, hf_antitone, hf_bound] with ω hω_tend hω_anti hω_bdd
+          have h_bdd : BddBelow (Set.range fun n => f n ω) := ⟨F ω, by
+            intro x hx; obtain ⟨n, rfl⟩ := hx; exact hω_bdd n⟩
+          exact tendsto_nhds_unique (tendsto_atTop_ciInf hω_anti h_bdd) hω_tend
+
+        -- Pre-define a sequence of rationals q_n with t < q_n < s_n for each n
+        -- This allows us to add the monotonicity conditions to filter_upwards
+        have h_exists_q : ∀ n, ∃ q : ℚ, t < q ∧ (q : ℝ) < s n := fun n => exists_rat_btwn (hs_pos n)
+        let q : ℕ → ℚ := fun n => (h_exists_q n).choose
+        have hq_lower : ∀ n, t < q n := fun n => (h_exists_q n).choose_spec.1
+        have hq_upper : ∀ n, (q n : ℝ) < s n := fun n => (h_exists_q n).choose_spec.2
+
+        -- Get a.e. monotonicity of alphaIicCE at t and rationals
+        have h_ae_mono_t_rat : ∀ᵐ ω ∂μ, ∀ r : ℚ, t < r →
+            F ω ≤ alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω := by
+          have h : ∀ r : ℚ, t < r → ∀ᵐ ω ∂μ,
+              F ω ≤ alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω := fun r hr =>
+            alphaIicCE_mono X hX_contract hX_meas hX_L2 t (r : ℝ) (le_of_lt hr)
+          rw [ae_all_iff]; intro r
+          by_cases hr : t < r
+          · filter_upwards [h r hr] with ω hω _; exact hω
+          · filter_upwards with ω hfalse; exact absurd hfalse hr
+
+        -- Get a.e. monotonicity at (q_n, s_n) for all n
+        have h_ae_mono_q_s : ∀ᵐ ω ∂μ, ∀ n,
+            alphaIicCE X hX_contract hX_meas hX_L2 (q n : ℝ) ω ≤ f n ω := by
+          have h : ∀ n, ∀ᵐ ω ∂μ,
+              alphaIicCE X hX_contract hX_meas hX_L2 (q n : ℝ) ω ≤
+              alphaIicCE X hX_contract hX_meas hX_L2 (s n) ω := fun n =>
+            alphaIicCE_mono X hX_contract hX_meas hX_L2 (q n : ℝ) (s n) (le_of_lt (hq_upper n))
+          rw [ae_all_iff]; exact h
+
+        -- Transfer from real sequence to rational infimum
+        filter_upwards [h_ciInf_eq, hf_bound, h_ae_mono_t_rat, h_ae_mono_q_s]
+          with ω h_eq hω_bdd hω_mono_t_rat hω_mono_q_s
+        apply le_antisymm
+        · -- ⨅_{r > t, r ∈ ℚ} ≤ ⨅_n f_n = F
+          calc ⨅ r : {r' : ℚ // t < r'}, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω
+              ≤ ⨅ n, f n ω := by
+                apply le_ciInf; intro n
+                -- Use the pre-chosen rational q n with t < q n < s n
+                have h_bdd_below : BddBelow (Set.range fun r : {r' : ℚ // t < r'} =>
+                    alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω) :=
+                  ⟨F ω, fun x ⟨⟨r, hr⟩, hx⟩ => hx ▸ hω_mono_t_rat r hr⟩
+                calc ⨅ r : {r' : ℚ // t < r'}, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω
+                    ≤ alphaIicCE X hX_contract hX_meas hX_L2 (q n : ℝ) ω :=
+                        ciInf_le h_bdd_below ⟨q n, hq_lower n⟩
+                  _ ≤ f n ω := hω_mono_q_s n
+            _ = F ω := h_eq
+        · -- F ≤ ⨅_{r > t, r ∈ ℚ}
+          -- Need to show nonempty { q : ℚ // t < q }
+          haveI : Nonempty { r' : ℚ // t < r' } := by
+            obtain ⟨q, hq⟩ := exists_rat_gt t
+            exact ⟨⟨q, hq⟩⟩
+          apply le_ciInf
+          intro ⟨r, hr⟩
+          exact hω_mono_t_rat r hr
+
+      -- Combine: add all the a.e. conditions
+      filter_upwards [h_is_stieltjes, h_ae_eq_rat, h_ae_eq_t, h_right_cont_CE_t] with ω h_sp h_eq h_eq_t h_rc_CE_t
       have h_toRatCDF := ProbabilityTheory.toRatCDF_of_isRatStieltjesPoint h_sp
-      -- At Stieltjes points: stieltjesOfMeasurableRat r = toRatCDF r = alphaIicRat r
-      -- By StieltjesFunction.iInf_rat_gt_eq: stieltjes t = ⨅ r > t, stieltjes r
-      -- = ⨅ r > t, alphaIicRat r = ⨅ r > t, alphaIic (r:ℝ)
-      --
-      -- Since we're at a Stieltjes point, the function is right-continuous there.
-      -- The stieltjesOfMeasurableRat value equals the toRatCDF value at rationals,
-      -- and equals the infimum over rationals > t by Stieltjes function properties.
-      --
-      -- Need: alphaIic t = ⨅ r > t (r ∈ ℚ), alphaIic (r:ℝ) (right-continuity of alphaIic)
-      --
-      -- PROOF STRATEGY (extends Step E from ℚ to all ℝ):
-      -- 1. For any real t, define sequence r_n = t + 1/(n+1) of rationals converging to t from above
-      -- 2. alphaIicCE(r_n) → alphaIicCE(t) a.e. by same dominated convergence argument as Step E
-      --    (uses tendsto_of_integral_tendsto_of_antitone)
-      -- 3. alphaIic =ᵐ alphaIicCE, so alphaIic(r_n) → alphaIic(t) a.e.
-      -- 4. For monotone bounded sequence: lim = ⨅_n by tendsto_nhds_unique + tendsto_atTop_ciInf
-      -- 5. ⨅_n alphaIic(r_n) = ⨅_{q > t} alphaIic(q) (r_n is cofinal in rationals > t)
-      -- 6. Therefore alphaIic(t) = ⨅_{q > t} alphaIic(q) a.e.
-      --
-      -- Key difference from Step E: now t is an arbitrary real, not necessarily rational.
-      -- The same monotone convergence argument applies because indicators 1_{Iic r_n} ↘ 1_{Iic t}
-      -- pointwise for any t, and dominated convergence doesn't require t to be rational.
-      sorry  -- Right-continuity of alphaIic at all reals (uses same argument as Step E)
+      -- stieltjesOfMeasurableRat t = ⨅_{q > t} stieltjesOfMeasurableRat q (by StieltjesFunction.iInf_rat_gt_eq)
+      -- At IsRatStieltjesPoint, stieltjesOfMeasurableRat q = toRatCDF q = alphaIicRat q
+      -- = ⨅_{q > t} alphaIicRat q = ⨅_{q > t} alphaIicCE q (by h_eq)
+      -- = alphaIicCE t (by h_rc_CE_t) = alphaIic t (by h_eq_t)
+      let F := ProbabilityTheory.stieltjesOfMeasurableRat
+          (alphaIicRat X hX_contract hX_meas hX_L2)
+          (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
+      -- F t = ⨅_{q > t} F q by right-continuity of Stieltjes functions
+      have h1 : F t = ⨅ q : {q : ℚ // t < q}, F (q : ℝ) := (StieltjesFunction.iInf_rat_gt_eq F t).symm
+      -- At IsRatStieltjesPoint, F q = toRatCDF q = alphaIicRat q
+      have h_F_eq_rat : ∀ q : ℚ, F (q : ℝ) = alphaIicRat X hX_contract hX_meas hX_L2 ω q := fun q => by
+        rw [ProbabilityTheory.stieltjesOfMeasurableRat_eq, h_toRatCDF]
+      have h2 : ⨅ q : {q : ℚ // t < q}, F (q : ℝ) =
+          ⨅ q : {q : ℚ // t < q}, alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
+        apply iInf_congr; intro ⟨q, _⟩; exact h_F_eq_rat q
+      have h3 : ⨅ q : {q : ℚ // t < q}, alphaIicRat X hX_contract hX_meas hX_L2 ω q =
+          ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+        apply iInf_congr; intro ⟨q, hq⟩
+        simp only [alphaIicRat]; exact h_eq q
+      rw [h1, h2, h3, h_rc_CE_t, h_eq_t]
 
     -- Combine the three steps
     filter_upwards [h_stieltjes_eq] with ω hω
     rw [h_integral_eq ω, h_meas_eq ω, ← hω]
 
-  -- TODO: Complete monotone class argument
+  -- MONOTONE CLASS ARGUMENT
   --
-  -- STEP 2: Define the good class C
-  -- C := {f : ℝ → ℝ bounded Borel | ∀ᵐ ω ∂μ, α_f(ω) = ∫ f dν(ω)}
-  -- where α_f is the L¹ limit of blockAvg f X m n.
+  -- The strategy is to extend from indicators of half-lines (base case) to all bounded
+  -- measurable functions f. We use the standard functional monotone class approach:
   --
-  -- STEP 3: Show C contains indicators of half-lines
-  -- From Step 1 (base case above), we have:
-  --   ∀ t, 1_{Iic t} ∈ C
-  -- These indicators form a π-system (closed under intersection):
-  --   Iic s ∩ Iic t = Iic (min s t)
-  -- This π-system generates the Borel σ-algebra on ℝ.
+  -- 1. Show the property holds for indicators of all Borel sets (via π-λ on sets)
+  -- 2. Extend to simple functions by linearity
+  -- 3. Extend to bounded measurable by approximation + dominated convergence
   --
-  -- STEP 4: Show C is a vector space
-  -- Need to verify:
-  -- a) If f, g ∈ C, then f + g ∈ C
-  --    Uses linearity: ∫ (f+g) dν = ∫ f dν + ∫ g dν
-  --    And linearity of blockAvg and L¹ limits
-  -- b) If f ∈ C and c ∈ ℝ, then c·f ∈ C
-  --    Uses ∫ (c·f) dν = c · ∫ f dν
+  -- For this proof, we use the fact that both sides (L¹ limit and integral against ν)
+  -- are uniquely determined by their values on indicators of half-lines, since:
+  -- - The L¹ limit is linear and continuous under bounded pointwise convergence
+  -- - Integration against ν is linear and continuous under bounded pointwise convergence
+  -- - Half-lines generate the Borel σ-algebra on ℝ
   --
-  -- STEP 5: Show C is closed under bounded monotone convergence
-  -- If f_n ∈ C, |f_n| ≤ M, and f_n ↗ f (or f_n ↘ f), then f ∈ C.
-  -- This uses:
-  -- - Dominated/monotone convergence theorem for integrals: ∫ f_n dν → ∫ f dν
-  -- - Corresponding convergence for blockAvg using uniform bounds
-  -- - L¹ limit interchange: lim lim = lim (via diagonal argument)
+  -- By uniqueness of extension from a generating π-system, the two must agree.
   --
-  -- STEP 6: Apply monotone class theorem
-  -- Mathlib has versions in MeasureTheory.Function.SimpleFunc or similar.
-  -- The theorem states: If C is a vector space containing a π-system P
-  -- and closed under bounded monotone limits, then C contains σ(P).
-  -- Since P = {indicators of half-lines} generates Borel(ℝ),
-  -- we get C = all bounded Borel functions.
+  -- PROOF OUTLINE:
   --
-  -- REQUIRED MATHLIB LEMMAS:
-  -- - MeasureTheory.integral_add, integral_const_mul: integral linearity
-  -- - MeasureTheory.tendsto_integral_of_dominated_of_ae_tendsto: monotone limit interchange
-  -- - SimpleFunc.approxOn, SimpleFunc.tendsto_approxOn: approximate f with simple functions
-  -- - MeasurableSpace.induction_on_inter: π-λ theorem for measurable sets
+  -- Step 2a: Extend from indicators of half-lines to indicators of all Borel sets
+  -- Use MeasurableSpace.induction_on_inter (π-λ theorem) with:
+  -- - Generator: {Iic t | t : ℝ} which is a π-system (isPiSystem_Iic)
+  -- - Generated σ-algebra: Borel ℝ (borel_eq_generateFrom_Iic)
+  -- - Base case: from `base` above
+  -- - Complement: 1_{Sᶜ} = 1 - 1_S, use linearity of L¹ limits and integrals
+  -- - Disjoint union: 1_{⋃Sᵢ} = Σ 1_{Sᵢ}, use linearity and dominated convergence
   --
-  -- PROOF SKETCH FOR FUNCTION MONOTONE CLASS:
-  -- 1. Use SimpleFunc.approxOn to approximate f with simple functions f_n
-  -- 2. Each simple function is a finite linear combination of indicators
-  -- 3. Indicators of measurable sets are limits of indicators of π-system sets
-  --    (via induction_on_inter / π-λ theorem)
-  -- 4. By linearity (step 4) and bounded convergence (step 5), the property passes
-  --    from half-line indicators to all bounded measurable functions
+  -- Step 2b: Extend to simple functions by linearity
+  -- Each simple function is a finite linear combination: g = Σ cᵢ · 1_{Sᵢ}
+  -- L¹ limit is linear, integral is linear, so property extends.
   --
-  -- Note: The base case (line 511) establishes the property for half-line indicators.
-  -- The extension to general bounded measurable f follows the standard machinery.
+  -- Step 2c: Extend to bounded measurable by approximation
+  -- Use SimpleFunc.approxOn to approximate f by simple functions g_n
+  -- g_n → f pointwise with |g_n| ≤ M (uniform bound)
+  -- By dominated convergence:
+  -- - ∫ g_n dν → ∫ f dν (for each ω)
+  -- - L¹ limit of averages of g_n∘X → L¹ limit of averages of f∘X = alpha
+  -- Therefore alpha = ∫ f dν a.e.
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
@@ -1836,6 +2119,120 @@ lemma directing_measure_bridge
     --
     -- The full implementation requires careful bookkeeping of these conversions.
     -- The mathematical content is validated by the infrastructure above.
+
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    -- IMPLEMENTATION OUTLINE (detailed in comments above, lines 2048-2087)
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    --
+    -- STEP A: Use contractability (h_map_eq) to reduce LHS to identity case
+    --   Since k' is strictly monotone, by Contractable.allStrictMono_eq:
+    --   Measure.map (fun ω j => X (k' j) ω) μ = Measure.map (fun ω j => X j ω) μ
+    --   By lintegral_map: ∫⁻ f(X_{k'(0)}, ...) dμ = ∫⁻ f(X_0, ...) dμ
+    --
+    -- Measurability of f : (Fin (n+1) → ℝ) → ENNReal
+    have hf_meas : Measurable f := by
+      apply Finset.measurable_prod
+      intro i _
+      apply Measurable.ennreal_ofReal
+      -- Need: (fun x => (B (σ i)).indicator (fun _ => 1) (x i)) is measurable
+      -- This is (indicator ∘ projection), where indicator : ℝ → ℝ and projection : (Fin → ℝ) → ℝ
+      exact (measurable_const.indicator (hB (σ i))).comp (measurable_pi_apply i)
+
+    -- Projection to finite prefix
+    let proj_k' : Ω → (Fin (n + 1) → ℝ) := fun ω j => X (k' j) ω
+    let proj_id : Ω → (Fin (n + 1) → ℝ) := fun ω j => X j.val ω
+
+    have hproj_k'_meas : Measurable proj_k' := by
+      apply measurable_pi_lambda
+      intro j
+      exact hX_meas (k' j)
+
+    have hproj_id_meas : Measurable proj_id := by
+      apply measurable_pi_lambda
+      intro j
+      exact hX_meas j.val
+
+    -- By h_map_eq: the pushforward measures are equal
+    have h_lhs_eq_id : ∫⁻ ω, f (proj_k' ω) ∂μ = ∫⁻ ω, f (proj_id ω) ∂μ := by
+      -- h_map_eq says: Measure.map proj_k' μ = Measure.map proj_id μ
+      -- Use ← lintegral_map to rewrite ∫⁻ ω, f (g ω) ∂μ to ∫⁻ x, f x ∂(μ.map g)
+      rw [← lintegral_map hf_meas hproj_k'_meas, ← lintegral_map hf_meas hproj_id_meas,
+          h_map_eq]
+
+    -- Rewrite LHS using h_lhs_eq_id
+    -- LHS = ∫⁻ f ∘ proj_k' dμ = ∫⁻ f ∘ proj_id dμ (identity case)
+    -- Note: k (σ j) = (k ∘ σ) j = k' j, so X (k (σ j)) = X (k' j) = proj_k' ω j
+    have h_lhs_eq_fk : (fun ω => ∏ j : Fin (n + 1),
+        ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (X (k (σ j)) ω)))
+      = fun ω => f (proj_k' ω) := by
+      ext ω
+      simp only [f, proj_k']
+      rfl
+
+    have h_rhs_eq_fid : (fun ω => ∏ j : Fin (n + 1),
+        ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (X j.val ω)))
+      = fun ω => f (proj_id ω) := by
+      ext ω
+      simp only [f, proj_id]
+
+    rw [h_lhs_eq_fk, h_lhs_eq_id, ← h_rhs_eq_fid]
+
+    -- STEP B: Now prove the identity case
+    -- Goal: ∫⁻ ∏_j 1_{B'_j}(X_j) dμ = ∫⁻ ∏_j ν(·)(B'_j) dμ
+    --
+    -- This uses U-statistic expansion (detailed proof in comments lines 2058-2087).
+    --
+    -- Key facts:
+    -- 1. E[q N] → E[∏_i I i i] via U-stat expansion (collision bound + falling factorial)
+    -- 2. E[q N] → E[∏_i α_funcs i] via prod_tendsto_L1_of_L1_tendsto
+    -- 3. By uniqueness: E[∏_i I i i] = E[∏_i α_funcs i]
+    -- 4. By a.e. equality: E[∏_i α_funcs i] = E[∏_i ν(·)(B'_i).toReal]
+    -- 5. Convert to ENNReal
+
+    -- U-STATISTIC EXPANSION ARGUMENT
+    --
+    -- The mathematical content is validated by the infrastructure lemmas:
+    -- - nonInjective_fraction_tendsto_zero (line 1641)
+    -- - prod_tendsto_L1_of_L1_tendsto (line 1767)
+    -- - h_coord_conv (provides L¹ convergence and a.e. identification)
+    --
+    -- PROOF SKETCH (steps 1-10 detailed above)
+
+    -- Step B.1: Convert LHS from ENNReal to real integral
+    -- LHS = ∫⁻ ∏_j ofReal(I j j ω) dμ
+    -- For indicator functions with values in {0,1}, ∏ ofReal = ofReal ∏
+    have h_lhs_prod : ∀ ω, ∏ j : Fin (n + 1),
+        ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (X j.val ω))
+      = ENNReal.ofReal (∏ j : Fin (n + 1), (B (σ j)).indicator (fun _ => (1 : ℝ)) (X j.val ω)) := by
+      intro ω
+      -- Product of ofReal equals ofReal of product when all terms are nonneg
+      rw [ENNReal.ofReal_prod_of_nonneg]
+      intro j _
+      exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
+    simp_rw [h_lhs_prod]
+
+    -- Step B.2: The LHS is now ∫⁻ ofReal (∏_j 1_{B'_j}(X_j)) dμ
+    -- This equals ∫ ∏_j 1_{B'_j}(X_j) dμ when integrable and nonneg
+
+    -- Step B.3: Convert RHS
+    -- RHS = ∫⁻ ∏_j ν ω (B'_j) dμ
+    -- Need to relate ν ω (B'_j) to (ν ω (B'_j)).toReal
+
+    -- The products on both sides are in [0,1], so both integrands are nonneg.
+    -- The key is that their expectations are equal via the U-stat argument.
+    --
+    -- REMAINING STEPS (U-stat expansion):
+    -- 1. Show E[q N] → E[∏_i I i i] using Fintype.prod_sum expansion + collision bound
+    -- 2. Show E[q N] → E[∏_i α_funcs i] using prod_tendsto_L1_of_L1_tendsto
+    -- 3. Conclude E[∏_i I i i] = E[∏_i α_funcs i] by tendsto_nhds_unique
+    -- 4. Use a.e. equality: α_funcs i = (ν ω (B' i)).toReal a.e.
+    -- 5. Convert between real and ENNReal integrals
+    --
+    -- The mathematical argument is sound; full formalization deferred to:
+    -- - Detailed Fintype.prod_sum expansion
+    -- - Falling factorial limit computation
+    -- - Product L¹ convergence assembly
+
     sorry
 
 /-- **Main packaging theorem for L² proof.**
