@@ -2196,24 +2196,42 @@ lemma directing_measure_bridge
     -- - prod_tendsto_L1_of_L1_tendsto (line 1767)
     -- - h_coord_conv (provides L¹ convergence and a.e. identification)
     --
-    -- PROOF SKETCH:
+    -- PROOF SKETCH (steps 1-10 detailed above)
+
+    -- Step B.1: Convert LHS from ENNReal to real integral
+    -- LHS = ∫⁻ ∏_j ofReal(I j j ω) dμ
+    -- For indicator functions with values in {0,1}, ∏ ofReal = ofReal ∏
+    have h_lhs_prod : ∀ ω, ∏ j : Fin (n + 1),
+        ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (X j.val ω))
+      = ENNReal.ofReal (∏ j : Fin (n + 1), (B (σ j)).indicator (fun _ => (1 : ℝ)) (X j.val ω)) := by
+      intro ω
+      -- Product of ofReal equals ofReal of product when all terms are nonneg
+      rw [ENNReal.ofReal_prod_of_nonneg]
+      intro j _
+      exact Set.indicator_nonneg (fun _ _ => zero_le_one) _
+    simp_rw [h_lhs_prod]
+
+    -- Step B.2: The LHS is now ∫⁻ ofReal (∏_j 1_{B'_j}(X_j)) dμ
+    -- This equals ∫ ∏_j 1_{B'_j}(X_j) dμ when integrable and nonneg
+
+    -- Step B.3: Convert RHS
+    -- RHS = ∫⁻ ∏_j ν ω (B'_j) dμ
+    -- Need to relate ν ω (B'_j) to (ν ω (B'_j)).toReal
+
+    -- The products on both sides are in [0,1], so both integrands are nonneg.
+    -- The key is that their expectations are equal via the U-stat argument.
     --
-    -- 1. Product of empirical averages q N ω = ∏_i p N i ω
-    -- 2. By Fintype.prod_sum: q N = (1/(N+1))^m * ∑_{φ : Fin m → Fin(N+1)} ∏_i I i (φ i + 1)
-    -- 3. Split sum by injectivity of φ
-    -- 4. Injective terms: by contractability, all equal to E[∏_i I i i]
-    --    Number of injective: (N+1)!/(N+1-m)! ≈ (N+1)^m as N → ∞
-    -- 5. Non-injective terms: bounded by 1 each, count is O(N^{m-1})
-    --    By nonInjective_fraction_tendsto_zero: contribution → 0
-    -- 6. E[q N] → E[∏_i I i i] (the identity case value)
-    -- 7. Also E[q N] → E[∏_i α_funcs i] (by prod_tendsto_L1_of_L1_tendsto)
-    -- 8. Uniqueness: E[∏_i I i i] = E[∏_i α_funcs i]
-    -- 9. A.e. equality: α_funcs i = ν(·)(B' i).toReal a.e.
-    --    So E[∏_i α_funcs i] = E[∏_i ν(·)(B' i).toReal]
-    -- 10. Convert to ENNReal using lintegral_ofReal (products in [0,1])
+    -- REMAINING STEPS (U-stat expansion):
+    -- 1. Show E[q N] → E[∏_i I i i] using Fintype.prod_sum expansion + collision bound
+    -- 2. Show E[q N] → E[∏_i α_funcs i] using prod_tendsto_L1_of_L1_tendsto
+    -- 3. Conclude E[∏_i I i i] = E[∏_i α_funcs i] by tendsto_nhds_unique
+    -- 4. Use a.e. equality: α_funcs i = (ν ω (B' i)).toReal a.e.
+    -- 5. Convert between real and ENNReal integrals
     --
-    -- Each step is mathematically sound; full formalization requires extensive
-    -- bookkeeping of the limit arguments and measure-theoretic technicalities.
+    -- The mathematical argument is sound; full formalization deferred to:
+    -- - Detailed Fintype.prod_sum expansion
+    -- - Falling factorial limit computation
+    -- - Product L¹ convergence assembly
 
     sorry
 
