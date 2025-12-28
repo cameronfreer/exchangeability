@@ -2626,7 +2626,7 @@ Combine the a.e. equality `alphaIic =ᵐ alphaIicCE` with `alphaIicCE_ae_tendsto
 Since both are a.e. statements and we take countable intersection over integers, we
 get a.e. convergence of `alphaIic` along the integer sequence `-(n:ℝ)`.
 -/
-private lemma alphaIic_ae_tendsto_zero_at_bot
+lemma alphaIic_ae_tendsto_zero_at_bot
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
@@ -2657,7 +2657,7 @@ proven from the L¹ construction since `alphaIic` is defined via existential L¹
 **Proof strategy:**
 Combine the a.e. equality `alphaIic =ᵐ alphaIicCE` with `alphaIicCE_ae_tendsto_one_atTop`.
 -/
-private lemma alphaIic_ae_tendsto_one_at_top
+lemma alphaIic_ae_tendsto_one_at_top
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
