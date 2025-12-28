@@ -696,9 +696,18 @@ lemma directing_measure_integral
         have h_CE_right_cont_q : ∀ᵐ ω ∂μ,
             ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
             alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
-          -- TODO: Prove using tendsto_condExpL1_of_dominated_convergence
-          -- + monotone L¹ convergence implies a.e. convergence
-          sorry -- A.e. right-continuity via dominated convergence
+          -- Strategy: Use tendsto_of_integral_tendsto_of_antitone
+          -- 1. Define sequence r_n = q + 1/(n+1) ↓ q
+          -- 2. alphaIicCE(r_n) is antitone and bounded below by alphaIicCE(q)
+          -- 3. Integrals converge (from dominated convergence for condexp)
+          -- 4. Therefore alphaIicCE(r_n) → alphaIicCE(q) a.e.
+          -- 5. Infimum over r > q = limit of r_n sequence = alphaIicCE(q)
+          --
+          -- Key mathlib lemmas:
+          -- - tendsto_of_integral_tendsto_of_antitone: antitone + integral convergence ⇒ a.e. convergence
+          -- - alphaIicCE_mono: monotonicity of conditional CDF
+          -- - tendsto_integral_of_dominated_convergence: dominated convergence for integrals
+          sorry -- Dominated convergence + antitone a.e. convergence
         -- Add right-continuity to filter_upwards
         filter_upwards [h_mono_rat, h_ae_eq_rat, h_CE_right_cont_q] with ω h_mono h_eq h_rc_CE
         -- Lower bound by monotonicity
