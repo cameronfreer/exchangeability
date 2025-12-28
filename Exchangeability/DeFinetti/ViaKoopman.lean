@@ -5920,6 +5920,174 @@ lemma kernel_indep_pair
       ext y; simp only [Set.mem_setOf_eq]; tauto
     rw [h_set_eq, hω, mul_comm]
 
+/-! ### Tower property for cylinder indicators
+
+The following lemma is the key to proving `kernel_indep_finset`. It establishes
+that indicators at disjoint coordinates factorize under conditional expectation.
+-/
+
+/-- **Tower property for cylinder indicators**.
+
+For a coordinate k and a cylinder set B over coordinates S with k ∉ S:
+  CE[1_{ω_k ∈ A} · 1_B | mSI] =ᵃᵉ CE[1_{ω_k ∈ A} | mSI] · CE[1_B | mSI]
+
+**Proof strategy**:
+1. Choose N₀ > max(k, max(S)) so the shifted cylinder has disjoint coordinates
+2. Use a block permutation σ that swaps S and S + N₀ while fixing k
+3. By exchangeability: CE[f · 1_B(shift^{N₀}) | mSI] =ᵃᵉ CE[f · 1_B | mSI]
+4. By MET: A_N = (1/N)Σ 1_B(shift^{N₀+j}) → CE[1_B | mSI] in L¹
+5. By CE contraction: CE[f · A_N | mSI] → CE[f · CE[1_B | mSI] | mSI] in L¹
+6. By pull-out: CE[f · CE[1_B | mSI] | mSI] = CE[1_B | mSI] · CE[f | mSI]
+
+The key insight is that even without adjacent lag constancy, the limit
+of the Cesàro average gives the factorization we need.
+-/
+private lemma tower_indicator_finset
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
+    (k : ℕ) (A : Set α) (hA : MeasurableSet A)
+    (S : Finset ℕ) (hkS : k ∉ S) (f : ℕ → Set α) (hf : ∀ i ∈ S, MeasurableSet (f i)) :
+    let B := ⋂ i ∈ S, {ω : Ω[α] | ω i ∈ f i}
+    μ[(fun ω => (A.indicator (1 : α → ℝ) (ω k)) * (B.indicator (1 : Ω[α] → ℝ) ω)) | mSI]
+      =ᵐ[μ]
+    (fun ω => μ[(fun ω => A.indicator 1 (ω k)) | mSI] ω *
+              μ[(fun ω => B.indicator 1 ω) | mSI] ω) := by
+  classical
+  intro B
+
+  -- Handle empty S case separately
+  cases' S.eq_empty_or_nonempty with hS_empty hS_nonempty
+  · -- S = ∅: B = Set.univ, so 1_B = 1
+    subst hS_empty
+    simp only [Finset.not_mem_empty, Set.iInter_of_empty, Set.iInter_univ, B]
+    have h_indicator_univ : (Set.univ : Set (Ω[α])).indicator (1 : Ω[α] → ℝ) = fun _ => 1 := by
+      ext ω; simp
+    simp only [h_indicator_univ]
+    -- CE[f · 1 | mSI] = CE[f | mSI] and CE[1 | mSI] = 1
+    have h_ce_one : μ[(fun _ : Ω[α] => (1 : ℝ)) | mSI] =ᵐ[μ] fun _ => 1 := by
+      rw [condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ)]
+    have h_mul_one : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * (1 : ℝ))
+                   = (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) := by
+      ext ω; ring
+    calc μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * 1) | mSI]
+        =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] := by rw [h_mul_one]
+      _ =ᵐ[μ] (fun ω => μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] ω * 1) := by
+          filter_upwards with ω; ring
+      _ =ᵐ[μ] (fun ω => μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] ω *
+                μ[(fun _ => (1 : ℝ)) | mSI] ω) := by
+          filter_upwards [h_ce_one] with ω hω
+          rw [hω]
+
+  -- S is nonempty. We use the Cesàro + MET + pull-out approach.
+
+  -- Measurability of B
+  have hB_meas : MeasurableSet B := by
+    apply MeasurableSet.iInter
+    intro i
+    apply MeasurableSet.iInter
+    intro hi
+    exact (hf i hi).preimage (measurable_pi_apply i)
+
+  -- Indicator function bounds
+  have hA_ind_bd : ∀ x : α, |(A.indicator (1 : α → ℝ) x : ℝ)| ≤ 1 := fun x => by
+    simp only [Set.indicator_apply, Pi.one_apply]
+    by_cases hx : x ∈ A
+    · simp [hx]
+    · simp [hx]
+  have hB_ind_bd : ∀ ω : Ω[α], |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ 1 := fun ω => by
+    simp only [Set.indicator_apply, Pi.one_apply]
+    by_cases hω : ω ∈ B
+    · simp [hω]
+    · simp [hω]
+
+  -- Integrability
+  have hfA_int : Integrable (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) μ :=
+    integrable_of_bounded_measurable
+      ((measurable_const.indicator hA).comp (measurable_pi_apply k))
+      1 (fun ω => hA_ind_bd (ω k))
+  have hfB_int : Integrable (fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) μ :=
+    integrable_of_bounded_measurable
+      (measurable_const.indicator hB_meas)
+      1 hB_ind_bd
+  have hprod_int : Integrable (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
+      (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) μ :=
+    integrable_of_bounded_measurable
+      (((measurable_const.indicator hA).comp (measurable_pi_apply k)).mul
+        (measurable_const.indicator hB_meas))
+      1 (fun ω => by
+        simp only [abs_mul]
+        have h1 : |(A.indicator (1 : α → ℝ) (ω k) : ℝ)| ≤ 1 := hA_ind_bd (ω k)
+        have h2 : |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ 1 := hB_ind_bd ω
+        calc |(A.indicator (1 : α → ℝ) (ω k) : ℝ)| * |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)|
+            ≤ 1 * 1 := mul_le_mul h1 h2 (abs_nonneg _) zero_le_one
+          _ = 1 := one_mul 1)
+
+  -- The key step: use CE contraction + pull-out
+  -- We need to show the product factorizes
+
+  -- Step 1: Define the conditional expectations
+  set CE_A := μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI]
+  set CE_B := μ[(fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
+
+  -- Step 2: CE_B is mSI-measurable
+  have hCE_B_meas : Measurable[mSI] CE_B := stronglyMeasurable_condExp.measurable
+  have hCE_B_bd : ∃ C : ℝ, ∀ᵐ ω ∂μ, |CE_B ω| ≤ C := by
+    use 1
+    have h1_ae : ∀ᵐ ω ∂μ, |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ ((1 : NNReal) : ℝ) := by
+      filter_upwards with ω
+      exact hB_ind_bd ω
+    have h := ae_bdd_condExp_of_ae_bdd (m := mSI) (R := 1) h1_ae
+    filter_upwards [h] with ω hω
+    exact hω
+
+  -- Step 3: Tower property via shift invariance and MET limit
+
+  -- The core argument: We'll show that CE[f·g | mSI] = CE[f·CE[g | mSI] | mSI]
+  -- by the following logic:
+  -- (a) Define Cesàro averages of shifted cylinders
+  -- (b) These converge to CE[g | mSI] in L¹ by MET + shift invariance
+  -- (c) CE[f · Cesàro | mSI] → CE[f · CE[g | mSI] | mSI] by CE contraction
+  -- (d) By exchangeability, each term CE[f · g(shift^j) | mSI] = CE[f · g | mSI]
+  --     (This is the key step requiring a block permutation argument)
+  -- (e) Hence CE[f · g | mSI] = CE[f · CE[g | mSI] | mSI]
+
+  -- For now, we use the direct approach via the tower-pullout pattern
+  -- TODO: Complete the full Cesàro + MET proof with block permutation
+  have h_tower :
+      μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
+        (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
+      =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := by
+    -- This is the key tower property that needs the Cesàro + MET argument
+    -- The proof follows the same pattern as h_tower_of_lagConst_from_one
+    -- but uses block permutations instead of transpositions
+
+    -- Key observation: coordinates k and S are disjoint (hkS : k ∉ S)
+    -- Choose N₀ > max(k, max(S)) so shifted cylinder has disjoint coordinates
+
+    -- For this sorry, we need to prove that the tower property holds
+    -- for cylinder indicators at disjoint coordinates
+    sorry
+
+  -- Step 4: Pull-out property
+  have h_pullout :
+      μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI]
+      =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := by
+    have h := condExp_mul_pullout hCE_B_meas hCE_B_bd hfA_int
+    calc μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI]
+        =ᵐ[μ] μ[(fun ω : Ω[α] => CE_B ω * (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] := by
+          have : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω)
+               = (fun ω : Ω[α] => CE_B ω * (A.indicator (1 : α → ℝ) (ω k) : ℝ)) := by ext ω; ring
+          rw [this]
+      _ =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := h
+
+  -- Combine: CE[f·g | mSI] = CE[f·CE_B | mSI] = CE_B · CE_A
+  calc μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
+        (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
+      =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := h_tower
+    _ =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := h_pullout
+    _ =ᵐ[μ] (fun ω => CE_A ω * CE_B ω) := by filter_upwards with ω; ring
+
 /-- **Finite product factorization for kernel measures** - Full proof.
 
 For any finite set S of distinct indices and measurable sets f(i) ⊆ α:
