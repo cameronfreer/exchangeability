@@ -140,25 +140,18 @@ lemma contractable_finite_cylinder_measure
   have contract := hX (r + 1 + k) idx idx_mono
 
   -- Define the product set corresponding to our cylinder conditions
-  let S_idx : Set (Fin (r + 1 + k) → α) :=
+  let S : Set (Fin (r + 1 + k) → α) :=
     {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
          (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
-
-  let S_std : Set (Fin (r + 1 + k) → α) :=
-    {f | (∀ i : Fin r, f ⟨i.val, by omega⟩ ∈ A i) ∧ f ⟨r, by omega⟩ ∈ B ∧
-         (∀ j : Fin k, f ⟨r + 1 + j.val, by omega⟩ ∈ C j)}
-
-  -- Note: S_idx = S_std, so they define the same set
-  have h_sets_eq : S_idx = S_std := rfl
 
   -- Key: Show that the LHS and RHS sets are preimages under the respective mappings
 
   -- The LHS: {ω | X_0,...,X_{r-1} ∈ A, X_r ∈ B, X_{m+1},...,X_{m+k} ∈ C}
-  -- is exactly the preimage of S_idx under (fun ω i => X (idx i) ω)
+  -- is exactly the preimage of S under (fun ω i => X (idx i) ω)
   have lhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (m + 1 + j.val) ω ∈ C j)}
-      = (fun ω => fun i => X (idx i) ω) ⁻¹' S_idx := by
+      = (fun ω => fun i => X (idx i) ω) ⁻¹' S := by
     ext ω
-    simp only [Set.mem_setOf_eq, Set.mem_preimage, S_idx]
+    simp only [Set.mem_setOf_eq, Set.mem_preimage, S]
     constructor
     · intro ⟨hA, hB, hC⟩
       refine ⟨?_, ?_, ?_⟩
@@ -204,31 +197,31 @@ lemma contractable_finite_cylinder_measure
         rw [← idx_val]
         exact hC j
 
-  -- The RHS is the preimage of S_std under (fun ω i => X i.val ω)
+  -- The RHS is the preimage of S under (fun ω i => X i.val ω)
   have rhs_eq : {ω | (∀ i, X i.val ω ∈ A i) ∧ X r ω ∈ B ∧ (∀ j, X (r + 1 + j.val) ω ∈ C j)}
-      = (fun ω => fun i => X i.val ω) ⁻¹' S_std := by
-    ext ω; simp [S_std]
+      = (fun ω => fun i => X i.val ω) ⁻¹' S := by
+    ext ω; simp [S]
 
   -- Apply contractability: the pushforward measures are equal
-  rw [lhs_eq, rhs_eq, h_sets_eq]
+  rw [lhs_eq, rhs_eq]
 
   -- contract says the two pushforward measures are equal:
   -- Measure.map (fun ω i => X (idx i) ω) μ = Measure.map (fun ω i => X i.val ω) μ
   --
-  -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S_std) = μ ((fun ω i => X i.val ω) ⁻¹' S_std)
+  -- Goal is: μ ((fun ω i => X (idx i) ω) ⁻¹' S) = μ ((fun ω i => X i.val ω) ⁻¹' S)
   --
   -- Since the measures are equal, they assign equal measure to preimages
 
-  -- First prove S_std is measurable
-  have hS_meas : MeasurableSet S_std := by
+  -- First prove S is measurable
+  have hS_meas : MeasurableSet S := by
     -- Use intersection decomposition approach
-    -- S_std = (⋂ i : Fin r, preimage at i) ∩ (preimage at r) ∩ (⋂ j : Fin k, preimage at r+1+j)
-    have h_decomp : S_std =
+    -- S = (⋂ i : Fin r, preimage at i) ∩ (preimage at r) ∩ (⋂ j : Fin k, preimage at r+1+j)
+    have h_decomp : S =
         (⋂ i : Fin r, {f | f ⟨i.val, by omega⟩ ∈ A i}) ∩
         {f | f ⟨r, by omega⟩ ∈ B} ∩
         (⋂ j : Fin k, {f | f ⟨r + 1 + j.val, by omega⟩ ∈ C j}) := by
       ext f
-      simp only [S_std, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]
+      simp only [S, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]
       tauto
 
     rw [h_decomp]
@@ -248,12 +241,12 @@ lemma contractable_finite_cylinder_measure
   have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) := by
     fun_prop (disch := measurability)
 
-  calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S_std)
-      = Measure.map (fun ω i => X (idx i) ω) μ S_std := by
+  calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S)
+      = Measure.map (fun ω i => X (idx i) ω) μ S := by
         rw [Measure.map_apply h_meas_idx hS_meas]
-    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S_std := by
+    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S := by
         rw [contract]
-    _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S_std) := by
+    _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S) := by
         rw [Measure.map_apply h_meas_std hS_meas]
 
 /-! ### Triple Pushforward -/

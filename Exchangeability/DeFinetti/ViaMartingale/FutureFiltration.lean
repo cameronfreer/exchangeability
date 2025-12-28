@@ -43,30 +43,6 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 abbrev futureFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
 
-/-- Tail σ-algebra is sub-σ-algebra of future filtration.
-
-Proof: tailSigma = ⨅ n, revFiltration X n, and futureFiltration X m = revFiltration X (m+1),
-so the infimum is ≤ any component. -/
-lemma tailSigma_le_futureFiltration_fwd
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (m : ℕ) :
-    tailSigma X ≤ futureFiltration X m := by
-  -- tailSigma = ⨅ n, revFiltration X n ≤ revFiltration X (m+1) = futureFiltration X m
-  refine iInf_le_of_le (m + 1) ?_
-  rfl
-
-/-- Future filtration is sub-σ-algebra of ambient.
-
-Proof: futureFiltration X m = revFiltration X (m + 1), which is a sub-σ-algebra by
-`revFiltration_le`. -/
-lemma futureFiltration_le_fwd
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
-    futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  -- futureFiltration X m = revFiltration X (m + 1)
-  simp only [futureFiltration]
-  exact revFiltration_le X hX (m + 1)
-
 /-! ### Future Filtration Properties -/
 
 section FutureFiltration
@@ -75,10 +51,8 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- The future filtration is decreasing (antitone). -/
 lemma futureFiltration_antitone (X : ℕ → Ω → α) :
-    Antitone (futureFiltration X) := by
-  intro m n hmn
-  simpa [futureFiltration, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
-    (revFiltration_antitone X (Nat.succ_le_succ hmn))
+    Antitone (futureFiltration X) := fun _ _ hmn =>
+  revFiltration_antitone X (Nat.succ_le_succ hmn)
 
 /-- Tail σ-algebra via the future filtration. (Additive alias.) -/
 def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
@@ -110,12 +84,11 @@ lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
   refine iInf_le_of_le 0 ?_
   exact revFiltration_le X hX 0
 
-/-- Future filtration is always at least as fine as the tail σ-algebra.
-Alternative proof via tailSigmaFuture. -/
+/-- Tail σ-algebra is sub-σ-algebra of future filtration. -/
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
     tailSigma X ≤ futureFiltration X m :=
-  tailSigma_le_futureFiltration_fwd X m
+  iInf_le_of_le (m + 1) le_rfl
 
 /-- Indicators of tail-measurable sets are tail-measurable functions. -/
 lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -140,11 +113,11 @@ lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [Me
 
 /-! ### Helper lemmas for futureFiltration properties -/
 
-/-- The future filtration at level m is a sub-σ-algebra of the ambient σ-algebra. -/
+/-- Future filtration is sub-σ-algebra of ambient. -/
 lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
-  futureFiltration_le_fwd X m hX
+  revFiltration_le X hX (m + 1)
 
 /-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
 Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/

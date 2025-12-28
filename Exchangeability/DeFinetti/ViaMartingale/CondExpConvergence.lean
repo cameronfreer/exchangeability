@@ -92,23 +92,8 @@ lemma extreme_members_equal_on_tail
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   classical
-  -- abbreviations
-  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X m with hf_m
-  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0 with hf_0
-
-  -- bounded indicators are integrable
-  have hf_m_int :
-      Integrable f_m μ :=
-    by
-      simpa [hf_m] using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := X m) (hX := hX_meas m) hB
-  have hf_0_int :
-      Integrable f_0 μ :=
-    by
-      simpa [hf_0] using
-        Exchangeability.Probability.integrable_indicator_comp
-          (μ := μ) (X := X 0) (hX := hX_meas 0) hB
+  set f_m : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X m
+  set f_0 : Ω → ℝ := (Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0
 
   -- equality at the future level m (contractability)
   have h_eq_m :
@@ -124,24 +109,12 @@ lemma extreme_members_equal_on_tail
     condExp_congr_ae h_eq_m
 
   -- tower property since tailSigma ≤ futureFiltration m
-  have h_tower_m :
-      μ[μ[f_m | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_m | tailSigma X] :=
-    condExp_condExp_of_le
-      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
-      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
-      (f := f_m)
-  have h_tower_0 :
-      μ[μ[f_0 | futureFiltration X m] | tailSigma X]
-        =ᵐ[μ] μ[f_0 | tailSigma X] :=
-    condExp_condExp_of_le
-      (hm₁₂ := tailSigma_le_futureFiltration_fwd (X := X) m)
-      (hm₂ := futureFiltration_le_fwd (X := X) m hX_meas)
-      (f := f_0)
+  have h_tower (f : Ω → ℝ) :
+      μ[μ[f | futureFiltration X m] | tailSigma X] =ᵐ[μ] μ[f | tailSigma X] :=
+    condExp_condExp_of_le (tailSigma_le_futureFiltration X m) (futureFiltration_le X m hX_meas)
 
-  -- assemble the equalities
-  -- Chain: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
-  exact h_tower_m.symm.trans (h_cond_on_tail.trans h_tower_0)
+  -- assemble the equalities: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
+  exact (h_tower f_m).symm.trans (h_cond_on_tail.trans (h_tower f_0))
 
 
 section reverse_martingale

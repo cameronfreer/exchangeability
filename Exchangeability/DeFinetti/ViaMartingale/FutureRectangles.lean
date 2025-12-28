@@ -178,39 +178,11 @@ lemma contractable_dist_eq_on_rectangles_future
     have := contractable_dist_eq_on_first_r_tail
         (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC
     convert this using 2
-  -- Show the sets are equal modulo arithmetic
-  have hset_eq₁ : {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
-                = {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    ext ω; simp only [Set.mem_setOf]
-    constructor
-    · intro ⟨hB, hC⟩
-      constructor
-      · exact hB
-      · intro i
-        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
-        rw [← this]; exact hC i
-    · intro ⟨hB, hC⟩
-      constructor
-      · exact hB
-      · intro i
-        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
-        rw [this]; exact hC i
-  have hset_eq₂ : {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
-                = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    ext ω; simp only [Set.mem_setOf]
-    constructor
-    · intro ⟨hB, hC⟩
-      constructor
-      · exact hB
-      · intro i
-        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
-        rw [← this]; exact hC i
-    · intro ⟨hB, hC⟩
-      constructor
-      · exact hB
-      · intro i
-        have : m + 1 + i.1 = m + (i.1 + 1) := by omega
-        rw [this]; exact hC i
+  -- Show the sets are equal modulo arithmetic (m + 1 + i = m + (i + 1))
+  have hset_eq (j : ℕ) : {ω | X j ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
+                       = {ω | X j ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
+    simp only [Set.setOf_and]; congr 1; ext ω; simp only [Set.mem_setOf]
+    exact forall_congr' fun i => by rw [show m + 1 + i.1 = m + (i.1 + 1) by omega]
   -- Measurability of ψ₁ and ψ₂
   have hψ₁_meas : Measurable ψ₁ :=
     (hX_meas m).prodMk (measurable_shiftRV hX_meas)
@@ -218,7 +190,7 @@ lemma contractable_dist_eq_on_rectangles_future
     (hX_meas k).prodMk (measurable_shiftRV hX_meas)
   -- Apply Measure.map_apply and connect the pieces
   rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
-  rw [hpre₁, hpre₂, hset_eq₁, hset_eq₂]
+  rw [hpre₁, hpre₂, hset_eq m, hset_eq k]
   exact hfd
 
 end FutureRectangles

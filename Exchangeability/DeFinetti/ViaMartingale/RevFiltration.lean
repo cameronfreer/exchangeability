@@ -38,27 +38,6 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 open MartingaleHelpers
 
-/-! ### Helper lemmas first (needed for revFiltration_le) -/
-
-/-- Helper for path measurability. -/
-lemma measurable_path' (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    Measurable (path X) := by
-  rw [measurable_pi_iff]
-  intro n
-  exact hX n
-
-/-- Helper for shiftProcess measurability. -/
-lemma measurable_shiftProcess' (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) (n : ℕ) :
-    Measurable (shiftProcess X m n) :=
-  hX (m + n)
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- Bridge lemma: shiftRV = path ∘ shiftProcess. -/
-lemma shiftRV_eq_path_comp_shift' (X : ℕ → Ω → α) (m : ℕ) :
-    shiftRV X m = path (shiftProcess X m) := by
-  funext ω n
-  rfl
-
 /-! ### Reverse Filtration -/
 
 /-- 𝔽ₘ := σ(θₘ X) = σ(ω ↦ (n ↦ X (m+n) ω)). -/
@@ -73,14 +52,9 @@ lemma revFiltration_zero (X : ℕ → Ω → α) :
   rw [shiftRV_zero]
 
 lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m : ℕ) :
-    revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) := by
-  -- The comap is ≤ ambient iff the function is measurable
-  simp only [revFiltration]
-  intro s hs
-  obtain ⟨t, ht, rfl⟩ := hs
-  rw [shiftRV_eq_path_comp_shift']
-  have h_meas := measurable_path' (shiftProcess X m) (measurable_shiftProcess' X m hX)
-  exact h_meas ht
+    revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
+  MeasurableSpace.comap_le_iff_le_map.mpr fun _ hs =>
+    (measurable_pi_iff.mpr fun n => hX (m + n)) hs
 
 /-! ### Tail σ-Algebra -/
 
