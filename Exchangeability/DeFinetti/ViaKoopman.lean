@@ -6052,21 +6052,30 @@ private lemma tower_indicator_finset
   --     (This is the key step requiring a block permutation argument)
   -- (e) Hence CE[f · g | mSI] = CE[f · CE[g | mSI] | mSI]
 
-  -- For now, we use the direct approach via the tower-pullout pattern
-  -- TODO: Complete the full Cesàro + MET proof with block permutation
+  -- Tower property for cylinder indicators via Cesàro + MET
+  --
+  -- Proof structure (generalizing h_tower_of_lagConst_from_one):
+  -- 1. Choose N₀ = max(k, max(S)) + 1 so all coordinates in {k} ∪ S are below N₀
+  -- 2. Define Cesàro averages: A_n = (1/n) Σ_{j=0}^{n-1} 1_B ∘ shift^{N₀+j}
+  -- 3. MET: A_n → CE[1_B | mSI] in L¹ (by L1_cesaro_convergence)
+  -- 4. CE Lipschitz: CE[1_{ω_k ∈ A} · A_n | mSI] → CE[1_{ω_k ∈ A} · CE_B | mSI] in L¹
+  -- 5. Lag constancy: For j ≥ 0, CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀+j}) | mSI]
+  --    is constant in j. This requires a block permutation argument:
+  --    - Define π that swaps coordinate blocks {i + N₀ + j : i ∈ S} and {i + N₀ : i ∈ S}
+  --    - These blocks are disjoint from k since k < N₀
+  --    - Use exchangeability: μ.map (reindex π) = μ
+  --    - Key subtlety: if S contains consecutive integers, blocks may overlap
+  --      and we need a more sophisticated permutation (cyclic or composition of swaps)
+  -- 6. Hence CE[1_{ω_k ∈ A} · A_n | mSI] =ᵃᵉ CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀}) | mSI] for all n
+  -- 7. Squeeze: constant sequence with L¹ limit → a.e. equality
+  -- 8. Coordinate shift back: CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀}) | mSI]
+  --    =ᵃᵉ CE[1_{ω_k ∈ A} · 1_B | mSI] by another permutation argument
+  --
+  -- TODO: Implement the block permutation in step 5 - the key technical challenge
   have h_tower :
       μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
         (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
       =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := by
-    -- This is the key tower property that needs the Cesàro + MET argument
-    -- The proof follows the same pattern as h_tower_of_lagConst_from_one
-    -- but uses block permutations instead of transpositions
-
-    -- Key observation: coordinates k and S are disjoint (hkS : k ∉ S)
-    -- Choose N₀ > max(k, max(S)) so shifted cylinder has disjoint coordinates
-
-    -- For this sorry, we need to prove that the tower property holds
-    -- for cylinder indicators at disjoint coordinates
     sorry
 
   -- Step 4: Pull-out property
