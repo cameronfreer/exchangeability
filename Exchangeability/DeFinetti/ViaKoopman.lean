@@ -4515,7 +4515,97 @@ private lemma ce_lipschitz_convergence
   - `squeeze_zero`: 0 ≤ f n ≤ g n, g → 0 ⟹ f → 0
   - `Tendsto.const_mul`: Cf · (f n → 0) ⟹ Cf · f n → 0
   -/
-  sorry
+  -- Unfold the let binding for A
+  let A := fun n : ℕ => fun ω : Ω[α] => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+  -- Define Y = CE[g(ω₀)|mSI] for clarity
+  set Y : Ω[α] → ℝ := fun ω => μ[(fun ω' => g (ω' 0)) | mSI] ω with hY_def
+  -- Obtain the bound Cf for f
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+
+  -- Integrability of A n for any n
+  have hA_int : ∀ n, Integrable (A n) μ := fun n => by
+    have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ :=
+      integrable_finset_sum (Finset.range (n + 1)) (fun j _ =>
+        integrable_of_bounded_measurable
+          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j)))
+    exact h_sum_int.smul (1 / ((n + 1) : ℝ))
+
+  -- Integrability of g(ω 0)
+  have hg0_int : Integrable (fun ω => g (ω 0)) μ :=
+    integrable_of_bounded_measurable
+      (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+
+  -- Integrability of Z n = f(ω 0) * A n ω
+  have hZ_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := fun n => by
+    refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA_int n)
+    · exact hf_meas.comp (measurable_pi_apply 0)
+    · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+
+  -- Integrability of W = f(ω 0) * Y ω
+  have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+    refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
+    · exact hf_meas.comp (measurable_pi_apply 0)
+    · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+
+  -- Step 1: Apply condExp_L1_lipschitz to bound CE difference by integrand difference
+  have h₁ : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+                     - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
+               ≤ ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ := fun n =>
+    condExp_L1_lipschitz (hZ_int n) hW_int
+
+  -- Step 2: Bound |f(ω 0)| · |A n - Y| ≤ Cf · |A n - Y| pointwise
+  have h₂ : ∀ n, ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ
+               ≤ Cf * ∫ ω, |A n ω - Y ω| ∂μ := fun n => by
+    -- Rewrite: |f * A - f * Y| = |f| * |A - Y|
+    have h_eq : ∀ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| = |f (ω 0)| * |A n ω - Y ω| := fun ω => by
+      rw [← mul_sub, abs_mul]
+    -- Pointwise bound: |f(ω 0)| * |A n ω - Y ω| ≤ Cf * |A n ω - Y ω|
+    have hpt : ∀ᵐ ω ∂μ, |f (ω 0)| * |A n ω - Y ω| ≤ Cf * |A n ω - Y ω| :=
+      ae_of_all μ (fun ω => mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _))
+    -- Integrability of both sides
+    have h_diff_int : Integrable (fun ω => A n ω - Y ω) μ := (hA_int n).sub integrable_condExp
+    have hint_rhs : Integrable (fun ω => Cf * |A n ω - Y ω|) μ := h_diff_int.abs.const_mul Cf
+    have hint_lhs : Integrable (fun ω => |f (ω 0)| * |A n ω - Y ω|) μ := by
+      -- |f| * |diff| ≤ Cf * |diff|, and Cf * |diff| is integrable
+      have h_bd_by_rhs : ∀ᵐ ω ∂μ, ‖|f (ω 0)| * |A n ω - Y ω|‖ ≤ Cf * |A n ω - Y ω| := by
+        filter_upwards with ω
+        rw [Real.norm_eq_abs, abs_mul, abs_abs, abs_abs]
+        exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
+      -- AEStronglyMeasurable of |f(ω 0)| * |A n ω - Y ω|
+      have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A n ω - Y ω|) μ := by
+        apply AEStronglyMeasurable.mul
+        · exact (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable
+        · exact continuous_abs.comp_aestronglyMeasurable ((hA_int n).sub integrable_condExp).aestronglyMeasurable
+      exact Integrable.mono' hint_rhs h_asm h_bd_by_rhs
+    -- Apply integral_mono_ae then factor out constant
+    calc ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ
+        = ∫ ω, |f (ω 0)| * |A n ω - Y ω| ∂μ := by congr 1; ext ω; exact h_eq ω
+      _ ≤ ∫ ω, Cf * |A n ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+      _ = Cf * ∫ ω, |A n ω - Y ω| ∂μ := integral_const_mul Cf _
+
+  -- Step 3: Chain bounds to get overall upper bound
+  have h_upper : ∀ n,
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+           - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
+      ≤ Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ := fun n =>
+    le_trans (h₁ n) (h₂ n)
+
+  -- Step 4: Upper bound tends to 0
+  have h_bound_to_zero : Tendsto (fun n =>
+      Cf * ∫ ω, |A n ω - μ[(fun ω => g (ω 0)) | mSI] ω| ∂μ) atTop (𝓝 0) := by
+    convert Tendsto.const_mul Cf h_L1_An_to_CE using 1
+    simp
+
+  -- Step 5: Nonnegativity
+  have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
+       - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ := fun n =>
+    integral_nonneg (fun ω => abs_nonneg _)
+
+  -- Step 6: Apply squeeze theorem
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+  · exact h_nonneg
+  · exact h_upper
 
 /-
 Orphaned proof code from ce_lipschitz_convergence removed (lines 4483-5014).
@@ -4772,11 +4862,234 @@ private theorem h_tower_of_lagConst_from_one
     μ[(fun ω =>
         f (ω 0) * μ[(fun ω => g (ω 0)) | shiftInvariantSigma (α := α)] ω)
         | shiftInvariantSigma (α := α)] := by
-  -- Tower property: CE[f(ω₀)·g(ω₁)|mSI] = CE[f(ω₀)·CE[g(ω₀)|mSI]|mSI]
-  -- Proof strategy: Cesàro averaging + L¹ convergence + squeeze theorem
-  -- This is a well-known property in ergodic theory.
-  -- Full proof via Cesàro from index 1: see product_ce_constant_of_lag_const_from_one
-  sorry
+  classical
+  have hmSI := shiftInvariantSigma_le (α := α)
+
+  -- Cesàro averages from index 1: A'_n = (1/n) * Σ_{j=1}^n g(ω_j)
+  let A' : ℕ → Ω[α] → ℝ := fun n ω =>
+    if n = 0 then 0 else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1)))
+  set Y : Ω[α] → ℝ := fun ω => μ[(fun ω' => g (ω' 0)) | mSI] ω
+
+  obtain ⟨Cf, hCf⟩ := hf_bd
+  obtain ⟨Cg, hCg⟩ := hg_bd
+
+  -- (1) CE[f·A'_n | mSI] = CE[f·g₁ | mSI] for all n ≥ 1
+  have h_product_const : ∀ n, 0 < n →
+      μ[(fun ω => f (ω 0) * A' n ω) | mSI]
+        =ᵐ[μ]
+      μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := by
+    intro n hn
+    have hA' : A' n = fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1))) := by
+      ext ω
+      simp only [A', if_neg (Nat.ne_of_gt hn)]
+    rw [show (fun ω => f (ω 0) * A' n ω)
+           = (fun ω => f (ω 0) * ((1 / (n : ℝ)) * (Finset.range n).sum (fun j => g (ω (j + 1))))) by
+         ext ω; rw [hA']]
+    exact product_ce_constant_of_lag_const_from_one hExch f g hf_meas ⟨Cf, hCf⟩ hg_meas ⟨Cg, hCg⟩ n hn
+
+  -- (2) A'_n → Y in L¹ (MET via shift composition)
+  -- A'_{n+1}(ω) = (1/(n+1)) * Σ_{j=0}^n g(shift(ω)_j) = A_n(shift(ω))
+  -- Since shift preserves μ and A_n → Y in L¹, A'_{n+1} → Y in L¹
+  have h_L1_A'_to_Y : Tendsto (fun n =>
+      ∫ ω, |A' (n + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+    -- A'_{n+1}(ω) = (1/(n+1)) * Σ_{j=0}^n g(ω_{j+1})
+    -- But ω_{j+1} = (shift ω)_j, so A'_{n+1}(ω) = A_n(shift ω)
+    -- Let A_n(ω) = (1/(n+1)) * Σ_{j=0}^n g(ω_j)
+    let A : ℕ → Ω[α] → ℝ := fun n ω =>
+      (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
+    -- By L1_cesaro_convergence: A_n → Y in L¹
+    have hg_int : Integrable (fun ω => g (ω 0)) μ :=
+      integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+    have h_A_to_Y := L1_cesaro_convergence hσ g hg_meas hg_int
+    -- A'_{n+1}(ω) = A_n(shift ω)
+    have h_eq : ∀ n ω, A' (n + 1) ω = A n (shift ω) := by
+      intro n ω
+      simp only [A', if_neg (Nat.succ_ne_zero n), A]
+      -- LHS: (1/(n+1)) * Σ_{j < n+1} g(ω_{j+1})
+      -- RHS: (1/(n+1)) * Σ_{j < n+1} g((shift ω)_j)
+      -- These are equal since (shift ω)_j = ω_{j+1}
+      simp only [Nat.cast_add, Nat.cast_one, shift_apply]
+    -- Change of variables: ∫|A'_{n+1} - Y| = ∫|A_n ∘ shift - Y ∘ shift|
+    -- But Y is shift-invariant! So Y ∘ shift =ᵐ Y
+    have hY_inv : (fun ω => Y (shift ω)) =ᵐ[μ] Y := by
+      -- Y = CE[g(ω_0)|mSI], and CE is mSI-measurable
+      -- shift preserves mSI, so Y ∘ shift =ᵃᵉ Y
+      -- Use the lemma from InvariantSigma.lean that says:
+      -- AEStronglyMeasurable[mSI] f μ → (f ∘ shift =ᵃᵉ f)
+      have hY_aesm : AEStronglyMeasurable[mSI] Y μ :=
+        stronglyMeasurable_condExp.aestronglyMeasurable
+      exact shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq hσ hY_aesm
+    -- Now use measure preservation
+    have h_mp : ∀ n, ∫ ω, |A n (shift ω) - Y ω| ∂μ = ∫ ω, |A n ω - Y ω| ∂μ := by
+      intro n
+      have h1 : (fun ω => |A n (shift ω) - Y ω|)
+                =ᵐ[μ] (fun ω => |A n (shift ω) - Y (shift ω)|) := by
+        filter_upwards [hY_inv] with ω hω
+        simp [hω]
+      rw [integral_congr_ae h1]
+      -- ∫ f ∘ shift dμ = ∫ f dμ by measure preservation
+      -- Using integral_map: ∫ h d(μ.map shift) = ∫ (h ∘ shift) dμ
+      -- Since hσ.map_eq : μ.map shift = μ, we get ∫ h dμ = ∫ (h ∘ shift) dμ
+      have hh_asm : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) μ := by
+        have hA_meas : Measurable (A n) := by
+          apply Measurable.mul
+          · exact measurable_const
+          · apply Finset.measurable_sum
+            intro j _
+            exact hg_meas.comp (measurable_pi_apply j)
+        have h_diff : AEStronglyMeasurable (fun ω => A n ω - Y ω) μ :=
+          hA_meas.aestronglyMeasurable.sub integrable_condExp.aestronglyMeasurable
+        exact continuous_abs.comp_aestronglyMeasurable h_diff
+      -- By integral_map: ∫ f d(μ.map g) = ∫ (f ∘ g) dμ (reversed is what we need)
+      have hh_asm' : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) (μ.map shift) := by
+        rw [hσ.map_eq]; exact hh_asm
+      have h_int_map := integral_map hσ.measurable.aemeasurable hh_asm'
+      -- Rewrite: ∫ (h ∘ shift) dμ = ∫ h d(μ.map shift) = ∫ h dμ
+      rw [h_int_map.symm, hσ.map_eq]
+    -- Conclude
+    simp_rw [h_eq, h_mp]
+    exact h_A_to_Y
+
+  -- (3) CE Lipschitz: CE[f·A'_n] → CE[f·Y]
+  have h_L1_CE : Tendsto (fun n =>
+      ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+           - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
+    -- Use ce_lipschitz_convergence with A' shifted by 1
+    have h_int : Integrable (fun ω => g (ω 0)) μ :=
+      integrable_of_bounded_measurable (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+    -- A'_{n+1} has the form (1/(n+1)) * Σ_{j=0}^n g(shift ω)_j = A_n(shift ω)
+    -- Need to relate to ce_lipschitz_convergence format
+    -- ce_lipschitz_convergence needs: A_n defined as (1/(n+1)) * Σ g(ω_j)
+    -- We have: A'_{n+1} = A_n ∘ shift
+    -- Apply the bound: ∫|CE[f·A'_{n+1}] - CE[f·Y]| ≤ Cf · ∫|A'_{n+1} - Y|
+    -- Since A'_{n+1} - Y → 0 in L¹, the conclusion follows
+    have h_bd : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+                        - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
+                  ≤ Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ := by
+      intro n
+      -- Integrability of f(ω_0) * A'_{n+1}
+      have hA'_int : ∀ n, 0 < n → Integrable (A' n) μ := by
+        intro m hm
+        simp only [A', if_neg (Nat.ne_of_gt hm)]
+        have h_sum : Integrable (fun ω => (Finset.range m).sum (fun j => g (ω (j + 1)))) μ :=
+          integrable_finset_sum (Finset.range m) (fun j _ =>
+            integrable_of_bounded_measurable
+              (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1))))
+        exact h_sum.smul (1 / (m : ℝ))
+      have hfA_int : Integrable (fun ω => f (ω 0) * A' (n + 1) ω) μ := by
+        refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA'_int (n + 1) (Nat.succ_pos n))
+        · exact hf_meas.comp (measurable_pi_apply 0)
+        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+      have hfY_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
+        refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
+        · exact hf_meas.comp (measurable_pi_apply 0)
+        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+      -- CE Lipschitz
+      have h1 : ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+                    - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
+              ≤ ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ :=
+        condExp_L1_lipschitz hfA_int hfY_int
+      -- Factor bound
+      have h2 : ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ
+              ≤ Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ := by
+        have h_eq : ∀ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| = |f (ω 0)| * |A' (n + 1) ω - Y ω| := by
+          intro ω; rw [← mul_sub, abs_mul]
+        have hpt : ∀ᵐ ω ∂μ, |f (ω 0)| * |A' (n + 1) ω - Y ω| ≤ Cf * |A' (n + 1) ω - Y ω| :=
+          ae_of_all μ (fun ω => mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _))
+        have hdiff_int : Integrable (fun ω => A' (n + 1) ω - Y ω) μ :=
+          (hA'_int (n + 1) (Nat.succ_pos n)).sub integrable_condExp
+        have hint_lhs : Integrable (fun ω => |f (ω 0)| * |A' (n + 1) ω - Y ω|) μ := by
+          have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A' (n + 1) ω - Y ω|) μ := by
+            apply AEStronglyMeasurable.mul
+            · exact (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable
+            · exact continuous_abs.comp_aestronglyMeasurable hdiff_int.aestronglyMeasurable
+          -- Use norm = abs for real numbers, and |a * b| = |a| * |b| for a, b ≥ 0
+          have hpt_norm : ∀ᵐ ω ∂μ, ‖|f (ω 0)| * |A' (n + 1) ω - Y ω|‖ ≤ Cf * |A' (n + 1) ω - Y ω| := by
+            filter_upwards [hpt] with ω hω
+            rw [Real.norm_eq_abs, abs_mul, abs_abs, abs_abs]
+            exact hω
+          exact Integrable.mono' (hdiff_int.abs.const_mul Cf) h_asm hpt_norm
+        have hint_rhs : Integrable (fun ω => Cf * |A' (n + 1) ω - Y ω|) μ :=
+          hdiff_int.abs.const_mul Cf
+        calc ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ
+            = ∫ ω, |f (ω 0)| * |A' (n + 1) ω - Y ω| ∂μ := by congr 1; ext ω; exact h_eq ω
+          _ ≤ ∫ ω, Cf * |A' (n + 1) ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+          _ = Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ := integral_const_mul Cf _
+      exact le_trans h1 h2
+    -- Squeeze
+    have h_bound_to_zero : Tendsto (fun n =>
+        Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+      convert Tendsto.const_mul Cf h_L1_A'_to_Y using 1
+      simp
+    refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+    · exact fun n => integral_nonneg (fun ω => abs_nonneg _)
+    · exact h_bd
+
+  -- (4) Squeeze: constant sequence (= CE[f·g₁]) with L¹ limit 0 implies a.e. equality
+  have h_const_is_target : ∀ n, 0 < n →
+      μ[(fun ω => f (ω 0) * A' n ω) | mSI]
+        =ᵐ[μ]
+      μ[(fun ω => f (ω 0) * g (ω 1)) | mSI] := h_product_const
+
+  -- The L¹ integral of |CE[f·A'_{n+1}] - CE[f·Y]| → 0
+  -- But CE[f·A'_{n+1}] =ᵃᵉ CE[f·g₁] for all n
+  -- So the L¹ integral of |CE[f·g₁] - CE[f·Y]| → 0
+  -- A constant sequence with limit 0 must be 0 a.e.
+  have h_ae_eq : μ[(fun ω => f (ω 0) * g (ω 1)) | mSI]
+                   =ᵐ[μ]
+                 μ[(fun ω => f (ω 0) * Y ω) | mSI] := by
+    -- Show ∫|CE[f·g₁] - CE[f·Y]| = 0
+    have h_zero : ∫ ω, |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                      - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ = 0 := by
+      -- The sequence ∫|CE[f·A'_{n+1}] - CE[f·Y]| → 0
+      -- But each CE[f·A'_{n+1}] =ᵃᵉ CE[f·g₁]
+      -- So ∫|CE[f·g₁] - CE[f·Y]| ≤ ∫|CE[f·A'_{n+1}] - CE[f·Y]| for each n (up to null sets)
+      have h_eq_ae : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                           - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
+                       = ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
+                           - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ := by
+        intro n
+        have h := h_const_is_target (n + 1) (Nat.succ_pos n)
+        refine integral_congr_ae ?_
+        filter_upwards [h] with ω hω
+        simp [hω]
+      -- The RHS → 0, so for any ε > 0, there exists N such that RHS < ε
+      -- Since the LHS = RHS for all n, the LHS ≤ ε for all ε > 0, hence LHS = 0
+      have h_le : ∀ ε > 0, ∫ ω, |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                              - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ < ε := by
+        intro ε hε
+        rw [Metric.tendsto_atTop] at h_L1_CE
+        obtain ⟨N, hN⟩ := h_L1_CE ε hε
+        specialize hN N le_rfl
+        rw [Real.dist_0_eq_abs, abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN
+        rw [h_eq_ae N]
+        exact hN
+      have h_nonneg : 0 ≤ ∫ ω, |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                           - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ :=
+        integral_nonneg (fun _ => abs_nonneg _)
+      -- 0 ≤ x and (∀ ε > 0, x < ε) implies x = 0
+      exact le_antisymm (le_of_forall_pos_lt_add (fun ε hε => by linarith [h_le ε hε])) h_nonneg
+    -- ∫|X - Y| = 0 implies X =ᵃᵉ Y for integrable X, Y
+    have h_int1 : Integrable (μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI]) μ := integrable_condExp
+    have h_int2 : Integrable (μ[(fun ω' => f (ω' 0) * Y ω') | mSI]) μ := integrable_condExp
+    have h_diff_int : Integrable (fun ω => μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                                         - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω) μ :=
+      h_int1.sub h_int2
+    -- Use integral_eq_zero_iff_of_nonneg_ae: ∫|f| = 0 ↔ f =ᵃᵉ 0 (for nonneg f)
+    have h_nonneg : (0 : Ω[α] → ℝ) ≤ᵐ[μ] fun ω => |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                                            - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| :=
+      ae_of_all μ (fun ω => abs_nonneg _)
+    have h_abs_eq_zero : (fun ω => |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+                                   - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω|) =ᵐ[μ] 0 :=
+      (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_diff_int.abs).mp h_zero
+    -- |X - Y| =ᵃᵉ 0 implies X - Y =ᵃᵉ 0, hence X =ᵃᵉ Y
+    filter_upwards [h_abs_eq_zero] with ω hω
+    have : μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
+         - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω = 0 := abs_eq_zero.mp hω
+    linarith
+
+  exact h_ae_eq
 
 set_option maxHeartbeats 1000000
 
@@ -4854,68 +5167,9 @@ private lemma condexp_pair_factorization_MET
     _ =ᵐ[μ] (fun ω => μ[(fun ω => f (ω 0)) | mSI] ω * μ[(fun ω => g (ω 0)) | mSI] ω) := by
         filter_upwards with ω; ring
 
-/-- **Kernel independence for pairs of coordinates at (0,1)**.
-
-From `condexp_pair_factorization_MET`, for sets A, B ⊆ α:
-  CE[1_{ω₀ ∈ A} · 1_{ω₁ ∈ B} | ℐ] =ᵃᵉ CE[1_{ω₀ ∈ A} | ℐ] · CE[1_{ω₁ ∈ B} | ℐ]
-
-Using CE[1_S | ℐ] = κ(S) a.e. (where κ = condExpKernel):
-  κ({ω | ω₀ ∈ A ∧ ω₁ ∈ B}) =ᵃᵉ κ({ω | ω₀ ∈ A}) · κ({ω | ω₁ ∈ B})
-
-This is the kernel-level independence of coordinates 0 and 1.
--/
-private lemma kernel_indep_pair_01
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
-    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
-        ({ω' | ω' 0 ∈ A ∧ ω' 1 ∈ B}) =
-      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 0 ∈ A}) *
-      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' 1 ∈ B}) := by
-  -- Cannot reference kernel_indep_pair_01_proof here due to forward dependency.
-  -- The full proof is in kernel_indep_pair_01_proof (line ~5644) after coord_indicator_via_ν.
-  -- Use kernel_indep_pair_01_proof directly where this result is needed.
-  sorry
-
-/-- **Kernel independence for pairs at arbitrary distinct coordinates (i,j)**.
-
-By exchangeability, the pair independence at (0,1) extends to any (i,j) with i ≠ j.
--/
-private lemma kernel_indep_pair
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (i j : ℕ) (hij : i ≠ j)
-    (A B : Set α) (hA : MeasurableSet A) (hB : MeasurableSet B) :
-    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
-        ({ω' | ω' i ∈ A ∧ ω' j ∈ B}) =
-      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ A}) *
-      (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' j ∈ B}) := by
-  -- Use a permutation π that sends 0 ↦ i and 1 ↦ j
-  -- By exchangeability, the distribution is preserved under reindex π
-  -- So the pair independence at (0,1) gives pair independence at (i,j)
-  sorry
-
-/-- **Finite product factorization for kernel measures**.
-
-For any finite set S of distinct indices and measurable sets f(i) ⊆ α:
-  κ(⋂ i ∈ S, {ω | ω i ∈ f(i)}) =ᵃᵉ ∏ i ∈ S, κ({ω | ω i ∈ f(i)})
-
-This is the full kernel independence condition needed for `hciid`.
--/
-private lemma kernel_indep_finset
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (S : Finset ℕ) (f : ℕ → Set α) (hf : ∀ i ∈ S, MeasurableSet (f i)) :
-    ∀ᵐ ω ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) ω)
-        (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
-      ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) ω) ({ω' | ω' i ∈ f i}) := by
-  -- Proof by induction on |S|
-  -- Base: |S| = 0 → both sides = 1
-  -- Step: Use kernel_indep_pair to factor out one element
-  sorry
+-- Kernel independence lemmas are in section "Filled proofs of kernel independence lemmas"
+-- below, after coord_indicator_via_ν is defined. The lemmas are:
+--   kernel_indep_pair_01, kernel_indep_pair, kernel_indep_finset
 
 end OptionB_L1Convergence
 
@@ -5331,22 +5585,26 @@ lemma coord_indicator_via_ν
 
   exact (ENNReal.toReal_eq_toReal_iff' (measure_ne_top _ _) (measure_ne_top _ _)).mp h_toReal
 
-/-! ### Filled proofs of kernel independence lemmas
+/-! ### Kernel independence lemmas
 
-These proofs fill the sorries in `kernel_indep_pair_01`, `kernel_indep_pair`, and
-`kernel_indep_finset` from the OptionB_L1Convergence section. They are placed here
-because they depend on `coord_indicator_via_ν` which is defined in this section.
+These lemmas prove kernel independence (product factorization for measures of cylinder sets).
+They are placed after `coord_indicator_via_ν` because they depend on that lemma.
 -/
 
-/-- **Kernel independence for pairs at (0,1)** - Full proof.
+/-- **Kernel independence for pairs at (0,1)**.
 
-This is the filled version of `kernel_indep_pair_01` from OptionB_L1Convergence.
+From `condexp_pair_factorization_MET`, for sets A, B ⊆ α:
+  CE[1_{ω₀ ∈ A} · 1_{ω₁ ∈ B} | ℐ] =ᵃᵉ CE[1_{ω₀ ∈ A} | ℐ] · CE[1_{ω₁ ∈ B} | ℐ]
+
+Using CE[1_S | ℐ] = κ(S) a.e. (where κ = condExpKernel):
+  κ({ω | ω₀ ∈ A ∧ ω₁ ∈ B}) =ᵃᵉ κ({ω | ω₀ ∈ A}) · κ({ω | ω₁ ∈ B})
+
 The proof uses:
 1. `condexp_pair_factorization_MET` to get CE factorization for indicator functions
 2. `condExp_ae_eq_integral_condExpKernel` to convert to kernel integrals
 3. `coord_indicator_via_ν` to show that κ({y | y 0 ∈ B}) =ᵃᵉ κ({y | y 1 ∈ B})
 -/
-lemma kernel_indep_pair_01_proof
+lemma kernel_indep_pair_01
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -5500,14 +5758,14 @@ lemma kernel_indep_pair_01_proof
 
 /-- **Kernel independence for pairs at arbitrary distinct coordinates (i,j)** - Full proof.
 
-This extends `kernel_indep_pair_01_proof` from (0,1) to arbitrary (i,j) with i ≠ j.
+This extends `kernel_indep_pair_01` from (0,1) to arbitrary (i,j) with i ≠ j.
 The proof uses:
 1. `condexp_precomp_iterate_eq`: CE is shift-invariant, reducing (i,j) to (0, j-i)
 2. `condexp_product_eq_at_one`: lag constancy reduces (0, m) to (0, 1) for any m ≥ 1
-3. `kernel_indep_pair_01_proof`: factorization at (0,1)
+3. `kernel_indep_pair_01`: factorization at (0,1)
 4. `coord_indicator_via_ν`: all coordinates have the same kernel marginals
 -/
-lemma kernel_indep_pair_proof
+lemma kernel_indep_pair
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -5522,7 +5780,7 @@ lemma kernel_indep_pair_proof
   · -- Case i < j: reduce to (0, j-i) via shift^[i], then to (0,1) via lag constancy
     let κ := condExpKernel μ (shiftInvariantSigma (α := α))
     -- Get the (0,1) case
-    have h01 := kernel_indep_pair_01_proof hσ hExch A B hA hB
+    have h01 := kernel_indep_pair_01 hσ hExch A B hA hB
     -- Use coord_indicator_via_ν to relate different coordinates
     have h_coord_i_A := coord_indicator_via_ν (μ := μ) (α := α) hσ i hA
     have h_coord_0_A := coord_indicator_via_ν (μ := μ) (α := α) hσ 0 hA
@@ -5654,7 +5912,7 @@ lemma kernel_indep_pair_proof
   · -- Case i = j: contradicts hij
     exact absurd rfl hij
   · -- Case j < i: symmetric to the first case, swap A,B and i,j
-    have h_sym := kernel_indep_pair_proof hσ hExch j i (Ne.symm hij) B A hB hA
+    have h_sym := kernel_indep_pair hσ hExch j i (Ne.symm hij) B A hB hA
     filter_upwards [h_sym] with ω hω
     -- hω: κ ω {y | y j ∈ B ∧ y i ∈ A} = κ ω {y | y j ∈ B} * κ ω {y | y i ∈ A}
     -- Need: κ ω {y | y i ∈ A ∧ y j ∈ B} = κ ω {y | y i ∈ A} * κ ω {y | y j ∈ B}
@@ -5667,9 +5925,9 @@ lemma kernel_indep_pair_proof
 For any finite set S of distinct indices and measurable sets f(i) ⊆ α:
   κ(⋂ i ∈ S, {ω | ω i ∈ f(i)}) =ᵃᵉ ∏ i ∈ S, κ({ω | ω i ∈ f(i)})
 
-Uses induction on |S| with `kernel_indep_pair_proof` for the step.
+Uses induction on |S| with `kernel_indep_pair` for the step.
 -/
-lemma kernel_indep_finset_proof
+lemma kernel_indep_finset
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -5711,7 +5969,7 @@ lemma kernel_indep_finset_proof
     · -- S is nonempty
       -- Pick an element m of S using nonempty witness
       obtain ⟨m, hm_in_S⟩ := hS_nonempty
-      -- Use kernel_indep_pair_proof for k and some element of S
+      -- Use kernel_indep_pair for k and some element of S
       -- The key insight: by repeatedly applying pair independence with exchangeability,
       -- we get that k is independent of the full intersection over S
 
@@ -5753,19 +6011,37 @@ lemma kernel_indep_finset_proof
       rw [← h_IH_ω]
 
       -- Now need: κ({ω' | ω' k ∈ A} ∩ B) = κ({ω' | ω' k ∈ A}) · κ(B)
-      -- This requires generalized independence of coordinate k from coordinates in S
-      -- The proof would use kernel_indep_pair_proof iteratively on S
+      -- This is kernel independence of coordinate k from the cylinder B over S (with k ∉ S)
 
-      -- The proof uses that S ⊆ {i : i ≠ k} (since k ∉ S)
-      -- and the tower property extends to products at multiple coordinates
+      -- Proof strategy: By nested induction on S, using kernel_indep_pair for base case
+      -- and the tower + pull-out properties for the inductive step.
 
-      -- For this sorry, the mathematical content is:
-      -- κ(A_k ∩ B_S) = κ(A_k) · κ(B_S) where A_k = {ω' | ω' k ∈ A} and B_S = ⋂ i∈S {ω' | ω' i ∈ f i}
-      -- This is the "generalized independence" between a single coordinate and a cylinder set
-      -- It follows from the tower property + exchangeability (iterated application)
+      -- We use that the outer IH gives κ(B_S) = ∏_{i ∈ S} κ({i ∈ f_i}) (product form).
+      -- For nested induction, we show κ(A_k ∩ B_S) = κ(A_k) · κ(B_S) by:
+      -- - Base S = {m}: use kernel_indep_pair for (k, m)
+      -- - Step S = T ∪ {m}: use nested IH + tower property
 
-      -- Placeholder: The full proof requires generalizing h_tower_of_lagConst_from_one
-      -- to products, which follows the same Cesàro averaging argument
+      -- The proof uses CE factorization via tower (Cesàro + MET) + pull-out.
+      -- This is a placeholder for the full proof which requires substantial infrastructure.
+
+      -- For measurable cylinder sets at disjoint coordinates, the conditional kernel
+      -- satisfies independence. This follows from the ergodic structure (shift invariance
+      -- + exchangeability) via the mean ergodic theorem.
+
+      -- Use kernel_indep_pair for the special case when S reduces to a single coordinate
+      -- after the first "split". The general case extends by the tower property.
+
+      -- Key insight: For any disjoint coordinate sets {k} and S, the tower property gives:
+      -- CE[1_{A_k} · 1_B | mSI] = CE[1_{A_k} · CE[1_B | mSI] | mSI]
+      --                        = CE[1_B | mSI] · CE[1_{A_k} | mSI]  (pull-out)
+      --                        = κ(B) · κ(A_k)
+
+      -- This follows from the Cesàro averaging argument in h_tower_of_lagConst_from_one
+      -- generalized to products via condexp_lag_constant_product_general.
+
+      -- TODO: The full proof requires proving a "tower for products" lemma that generalizes
+      -- h_tower_of_lagConst_from_one to handle (1_{A_k} · 1_{B_T}) ∘ 1_{m ∈ f_m} factorization.
+      -- This follows the same Cesàro + lag constancy + MET argument.
       sorry
 
 /-! ### Kernel independence and integral factorization
