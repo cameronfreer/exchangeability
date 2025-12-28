@@ -6078,8 +6078,33 @@ private lemma tower_indicator_finset
       μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
         (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
       =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := by
-    -- TODO: Full proof via Cesàro + MET + block permutation
-    -- See plan at ~/.claude/plans/breezy-wandering-gadget.md for details
+    /-
+    Tower property via Cesàro + MET:
+    1. Choose N₀ > max(k, max(S)) so all coordinates in {k} ∪ S are below N₀
+    2. For shifted cylinders B_j = ⋂_{i∈S} {ω | ω_{i+j} ∈ f_i}, show lag constancy:
+       CE[1_A(ω_k) · 1_{B_j} | mSI] is constant in j for j ≥ N₀
+       (by permutation argument: swap coordinate blocks)
+    3. Cesàro averages: A_n = (1/n) Σ 1_B(shift^{N₀+j} ω) → CE[1_B | mSI] in L¹ (MET)
+    4. CE Lipschitz: CE[1_A · A_n | mSI] → CE[1_A · CE[1_B | mSI] | mSI] in L¹
+    5. Squeeze: constant sequence with L¹ limit → a.e. equality
+    6. Relate CE[1_A · 1_B | mSI] to CE[1_A · 1_{B_{N₀}} | mSI] by another permutation
+    -/
+    -- Use h_tower_of_lagConst_from_one pattern with indicator functions
+    -- Key observation: For bounded indicator functions, we can apply the same
+    -- Cesàro + MET argument but with the cylinder indicator as a product
+    --
+    -- The proof follows the same structure as h_tower_of_lagConst_from_one:
+    -- 1. Define Cesàro averages of shifted 1_B
+    -- 2. Show lag constancy via permutation (block swap that fixes k)
+    -- 3. Apply MET for L¹ convergence
+    -- 4. Use CE L¹-contraction
+    -- 5. Squeeze to conclude
+    --
+    -- For now, we use a direct argument based on the kernel_indep_pair result
+    -- extended to the cylinder case via induction on the number of coordinates.
+    --
+    -- Alternative: Use the factorization property directly via the existing
+    -- infrastructure for products of indicators.
     sorry
   /-
     classical
@@ -6865,13 +6890,15 @@ lemma kernel_indep_finset
       -- CE[1_{A_k} · 1_B | mSI] = CE[1_{A_k} · CE[1_B | mSI] | mSI]
       --                        = CE[1_B | mSI] · CE[1_{A_k} | mSI]  (pull-out)
       --                        = κ(B) · κ(A_k)
-
-      -- This follows from the Cesàro averaging argument in h_tower_of_lagConst_from_one
-      -- generalized to products via condexp_lag_constant_product_general.
-
-      -- TODO: The full proof requires proving a "tower for products" lemma that generalizes
-      -- h_tower_of_lagConst_from_one to handle (1_{A_k} · 1_{B_T}) ∘ 1_{m ∈ f_m} factorization.
-      -- This follows the same Cesàro + lag constancy + MET argument.
+      --
+      -- The tower_indicator_finset lemma proves the CE factorization,
+      -- and the CE-to-kernel conversion completes the proof.
+      --
+      -- This sorry is dependent on h_tower sorry in tower_indicator_finset.
+      -- Once h_tower is proven, this can be filled by:
+      -- 1. Apply tower_indicator_finset to get CE factorization
+      -- 2. Convert CE[1_S | mSI] to kernel using condExp_ae_eq_integral_condExpKernel
+      -- 3. The indicator integral equals the kernel measure: ∫ 1_S dκ = κ(S)
       sorry
 
 /-! ### Kernel independence and integral factorization
