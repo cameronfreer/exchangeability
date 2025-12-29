@@ -6341,8 +6341,77 @@ private lemma tower_indicator_finset
       have h_L1_CE : Tendsto (fun N =>
           ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
                - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
-        -- Similar to ce_lipschitz_convergence
-        sorry
+        -- Bound using |φ| ≤ 1
+        have hφ_bd : ∀ x, |φ x| ≤ 1 := by
+          intro x; simp only [φ, Set.indicator_apply]
+          split_ifs <;> simp
+        -- Integrability of A_N
+        have hA_N_int : ∀ N, 0 < N → Integrable (A_N N) μ := by
+          intro N hN
+          simp only [A_N, if_neg (Nat.ne_of_gt hN)]
+          have h_sum : Integrable (fun ω =>
+              (Finset.range N).sum (fun j => (B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω)) μ := by
+            refine integrable_finset_sum (Finset.range N) (fun j _ => ?_)
+            apply Integrable.indicator _ (hB_at_meas (N₀ + j))
+            exact integrable_const 1
+          exact h_sum.smul (1 / (N : ℝ))
+        -- Integrability of φ(ω_k) * A_N
+        have hfA_int : ∀ N, 0 < N → Integrable (fun ω => φ (ω k) * A_N N ω) μ := by
+          intro N hN
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA_N_int N hN)
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ (fun ω => hφ_bd (ω k))⟩
+        -- Integrability of φ(ω_k) * Y
+        have hfY_int : Integrable (fun ω => φ (ω k) * Y ω) μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ (fun ω => hφ_bd (ω k))⟩
+        -- CE Lipschitz bound
+        have h_bd : ∀ N, ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                            - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ
+                      ≤ 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := by
+          intro N
+          have h1 : ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                        - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ
+                  ≤ ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ :=
+            condExp_L1_lipschitz (hfA_int (N + 1) (Nat.succ_pos N)) hfY_int
+          have h2 : ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ
+                  ≤ 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := by
+            have h_eq : ∀ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω|
+                        = |φ (ω k)| * |A_N (N + 1) ω - Y ω| := by
+              intro ω; rw [← mul_sub, abs_mul]
+            have hpt : ∀ᵐ ω ∂μ, |φ (ω k)| * |A_N (N + 1) ω - Y ω|
+                        ≤ 1 * |A_N (N + 1) ω - Y ω| :=
+              ae_of_all μ (fun ω => mul_le_mul_of_nonneg_right (hφ_bd (ω k)) (abs_nonneg _))
+            have hdiff_int : Integrable (fun ω => A_N (N + 1) ω - Y ω) μ :=
+              (hA_N_int (N + 1) (Nat.succ_pos N)).sub integrable_condExp
+            have hint_lhs : Integrable (fun ω => |φ (ω k)| * |A_N (N + 1) ω - Y ω|) μ := by
+              have h_asm : AEStronglyMeasurable (fun ω => |φ (ω k)| * |A_N (N + 1) ω - Y ω|) μ := by
+                apply AEStronglyMeasurable.mul
+                · exact (continuous_abs.measurable.comp
+                    (hφ_meas.comp (measurable_pi_apply k))).aestronglyMeasurable
+                · exact continuous_abs.comp_aestronglyMeasurable hdiff_int.aestronglyMeasurable
+              have hpt_norm : ∀ᵐ ω ∂μ, ‖|φ (ω k)| * |A_N (N + 1) ω - Y ω|‖
+                              ≤ 1 * |A_N (N + 1) ω - Y ω| := by
+                filter_upwards [hpt] with ω hω
+                rw [Real.norm_eq_abs, abs_mul, abs_abs, abs_abs]
+                exact hω
+              exact Integrable.mono' (hdiff_int.abs.const_mul 1) h_asm hpt_norm
+            have hint_rhs : Integrable (fun ω => 1 * |A_N (N + 1) ω - Y ω|) μ :=
+              hdiff_int.abs.const_mul 1
+            calc ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ
+                = ∫ ω, |φ (ω k)| * |A_N (N + 1) ω - Y ω| ∂μ := by congr 1; ext ω; exact h_eq ω
+              _ ≤ ∫ ω, 1 * |A_N (N + 1) ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+              _ = 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := integral_const_mul 1 _
+          exact le_trans h1 h2
+        -- Squeeze
+        have h_bound_to_zero : Tendsto (fun N =>
+            1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+          convert Tendsto.const_mul 1 h_L1_A_to_Y using 1
+          simp
+        refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+        · exact fun N => integral_nonneg (fun ω => abs_nonneg _)
+        · exact h_bd
 
       -- The constant sequence equals 0 ⟹ a.e. equality
       have h_const_is_zero :
@@ -6351,7 +6420,30 @@ private lemma tower_indicator_finset
         -- h_product_const says the integral is constant in N
         -- h_L1_CE says this integral → 0
         -- So the constant = 0
-        sorry
+        have h_eq_ae : ∀ N, ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ
+                         = ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                               - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ := by
+          intro N
+          have h := h_product_const (N + 1) (Nat.succ_pos N)
+          refine integral_congr_ae ?_
+          filter_upwards [h] with ω hω
+          simp [hω]
+        -- For any ε > 0, the integral < ε (since the RHS → 0)
+        have h_le : ∀ ε > 0, ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                                 - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ < ε := by
+          intro ε hε
+          rw [Metric.tendsto_atTop] at h_L1_CE
+          obtain ⟨N, hN⟩ := h_L1_CE ε hε
+          specialize hN N le_rfl
+          rw [Real.dist_0_eq_abs, abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN
+          rw [h_eq_ae N]
+          exact hN
+        have h_nonneg : 0 ≤ ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                             - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ :=
+          integral_nonneg (fun _ => abs_nonneg _)
+        -- 0 ≤ x and (∀ ε > 0, x < ε) implies x = 0
+        exact le_antisymm (le_of_forall_pos_lt_add (fun ε hε => by linarith [h_le ε hε])) h_nonneg
 
       -- Pull-out: CE[φ(ω_k) · Y | mSI] = Y · CE[φ(ω_k) | mSI]
       have h_pullout : μ[(fun ω => φ (ω k) * Y ω) | mSI]
@@ -6381,9 +6473,20 @@ private lemma tower_indicator_finset
         have h_eq_to_Y : μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
             =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := by
           -- The L¹ distance being 0 implies a.e. equality
-          -- h_const_is_zero says ∫|...| = 0, and integral of nonneg = 0 implies a.e. = 0
-          -- So the difference is a.e. 0, hence a.e. equality
-          sorry
+          -- Use: ∫|f| = 0 ∧ f ≥ 0 ∧ f integrable → f = 0 a.e.
+          have hint : Integrable (fun ω =>
+              |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω|) μ := by
+            apply Integrable.abs
+            apply Integrable.sub <;> exact integrable_condExp
+          have h_abs_zero :
+              (fun ω => |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                         - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω|) =ᵐ[μ] 0 :=
+            integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint
+              |>.mp h_const_is_zero
+          -- a.e. |f - g| = 0 implies a.e. f = g
+          filter_upwards [h_abs_zero] with ω hω
+          exact sub_eq_zero.mp (abs_eq_zero.mp hω)
         calc μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
             =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := h_eq_to_Y
           _ =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := h_pullout
