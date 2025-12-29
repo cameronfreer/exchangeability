@@ -2707,21 +2707,35 @@ lemma directing_measure_bridge
               apply Finset.prod_nonneg
               intro j _; exact I_nonneg j (φ j).val ω
 
-          -- For injective φ, ∫ ∏ I i (φ(i)) = ∫ ∏ I i (i+1) by contractability
-          -- This requires sorting the injective function to get a strictly monotone one,
-          -- then applying Contractable.allStrictMono_eq. The technical setup is:
-          -- 1. Sort the range of φ to get an order isomorphism from Fin (n+1)
-          -- 2. Apply allStrictMono_eq with this sorted version
-          -- 3. The integral is invariant under reordering of the product
+          -- TECHNICAL NOTE: The claim "∫ ∏ I i (φ(i)) = E_prod for all injective φ" requires
+          -- EXCHANGEABILITY, not just contractability. Contractability only gives equality
+          -- for strictly monotone selections via allStrictMono_eq.
+          --
+          -- For a general injective φ = k' ∘ τ (where k' is strictly monotone and τ is a permutation):
+          -- ∫ ∏_j I j (φ j) dμ = ∫ ∏_j I j (k' (τ j)) dμ
+          --                    = ∫ ∏_i I (τ⁻¹ i) (k' i) dμ  [substituting i = τ j]
+          --                    = ∫ g(X (k' 0), ..., X (k' n)) dμ  where g depends on τ
+          --                    = ∫ g(X 0, ..., X n) dμ  [by allStrictMono_eq]
+          --
+          -- This equals E_prod only if the distribution of (X_0, ..., X_n) is symmetric
+          -- under permutation, i.e., EXCHANGEABILITY.
+          --
+          -- The resolution is that contractable sequences ARE exchangeable (de Finetti),
+          -- so this equality holds. But we're in the middle of proving de Finetti!
+          --
+          -- ALTERNATIVE APPROACH: Use the fact that the strictly monotone selections
+          -- (which are 1/m! of all injective selections) give the correct value, and
+          -- show the average over all injective selections also converges to E_prod
+          -- by a symmetry argument.
+          --
+          -- For now, we assume this claim and defer the full proof.
           have h_inj_eq : ∀ N ≥ n, ∀ (φ : Fin (n + 1) → Fin (N + 1)),
               Function.Injective φ →
                 ∫ ω, ∏ j : Fin (n + 1), I j (φ j).val ω ∂μ = E_prod := by
             intro N hN φ hφ
-            -- The key insight: for contractable sequences, all n+1 distinct coordinates
-            -- have the same joint distribution, regardless of which coordinates are selected.
-            -- This follows from allStrictMono_eq after sorting.
-            -- Technical: need to construct sorted version and apply contractability.
-            sorry  -- Contractability argument: any injective selection has same distribution
+            -- Deferred: requires exchangeability (consequence of de Finetti)
+            -- or a sophisticated symmetry argument using the specific structure of B and σ.
+            sorry
 
           -- U-stat expansion: ∫ q N → E_prod
           have h_qN_tends : Tendsto (fun N => ∫ ω, q N ω ∂μ) atTop (𝓝 E_prod) := by
@@ -2795,17 +2809,26 @@ lemma directing_measure_bridge
             -- This is technically involved, so we mark this step as admitting the
             -- U-stat expansion formula and focus on the limit argument.
 
-            -- The bound follows from the L¹ convergence and limit uniqueness.
+            -- The bound follows from the U-stat expansion (which uses h_inj_eq).
+            -- Let m = n + 1. By Fintype.prod_sum:
+            --   ∫ q N = (1/(N+1))^m ∑_φ ∫ ∏_j I j (φ(j)+1)
+            -- Split by injectivity:
+            --   = (1/(N+1))^m [∑_{φ inj} ∫ ∏ I + ∑_{φ non-inj} ∫ ∏ I]
+            -- By h_inj_eq: ∑_{φ inj} ∫ ∏ I = (# inj) * E_prod
+            -- Each non-inj term is bounded by 1: ∑_{φ non-inj} ∫ ∏ I ≤ # non-inj
+            -- So: |∫ q N - E_prod| ≤ |# inj / (N+1)^m - 1| * |E_prod| + # non-inj / (N+1)^m
+            --                      = (# non-inj / (N+1)^m) * |E_prod| + # non-inj / (N+1)^m
+            --                      ≤ 2 * # non-inj / (N+1)^m
+            --                      → 0 by nonInjective_fraction_tendsto_zero
             have hN_ge_n : N ≥ n := le_of_max_le_right hN
             have hN_ge_M1 : N ≥ M1 := le_of_max_le_left hN
             specialize hM1 N hN_ge_M1
             rw [Real.dist_eq, abs_of_nonneg] at hM1
-            · -- Use that q N is within ε of E_prod for large N
-              -- This follows from the expansion but we simplify using bounds
-              simp only [Real.dist_eq]
-              -- The complete proof requires expanding q N which is technically involved
-              -- For now we use that the L¹ convergence implies integral convergence
-              -- and the limits must agree
+            · simp only [Real.dist_eq]
+              -- DEFERRED: Full U-stat expansion proof.
+              -- The argument above shows the bound, assuming h_inj_eq.
+              -- Both h_inj_eq and this step are logically equivalent to
+              -- establishing exchangeability from contractability (de Finetti).
               sorry
             · rw [sub_zero]
               apply div_nonneg (Nat.cast_nonneg _)
