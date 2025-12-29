@@ -56,13 +56,8 @@ lemma condexp_convergence
   -- Use the CE bridge lemma with Y = X m, Y' = X k, Z = shiftRV X (m+1)
   -- The key is that futureFiltration X m = σ(shiftRV X (m+1)) by definition
 
-  -- First, get the measure equality from contractability
-  have hmeas_eq : Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ
-                = Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ := by
-    -- Use measure_ext_of_future_rectangles to convert rectangle agreement to full equality
-    apply measure_ext_of_future_rectangles
-    -- Get rectangle agreement from contractability
-    exact agree_on_future_rectangles_of_contractable hX hX_meas k m hk
+  -- Get the measure equality from contractability
+  have hmeas_eq := contractable_dist_eq hX hX_meas k m hk
 
   -- Apply the CE bridge lemma
   have h := Exchangeability.Probability.condexp_indicator_eq_of_pair_law_eq

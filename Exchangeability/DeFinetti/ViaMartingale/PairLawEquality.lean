@@ -626,47 +626,10 @@ lemma condExp_Xr_indicator_eq_of_contractable
   -- If X_r ⊥⊥_W U, then E[1_{X_r∈B}|σ(U,W)] = E[1_{X_r∈B}|σ(W)]
   -- Use condExp_project_of_condIndep
 
-  -- The goal has σ(U) ⊔ σ(W) while condIndep_project uses σ((U,W)) = comap (U,W)
-  -- Need to show these are equal
+  -- σ(U) ⊔ σ(W) = σ(U,W) by mathlib's comap_prodMk
   have h_sigma_eq : MeasurableSpace.comap U inferInstance ⊔ MeasurableSpace.comap W inferInstance =
-                    MeasurableSpace.comap (fun ω => (U ω, W ω)) inferInstance := by
-    -- comap (U,W) = comap U ⊔ comap W for product of projections
-    apply le_antisymm
-    -- (≤): σ(U) ⊔ σ(W) ≤ σ(U,W)
-    · apply sup_le
-      -- σ(U) ≤ σ(U,W) via first projection
-      · intro s hs
-        obtain ⟨S, hS_meas, rfl⟩ := hs
-        use S ×ˢ Set.univ
-        constructor
-        · exact hS_meas.prod MeasurableSet.univ
-        · ext ω; simp [Set.mem_preimage, Set.mem_prod]
-      -- σ(W) ≤ σ(U,W) via second projection
-      · intro s hs
-        obtain ⟨S, hS_meas, rfl⟩ := hs
-        use Set.univ ×ˢ S
-        constructor
-        · exact MeasurableSet.univ.prod hS_meas
-        · ext ω; simp [Set.mem_preimage, Set.mem_prod]
-    -- (≥): σ(U,W) ≤ σ(U) ⊔ σ(W)
-    · intro s hs
-      obtain ⟨S, hS_meas, rfl⟩ := hs
-      -- S is measurable in product space = σ(Fin r → α) ⊗ σ(ℕ → α)
-      -- (U,W)⁻¹(S) is in σ(U) ⊔ σ(W) by factoring through projections
-      have h_pair_meas : @Measurable _ _ (MeasurableSpace.comap U inferInstance ⊔
-                                         MeasurableSpace.comap W inferInstance)
-                                        (MeasurableSpace.prod inferInstance inferInstance)
-                                        (fun ω => (U ω, W ω)) := by
-        apply Measurable.prod
-        -- U is measurable from σ(U) ⊔ σ(W) to first component
-        · have hU' : @Measurable _ _ (MeasurableSpace.comap U inferInstance) _ U :=
-            Measurable.of_comap_le le_rfl
-          exact Measurable.mono hU' le_sup_left le_rfl
-        -- W is measurable from σ(U) ⊔ σ(W) to second component
-        · have hW' : @Measurable _ _ (MeasurableSpace.comap W inferInstance) _ W :=
-            Measurable.of_comap_le le_rfl
-          exact Measurable.mono hW' le_sup_right le_rfl
-      exact h_pair_meas hS_meas
+                    MeasurableSpace.comap (fun ω => (U ω, W ω)) inferInstance :=
+    (MeasurableSpace.comap_prodMk U W).symm
 
   -- Rewrite goal using the σ-algebra equality
   rw [h_sigma_eq]
