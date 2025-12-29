@@ -6100,11 +6100,26 @@ private lemma tower_indicator_finset
     -- 4. Use CE L¹-contraction
     -- 5. Squeeze to conclude
     --
-    -- For now, we use a direct argument based on the kernel_indep_pair result
-    -- extended to the cylinder case via induction on the number of coordinates.
+    -- Proof strategy: Induction on |S| using Cesàro + MET machinery
+    -- Base case |S| = 1: reduces to condexp_pair_factorization_MET + coordinate shifts
+    -- Inductive case: peel off one coordinate using tower + IH
     --
-    -- Alternative: Use the factorization property directly via the existing
-    -- infrastructure for products of indicators.
+    -- The proof uses the same Cesàro + MET + pull-out pattern as h_tower_of_lagConst_from_one
+    -- generalized to cylinder indicators via block permutation.
+    --
+    -- Key steps:
+    -- 1. Choose N₀ = max(k, max(S)) + 1 so coordinates don't overlap
+    -- 2. Define block permutation σ that swaps i ↔ i + N₀ for i ∈ S (fixes k)
+    -- 3. By exchangeability: CE[1_A · 1_B | mSI] = CE[1_A · 1_B(shift^{N₀}) | mSI]
+    -- 4. Cesàro averages of 1_B(shift^{N₀+jM}) → CE[1_B | mSI] by MET (spacing M = max(S)+1)
+    -- 5. CE Lipschitz: CE[1_A · Cesàro] → CE[1_A · CE[1_B|mSI] | mSI]
+    -- 6. Lag constancy via block permutation: CE[1_A · 1_B(shift^{N₀})] = CE[1_A · 1_B(shift^{N₀+jM})]
+    -- 7. Squeeze: constant = limit
+    -- 8. Pull-out: CE[1_A · CE[1_B|mSI] | mSI] = CE[1_B|mSI] · CE[1_A|mSI]
+    --
+    -- This is the key tower lemma for cylinder indicators. The proof requires substantial
+    -- infrastructure for block permutations preserving shift-invariant sets. See
+    -- Infrastructure.lean:917 for the single-swap case (reindex_swap_preimage_shiftInvariant).
     sorry
   /-
     classical
