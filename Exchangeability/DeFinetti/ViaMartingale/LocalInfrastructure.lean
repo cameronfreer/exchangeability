@@ -128,6 +128,14 @@ lemma ae_norm_condExp_le_of_bound
   rw [← hC_nn] at hbound ⊢
   exact MeasureTheory.ae_bdd_condExp_of_ae_bdd hbound
 
+/-- Indicator functions `Set.indicator S (1 : _ → ℝ)` are bounded by 1 in norm. -/
+lemma norm_indicator_one_le {α : Type*} (S : Set α) (x : α) :
+    ‖Set.indicator S (fun _ : α => (1 : ℝ)) x‖ ≤ 1 := by
+  simp only [Real.norm_eq_abs]
+  by_cases h : x ∈ S
+  · simp [Set.indicator_of_mem h]
+  · simp [Set.indicator_of_notMem h]
+
 end ProbabilityMeasureHelpers
 
 /-! ### Conditional Distribution Uniqueness -/

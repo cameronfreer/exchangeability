@@ -90,6 +90,38 @@ lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable
   intro n
   exact (measurable_pi_apply (n + 1)).comp ht
 
+set_option linter.unusedSectionVars false in
+/-- The contraction property: σ(tailRV t) ≤ σ(t).
+
+This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
+lemma comap_tailRV_le {t : Ω → ℕ → α} :
+    MeasurableSpace.comap (tailRV t) inferInstance ≤
+    MeasurableSpace.comap t inferInstance := by
+  intro S hS
+  obtain ⟨A, hA, rfl⟩ := hS
+  use (fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A
+  constructor
+  · apply MeasurableSet.preimage
+    · exact hA
+    · rw [measurable_pi_iff]
+      intro n
+      exact measurable_pi_apply (n + 1)
+  · ext ω
+    simp only [Set.mem_preimage]
+    rfl
+
+set_option linter.unusedSectionVars false in
+/-- For W' = consRV x W, we have σ(W) ≤ σ(W').
+
+This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/
+lemma comap_le_comap_consRV (x : Ω → α) (t : Ω → ℕ → α) :
+    MeasurableSpace.comap t inferInstance ≤
+    MeasurableSpace.comap (consRV x t) inferInstance := by
+  calc MeasurableSpace.comap t inferInstance
+      = MeasurableSpace.comap (tailRV (consRV x t)) inferInstance := by
+        simp only [tailRV_consRV]
+    _ ≤ MeasurableSpace.comap (consRV x t) inferInstance := comap_tailRV_le
+
 variable {X : ℕ → Ω → α}
 
 @[measurability, fun_prop]
