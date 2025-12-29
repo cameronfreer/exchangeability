@@ -351,3 +351,81 @@ lemma eapprox_real_approx {α : Type*} [MeasurableSpace α] (f : α → ℝ) (hf
     simp only [sf, fp, fm, SimpleFunc.coe_sub] at this ⊢
     convert this using 2
     exact (max_zero_sub_eq_self (f x)).symm
+
+/-!
+## L¹ convergence helper lemmas
+
+These lemmas capture common patterns in the bounded measurable extension proofs:
+1. Product L¹ convergence: bounded × L¹-convergent → L¹-convergent
+2. Set integral convergence: L¹ convergence implies set integral convergence
+-/
+
+/-- **Product L¹ convergence: bounded factor × L¹-convergent → L¹-convergent.**
+
+If `f` is bounded a.e. by `M` and `∫|gn - g| → 0`, then `∫|f * (gn - g)| → 0`.
+This pattern appears repeatedly in monotone class arguments. -/
+lemma tendsto_integral_mul_of_bounded_L1
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {f : Ω → ℝ} {gn : ℕ → Ω → ℝ} {g : Ω → ℝ}
+    (M : ℝ) (hM_nn : 0 ≤ M)
+    (hf_asm : AEStronglyMeasurable f μ)
+    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
+    (hgn_int : ∀ n, Integrable (gn n) μ) (hg_int : Integrable g μ)
+    (hL1 : Filter.Tendsto (fun n => ∫ ω, |gn n ω - g ω| ∂μ) Filter.atTop (nhds 0)) :
+    Filter.Tendsto (fun n => ∫ ω, |f ω * (gn n ω - g ω)| ∂μ) Filter.atTop (nhds 0) := by
+  -- Upper bound: ∫|f * (gn - g)| ≤ M * ∫|gn - g| → 0
+  let h : ℕ → ℝ := fun n => M * ∫ ω, |gn n ω - g ω| ∂μ
+  have h_tendsto : Filter.Tendsto h Filter.atTop (nhds 0) := by
+    have := Filter.Tendsto.const_mul M hL1
+    simp only [mul_zero] at this
+    exact this
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_tendsto ?_ ?_
+  · intro n; exact integral_nonneg (fun _ => abs_nonneg _)
+  · intro n
+    have h_bd : ∀ᵐ ω ∂μ, |f ω * (gn n ω - g ω)| ≤ M * |gn n ω - g ω| := by
+      filter_upwards [hf_bdd] with ω hω
+      rw [abs_mul]
+      exact mul_le_mul_of_nonneg_right hω (abs_nonneg _)
+    have h_lhs_int : Integrable (fun ω => |f ω * (gn n ω - g ω)|) μ := by
+      have h_diff_int : Integrable (gn n - g) μ := (hgn_int n).sub hg_int
+      have h_prod : Integrable (fun ω => f ω * (gn n ω - g ω)) μ := by
+        have h_eq : (fun ω => f ω * (gn n ω - g ω)) = f * (gn n - g) := rfl
+        rw [h_eq]
+        -- bdd_mul' (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
+        refine Integrable.bdd_mul' (c := M) h_diff_int hf_asm ?_
+        filter_upwards [hf_bdd] with ω hω
+        rw [Real.norm_eq_abs]; exact hω
+      exact h_prod.abs
+    have h_rhs_int : Integrable (fun ω => M * |gn n ω - g ω|) μ :=
+      ((hgn_int n).sub hg_int).abs.const_mul M
+    calc ∫ ω, |f ω * (gn n ω - g ω)| ∂μ
+        ≤ ∫ ω, M * |gn n ω - g ω| ∂μ := integral_mono_ae h_lhs_int h_rhs_int h_bd
+      _ = M * ∫ ω, |gn n ω - g ω| ∂μ := integral_const_mul M _
+
+/-- **Set integral convergence from L¹ convergence.**
+
+If `∫|fn - f| → 0` and both `fn`, `f` are integrable, then for any measurable set `C`,
+`∫_C fn → ∫_C f`. -/
+lemma tendsto_setIntegral_of_L1
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (hfn_int : ∀ n, Integrable (fn n) μ) (hf_int : Integrable f μ)
+    (hL1 : Filter.Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) Filter.atTop (nhds 0))
+    (C : Set Ω) :
+    Filter.Tendsto (fun n => ∫ ω in C, fn n ω ∂μ) Filter.atTop (nhds (∫ ω in C, f ω ∂μ)) := by
+  rw [Metric.tendsto_atTop] at hL1 ⊢
+  intro ε hε
+  obtain ⟨N, hN⟩ := hL1 ε hε
+  use N
+  intro n hn
+  rw [Real.dist_eq]
+  have hN' := hN n hn
+  rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN'
+  calc |∫ ω in C, fn n ω ∂μ - ∫ ω in C, f ω ∂μ|
+      = |∫ ω in C, (fn n ω - f ω) ∂μ| := by
+        rw [← integral_sub (hfn_int n).integrableOn hf_int.integrableOn]
+    _ ≤ ∫ ω in C, |fn n ω - f ω| ∂μ := abs_integral_le_integral_abs
+    _ ≤ ∫ ω, |fn n ω - f ω| ∂μ := by
+        refine setIntegral_le_integral ((hfn_int n).sub hf_int).abs ?_
+        filter_upwards with ω; exact abs_nonneg _
+    _ < ε := hN'
