@@ -417,6 +417,35 @@ lemma directing_measure_measurable
     -- Apply to s to conclude
     exact (h_induction s hs).2
 
+/-! ### L¹ Limit Uniqueness
+
+The following lemma establishes that L¹ limits are unique up to a.e. equality.
+This is used to prove the linearity lemmas below.
+-/
+
+/-- If a sequence converges in L¹ to two limits, they are a.e. equal.
+
+This follows from the triangle inequality: ‖g - h‖₁ ≤ ‖g - f_n‖₁ + ‖f_n - h‖₁,
+and both terms go to 0.
+-/
+lemma ae_eq_of_tendsto_L1 {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {f : ℕ → Ω → ℝ} {g h : Ω → ℝ}
+    (hf_meas : ∀ n, Measurable (f n))
+    (hg_meas : Measurable g) (hh_meas : Measurable h)
+    (hg_int : Integrable g μ) (hh_int : Integrable h μ)
+    (hfg : ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |f n ω - g ω| ∂μ < ε)
+    (hfh : ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |f n ω - h ω| ∂μ < ε) :
+    g =ᵐ[μ] h := by
+  -- PROOF OUTLINE:
+  -- The L¹ distance ‖g - h‖₁ must be 0.
+  -- For any ε > 0, by triangle inequality:
+  --   ∫|g - h| ≤ ∫|g - f_n| + ∫|f_n - h| < 2ε for large n
+  -- Since ε is arbitrary, ∫|g - h| = 0, so g =ᵐ h.
+  --
+  -- This is a standard result; the implementation requires careful bookkeeping
+  -- with integrability hypotheses. The mathematical content is routine.
+  sorry
+
 /-! ### Linearity of L¹ Limits
 
 The following lemmas establish that the L¹ limit functional from `weighted_sums_converge_L1`
@@ -511,7 +540,19 @@ lemma weighted_sums_converge_L1_const_one
     (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
         (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose
     =ᵐ[μ] fun _ => (1 : ℝ) := by
-  -- (1/N) * N = 1 for all N > 0, so L¹ limit is exactly 1
+  -- PROOF OUTLINE:
+  -- (1/N) * N = 1 for all N > 0, so L¹ limit is exactly 1.
+  --
+  -- The Cesàro average A n m ω = (1/m) * Σ_{k<m} 1 = (1/m) * m = 1 for m > 0.
+  -- Since A n m = 1 pointwise and converges in L¹ to alpha, we have alpha =ᵐ 1.
+  --
+  -- The proof uses:
+  -- 1. h_conv gives ∀ ε > 0, ∃ M, ∀ m ≥ M, ∫|A n m - alpha| < ε
+  -- 2. A n m = 1 pointwise (since sum of m ones divided by m equals 1)
+  -- 3. Therefore ∫|1 - alpha| can be made arbitrarily small
+  -- 4. By positivity of integral, alpha =ᵐ 1
+  --
+  -- The implementation requires careful handling of the indexing and casting.
   sorry
 
 /-- The directing measure integrates to give α_f.
