@@ -485,8 +485,91 @@ lemma weighted_sums_converge_L1_smul
         (fun x => c * f x) (measurable_const.mul hf_meas) hcf_bdd).choose
     alpha_c =ᵐ[μ] fun ω => c * alpha ω := by
   intro alpha alpha_c
-  -- (1/N) Σ c*f(X_k) = c * (1/N) Σ f(X_k), so limits satisfy same identity
-  sorry
+  -- Key: (1/m) * Σ c*f(X_k) = c * (1/m) * Σ f(X_k)
+  -- So the Cesàro averages of c*f equal c times the Cesàro averages of f
+
+  -- Get specs for both limits
+  have h_spec := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose_spec
+  have h_spec_c := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun x => c * f x) (measurable_const.mul hf_meas) hcf_bdd).choose_spec
+
+  have h_alpha_meas : Measurable alpha := h_spec.1
+  have h_alpha_L1 : MemLp alpha 1 μ := h_spec.2.1
+  have h_conv := h_spec.2.2
+
+  have h_alpha_c_meas : Measurable alpha_c := h_spec_c.1
+  have h_alpha_c_L1 : MemLp alpha_c 1 μ := h_spec_c.2.1
+  have h_conv_c := h_spec_c.2.2
+
+  -- Integrability
+  have h_alpha_int : Integrable alpha μ := h_alpha_L1.integrable le_rfl
+  have h_alpha_c_int : Integrable alpha_c μ := h_alpha_c_L1.integrable le_rfl
+  have h_c_alpha_int : Integrable (fun ω => c * alpha ω) μ := h_alpha_int.const_mul c
+  have h_diff_int : Integrable (fun ω => alpha_c ω - c * alpha ω) μ := h_alpha_c_int.sub h_c_alpha_int
+  have h_abs_int : Integrable (fun ω => |alpha_c ω - c * alpha ω|) μ := h_diff_int.abs
+
+  -- Key algebraic identity: avg of c*f = c * avg of f
+  have h_avg_eq : ∀ n (m : ℕ), ∀ ω,
+      (1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (n + k.val + 1) ω)) =
+      c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω)) := by
+    intro n m ω
+    -- Pull c out of the sum: ∑ k, c * f(...) = c * ∑ k, f(...)
+    rw [← Finset.mul_sum]
+    ring
+
+  -- Show ∫|alpha_c - c*alpha| = 0 by showing it can be made arbitrarily small
+  have h_integral_zero : ∫ ω, |alpha_c ω - c * alpha ω| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |alpha_c ω - c * alpha ω| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |alpha_c ω - c * alpha ω| ∂μ := lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+
+    -- Choose ε = (∫|alpha_c - c*alpha|) / 4
+    set ε := (∫ ω, |alpha_c ω - c * alpha ω| ∂μ) / 4 with hε_def
+    have hε_pos : ε > 0 := by linarith
+
+    -- Get M₁ from h_conv_c (convergence of c*f averages to alpha_c)
+    obtain ⟨M₁, hM₁⟩ := h_conv_c 0 ε hε_pos
+
+    -- Get M₂ from h_conv (convergence of f averages to alpha)
+    -- Need: ∫|avg_f - alpha| < ε / (|c| + 1) to handle scaling
+    have hε' : ε / (|c| + 1) > 0 := div_pos hε_pos (by linarith [abs_nonneg c])
+    obtain ⟨M₂, hM₂⟩ := h_conv 0 (ε / (|c| + 1)) hε'
+
+    set m := max 1 (max M₁ M₂) with hm_def
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (by norm_num) (le_max_left _ _)
+    have hm_ge_M₁ : m ≥ M₁ := le_trans (le_max_left _ _) (le_max_right _ _)
+    have hm_ge_M₂ : m ≥ M₂ := le_trans (le_max_right _ _) (le_max_right _ _)
+
+    -- From hM₁: ∫|avg_{c*f} - alpha_c| < ε
+    specialize hM₁ m hm_ge_M₁
+    -- From hM₂: ∫|avg_f - alpha| < ε / (|c| + 1)
+    specialize hM₂ m hm_ge_M₂
+
+    -- By triangle inequality:
+    -- ∫|alpha_c - c*alpha| ≤ ∫|alpha_c - avg_{c*f}| + ∫|avg_{c*f} - c*alpha|
+    --                      = ∫|alpha_c - avg_{c*f}| + ∫|c*(avg_f - alpha)|
+    --                      ≤ ∫|alpha_c - avg_{c*f}| + |c| * ∫|avg_f - alpha|
+    --                      < ε + |c| * (ε / (|c| + 1))
+    --                      < ε + ε = 2ε = (∫|alpha_c - c*alpha|) / 2
+
+    -- Simplify hM₁ and hM₂
+    simp only [zero_add, Finset.sum_const, Finset.card_fin, nsmul_eq_mul] at hM₁ hM₂
+
+    -- The detailed calculation requires showing:
+    -- avg_{c*f} = c * avg_f (by h_avg_eq)
+    -- Then using triangle inequality
+    -- This is routine but tedious; the key insight is established above
+    sorry
+
+  -- From ∫|alpha_c - c*alpha| = 0, conclude alpha_c =ᵐ c*alpha
+  have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_c ω - c * alpha ω| := by
+    filter_upwards with ω
+    exact abs_nonneg _
+  have h_ae_zero : (fun ω => |alpha_c ω - c * alpha ω|) =ᵐ[μ] (0 : Ω → ℝ) := by
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg_ae h_abs_int]
+  filter_upwards [h_ae_zero] with ω hω
+  simp only [Pi.zero_apply, abs_eq_zero, sub_eq_zero] at hω
+  exact hω
 
 /-- Addition of L¹ limits: if f has limit α_f and g has limit α_g, then f+g has limit α_f + α_g. -/
 lemma weighted_sums_converge_L1_add
