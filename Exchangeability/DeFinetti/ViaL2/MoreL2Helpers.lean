@@ -552,13 +552,32 @@ lemma weighted_sums_converge_L1_smul
     --                      < ε + |c| * (ε / (|c| + 1))
     --                      < ε + ε = 2ε = (∫|alpha_c - c*alpha|) / 2
 
-    -- Simplify hM₁ and hM₂
-    simp only [zero_add, Finset.sum_const, Finset.card_fin, nsmul_eq_mul] at hM₁ hM₂
+    -- Simplify: at starting index 0, the sum starts at index 0 + k + 1 = k + 1
+    simp only [zero_add] at hM₁ hM₂
 
-    -- The detailed calculation requires showing:
-    -- avg_{c*f} = c * avg_f (by h_avg_eq)
-    -- Then using triangle inequality
-    -- This is routine but tedious; the key insight is established above
+    -- KEY ARGUMENT: By triangle inequality and h_avg_eq (avg_{c*f} = c * avg_f),
+    -- ∫|alpha_c - c*alpha| ≤ ∫|alpha_c - avg_{c*f}| + |c| * ∫|avg_f - alpha|
+    --                      < ε + |c| * (ε / (|c| + 1))
+    --                      < ε + ε = 2ε = (∫|alpha_c - c*alpha|) / 2
+    -- This is a contradiction, so ∫|alpha_c - c*alpha| = 0.
+
+    -- The algebraic identity: avg_{c*f} = c * avg_f
+    have _h_avg_eq' : ∀ ω,
+        (1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) =
+        c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) := by
+      intro ω; rw [← Finset.mul_sum]; ring
+
+    -- The key bound: |c| * (ε / (|c| + 1)) < ε
+    have _h_bound : |c| * (ε / (|c| + 1)) < ε := by
+      have h1 : |c| / (|c| + 1) < 1 := by
+        rw [div_lt_one (by linarith [abs_nonneg c])]
+        linarith [abs_nonneg c]
+      calc |c| * (ε / (|c| + 1)) = (|c| / (|c| + 1)) * ε := by ring
+        _ < 1 * ε := by nlinarith [abs_nonneg c]
+        _ = ε := one_mul ε
+
+    -- Technical details: triangle inequality + integrability bookkeeping
+    -- The argument is standard but the Lean formalization is tedious
     sorry
 
   -- From ∫|alpha_c - c*alpha| = 0, conclude alpha_c =ᵐ c*alpha
@@ -586,8 +605,76 @@ lemma weighted_sums_converge_L1_add
         (fun x => f x + g x) (hf_meas.add hg_meas) hfg_bdd).choose
     alpha_fg =ᵐ[μ] fun ω => alpha_f ω + alpha_g ω := by
   intro alpha_f alpha_g alpha_fg
-  -- (1/N) Σ (f+g)(X_k) = (1/N) Σ f(X_k) + (1/N) Σ g(X_k), so limits add
-  sorry
+
+  -- Get convergence specs
+  have h_spec_f := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose_spec
+  have h_spec_g := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 g hg_meas hg_bdd).choose_spec
+  have h_spec_fg := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun x => f x + g x) (hf_meas.add hg_meas) hfg_bdd).choose_spec
+
+  have h_conv_f := h_spec_f.2.2
+  have h_conv_g := h_spec_g.2.2
+  have h_conv_fg := h_spec_fg.2.2
+
+  -- Integrability
+  have h_alpha_f_int : Integrable alpha_f μ := (h_spec_f.2.1).integrable le_rfl
+  have h_alpha_g_int : Integrable alpha_g μ := (h_spec_g.2.1).integrable le_rfl
+  have h_alpha_fg_int : Integrable alpha_fg μ := (h_spec_fg.2.1).integrable le_rfl
+  have h_sum_int : Integrable (fun ω => alpha_f ω + alpha_g ω) μ := h_alpha_f_int.add h_alpha_g_int
+  have h_diff_int : Integrable (fun ω => alpha_fg ω - (alpha_f ω + alpha_g ω)) μ := h_alpha_fg_int.sub h_sum_int
+  have h_abs_int : Integrable (fun ω => |alpha_fg ω - (alpha_f ω + alpha_g ω)|) μ := h_diff_int.abs
+
+  -- KEY ALGEBRAIC IDENTITY: (1/N) Σ (f+g)(X_k) = (1/N) Σ f(X_k) + (1/N) Σ g(X_k)
+  have _h_avg_add : ∀ n (m : ℕ) ω,
+      (1 / (m : ℝ)) * ∑ k : Fin m, ((f + g) (X (n + k.val + 1) ω)) =
+      (1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) +
+      (1 / (m : ℝ)) * ∑ k : Fin m, g (X (n + k.val + 1) ω) := by
+    intro n m ω
+    simp only [Pi.add_apply, Finset.sum_add_distrib, mul_add]
+
+  -- Show ∫|alpha_fg - (alpha_f + alpha_g)| = 0 by showing it can be made arbitrarily small
+  have h_integral_zero : ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ := integral_nonneg (fun _ => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ := lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+
+    -- Choose ε = (∫|alpha_fg - (alpha_f + alpha_g)|) / 4
+    set ε := (∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ) / 4 with hε_def
+    have hε_pos : ε > 0 := by linarith
+
+    -- Get M_fg, M_f, M_g from convergence
+    obtain ⟨M_fg, hM_fg⟩ := h_conv_fg 0 ε hε_pos
+    obtain ⟨M_f, hM_f⟩ := h_conv_f 0 ε hε_pos
+    obtain ⟨M_g, hM_g⟩ := h_conv_g 0 ε hε_pos
+
+    set m := max 1 (max M_fg (max M_f M_g)) with hm_def
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (by norm_num) (le_max_left _ _)
+    have hm_ge_fg : m ≥ M_fg := le_trans (le_max_left _ _) (le_max_right _ _)
+    have hm_ge_f : m ≥ M_f := le_trans (le_trans (le_max_left _ _) (le_max_right _ _)) (le_max_right _ _)
+    have hm_ge_g : m ≥ M_g := le_trans (le_trans (le_max_right _ _) (le_max_right _ _)) (le_max_right _ _)
+
+    specialize hM_fg m hm_ge_fg
+    specialize hM_f m hm_ge_f
+    specialize hM_g m hm_ge_g
+
+    simp only [zero_add] at hM_fg hM_f hM_g
+
+    -- By triangle inequality:
+    -- |alpha_fg - (alpha_f + alpha_g)| ≤ |alpha_fg - avg_{f+g}| + |avg_f + avg_g - (alpha_f + alpha_g)|
+    --                                 ≤ |alpha_fg - avg_{f+g}| + |avg_f - alpha_f| + |avg_g - alpha_g|
+    -- Using: avg_{f+g} = avg_f + avg_g
+    -- Integrating: ∫|...| < ε + ε + ε = 3ε < 4ε = ∫|...|, contradiction
+    sorry
+
+  -- From ∫|alpha_fg - (alpha_f + alpha_g)| = 0, conclude alpha_fg =ᵐ alpha_f + alpha_g
+  have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_fg ω - (alpha_f ω + alpha_g ω)| := by
+    filter_upwards with ω
+    exact abs_nonneg _
+  have h_ae_zero : (fun ω => |alpha_fg ω - (alpha_f ω + alpha_g ω)|) =ᵐ[μ] (0 : Ω → ℝ) := by
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg_ae h_abs_int]
+  filter_upwards [h_ae_zero] with ω hω
+  simp only [Pi.zero_apply, abs_eq_zero, sub_eq_zero] at hω
+  exact hω
 
 /-- Subtraction/complement: L¹ limit of (1 - f) is (1 - limit of f).
 
@@ -608,8 +695,74 @@ lemma weighted_sums_converge_L1_one_sub
         (fun x => 1 - f x) (measurable_const.sub hf_meas) hsub_bdd).choose
     alpha_sub =ᵐ[μ] fun ω => alpha_1 ω - alpha ω := by
   intro alpha alpha_1 alpha_sub
-  -- alpha_1 = 1 a.e. (constant averages), then subtraction follows from linearity
-  sorry
+
+  -- Note: alpha_1 = 1 a.e. can be shown by weighted_sums_converge_L1_const_one (defined below)
+  -- For this proof, we work directly with alpha_1 and alpha_sub
+
+  -- Get convergence specs
+  have h_spec := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose_spec
+  have h_spec_1 := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose_spec
+  have h_spec_sub := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun x => 1 - f x) (measurable_const.sub hf_meas) hsub_bdd).choose_spec
+
+  have h_conv := h_spec.2.2
+  have h_conv_1 := h_spec_1.2.2
+  have h_conv_sub := h_spec_sub.2.2
+
+  -- Integrability
+  have h_alpha_int : Integrable alpha μ := (h_spec.2.1).integrable le_rfl
+  have h_alpha_1_int : Integrable alpha_1 μ := (h_spec_1.2.1).integrable le_rfl
+  have h_alpha_sub_int : Integrable alpha_sub μ := (h_spec_sub.2.1).integrable le_rfl
+  have h_diff_int : Integrable (fun ω => alpha_1 ω - alpha ω) μ := h_alpha_1_int.sub h_alpha_int
+  have h_result_int : Integrable (fun ω => alpha_sub ω - (alpha_1 ω - alpha ω)) μ := h_alpha_sub_int.sub h_diff_int
+  have h_abs_int : Integrable (fun ω => |alpha_sub ω - (alpha_1 ω - alpha ω)|) μ := h_result_int.abs
+
+  -- KEY ALGEBRAIC IDENTITY: (1/N) Σ (1 - f)(X_k) = (1/N) Σ 1 - (1/N) Σ f(X_k)
+  have _h_avg_sub : ∀ n (m : ℕ) ω, m > 0 →
+      (1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (n + k.val + 1) ω)) =
+      (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) -
+      (1 / (m : ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) := by
+    intro n m ω _hm
+    simp only [Finset.sum_sub_distrib, mul_sub]
+
+  -- Show ∫|alpha_sub - (alpha_1 - alpha)| = 0
+  have h_integral_zero : ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ := integral_nonneg (fun _ => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ := lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+
+    set ε := (∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ) / 4 with hε_def
+    have hε_pos : ε > 0 := by linarith
+
+    obtain ⟨M_sub, hM_sub⟩ := h_conv_sub 0 ε hε_pos
+    obtain ⟨M_1, hM_1⟩ := h_conv_1 0 ε hε_pos
+    obtain ⟨M, hM⟩ := h_conv 0 ε hε_pos
+
+    set m := max 1 (max M_sub (max M_1 M)) with hm_def
+    have _hm_pos : m > 0 := Nat.lt_of_lt_of_le (by norm_num) (le_max_left _ _)
+    have hm_ge_sub : m ≥ M_sub := le_trans (le_max_left _ _) (le_max_right _ _)
+    have hm_ge_1 : m ≥ M_1 := le_trans (le_trans (le_max_left _ _) (le_max_right _ _)) (le_max_right _ _)
+    have hm_ge : m ≥ M := le_trans (le_trans (le_max_right _ _) (le_max_right _ _)) (le_max_right _ _)
+
+    specialize hM_sub m hm_ge_sub
+    specialize hM_1 m hm_ge_1
+    specialize hM m hm_ge
+
+    simp only [zero_add] at hM_sub hM_1 hM
+
+    -- Triangle inequality gives ∫|...| < 3ε < 4ε, contradiction
+    sorry
+
+  -- Conclude alpha_sub =ᵐ alpha_1 - alpha
+  have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_sub ω - (alpha_1 ω - alpha ω)| := by
+    filter_upwards with ω
+    exact abs_nonneg _
+  have h_ae_zero : (fun ω => |alpha_sub ω - (alpha_1 ω - alpha ω)|) =ᵐ[μ] (0 : Ω → ℝ) := by
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg_ae h_abs_int]
+  filter_upwards [h_ae_zero] with ω hω
+  simp only [Pi.zero_apply, abs_eq_zero, sub_eq_zero] at hω
+  exact hω
 
 /-- The L¹ limit of the constant function 1 is 1 a.e.
 
