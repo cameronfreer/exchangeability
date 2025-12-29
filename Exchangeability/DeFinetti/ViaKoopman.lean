@@ -6125,8 +6125,247 @@ private lemma tower_indicator_finset
               rw [← hω]
 
     · -- T is nonempty: proper inductive case
-      -- Need to apply IH to T and then combine with the m coordinate
-      sorry
+      -- Strategy: Use Cesàro + MET directly on the full cylinder B = ⋂_{i ∈ S} {ω_i ∈ f_i}
+      -- where S = insert m T.
+      --
+      -- Step 1: Set up N₀ = max(k, max(S)) + 1 as safe starting index
+      -- Step 2: Show CE[1_A(ω_k) · 1_B | mSI] = CE[1_A(ω_k) · 1_{B shifted by N₀} | mSI]
+      -- Step 3: Cesàro average A_N = (1/N) ∑ shifted cylinders
+      -- Step 4: Lag constancy via cyclic permutation
+      -- Step 5: MET: A_N → CE[1_B | mSI]
+      -- Step 6: CE Lipschitz + Pull-out gives factorization
+
+      -- S = insert m T is nonempty
+      have hS_nonempty : (insert m T).Nonempty := Finset.insert_nonempty m T
+
+      -- N₀ = max(k, max(S)) + 1
+      let N₀ := max k ((insert m T).max' hS_nonempty) + 1
+      have hN₀_gt_k : k < N₀ := by simp only [N₀]; omega
+      have hN₀_gt_S : ∀ i ∈ insert m T, i < N₀ := fun i hi => by
+        simp only [N₀]
+        have h := Finset.le_max' (insert m T) i hi
+        omega
+
+      -- Define shifted cylinder indicator
+      let B_at : ℕ → Set (Ω[α]) := fun j => ⋂ i ∈ insert m T, {ω : Ω[α] | ω (j + i) ∈ f i}
+
+      -- B_at j = shift⁻ʲ(B) in the sense that B_at j (ω) ↔ B(shift^j ω)
+      have hB_at_eq_shift : ∀ j, (B_at j).indicator (1 : Ω[α] → ℝ) = fun ω =>
+          B.indicator 1 (shift^[j] ω) := by
+        intro j; ext ω
+        -- Show membership conditions are equivalent
+        have h_mem_eq : ω ∈ B_at j ↔ shift^[j] ω ∈ B := by
+          simp only [B_at, B, Set.mem_iInter, Set.mem_setOf_eq]
+          apply forall_congr'; intro i
+          apply imp_congr_right; intro _
+          rw [shift_iterate_apply]
+          simp only [add_comm j i]
+        simp only [Set.indicator_apply, Pi.one_apply, B_at, B, h_mem_eq]
+
+      -- Measurability of B and B_at j
+      have hB_meas : MeasurableSet B := by
+        apply MeasurableSet.iInter; intro i
+        apply MeasurableSet.iInter; intro hi
+        exact (hf i hi).preimage (measurable_pi_apply i)
+
+      have hB_at_meas : ∀ j, MeasurableSet (B_at j) := by
+        intro j
+        apply MeasurableSet.iInter; intro i
+        apply MeasurableSet.iInter; intro hi
+        exact (hf i hi).preimage (measurable_pi_apply (j + i))
+
+      -- Define indicator functions
+      let φ : α → ℝ := A.indicator 1
+      have hφ_meas : Measurable φ := measurable_const.indicator hA
+      have hφ_bd : ∃ C, ∀ x, |φ x| ≤ C := ⟨1, fun x => by
+        simp only [φ, Set.indicator_apply]; by_cases hx : x ∈ A <;> simp [hx]⟩
+
+      -- A.indicator 1 (ω k) = φ (ω k)
+      have hA_indicator : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ))
+          = (fun ω => φ (ω k)) := by ext ω; rfl
+
+      -- Integrability of φ(ω_k)
+      have hφ_int : Integrable (fun ω => φ (ω k)) μ := by
+        obtain ⟨C, hC⟩ := hφ_bd
+        exact integrable_of_bounded_measurable (hφ_meas.comp (measurable_pi_apply k)) C (fun ω => hC (ω k))
+
+      -- Integrability of cylinder indicator
+      have hB_int : Integrable (fun ω => B.indicator (1 : Ω[α] → ℝ) ω) μ :=
+        integrable_of_bounded_measurable (measurable_const.indicator hB_meas) 1 (fun ω => by
+          simp only [Set.indicator_apply]; split_ifs <;> simp)
+
+      -- Key step: Show CE[1_A(ω_k) · 1_B | mSI] = CE[1_A(ω_k) · 1_{B_at N₀} | mSI]
+      -- by exchangeability (permutation that maps i → N₀+i for i ∈ S, fixes k)
+      have h_shift_to_N₀ : μ[(fun ω => φ (ω k) * B.indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+        -- Define permutation π: fixes k, maps i to N₀+i for i ∈ S
+        -- For this we construct a finite permutation on the relevant coordinates
+        -- The key insight: by exchangeability, CE is invariant under reindexing
+        -- So CE[F | mSI] = CE[F ∘ reindex π | mSI] for any permutation π
+        -- We need: (φ(ω_k) · 1_B(ω)) = (φ(·_k) · 1_{B_at N₀}(·)) ∘ reindex(π⁻¹)
+        -- This holds when π fixes k and maps i → N₀+i for i ∈ S
+
+        -- Alternative approach: use shift invariance of CE
+        -- CE[f(ω_k) · 1_B | mSI] = CE[f(ω_k) · 1_B | mSI]
+        -- But 1_B(ω) = 1_B(ω), not equal to 1_{B_at N₀}(ω) in general!
+        -- We need exchangeability, not just shift invariance.
+
+        -- Use `condexp_precomp_iterate_eq` ideas: for shift-invariant functions,
+        -- composition with shift doesn't change the CE.
+        -- But here we want to shift only part of the coordinates (the cylinder coords).
+
+        -- Key lemma: by exchangeability, for any finite permutation π,
+        -- CE[f | mSI] = CE[f ∘ reindex π | mSI]
+        -- (This follows because reindex π preserves μ and mSI is π-invariant)
+
+        -- Define the permutation that swaps coordinates appropriately
+        -- For simplicity, we show this via a product of transpositions argument
+        -- that chains from the original cylinder to the shifted one.
+
+        -- Actually, let's use a more direct approach: show both sides are equal
+        -- by showing each shifted version has the same CE via exchangeability.
+
+        -- For each coordinate i ∈ S, define the transposition that swaps i with N₀+i
+        -- The composition of these transpositions (applied in order) gives a permutation
+        -- that maps the original cylinder to B_at N₀.
+
+        -- Since |S| is finite, we can apply exchangeability |S| times.
+        -- Each swap fixes k (since k ∉ S and k < N₀ < N₀+i for all i ∈ S).
+
+        -- For now, we prove this via a slightly different approach:
+        -- chain through all intermediate permutations using lag constancy.
+
+        -- Actually, the cleanest approach is to observe that both sides involve
+        -- the same "shape" of cylinder, just at different coordinate positions.
+        -- By exchangeability, the CE of a product depends only on the "pattern"
+        -- of the coordinates, not their absolute positions (as long as they're distinct).
+
+        -- Since k ∉ S and k ∉ {N₀+i : i ∈ S}, both expressions have the same structure:
+        -- one distinguished coordinate k, and |S| other coordinates forming a cylinder.
+
+        -- This is precisely what exchangeability says: permuting coordinate labels
+        -- doesn't change the CE given mSI.
+
+        -- Use `condExp_map_reindex_eq` if available, or prove directly.
+        -- For now, use sorry for this technical step (it follows from exchangeability).
+        sorry
+
+      -- Cesàro average of shifted cylinders
+      let A_N : ℕ → Ω[α] → ℝ := fun N ω =>
+        if N = 0 then 0
+        else (1 / N : ℝ) * (Finset.range N).sum (fun j => (B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω)
+
+      -- Convert to shift form for MET
+      have hA_N_eq : ∀ N, 0 < N → A_N N = fun ω =>
+          (1 / N : ℝ) * (Finset.range N).sum (fun j => B.indicator 1 (shift^[N₀ + j] ω)) := by
+        intro N hN
+        ext ω
+        simp only [A_N, if_neg (Nat.ne_of_gt hN)]
+        congr 1
+        apply Finset.sum_congr rfl
+        intro j _
+        rw [hB_at_eq_shift]
+
+      -- MET: A_N → CE[1_B | mSI] in L¹
+      -- This follows from L1_cesaro_convergence applied to the cylinder indicator
+      -- composed with shifts.
+
+      -- The limit is CE[1_B | mSI] by shift invariance.
+      set Y := μ[(fun ω => B.indicator (1 : Ω[α] → ℝ) ω) | mSI]
+
+      -- Lag constancy: CE[φ(ω_k) · 1_{B_at(N₀+j+1)} | mSI] = CE[φ(ω_k) · 1_{B_at(N₀+j)} | mSI]
+      -- This follows from exchangeability via a cyclic permutation on the relevant coordinates.
+      have h_lag_const : ∀ j, μ[(fun ω => φ (ω k) * (B_at (N₀ + j + 1)).indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) | mSI] := by
+        intro j
+        -- The coordinates for B_at(N₀+j) are {N₀+j+i : i ∈ S}
+        -- The coordinates for B_at(N₀+j+1) are {N₀+j+1+i : i ∈ S}
+        -- Define a cyclic permutation π that:
+        --   - Fixes all coordinates outside [N₀+j+min(S), N₀+j+max(S)+2]
+        --   - Cyclically shifts: N₀+j+i → N₀+j+i+1 for i ∈ {min(S), ..., max(S)+1}
+        -- This maps B_at(N₀+j+1) to B_at(N₀+j) and fixes k (since k < N₀ ≤ N₀+j+min(S)).
+        -- By exchangeability, CE is preserved.
+        sorry
+
+      -- Hence CE[φ(ω_k) · A_N | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI]
+      have h_product_const : ∀ N, 0 < N →
+          μ[(fun ω => φ (ω k) * A_N N ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+        intro N hN
+        -- Use linearity of CE and lag constancy
+        -- A_N = (1/N) ∑_{j=0}^{N-1} 1_{B_at(N₀+j)}
+        -- CE[φ · A_N | mSI] = (1/N) ∑_{j=0}^{N-1} CE[φ · 1_{B_at(N₀+j)} | mSI]
+        --                   = (1/N) · N · CE[φ · 1_{B_at N₀} | mSI]  (by lag constancy)
+        --                   = CE[φ · 1_{B_at N₀} | mSI]
+        sorry
+
+      -- MET gives: A_N → Y in L¹ where Y = CE[1_B | mSI]
+      have h_L1_A_to_Y : Tendsto (fun N =>
+          ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+        -- Use L1_cesaro_convergence for the cylinder indicator
+        -- A_{N+1}(ω) = (1/(N+1)) ∑_{j=0}^N 1_B(shift^{N₀+j} ω)
+        -- This is a Cesàro average starting from index N₀, which by shift invariance
+        -- converges to Y = CE[1_B | mSI].
+        sorry
+
+      -- CE Lipschitz: CE[φ(ω_k) · A_N | mSI] → CE[φ(ω_k) · Y | mSI] in L¹
+      have h_L1_CE : Tendsto (fun N =>
+          ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+               - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
+        -- Similar to ce_lipschitz_convergence
+        sorry
+
+      -- The constant sequence equals 0 ⟹ a.e. equality
+      have h_const_is_zero :
+          ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ = 0 := by
+        -- h_product_const says the integral is constant in N
+        -- h_L1_CE says this integral → 0
+        -- So the constant = 0
+        sorry
+
+      -- Pull-out: CE[φ(ω_k) · Y | mSI] = Y · CE[φ(ω_k) | mSI]
+      have h_pullout : μ[(fun ω => φ (ω k) * Y ω) | mSI]
+          =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := by
+        have hY_meas : Measurable[mSI] Y := stronglyMeasurable_condExp.measurable
+        have hY_bd : ∃ C, ∀ᵐ ω ∂μ, |Y ω| ≤ C := by
+          use 1
+          have hB_bd : ∀ᵐ ω ∂μ, |B.indicator (1 : Ω[α] → ℝ) ω| ≤ (1 : ℝ).toNNReal := by
+            filter_upwards with ω
+            simp only [Set.indicator_apply, Real.coe_toNNReal']
+            split_ifs <;> simp
+          have := ae_bdd_condExp_of_ae_bdd (m := mSI) hB_bd
+          filter_upwards [this] with ω hω
+          simp at hω ⊢
+          linarith
+        -- Rewrite product to Y * φ, then apply pullout
+        have h_comm : (fun ω => φ (ω k) * Y ω) = (fun ω => Y ω * φ (ω k)) := by
+          ext ω; ring
+        rw [h_comm]
+        exact condExp_mul_pullout hY_meas hY_bd hφ_int
+
+      -- Combine: CE[φ(ω_k) · 1_{B_at N₀} | mSI] =ᵃᵉ Y · CE[φ(ω_k) | mSI]
+      have h_factored_at_N₀ : μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+          =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := by
+        -- From h_const_is_zero: the integral of the difference is 0
+        -- Combined with h_pullout
+        have h_eq_to_Y : μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := by
+          -- The L¹ distance being 0 implies a.e. equality
+          -- h_const_is_zero says ∫|...| = 0, and integral of nonneg = 0 implies a.e. = 0
+          -- So the difference is a.e. 0, hence a.e. equality
+          sorry
+        calc μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := h_eq_to_Y
+          _ =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := h_pullout
+
+      -- Chain back to original B using h_shift_to_N₀
+      simp only [hA_indicator]
+      calc μ[(fun ω => φ (ω k) * B.indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := h_shift_to_N₀
+        _ =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := h_factored_at_N₀
+        _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * Y ω) := by
+            filter_upwards with ω; ring
 
 /-- **Finite product factorization for kernel measures** - Full proof.
 
