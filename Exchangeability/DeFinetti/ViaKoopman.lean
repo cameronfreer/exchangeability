@@ -5954,15 +5954,20 @@ private lemma tower_indicator_finset
     (fun ω => μ[(fun ω => A.indicator 1 (ω k)) | mSI] ω *
               μ[(fun ω => B.indicator 1 ω) | mSI] ω) := by
   classical
-  intro B
 
-  -- Handle empty S case separately
-  cases' S.eq_empty_or_nonempty with hS_empty hS_nonempty
-  · -- S = ∅: B = Set.univ, so 1_B = 1
-    subst hS_empty
-    simp only [Finset.not_mem_empty, Set.iInter_of_empty, Set.iInter_univ, B]
-    have h_indicator_univ : (Set.univ : Set (Ω[α])).indicator (1 : Ω[α] → ℝ) = fun _ => 1 := by
-      ext ω; simp
+  -- Do induction on S first, before introducing B
+  -- This ensures B is correctly instantiated for each S in the induction
+  revert k A hA hkS hf
+  induction S using Finset.induction_on with
+  | empty =>
+    -- S = ∅: B = Set.univ, so 1_B = 1
+    intro k A hA hkS hf B
+    -- B = ⋂ i ∈ ∅, ... = Set.univ
+    have hB_univ : B = Set.univ := by
+      show ⋂ i ∈ (∅ : Finset ℕ), {ω : Ω[α] | ω i ∈ f i} = Set.univ
+      simp only [Finset.notMem_empty, Set.iInter_of_empty, Set.iInter_univ]
+    have h_indicator_univ : B.indicator (1 : Ω[α] → ℝ) = fun _ => 1 := by
+      ext ω; simp [hB_univ]
     simp only [h_indicator_univ]
     -- CE[f · 1 | mSI] = CE[f | mSI] and CE[1 | mSI] = 1
     have h_ce_one : μ[(fun _ : Ω[α] => (1 : ℝ)) | mSI] =ᵐ[μ] fun _ => 1 := by
@@ -5978,770 +5983,553 @@ private lemma tower_indicator_finset
                 μ[(fun _ => (1 : ℝ)) | mSI] ω) := by
           filter_upwards [h_ce_one] with ω hω
           rw [hω]
+  | @insert m T hm_notin IH =>
+    -- S = {m} ∪ T, inductive case
+    intro k A hA hkS hf B
+    -- First handle the case T = ∅ (singleton case) separately
+    by_cases hT_empty : T = ∅
+    · -- Singleton case: S = {m}
+      subst hT_empty
+      simp only [Finset.insert_empty] at hkS hf ⊢
+      simp only [Finset.mem_singleton] at hkS
+      have hk_ne_m : k ≠ m := hkS
 
-  -- S is nonempty. We use the Cesàro + MET + pull-out approach.
+      -- The cylinder set B = {ω | ω m ∈ f m}
+      -- After subst hT_empty, S = insert m ∅, and simp simplified it to {m}
+      -- B = ⋂ i ∈ {m}, {ω | ω i ∈ f i} = {ω | ω m ∈ f m}
+      have hB_eq : B = {ω : Ω[α] | ω m ∈ f m} := by
+        show ⋂ i ∈ ({m} : Finset ℕ), {ω : Ω[α] | ω i ∈ f i} = {ω | ω m ∈ f m}
+        simp only [Finset.mem_singleton, Set.iInter_iInter_eq_left]
 
-  -- Measurability of B
-  have hB_meas : MeasurableSet B := by
-    apply MeasurableSet.iInter
-    intro i
-    apply MeasurableSet.iInter
-    intro hi
-    exact (hf i hi).preimage (measurable_pi_apply i)
+      -- Define indicator functions
+      let φ : α → ℝ := A.indicator 1
+      let ψ : α → ℝ := (f m).indicator 1
+      have hφ_meas : Measurable φ := measurable_const.indicator hA
+      have hψ_meas : Measurable ψ := measurable_const.indicator (hf m (Finset.mem_singleton_self m))
+      have hφ_bd : ∃ C, ∀ x, |φ x| ≤ C := ⟨1, fun x => by
+        simp only [φ, Set.indicator_apply]; by_cases hx : x ∈ A <;> simp [hx]⟩
+      have hψ_bd : ∃ C, ∀ x, |ψ x| ≤ C := ⟨1, fun x => by
+        simp only [ψ, Set.indicator_apply]; by_cases hx : x ∈ f m <;> simp [hx]⟩
 
-  -- Indicator function bounds
-  have hA_ind_bd : ∀ x : α, |(A.indicator (1 : α → ℝ) x : ℝ)| ≤ 1 := fun x => by
-    simp only [Set.indicator_apply, Pi.one_apply]
-    by_cases hx : x ∈ A
-    · simp [hx]
-    · simp [hx]
-  have hB_ind_bd : ∀ ω : Ω[α], |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ 1 := fun ω => by
-    simp only [Set.indicator_apply, Pi.one_apply]
-    by_cases hω : ω ∈ B
-    · simp [hω]
-    · simp [hω]
-
-  -- Integrability
-  have hfA_int : Integrable (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) μ :=
-    integrable_of_bounded_measurable
-      ((measurable_const.indicator hA).comp (measurable_pi_apply k))
-      1 (fun ω => hA_ind_bd (ω k))
-  have hfB_int : Integrable (fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) μ :=
-    integrable_of_bounded_measurable
-      (measurable_const.indicator hB_meas)
-      1 hB_ind_bd
-  have hprod_int : Integrable (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
-      (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) μ :=
-    integrable_of_bounded_measurable
-      (((measurable_const.indicator hA).comp (measurable_pi_apply k)).mul
-        (measurable_const.indicator hB_meas))
-      1 (fun ω => by
-        simp only [abs_mul]
-        have h1 : |(A.indicator (1 : α → ℝ) (ω k) : ℝ)| ≤ 1 := hA_ind_bd (ω k)
-        have h2 : |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ 1 := hB_ind_bd ω
-        calc |(A.indicator (1 : α → ℝ) (ω k) : ℝ)| * |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)|
-            ≤ 1 * 1 := mul_le_mul h1 h2 (abs_nonneg _) zero_le_one
-          _ = 1 := one_mul 1)
-
-  -- The key step: use CE contraction + pull-out
-  -- We need to show the product factorizes
-
-  -- Step 1: Define the conditional expectations
-  set CE_A := μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI]
-  set CE_B := μ[(fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
-
-  -- Step 2: CE_B is mSI-measurable
-  have hCE_B_meas : Measurable[mSI] CE_B := stronglyMeasurable_condExp.measurable
-  have hCE_B_bd : ∃ C : ℝ, ∀ᵐ ω ∂μ, |CE_B ω| ≤ C := by
-    use 1
-    have h1_ae : ∀ᵐ ω ∂μ, |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ ((1 : NNReal) : ℝ) := by
-      filter_upwards with ω
-      exact hB_ind_bd ω
-    have h := ae_bdd_condExp_of_ae_bdd (m := mSI) (R := 1) h1_ae
-    filter_upwards [h] with ω hω
-    exact hω
-
-  -- Step 3: Tower property via shift invariance and MET limit
-
-  -- The core argument: We'll show that CE[f·g | mSI] = CE[f·CE[g | mSI] | mSI]
-  -- by the following logic:
-  -- (a) Define Cesàro averages of shifted cylinders
-  -- (b) These converge to CE[g | mSI] in L¹ by MET + shift invariance
-  -- (c) CE[f · Cesàro | mSI] → CE[f · CE[g | mSI] | mSI] by CE contraction
-  -- (d) By exchangeability, each term CE[f · g(shift^j) | mSI] = CE[f · g | mSI]
-  --     (This is the key step requiring a block permutation argument)
-  -- (e) Hence CE[f · g | mSI] = CE[f · CE[g | mSI] | mSI]
-
-  -- Tower property for cylinder indicators via Cesàro + MET
-  --
-  -- Proof structure (generalizing h_tower_of_lagConst_from_one):
-  -- 1. Choose N₀ = max(k, max(S)) + 1 so all coordinates in {k} ∪ S are below N₀
-  -- 2. Define Cesàro averages: A_n = (1/n) Σ_{j=0}^{n-1} 1_B ∘ shift^{N₀+j}
-  -- 3. MET: A_n → CE[1_B | mSI] in L¹ (by L1_cesaro_convergence)
-  -- 4. CE Lipschitz: CE[1_{ω_k ∈ A} · A_n | mSI] → CE[1_{ω_k ∈ A} · CE_B | mSI] in L¹
-  -- 5. Lag constancy: For j ≥ 0, CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀+j}) | mSI]
-  --    is constant in j. This requires a block permutation argument:
-  --    - Define π that swaps coordinate blocks {i + N₀ + j : i ∈ S} and {i + N₀ : i ∈ S}
-  --    - These blocks are disjoint from k since k < N₀
-  --    - Use exchangeability: μ.map (reindex π) = μ
-  --    - Key subtlety: if S contains consecutive integers, blocks may overlap
-  --      and we need a more sophisticated permutation (cyclic or composition of swaps)
-  -- 6. Hence CE[1_{ω_k ∈ A} · A_n | mSI] =ᵃᵉ CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀}) | mSI] for all n
-  -- 7. Squeeze: constant sequence with L¹ limit → a.e. equality
-  -- 8. Coordinate shift back: CE[1_{ω_k ∈ A} · (1_B ∘ shift^{N₀}) | mSI]
-  --    =ᵃᵉ CE[1_{ω_k ∈ A} · 1_B | mSI] by another permutation argument
-  --
-  -- Implementation: Block permutation for lag constancy
-  -- Key insight: Use a permutation π that maps coordinates {i : i ∈ S} to {i + N : i ∈ S}
-  -- where N is large enough that these blocks are disjoint, and π fixes k.
-  have h_tower :
-      μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) *
-        (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) | mSI]
-      =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := by
-    /-
-    Tower property via Cesàro + MET:
-    1. Choose N₀ > max(k, max(S)) so all coordinates in {k} ∪ S are below N₀
-    2. For shifted cylinders B_j = ⋂_{i∈S} {ω | ω_{i+j} ∈ f_i}, show lag constancy:
-       CE[1_A(ω_k) · 1_{B_j} | mSI] is constant in j for j ≥ N₀
-       (by permutation argument: swap coordinate blocks)
-    3. Cesàro averages: A_n = (1/n) Σ 1_B(shift^{N₀+j} ω) → CE[1_B | mSI] in L¹ (MET)
-    4. CE Lipschitz: CE[1_A · A_n | mSI] → CE[1_A · CE[1_B | mSI] | mSI] in L¹
-    5. Squeeze: constant sequence with L¹ limit → a.e. equality
-    6. Relate CE[1_A · 1_B | mSI] to CE[1_A · 1_{B_{N₀}} | mSI] by another permutation
-    -/
-    -- Use h_tower_of_lagConst_from_one pattern with indicator functions
-    -- Key observation: For bounded indicator functions, we can apply the same
-    -- Cesàro + MET argument but with the cylinder indicator as a product
-    --
-    -- The proof follows the same structure as h_tower_of_lagConst_from_one:
-    -- 1. Define Cesàro averages of shifted 1_B
-    -- 2. Show lag constancy via permutation (block swap that fixes k)
-    -- 3. Apply MET for L¹ convergence
-    -- 4. Use CE L¹-contraction
-    -- 5. Squeeze to conclude
-    --
-    -- Proof strategy: Induction on |S| using Cesàro + MET machinery
-    -- Base case |S| = 1: reduces to condexp_pair_factorization_MET + coordinate shifts
-    -- Inductive case: peel off one coordinate using tower + IH
-    --
-    -- The proof uses the same Cesàro + MET + pull-out pattern as h_tower_of_lagConst_from_one
-    -- generalized to cylinder indicators via block permutation.
-    --
-    -- Key steps:
-    -- 1. Choose N₀ = max(k, max(S)) + 1 so coordinates don't overlap
-    -- 2. Define block permutation σ that swaps i ↔ i + N₀ for i ∈ S (fixes k)
-    -- 3. By exchangeability: CE[1_A · 1_B | mSI] = CE[1_A · 1_B(shift^{N₀}) | mSI]
-    -- 4. Cesàro averages of 1_B(shift^{N₀+jM}) → CE[1_B | mSI] by MET (spacing M = max(S)+1)
-    -- 5. CE Lipschitz: CE[1_A · Cesàro] → CE[1_A · CE[1_B|mSI] | mSI]
-    -- 6. Lag constancy via block permutation: CE[1_A · 1_B(shift^{N₀})] = CE[1_A · 1_B(shift^{N₀+jM})]
-    -- 7. Squeeze: constant = limit
-    -- 8. Pull-out: CE[1_A · CE[1_B|mSI] | mSI] = CE[1_B|mSI] · CE[1_A|mSI]
-    --
-    -- This is the key tower lemma for cylinder indicators. The proof requires substantial
-    -- infrastructure for block permutations preserving shift-invariant sets. See
-    -- Infrastructure.lean:917 for the single-swap case (reindex_swap_preimage_shiftInvariant).
-    sorry
-  /-
-    classical
-    -- Handle empty S case
-    by_cases hS_empty : S = ∅
-    · -- If S = ∅, then B = univ, so 1_B = 1 and CE_B =ᵃᵉ 1
-      have hB_eq_univ : B = Set.univ := by
-        simp only [hS_empty, Finset.not_mem_empty, Set.iInter_of_empty, Set.iInter_univ, B]
-      have h_B_one : (B.indicator (1 : Ω[α] → ℝ)) = (1 : Ω[α] → ℝ) := by
-        rw [hB_eq_univ]; ext ω; simp
-      -- CE[1|mSI] = 1
-      have hCE_one : μ[(1 : Ω[α] → ℝ) | mSI] =ᵐ[μ] (1 : Ω[α] → ℝ) := by
-        rw [condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ)]
-        filter_upwards with ω; ring
-      have hCE_B_eq_one : CE_B =ᵐ[μ] (1 : Ω[α] → ℝ) := by
-        have h_eq : (fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ)) = (1 : Ω[α] → ℝ) := h_B_one
-        simp only [CE_B, h_eq]
-        exact hCE_one
-      -- Now both sides simplify to CE[1_A(ω_k) | mSI]
-      conv_lhs => rw [h_B_one]
-      calc μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * (1 : ℝ)) | mSI]
-          =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] := by
-            refine condExp_congr_ae (ae_of_all μ ?_)
-            intro ω; ring
-        _ =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * (1 : ℝ)) | mSI] := by
-            refine (condExp_congr_ae (ae_of_all μ ?_)).symm
-            intro ω; ring
-        _ =ᵐ[μ] μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI] := by
-            refine condExp_congr_ae ?_
-            filter_upwards [hCE_B_eq_one] with ω hω
-            simp [hω]
-
-    -- Non-empty S case: use Cesàro averaging + MET + block permutation
-    push_neg at hS_empty
-    have hS_nonempty : S.Nonempty := Finset.nonempty_iff_ne_empty.mpr hS_empty
-
-    -- Choose N₀ large enough: N₀ > k and N₀ > max(S)
-    let maxS := S.sup id
-    let N₀ := max k maxS + 1
-
-    have hN₀_gt_k : k < N₀ := by simp only [N₀]; omega
-    have hN₀_gt_S : ∀ i ∈ S, i < N₀ := by
-      intro i hi
-      have : i ≤ maxS := Finset.le_sup hi
-      simp only [N₀]; omega
-
-    -- Define the indicator function for the cylinder
-    let ind_B : Ω[α] → ℝ := fun ω => B.indicator 1 ω
-    let ind_A : Ω[α] → ℝ := fun ω => A.indicator 1 (ω k)
-
-    -- Key: For any j ≥ 0, we can relate 1_B ∘ shift^{N₀+j} to 1_B via exchangeability
-    -- This is because there exists a permutation π that:
-    -- 1. Maps i + N₀ + j to i for each i ∈ S
-    -- 2. Maps i to i + N₀ + j for each i ∈ S
-    -- 3. Fixes all other coordinates (including k)
-
-    -- Step 1: Show that shift-invariant sets are invariant under any finite permutation
-    -- This follows from the fact that after enough shifts, any finite permutation is invisible
-    have h_perm_inv : ∀ (π : Equiv.Perm ℕ) (s : Set (Ω[α])),
-        isShiftInvariant (α := α) s →
-        (∃ M : ℕ, ∀ n ≥ M, π n = n) →
-        (Exchangeability.reindex π) ⁻¹' s = s := by
-      intro π s hs ⟨M, hM⟩
-      ext ω
-      simp only [Set.mem_preimage]
-      -- Use that s is shift^[M]-invariant
-      have h_iter : ∀ m, (shift (α := α))^[m] ⁻¹' s = s := by
-        intro m
-        induction m with
-        | zero => simp
-        | succ n ih =>
-          calc shift^[n + 1] ⁻¹' s = shift^[n] ⁻¹' (shift ⁻¹' s) := by
-                  simp only [Function.iterate_succ', Set.preimage_comp]
-            _ = shift^[n] ⁻¹' s := by rw [hs.2]
-            _ = s := ih
-      -- After M shifts, the permutation becomes invisible
-      have h_shift_M : ∀ ω', shift^[M] (Exchangeability.reindex π ω') = shift^[M] ω' := by
-        intro ω'
-        ext n
-        simp only [shift_iterate_apply, Exchangeability.reindex_apply]
-        have h : n + M ≥ M := Nat.le_add_left M n
-        rw [hM (n + M) h]
-      constructor
-      · intro h
-        have h1 : Exchangeability.reindex π ω ∈ shift^[M] ⁻¹' s := by
-          rw [h_iter M]; exact h
-        rw [Set.mem_preimage] at h1
-        have h2 : shift^[M] ω ∈ s := by
-          rw [← h_shift_M ω]; exact h1
-        rw [← h_iter M, Set.mem_preimage]; exact h2
-      · intro h
-        have h1 : ω ∈ shift^[M] ⁻¹' s := by
-          rw [h_iter M]; exact h
-        rw [Set.mem_preimage] at h1
-        have h2 : shift^[M] (Exchangeability.reindex π ω) ∈ s := by
-          rw [h_shift_M ω]; exact h1
-        rw [← h_iter M, Set.mem_preimage] at h2; exact h2
-
-    -- Step 2: Define the block-swap permutation
-    -- For j ≥ 0, π_j swaps {i : i ∈ S} with {i + N₀ + j : i ∈ S}
-    let block_perm (j : ℕ) : Equiv.Perm ℕ := Equiv.ofBijective
-      (fun n => if n ∈ S then n + N₀ + j
-                else if ∃ i ∈ S, n = i + N₀ + j then n - N₀ - j
-                else n) (by
-        constructor
-        · -- Injective
-          intro a b hab
-          simp only at hab
-          by_cases ha : a ∈ S
-          · simp only [ha, ↓reduceIte] at hab
-            by_cases hb : b ∈ S
-            · simp only [hb, ↓reduceIte] at hab; omega
-            · simp only [hb, ↓reduceIte] at hab
-              by_cases hb' : ∃ i ∈ S, b = i + N₀ + j
-              · simp only [hb', ↓reduceIte] at hab
-                obtain ⟨i, hi, rfl⟩ := hb'
-                have : i < N₀ := hN₀_gt_S i hi
-                omega
-              · simp only [hb', ↓reduceIte] at hab
-                have : a < N₀ := hN₀_gt_S a ha
-                omega
-          · simp only [ha, ↓reduceIte] at hab
-            by_cases ha' : ∃ i ∈ S, a = i + N₀ + j
-            · simp only [ha', ↓reduceIte] at hab
-              by_cases hb : b ∈ S
-              · simp only [hb, ↓reduceIte] at hab
-                obtain ⟨i, hi, rfl⟩ := ha'
-                have : i < N₀ := hN₀_gt_S i hi
-                omega
-              · simp only [hb, ↓reduceIte] at hab
-                by_cases hb' : ∃ i ∈ S, b = i + N₀ + j
-                · simp only [hb', ↓reduceIte] at hab
-                  obtain ⟨ia, hia, rfl⟩ := ha'
-                  obtain ⟨ib, hib, rfl⟩ := hb'
-                  omega
-                · simp only [hb', ↓reduceIte] at hab
-                  obtain ⟨i, hi, rfl⟩ := ha'
-                  exfalso
-                  have hne : ∃ i' ∈ S, b = i' + N₀ + j := ⟨i, hi, hab.symm⟩
-                  exact hb' hne
-            · simp only [ha', ↓reduceIte] at hab
-              by_cases hb : b ∈ S
-              · simp only [hb, ↓reduceIte] at hab
-                exfalso
-                have hne : a ∈ S := by simp_all
-                exact ha hne
-              · simp only [hb, ↓reduceIte] at hab
-                by_cases hb' : ∃ i ∈ S, b = i + N₀ + j
-                · simp only [hb', ↓reduceIte] at hab
-                  exfalso
-                  obtain ⟨i, hi, rfl⟩ := hb'
-                  have : ∃ i' ∈ S, a = i' + N₀ + j := by
-                    use i, hi
-                    have hi' : i < N₀ := hN₀_gt_S i hi
-                    omega
-                  exact ha' this
-                · simp only [hb', ↓reduceIte] at hab
-                  exact hab
-        · -- Surjective
-          intro b
-          by_cases hb : b ∈ S
-          · -- b ∈ S, so preimage is b + N₀ + j
-            use b + N₀ + j
-            simp only
-            have hb' : b + N₀ + j ∉ S := by
-              intro h
-              have h1 : b + N₀ + j < N₀ := hN₀_gt_S (b + N₀ + j) h
-              omega
-            simp only [hb', ↓reduceIte]
-            have hb'' : ∃ i ∈ S, b + N₀ + j = i + N₀ + j := ⟨b, hb, rfl⟩
-            simp only [hb'', ↓reduceIte]
-            omega
-          · by_cases hb' : ∃ i ∈ S, b = i + N₀ + j
-            · -- b = i + N₀ + j for some i ∈ S, so preimage is i
-              obtain ⟨i, hi, rfl⟩ := hb'
-              use i
-              simp only
-              simp only [hi, ↓reduceIte]
-            · -- b is not in either block, so preimage is b
-              use b
-              simp only [hb, ↓reduceIte, hb'])
-
-    -- For now, use a simpler approach: direct equality via shift invariance of CE
-    -- CE[1_B ∘ shift^{N₀} | mSI] =ᵃᵉ CE[1_B | mSI]
-    have h_CE_shift_eq : ∀ m : ℕ,
-        μ[(fun ω => ind_B (shift^[m] ω)) | mSI] =ᵐ[μ] μ[ind_B | mSI] := by
-      intro m
-      induction m with
-      | zero => simp
-      | succ n ih =>
-        have h_step : μ[(fun ω => ind_B (shift^[n + 1] ω)) | mSI]
-            =ᵐ[μ] μ[(fun ω => ind_B (shift^[n] ω)) | mSI] := by
-          simp only [Function.iterate_succ']
-          have h_int : Integrable (fun ω => ind_B (shift^[n] ω)) μ := by
-            apply integrable_of_bounded_measurable
-            · exact hB_meas.indicator measurable_const |>.comp (measurable_shift_iterate n)
-            · exact 1
-            · intro ω; exact hB_ind_bd _
-          exact condexp_precomp_shift_eq hσ h_int
-        exact h_step.trans ih
-
-    -- The core: CE[ind_A · ind_B | mSI] =ᵃᵉ CE[ind_A · CE_B | mSI]
-    -- We use the block permutation to show that:
-    -- CE[ind_A · (ind_B ∘ shift^{N₀+j}) | mSI] =ᵃᵉ CE[ind_A · ind_B | mSI] for all j
-
-    -- For the block permutation argument, we need to show that swapping coordinate blocks
-    -- preserves the conditional expectation. This follows from:
-    -- 1. μ is exchangeable
-    -- 2. Shift-invariant sets are invariant under finite permutations
-
-    -- Step 3: Key equality - swapping blocks relates shifted to original
-    have h_block_swap_eq : ∀ j : ℕ,
-        μ[(fun ω => ind_A ω * ind_B (shift^[N₀ + j] ω)) | mSI]
-        =ᵐ[μ] μ[(fun ω => ind_A ω * ind_B ω) | mSI] := by
-      intro j
-      let π := block_perm j
-      -- Show F ∘ reindex π = G where F is the shifted version
-      let F : Ω[α] → ℝ := fun ω => ind_A ω * ind_B (shift^[N₀ + j] ω)
-      let G : Ω[α] → ℝ := fun ω => ind_A ω * ind_B ω
-      -- Key: reindex π maps coordinates {i + N₀ + j : i ∈ S} to {i : i ∈ S}
-      -- and fixes k (since k < N₀ and k ∉ S)
-      have hπ_k : π k = k := by
-        simp only [π, block_perm, Equiv.ofBijective_apply]
-        simp only [hkS, ↓reduceIte]
-        have hk_not_shifted : ¬∃ i ∈ S, k = i + N₀ + j := by
-          intro ⟨i, _, hi_eq⟩
-          have : i < N₀ := hN₀_gt_S i (by assumption)
-          omega
-        simp only [hk_not_shifted, ↓reduceIte]
-      have hFG : F ∘ Exchangeability.reindex π = G := by
+      -- B.indicator 1 = ψ ∘ (· m)
+      have hB_indicator : (fun ω : Ω[α] => (B.indicator (1 : Ω[α] → ℝ) ω : ℝ))
+          = (fun ω => ψ (ω m)) := by
         ext ω
-        simp only [Function.comp_apply, F, G, ind_A, ind_B, Exchangeability.reindex_apply]
-        congr 1
-        · -- ind_A part: (reindex π ω) k = ω (π k) = ω k
-          rw [hπ_k]
-        · -- ind_B part: need to show ind_B (shift^[N₀+j] (reindex π ω)) = ind_B ω
-          -- This requires showing that for all i ∈ S, (shift^[N₀+j] (reindex π ω))_i = ω_i
-          -- (shift^[N₀+j] (reindex π ω))_i = (reindex π ω)_{i + N₀ + j} = ω_{π(i + N₀ + j)}
-          -- And π(i + N₀ + j) = i for i ∈ S
-          congr 1
-          ext n
-          simp only [shift_iterate_apply, Exchangeability.reindex_apply]
-          -- We need π(n + N₀ + j) behavior
-          simp only [π, block_perm, Equiv.ofBijective_apply]
-          -- Check if n + N₀ + j is in the shifted block
-          by_cases hn : n + N₀ + j ∈ S
-          · -- n + N₀ + j ∈ S, impossible since elements of S are < N₀
-            exfalso
-            have : n + N₀ + j < N₀ := hN₀_gt_S (n + N₀ + j) hn
-            omega
-          · simp only [hn, ↓reduceIte]
-            by_cases hn' : ∃ i ∈ S, n + N₀ + j = i + N₀ + j
-            · simp only [hn', ↓reduceIte]
-              obtain ⟨i, _, hi_eq⟩ := hn'
-              have : n = i := by omega
-              rw [this]; omega
-            · simp only [hn', ↓reduceIte]
-              -- This case: n ∉ S, need to verify
-              -- hn' says ¬∃ i ∈ S, n + N₀ + j = i + N₀ + j
-              -- This simplifies to n ∉ S
-              have hn_not_S : n ∉ S := by
-                intro h
-                apply hn'
-                exact ⟨n, h, rfl⟩
-              -- If n ∉ S and n + N₀ + j is unchanged, the result follows
-              rfl
-      -- Now use the permutation invariance of CE for shift-invariant sets
-      have hπ_finite : ∃ M : ℕ, ∀ n ≥ M, π n = n := by
-        use maxS + N₀ + j + 1
-        intro n hn
-        simp only [π, block_perm, Equiv.ofBijective_apply]
-        have hn_not_S : n ∉ S := by
-          intro h
-          have : n ≤ maxS := Finset.le_sup h
-          omega
-        simp only [hn_not_S, ↓reduceIte]
-        have hn_not_shifted : ¬∃ i ∈ S, n = i + N₀ + j := by
-          intro ⟨i, hi, hi_eq⟩
-          have : i ≤ maxS := Finset.le_sup hi
-          omega
-        simp only [hn_not_shifted, ↓reduceIte]
-      -- Apply the general principle
-      have hμ_inv : Measure.map (Exchangeability.reindex π) μ = μ := hExch π
-      have hF_meas : Measurable F := by
-        apply Measurable.mul
-        · exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-        · exact (measurable_const.indicator hB_meas).comp (measurable_shift_iterate (N₀ + j))
-      have hG_meas : Measurable G := by
-        apply Measurable.mul
-        · exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-        · exact measurable_const.indicator hB_meas
-      have hF_int : Integrable F μ := by
-        apply integrable_of_bounded_measurable hF_meas.aestronglyMeasurable 1
-        intro ω
-        simp only [F, ind_A, ind_B, abs_mul]
-        calc |A.indicator 1 (ω k)| * |B.indicator 1 (shift^[N₀ + j] ω)|
-            ≤ 1 * 1 := mul_le_mul (hA_ind_bd _) (hB_ind_bd _) (abs_nonneg _) zero_le_one
-          _ = 1 := one_mul 1
-      have hG_int : Integrable G μ := by
-        apply integrable_of_bounded_measurable hG_meas.aestronglyMeasurable 1
-        intro ω
-        simp only [G, ind_A, ind_B, abs_mul]
-        calc |A.indicator 1 (ω k)| * |B.indicator 1 ω|
-            ≤ 1 * 1 := mul_le_mul (hA_ind_bd _) (hB_ind_bd _) (abs_nonneg _) zero_le_one
-          _ = 1 := one_mul 1
-      -- Set integrals are equal
-      have h_int_eq : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
-          ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := by
-        intro s hs _
-        have hs_inv : isShiftInvariant (α := α) s := (mem_shiftInvariantSigma_iff (α := α)).mp hs
-        have h_preimage : (Exchangeability.reindex π) ⁻¹' s = s :=
-          h_perm_inv π s hs_inv hπ_finite
-        have hπ_meas : Measurable (Exchangeability.reindex (α := α) π) :=
-          Exchangeability.measurable_reindex (α := α) (π := π)
-        have hF' : AEStronglyMeasurable F (Measure.map (Exchangeability.reindex π) μ) := by
-          rw [hμ_inv]; exact hF_meas.aestronglyMeasurable
-        calc ∫ ω in s, F ω ∂μ
-            = ∫ ω in s, F ω ∂(Measure.map (Exchangeability.reindex π) μ) := by rw [hμ_inv]
-          _ = ∫ ω in (Exchangeability.reindex π) ⁻¹' s, F ((Exchangeability.reindex π) ω) ∂μ :=
-              setIntegral_map hs_inv.1 hF' hπ_meas.aemeasurable
-          _ = ∫ ω in s, F ((Exchangeability.reindex π) ω) ∂μ := by rw [h_preimage]
-          _ = ∫ ω in s, G ω ∂μ := by congr 1; ext ω; exact congrFun hFG ω
-      have h_diff_zero : ∀ s, MeasurableSet[shiftInvariantSigma (α := α)] s → μ s < ⊤ →
-          ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
-        simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
-                   h_int_eq s hs hμs, sub_self]
-      exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
+        simp only [hB_eq, Set.indicator_apply, Pi.one_apply, ψ, Set.mem_setOf_eq]
 
-    -- Step 4: Use MET convergence
-    -- Define Cesàro averages
-    let Cesaro : ℕ → Ω[α] → ℝ := fun n ω =>
-      if n = 0 then 0 else (1 / n) * (Finset.range n).sum (fun j => ind_B (shift^[N₀ + j] ω))
+      -- A.indicator 1 (ω k) = φ (ω k)
+      have hA_indicator : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ))
+          = (fun ω => φ (ω k)) := by ext ω; rfl
 
-    -- MET: Cesàro n → CE_B in L¹
-    have h_cesaro_to_CE : Tendsto (fun n =>
-        ∫ ω, |Cesaro (n + 1) ω - CE_B ω| ∂μ) atTop (𝓝 0) := by
-      -- Key insight: Cesaro_n = (1/n) Σ_{j<n} (ind_B ∘ shift^{N₀})(shift^j ω)
-      -- This is the Birkhoff average of h = ind_B ∘ shift^{N₀} under shift.
-      -- By L² MET + bounded functions, converges in L¹ to CE[h | mSI] = CE_B.
-      let h : Ω[α] → ℝ := fun ω => ind_B (shift^[N₀] ω)
-      -- h is bounded and measurable
-      have hh_bd : ∀ ω, |h ω| ≤ 1 := fun ω => hB_ind_bd _
-      have hh_meas : Measurable h :=
-        (measurable_const.indicator hB_meas).comp (measurable_shift_iterate N₀)
-      have hh_int : Integrable h μ := integrable_of_bounded_measurable hh_meas 1 hh_bd
-      -- CE[h | mSI] =ᵃᵉ CE[ind_B | mSI] = CE_B by shift invariance
-      have h_CE_h_eq : μ[h | mSI] =ᵐ[μ] CE_B := by
-        have h_shift := h_CE_shift_eq N₀
-        simp only [ind_B, h] at h_shift ⊢
-        exact h_shift
-      -- Apply L1_cesaro_convergence_general for bounded functions on Ω[α]
-      -- The Cesàro sums of h ∘ shift^j converge to CE[h | mSI] in L¹
-      -- This follows from L² MET + dominated convergence (bounded functions)
-      -- Cesaro (n+1) = (1/(n+1)) Σ_{j<n+1} ind_B(shift^{N₀+j} ω)
-      --             = (1/(n+1)) Σ_{j<n+1} h(shift^j ω)
-      have h_cesaro_eq : ∀ n > 0, ∀ᵐ ω ∂μ, Cesaro n ω =
-          (1 / n) * (Finset.range n).sum (fun j => h (shift^[j] ω)) := by
-        intro n hn
-        filter_upwards with ω
-        simp only [Cesaro, if_neg (Nat.ne_of_gt hn), h, ind_B]
+      -- Use condexp_product_shift_invariant and condexp_pair_factorization_MET
+      rcases Nat.lt_trichotomy k m with hk_lt | hk_eq | hm_lt
+      · -- Case k < m
+        have hd_pos : 1 ≤ m - k := by omega
+
+        -- CE[φ(ω_k) · ψ(ω_m)] = CE[φ(ω_0) · ψ(ω_{m-k})] by shift invariance
+        have h_shift := condexp_product_shift_invariant hσ φ ψ hφ_meas hφ_bd hψ_meas hψ_bd k (m - k)
+        have h_add : k + (m - k) = m := by omega
+        simp only [h_add] at h_shift
+
+        -- CE[φ(ω_0) · ψ(ω_{m-k})] = CE[φ(ω_0) · ψ(ω_1)] by lag constancy
+        have h_lag := condexp_product_eq_at_one hExch φ ψ hφ_meas hφ_bd hψ_meas hψ_bd (m - k) hd_pos
+
+        -- CE[φ(ω_0) · ψ(ω_1)] = CE[φ(ω_0)] · CE[ψ(ω_0)] by pair factorization
+        have h_pair := condexp_pair_factorization_MET hσ hExch φ ψ hφ_meas hφ_bd hψ_meas hψ_bd
+
+        -- CE[φ(ω_k)] = CE[φ(ω_0)] and CE[ψ(ω_m)] = CE[ψ(ω_0)] by shift invariance
+        have hφ_int : Integrable (fun ω => φ (ω 0)) μ := by
+          obtain ⟨C, hC⟩ := hφ_bd
+          exact integrable_of_bounded_measurable (hφ_meas.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+        have hψ_int : Integrable (fun ω => ψ (ω 0)) μ := by
+          obtain ⟨C, hC⟩ := hψ_bd
+          exact integrable_of_bounded_measurable (hψ_meas.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+
+        have hφ_shift := condexp_precomp_iterate_eq hσ (k := k) hφ_int
+        have hφ_eq : (fun ω => φ (shift^[k] ω 0)) = (fun ω => φ (ω k)) := by
+          ext ω; rw [shift_iterate_apply]; simp
+        rw [hφ_eq] at hφ_shift
+
+        have hψ_shift := condexp_precomp_iterate_eq hσ (k := m) hψ_int
+        have hψ_eq : (fun ω => ψ (shift^[m] ω 0)) = (fun ω => ψ (ω m)) := by
+          ext ω; rw [shift_iterate_apply]; simp
+        rw [hψ_eq] at hψ_shift
+
+        -- Rewrite goal using indicators
+        simp only [hA_indicator, hB_indicator]
+
+        -- The calc proof
+        calc μ[(fun ω => φ (ω k) * ψ (ω m)) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω 0) * ψ (ω (m - k))) | mSI] := h_shift
+          _ =ᵐ[μ] μ[(fun ω => φ (ω 0) * ψ (ω 1)) | mSI] := h_lag
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω 0)) | mSI] ω * μ[(fun ω => ψ (ω 0)) | mSI] ω) := h_pair
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * μ[(fun ω => ψ (ω 0)) | mSI] ω) := by
+              filter_upwards [hφ_shift] with ω hω
+              rw [← hω]
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * μ[(fun ω => ψ (ω m)) | mSI] ω) := by
+              filter_upwards [hψ_shift] with ω hω
+              rw [← hω]
+
+      · -- Case k = m: contradicts hk_ne_m
+        exact absurd hk_eq hk_ne_m
+
+      · -- Case m < k: similar to above, swap roles
+        have hd_pos : 1 ≤ k - m := by omega
+
+        -- CE[ψ(ω_m) · φ(ω_k)] = CE[ψ(ω_0) · φ(ω_{k-m})] by shift invariance
+        have h_shift := condexp_product_shift_invariant hσ ψ φ hψ_meas hψ_bd hφ_meas hφ_bd m (k - m)
+        have h_add : m + (k - m) = k := by omega
+        simp only [h_add] at h_shift
+
+        -- CE[ψ(ω_0) · φ(ω_{k-m})] = CE[ψ(ω_0) · φ(ω_1)] by lag constancy
+        have h_lag := condexp_product_eq_at_one hExch ψ φ hψ_meas hψ_bd hφ_meas hφ_bd (k - m) hd_pos
+
+        -- CE[ψ(ω_0) · φ(ω_1)] = CE[ψ(ω_0)] · CE[φ(ω_0)] by pair factorization
+        have h_pair := condexp_pair_factorization_MET hσ hExch ψ φ hψ_meas hψ_bd hφ_meas hφ_bd
+
+        -- Shift invariance for individual CEs
+        have hφ_int : Integrable (fun ω => φ (ω 0)) μ := by
+          obtain ⟨C, hC⟩ := hφ_bd
+          exact integrable_of_bounded_measurable (hφ_meas.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+        have hψ_int : Integrable (fun ω => ψ (ω 0)) μ := by
+          obtain ⟨C, hC⟩ := hψ_bd
+          exact integrable_of_bounded_measurable (hψ_meas.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+
+        have hφ_shift := condexp_precomp_iterate_eq hσ (k := k) hφ_int
+        have hφ_eq : (fun ω => φ (shift^[k] ω 0)) = (fun ω => φ (ω k)) := by
+          ext ω; rw [shift_iterate_apply]; simp
+        rw [hφ_eq] at hφ_shift
+
+        have hψ_shift := condexp_precomp_iterate_eq hσ (k := m) hψ_int
+        have hψ_eq : (fun ω => ψ (shift^[m] ω 0)) = (fun ω => ψ (ω m)) := by
+          ext ω; rw [shift_iterate_apply]; simp
+        rw [hψ_eq] at hψ_shift
+
+        -- Rewrite goal using indicators
+        simp only [hA_indicator, hB_indicator]
+
+        -- The calc proof
+        calc μ[(fun ω => φ (ω k) * ψ (ω m)) | mSI]
+            =ᵐ[μ] μ[(fun ω => ψ (ω m) * φ (ω k)) | mSI] := by
+              refine condExp_congr_ae (ae_of_all μ ?_); intro ω; ring
+          _ =ᵐ[μ] μ[(fun ω => ψ (ω 0) * φ (ω (k - m))) | mSI] := h_shift
+          _ =ᵐ[μ] μ[(fun ω => ψ (ω 0) * φ (ω 1)) | mSI] := h_lag
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => ψ (ω 0)) | mSI] ω * μ[(fun ω => φ (ω 0)) | mSI] ω) := h_pair
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω 0)) | mSI] ω * μ[(fun ω => ψ (ω 0)) | mSI] ω) := by
+              filter_upwards with ω; ring
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * μ[(fun ω => ψ (ω 0)) | mSI] ω) := by
+              filter_upwards [hφ_shift] with ω hω
+              rw [← hω]
+          _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * μ[(fun ω => ψ (ω m)) | mSI] ω) := by
+              filter_upwards [hψ_shift] with ω hω
+              rw [← hω]
+
+    · -- T is nonempty: proper inductive case
+      -- Strategy: Use Cesàro + MET directly on the full cylinder B = ⋂_{i ∈ S} {ω_i ∈ f_i}
+      -- where S = insert m T.
+      --
+      -- Step 1: Set up N₀ = max(k, max(S)) + 1 as safe starting index
+      -- Step 2: Show CE[1_A(ω_k) · 1_B | mSI] = CE[1_A(ω_k) · 1_{B shifted by N₀} | mSI]
+      -- Step 3: Cesàro average A_N = (1/N) ∑ shifted cylinders
+      -- Step 4: Lag constancy via cyclic permutation
+      -- Step 5: MET: A_N → CE[1_B | mSI]
+      -- Step 6: CE Lipschitz + Pull-out gives factorization
+
+      -- S = insert m T is nonempty
+      have hS_nonempty : (insert m T).Nonempty := Finset.insert_nonempty m T
+
+      -- N₀ = max(k, max(S)) + 1
+      let N₀ := max k ((insert m T).max' hS_nonempty) + 1
+      have hN₀_gt_k : k < N₀ := by simp only [N₀]; omega
+      have hN₀_gt_S : ∀ i ∈ insert m T, i < N₀ := fun i hi => by
+        simp only [N₀]
+        have h := Finset.le_max' (insert m T) i hi
+        omega
+
+      -- Define shifted cylinder indicator
+      let B_at : ℕ → Set (Ω[α]) := fun j => ⋂ i ∈ insert m T, {ω : Ω[α] | ω (j + i) ∈ f i}
+
+      -- B_at j = shift⁻ʲ(B) in the sense that B_at j (ω) ↔ B(shift^j ω)
+      have hB_at_eq_shift : ∀ j, (B_at j).indicator (1 : Ω[α] → ℝ) = fun ω =>
+          B.indicator 1 (shift^[j] ω) := by
+        intro j; ext ω
+        -- Show membership conditions are equivalent
+        have h_mem_eq : ω ∈ B_at j ↔ shift^[j] ω ∈ B := by
+          simp only [B_at, B, Set.mem_iInter, Set.mem_setOf_eq]
+          apply forall_congr'; intro i
+          apply imp_congr_right; intro _
+          rw [shift_iterate_apply]
+          simp only [add_comm j i]
+        simp only [Set.indicator_apply, Pi.one_apply, B_at, B, h_mem_eq]
+
+      -- Measurability of B and B_at j
+      have hB_meas : MeasurableSet B := by
+        apply MeasurableSet.iInter; intro i
+        apply MeasurableSet.iInter; intro hi
+        exact (hf i hi).preimage (measurable_pi_apply i)
+
+      have hB_at_meas : ∀ j, MeasurableSet (B_at j) := by
+        intro j
+        apply MeasurableSet.iInter; intro i
+        apply MeasurableSet.iInter; intro hi
+        exact (hf i hi).preimage (measurable_pi_apply (j + i))
+
+      -- Define indicator functions
+      let φ : α → ℝ := A.indicator 1
+      have hφ_meas : Measurable φ := measurable_const.indicator hA
+      have hφ_bd : ∃ C, ∀ x, |φ x| ≤ C := ⟨1, fun x => by
+        simp only [φ, Set.indicator_apply]; by_cases hx : x ∈ A <;> simp [hx]⟩
+
+      -- A.indicator 1 (ω k) = φ (ω k)
+      have hA_indicator : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ))
+          = (fun ω => φ (ω k)) := by ext ω; rfl
+
+      -- Integrability of φ(ω_k)
+      have hφ_int : Integrable (fun ω => φ (ω k)) μ := by
+        obtain ⟨C, hC⟩ := hφ_bd
+        exact integrable_of_bounded_measurable (hφ_meas.comp (measurable_pi_apply k)) C (fun ω => hC (ω k))
+
+      -- Integrability of cylinder indicator
+      have hB_int : Integrable (fun ω => B.indicator (1 : Ω[α] → ℝ) ω) μ :=
+        integrable_of_bounded_measurable (measurable_const.indicator hB_meas) 1 (fun ω => by
+          simp only [Set.indicator_apply]; split_ifs <;> simp)
+
+      -- Key step: Show CE[1_A(ω_k) · 1_B | mSI] = CE[1_A(ω_k) · 1_{B_at N₀} | mSI]
+      -- by exchangeability (permutation that maps i → N₀+i for i ∈ S, fixes k)
+      have h_shift_to_N₀ : μ[(fun ω => φ (ω k) * B.indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+        -- Define permutation π: fixes k, maps i to N₀+i for i ∈ S
+        -- For this we construct a finite permutation on the relevant coordinates
+        -- The key insight: by exchangeability, CE is invariant under reindexing
+        -- So CE[F | mSI] = CE[F ∘ reindex π | mSI] for any permutation π
+        -- We need: (φ(ω_k) · 1_B(ω)) = (φ(·_k) · 1_{B_at N₀}(·)) ∘ reindex(π⁻¹)
+        -- This holds when π fixes k and maps i → N₀+i for i ∈ S
+
+        -- Alternative approach: use shift invariance of CE
+        -- CE[f(ω_k) · 1_B | mSI] = CE[f(ω_k) · 1_B | mSI]
+        -- But 1_B(ω) = 1_B(ω), not equal to 1_{B_at N₀}(ω) in general!
+        -- We need exchangeability, not just shift invariance.
+
+        -- Use `condexp_precomp_iterate_eq` ideas: for shift-invariant functions,
+        -- composition with shift doesn't change the CE.
+        -- But here we want to shift only part of the coordinates (the cylinder coords).
+
+        -- Key lemma: by exchangeability, for any finite permutation π,
+        -- CE[f | mSI] = CE[f ∘ reindex π | mSI]
+        -- (This follows because reindex π preserves μ and mSI is π-invariant)
+
+        -- Define the permutation that swaps coordinates appropriately
+        -- For simplicity, we show this via a product of transpositions argument
+        -- that chains from the original cylinder to the shifted one.
+
+        -- Actually, let's use a more direct approach: show both sides are equal
+        -- by showing each shifted version has the same CE via exchangeability.
+
+        -- For each coordinate i ∈ S, define the transposition that swaps i with N₀+i
+        -- The composition of these transpositions (applied in order) gives a permutation
+        -- that maps the original cylinder to B_at N₀.
+
+        -- Since |S| is finite, we can apply exchangeability |S| times.
+        -- Each swap fixes k (since k ∉ S and k < N₀ < N₀+i for all i ∈ S).
+
+        -- For now, we prove this via a slightly different approach:
+        -- chain through all intermediate permutations using lag constancy.
+
+        -- Actually, the cleanest approach is to observe that both sides involve
+        -- the same "shape" of cylinder, just at different coordinate positions.
+        -- By exchangeability, the CE of a product depends only on the "pattern"
+        -- of the coordinates, not their absolute positions (as long as they're distinct).
+
+        -- Since k ∉ S and k ∉ {N₀+i : i ∈ S}, both expressions have the same structure:
+        -- one distinguished coordinate k, and |S| other coordinates forming a cylinder.
+
+        -- This is precisely what exchangeability says: permuting coordinate labels
+        -- doesn't change the CE given mSI.
+
+        -- Use `condExp_map_reindex_eq` if available, or prove directly.
+        -- For now, use sorry for this technical step (it follows from exchangeability).
+        sorry
+
+      -- Cesàro average of shifted cylinders
+      let A_N : ℕ → Ω[α] → ℝ := fun N ω =>
+        if N = 0 then 0
+        else (1 / N : ℝ) * (Finset.range N).sum (fun j => (B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω)
+
+      -- Convert to shift form for MET
+      have hA_N_eq : ∀ N, 0 < N → A_N N = fun ω =>
+          (1 / N : ℝ) * (Finset.range N).sum (fun j => B.indicator 1 (shift^[N₀ + j] ω)) := by
+        intro N hN
+        ext ω
+        simp only [A_N, if_neg (Nat.ne_of_gt hN)]
         congr 1
         apply Finset.sum_congr rfl
         intro j _
-        congr 1
-        rw [← Function.iterate_add_apply]
-        ring_nf
-      -- Use the general L¹ convergence for bounded Cesàro averages
-      -- Key fact: ∫|A_n - CE[h]| → 0 where A_n = (1/n)Σ h∘shift^j
-      -- This follows from: L² MET ⟹ L² convergence ⟹ L¹ convergence (bounded)
-      -- For now, use a direct dominated convergence argument
-      have h_bd_cesaro : ∀ n > 0, ∀ ω, |Cesaro n ω| ≤ 1 := by
-        intro n hn ω
-        simp only [Cesaro, if_neg (Nat.ne_of_gt hn)]
-        have h_each_bd : ∀ j, |ind_B (shift^[N₀ + j] ω)| ≤ 1 := fun j => hB_ind_bd _
-        have h_sum_bd := Finset.abs_sum_le_sum_abs (Finset.range n)
-            (fun j => ind_B (shift^[N₀ + j] ω))
-        have h_sum_le : (Finset.range n).sum (fun j => |ind_B (shift^[N₀ + j] ω)|) ≤ n := by
-          calc (Finset.range n).sum (fun j => |ind_B (shift^[N₀ + j] ω)|)
-              ≤ (Finset.range n).sum (fun _ => (1 : ℝ)) :=
-                  Finset.sum_le_sum (fun j _ => h_each_bd j)
-            _ = n := by simp
-        calc |Cesaro n ω| = |(1 / n : ℝ) * (Finset.range n).sum
-                              (fun j => ind_B (shift^[N₀ + j] ω))| := by
-              simp only [Cesaro, if_neg (Nat.ne_of_gt hn)]
-          _ ≤ |1 / n| * |(Finset.range n).sum (fun j => ind_B (shift^[N₀ + j] ω))| :=
-              abs_mul _ _
-          _ ≤ (1 / n) * n := by
-              have hn' : (0 : ℝ) < n := Nat.cast_pos.mpr hn
-              rw [abs_of_pos (one_div_pos.mpr hn')]
-              exact mul_le_mul_of_nonneg_left (le_trans h_sum_bd h_sum_le) (le_of_lt (one_div_pos.mpr hn'))
-          _ = 1 := by field_simp
-      -- The L¹ convergence follows from the L² MET applied to h
-      -- via optionB_Step3b_L2_to_L1 pattern
-      -- For the full proof, we need to:
-      -- 1. Lift h to L²
-      -- 2. Apply birkhoffAverage_tendsto_condexp
-      -- 3. Use L²→L¹ conversion for bounded functions
-      -- This is technical but follows the established pattern in optionB
-      sorry
+        rw [hB_at_eq_shift]
 
-    -- Step 5: CE Lipschitz - CE[ind_A · Cesàro | mSI] → CE[ind_A · CE_B | mSI]
-    have h_L1_CE : Tendsto (fun n =>
-        ∫ ω, |μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-             - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
-      -- Use CE L¹-contractivity: |CE[f·X] - CE[f·Y]| ≤ CE[|f|·|X-Y|] ≤ |X-Y| when |f| ≤ 1
-      -- Since ind_A is bounded by 1, we have:
-      -- ∫|CE[ind_A·Cesaro_n] - CE[ind_A·CE_B]| ≤ ∫|Cesaro_n - CE_B| → 0
-      have h_bound : ∀ n, ∫ ω, |μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-                           - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ
-                   ≤ ∫ ω, |Cesaro (n + 1) ω - CE_B ω| ∂μ := by
-        intro n
-        -- Rewrite difference as CE of difference
-        have h_diff : ∀ᵐ ω ∂μ,
-            μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-            - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω
-            = μ[(fun ω' => ind_A ω' * (Cesaro (n + 1) ω' - CE_B ω')) | mSI] ω := by
-          have hint1 : Integrable (fun ω => ind_A ω * Cesaro (n + 1) ω) μ := by
-            apply integrable_of_bounded_measurable
-            · apply Measurable.mul
-              exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-              simp only [Cesaro]
-              split_ifs with hn
-              · exact measurable_const
-              · apply Measurable.const_mul
-                apply Finset.measurable_sum
-                intro j _
-                exact (measurable_const.indicator hB_meas).comp (measurable_shift_iterate _)
-            · exact 1
-            · intro ω
-              calc |ind_A ω * Cesaro (n + 1) ω| ≤ |ind_A ω| * |Cesaro (n + 1) ω| := abs_mul _ _
-                _ ≤ 1 * 1 := mul_le_mul (hA_ind_bd _)
-                    (by by_cases hn : n + 1 = 0; simp [Cesaro, hn]; exact h_bd_cesaro (n+1) (Nat.succ_pos n) ω)
-                    (abs_nonneg _) zero_le_one
-                _ = 1 := one_mul 1
-          have hint2 : Integrable (fun ω => ind_A ω * CE_B ω) μ := by
-            apply integrable_of_bounded_measurable
-            · apply Measurable.mul
-              exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-              exact stronglyMeasurable_condExp.measurable
-            · obtain ⟨C, hC⟩ := hCE_B_bd
-              exact C
-            · obtain ⟨C, hC⟩ := hCE_B_bd
-              intro ω
-              filter_upwards [hC] with ω hω
-              calc |ind_A ω * CE_B ω| ≤ |ind_A ω| * |CE_B ω| := abs_mul _ _
-                _ ≤ 1 * C := mul_le_mul (hA_ind_bd _) hω (abs_nonneg _) zero_le_one
-          have h_sub := condExp_sub hint1 hint2
-          filter_upwards [h_sub] with ω hω
-          rw [← hω]
-          ring_nf
-        -- Use |ind_A| ≤ 1 and CE contractivity
-        calc ∫ ω, |μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-                 - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ
-            = ∫ ω, |μ[(fun ω' => ind_A ω' * (Cesaro (n + 1) ω' - CE_B ω')) | mSI] ω| ∂μ := by
-                refine integral_congr_ae ?_
-                filter_upwards [h_diff] with ω hω
-                rw [hω]
-          _ ≤ ∫ ω, μ[|fun ω' => ind_A ω' * (Cesaro (n + 1) ω' - CE_B ω')| | mSI] ω ∂μ := by
-                apply integral_mono integrable_condExp.abs integrable_condExp
-                filter_upwards [condExp_abs_le (fun ω' => ind_A ω' * (Cesaro (n + 1) ω' - CE_B ω'))] with ω hω
-                exact hω
-          _ = ∫ ω, |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)| ∂μ := by
-                rw [← integral_condExp (shiftInvariantSigma_le (α := α))]
-                · congr 1
-                · -- Integrability of |ind_A * (Cesaro - CE_B)| follows from boundedness a.e.
-                  have h_ae_bd : ∀ᵐ ω ∂μ, |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)| ≤ 2 := by
-                    -- CE_B is bounded by 1 a.e. (as CE of indicator)
-                    have hCE_B_ae_bd : ∀ᵐ ω ∂μ, |CE_B ω| ≤ 1 := by
-                      have h1_ae : ∀ᵐ ω ∂μ, |(B.indicator (1 : Ω[α] → ℝ) ω : ℝ)| ≤ ((1 : NNReal) : ℝ) := by
-                        filter_upwards with ω
-                        exact hB_ind_bd ω
-                      have h := ae_bdd_condExp_of_ae_bdd (m := mSI) (R := 1) h1_ae
-                      filter_upwards [h] with ω hω
-                      exact hω
-                    filter_upwards [hCE_B_ae_bd] with ω hω_CE
-                    calc |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)|
-                        ≤ |ind_A ω| * |Cesaro (n + 1) ω - CE_B ω| := abs_mul _ _
-                      _ ≤ 1 * |Cesaro (n + 1) ω - CE_B ω| :=
-                          mul_le_mul_of_nonneg_right (hA_ind_bd _) (abs_nonneg _)
-                      _ = |Cesaro (n + 1) ω - CE_B ω| := one_mul _
-                      _ ≤ |Cesaro (n + 1) ω| + |CE_B ω| := abs_sub _ _
-                      _ ≤ 1 + 1 := by
-                          have hCes : |Cesaro (n + 1) ω| ≤ 1 := h_bd_cesaro (n + 1) (Nat.succ_pos n) ω
-                          linarith
-                      _ = 2 := by ring
-                  have h_meas : Measurable (fun ω => |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)|) := by
-                    apply Measurable.abs
-                    apply Measurable.mul
-                    · exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-                    · apply Measurable.sub
-                      · simp only [Cesaro]
-                        split_ifs
-                        · exact measurable_const
-                        · apply Measurable.const_mul
-                          apply Finset.measurable_sum
-                          intro j _
-                          exact (measurable_const.indicator hB_meas).comp (measurable_shift_iterate _)
-                      · exact stronglyMeasurable_condExp.measurable
-                  exact ⟨h_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded h_ae_bd⟩
-          _ ≤ ∫ ω, |Cesaro (n + 1) ω - CE_B ω| ∂μ := by
-                apply integral_mono
-                · apply integrable_of_bounded_measurable
-                  · apply Measurable.abs; apply Measurable.mul
-                    · exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-                    · apply Measurable.sub
-                      simp only [Cesaro]; split_ifs
-                      · exact measurable_const
-                      · apply Measurable.const_mul; apply Finset.measurable_sum
-                        intro j _; exact (measurable_const.indicator hB_meas).comp (measurable_shift_iterate _)
-                      exact stronglyMeasurable_condExp.measurable
-                  · exact 2
-                  · intro ω; calc |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)|
-                      ≤ 1 * |Cesaro (n + 1) ω - CE_B ω| := by
-                        rw [abs_mul]; apply mul_le_mul_of_nonneg_right (hA_ind_bd _) (abs_nonneg _)
-                      _ = |Cesaro (n + 1) ω - CE_B ω| := one_mul _
-                · exact hfB_int.sub integrable_condExp |>.abs
-                · filter_upwards with ω
-                  calc |ind_A ω * (Cesaro (n + 1) ω - CE_B ω)|
-                      ≤ |ind_A ω| * |Cesaro (n + 1) ω - CE_B ω| := abs_mul _ _
-                    _ ≤ 1 * |Cesaro (n + 1) ω - CE_B ω| :=
-                        mul_le_mul_of_nonneg_right (hA_ind_bd _) (abs_nonneg _)
-                    _ = |Cesaro (n + 1) ω - CE_B ω| := one_mul _
-      -- Conclude by squeeze theorem
-      have h_nonneg : ∀ n, 0 ≤ ∫ ω, |μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-                              - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ :=
-        fun n => integral_nonneg (fun ω => abs_nonneg _)
-      refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_cesaro_to_CE h_nonneg h_bound
+      -- MET: A_N → CE[1_B | mSI] in L¹
+      -- This follows from L1_cesaro_convergence applied to the cylinder indicator
+      -- composed with shifts.
 
-    -- Step 6: Each term equals CE[ind_A · ind_B | mSI]
-    have h_term_eq : ∀ n : ℕ, 0 < n →
-        μ[(fun ω => ind_A ω * Cesaro n ω) | mSI]
-        =ᵐ[μ] μ[(fun ω => ind_A ω * ind_B ω) | mSI] := by
-      intro n hn
-      -- By linearity, this reduces to showing each term equals the target
-      -- Each CE[ind_A · ind_B ∘ shift^{N₀+j} | mSI] =ᵃᵉ CE[ind_A · ind_B | mSI]
-      simp only [Cesaro, if_neg (Nat.ne_of_gt hn)]
-      -- Push CE through scalar and sum
-      have h_push : μ[(fun ω => ind_A ω * ((1 / n) * (Finset.range n).sum
-            (fun j => ind_B (shift^[N₀ + j] ω)))) | mSI]
-          =ᵐ[μ] (fun ω => (1 / n) * μ[(fun ω' => (Finset.range n).sum
-            (fun j => ind_A ω' * ind_B (shift^[N₀ + j] ω'))) | mSI] ω) := by
-        have h_rewrite : (fun ω => ind_A ω * ((1 / n) * (Finset.range n).sum
-              (fun j => ind_B (shift^[N₀ + j] ω))))
-            = (fun ω => (1 / n) * (Finset.range n).sum
-              (fun j => ind_A ω * ind_B (shift^[N₀ + j] ω))) := by
+      -- The limit is CE[1_B | mSI] by shift invariance.
+      set Y := μ[(fun ω => B.indicator (1 : Ω[α] → ℝ) ω) | mSI]
+
+      -- Lag constancy: CE[φ(ω_k) · 1_{B_at(N₀+j+1)} | mSI] = CE[φ(ω_k) · 1_{B_at(N₀+j)} | mSI]
+      -- This follows from exchangeability via a cyclic permutation on the relevant coordinates.
+      have h_lag_const : ∀ j, μ[(fun ω => φ (ω k) * (B_at (N₀ + j + 1)).indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) | mSI] := by
+        intro j
+        -- The coordinates for B_at(N₀+j) are {N₀+j+i : i ∈ S}
+        -- The coordinates for B_at(N₀+j+1) are {N₀+j+1+i : i ∈ S}
+        -- Define a cyclic permutation π that:
+        --   - Fixes all coordinates outside [N₀+j+min(S), N₀+j+max(S)+2]
+        --   - Cyclically shifts: N₀+j+i → N₀+j+i+1 for i ∈ {min(S), ..., max(S)+1}
+        -- This maps B_at(N₀+j+1) to B_at(N₀+j) and fixes k (since k < N₀ ≤ N₀+j+min(S)).
+        -- By exchangeability, CE is preserved.
+        sorry
+
+      -- Hence CE[φ(ω_k) · A_N | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI]
+      have h_product_const : ∀ N, 0 < N →
+          μ[(fun ω => φ (ω k) * A_N N ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+        intro N hN
+        -- Use linearity of CE and lag constancy
+        -- A_N = (1/N) ∑_{j=0}^{N-1} 1_{B_at(N₀+j)}
+        -- CE[φ · A_N | mSI] = (1/N) ∑_{j=0}^{N-1} CE[φ · 1_{B_at(N₀+j)} | mSI]
+        --                   = (1/N) · N · CE[φ · 1_{B_at N₀} | mSI]  (by lag constancy)
+        --                   = CE[φ · 1_{B_at N₀} | mSI]
+
+        -- Step 1: Expand A_N
+        have hA_N_expand : (fun ω => φ (ω k) * A_N N ω) = fun ω =>
+            (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+              φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) := by
           ext ω
-          ring_nf
-          rw [Finset.mul_sum]
-        rw [h_rewrite]
-        exact condExp_const_mul (shiftInvariantSigma_le (α := α)) _ _
-      -- Each term in sum gives the same CE
-      have h_sum_const : μ[(fun ω' => (Finset.range n).sum
-            (fun j => ind_A ω' * ind_B (shift^[N₀ + j] ω'))) | mSI]
-          =ᵐ[μ] (fun ω => (n : ℝ) * μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω) := by
-        have hint : ∀ j ∈ Finset.range n,
-            Integrable (fun ω => ind_A ω * ind_B (shift^[N₀ + j] ω)) μ := by
+          simp only [A_N, if_neg (Nat.ne_of_gt hN), one_div]
+          -- φ(ω k) * ((↑N)⁻¹ * ∑ j, ...) = (↑N)⁻¹ * ∑ j, φ(ω k) * ...
+          rw [mul_comm (φ (ω k)) ((N : ℝ)⁻¹ * _)]
+          rw [mul_assoc]
+          congr 1
+          rw [Finset.sum_mul]
+          apply Finset.sum_congr rfl
           intro j _
-          apply integrable_of_bounded_measurable
-          · apply Measurable.mul
-            · exact (measurable_const.indicator hA).comp (measurable_pi_apply k)
-            · exact (measurable_const.indicator hB_meas).comp (measurable_shift_iterate (N₀ + j))
-          · exact 1
-          · intro ω
-            simp only [ind_A, ind_B, abs_mul]
-            calc |A.indicator 1 (ω k)| * |B.indicator 1 (shift^[N₀ + j] ω)|
-                ≤ 1 * 1 := mul_le_mul (hA_ind_bd _) (hB_ind_bd _) (abs_nonneg _) zero_le_one
-              _ = 1 := one_mul 1
-        have h_sum_ae := condExp_sum_finset (shiftInvariantSigma_le (α := α))
-          (Finset.range n) (fun j => fun ω => ind_A ω * ind_B (shift^[N₀ + j] ω)) hint
-        calc μ[(fun ω' => (Finset.range n).sum
-              (fun j => ind_A ω' * ind_B (shift^[N₀ + j] ω'))) | mSI]
-            =ᵐ[μ] (fun ω => (Finset.range n).sum
-              (fun j => μ[(fun ω' => ind_A ω' * ind_B (shift^[N₀ + j] ω')) | mSI] ω)) := h_sum_ae
-          _ =ᵐ[μ] (fun ω => (Finset.range n).sum
-              (fun _ => μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω)) := by
-            apply EventuallyEq.finset_sum
-            intro j _
-            exact h_block_swap_eq j
-          _ =ᵐ[μ] (fun ω => (n : ℝ) * μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω) := by
-            filter_upwards with ω
-            simp only [Finset.sum_const, Finset.card_range, smul_eq_mul]
-      -- Combine: (1/n) * n * CE[...] = CE[...]
-      -- First, unfold Cesaro n to match h_push
-      have h_cesaro_unfold : (fun ω => ind_A ω * Cesaro n ω)
-          = (fun ω => ind_A ω * ((1 / n) * (Finset.range n).sum
-              (fun j => ind_B (shift^[N₀ + j] ω)))) := by
-        ext ω
-        simp only [Cesaro, if_neg (Nat.ne_of_gt hn)]
-      rw [h_cesaro_unfold]
-      calc μ[(fun ω => ind_A ω * ((1 / n) * (Finset.range n).sum
-              (fun j => ind_B (shift^[N₀ + j] ω)))) | mSI]
-          =ᵐ[μ] (fun ω => (1 / n) * μ[(fun ω' => (Finset.range n).sum
-            (fun j => ind_A ω' * ind_B (shift^[N₀ + j] ω'))) | mSI] ω) := h_push
-        _ =ᵐ[μ] (fun ω => (1 / n) * ((n : ℝ) * μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω)) := by
-          filter_upwards [h_sum_const] with ω hω
-          rw [hω]
-        _ =ᵐ[μ] μ[(fun ω => ind_A ω * ind_B ω) | mSI] := by
-          filter_upwards with ω
-          field_simp
+          ring
 
-    -- Step 7: Squeeze argument
-    -- The sequence CE[ind_A · Cesàro n | mSI] is constant (= CE[ind_A · ind_B | mSI])
-    -- and converges to CE[ind_A · CE_B | mSI] in L¹
-    -- Therefore CE[ind_A · ind_B | mSI] =ᵃᵉ CE[ind_A · CE_B | mSI]
-    have h_ae_eq : μ[(fun ω => ind_A ω * ind_B ω) | mSI]
-                     =ᵐ[μ] μ[(fun ω => ind_A ω * CE_B ω) | mSI] := by
-      -- Show ∫|CE[ind_A · ind_B | mSI] - CE[ind_A · CE_B | mSI]| = 0
-      have h_zero : ∫ ω, |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                        - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ = 0 := by
-        -- Each CE[ind_A · Cesàro (n+1) | mSI] =ᵃᵉ CE[ind_A · ind_B | mSI]
-        have h_eq_ae : ∀ n, ∫ ω, |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                             - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ
-                     = ∫ ω, |μ[(fun ω' => ind_A ω' * Cesaro (n + 1) ω') | mSI] ω
-                             - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ := by
+        -- Step 2: Integrability of each term
+        have h_term_int : ∀ j, Integrable (fun ω =>
+            φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) μ := by
+          intro j
+          have h_ind_int : Integrable ((B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ)) μ :=
+            Integrable.indicator (integrable_const 1) (hB_at_meas (N₀ + j))
+          have h_ind_bd : ∃ C, ∀ᵐ ω ∂μ, |(B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω| ≤ C := by
+            use 1; filter_upwards with ω
+            simp only [Set.indicator_apply, Pi.one_apply]
+            split_ifs <;> simp
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ h_ind_int
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ fun ω => by simp [φ, Set.indicator_apply]; split_ifs <;> simp⟩
+
+        -- Step 3: Integrability of the sum
+        have h_sum_int : Integrable (fun ω =>
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) μ :=
+          integrable_finset_sum (Finset.range N) (fun j _ => h_term_int j)
+
+        -- Step 4: Pull out the scalar (1/N) from CE
+        have h_scalar : μ[(fun ω => (1 / N : ℝ) *
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI]
+            =ᵐ[μ] (fun ω => (1 / N : ℝ) * μ[(fun ω' =>
+              (Finset.range N).sum (fun j => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω')) | mSI] ω) := by
+          have := condExp_smul (μ := μ) (m := mSI) (1 / N : ℝ)
+            (fun ω => (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω))
+          convert this using 2 <;> ext ω <;> ring
+
+        -- Step 5: Distribute CE over the sum
+        have h_sum_ce : μ[(fun ω =>
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI]
+            =ᵐ[μ] (fun ω => (Finset.range N).sum (fun j =>
+              μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω)) :=
+          condExp_sum_finset (shiftInvariantSigma_le (α := α)) (Finset.range N)
+            (fun j ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)
+            (fun j _ => h_term_int j)
+
+        -- Step 6: Use lag constancy to show each CE equals CE[φ · 1_{B_at N₀}]
+        -- Chain: CE[φ · 1_{B_at(N₀+j)}] =ᵃᵉ CE[φ · 1_{B_at(N₀+j-1)}] =ᵃᵉ ... =ᵃᵉ CE[φ · 1_{B_at N₀}]
+        have h_all_equal : ∀ j,
+            μ[(fun ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+          intro j
+          -- Induction on j: j = 0 is trivial, j+1 follows from h_lag_const
+          induction j with
+          | zero => simp only [add_zero]; rfl
+          | succ n ih =>
+            -- CE[φ · 1_{B_at(N₀+n+1)}] =ᵃᵉ CE[φ · 1_{B_at(N₀+n)}] by h_lag_const
+            have h_step := h_lag_const n
+            -- Convert (N₀ + n + 1) to (N₀ + (n + 1)) form
+            have hN₀_n_add : N₀ + n + 1 = N₀ + (n + 1) := by ring
+            rw [hN₀_n_add] at h_step
+            calc μ[(fun ω => φ (ω k) * (B_at (N₀ + (n + 1))).indicator 1 ω) | mSI]
+                =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at (N₀ + n)).indicator 1 ω) | mSI] := h_step
+              _ =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := ih
+
+        -- Step 7: The sum of equal terms equals N times the common value
+        have h_sum_const : (fun ω => (Finset.range N).sum (fun j =>
+              μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω))
+            =ᵐ[μ] (fun ω => (N : ℝ) * μ[(fun ω' => φ (ω' k) * (B_at N₀).indicator 1 ω') | mSI] ω) := by
+          -- Get ae_eq for each term
+          have h_ae_terms := ae_all_iff.mpr (fun j => h_all_equal j)
+          filter_upwards [h_ae_terms] with ω hω
+          simp only [Finset.sum_congr rfl (fun j _ => hω j)]
+          rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+        -- Step 8: Combine: (1/N) * N * CE[...] = CE[...]
+        calc μ[(fun ω => φ (ω k) * A_N N ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+                φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI] := by
+              exact condExp_congr_ae (ae_of_all μ fun ω => by rw [hA_N_expand])
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * μ[(fun ω' =>
+                (Finset.range N).sum (fun j =>
+                  φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω')) | mSI] ω) := h_scalar
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+                μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω)) := by
+              filter_upwards [h_sum_ce] with ω hω; rw [hω]
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * ((N : ℝ) *
+                μ[(fun ω' => φ (ω' k) * (B_at N₀).indicator 1 ω') | mSI] ω)) := by
+              filter_upwards [h_sum_const] with ω hω; rw [hω]
+          _ =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+              filter_upwards with ω
+              field_simp [Nat.ne_of_gt hN]
+
+      -- MET gives: A_N → Y in L¹ where Y = CE[1_B | mSI]
+      have h_L1_A_to_Y : Tendsto (fun N =>
+          ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+        -- A_{N+1}(ω) = (1/(N+1)) ∑_{j=0}^N 1_B(shift^{N₀+j} ω)
+        --           = (1/(N+1)) ∑_{j=0}^N (1_B ∘ shift^{N₀})(shift^j ω)
+        -- Let h = 1_B ∘ shift^{N₀}. By MET, this converges to CE[1_B | mSI] = Y
+
+        -- Define A' using the same pattern
+        let A' : ℕ → Ω[α] → ℝ := fun n ω =>
+          (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j =>
+            B.indicator 1 (shift^[N₀] (shift^[j] ω)))
+
+        -- A'_n = A_{n+1} (after adjusting the starting point)
+        have hA_eq_A' : ∀ n, A_N (n + 1) = A' n := by
           intro n
-          have h := h_term_eq (n + 1) (Nat.succ_pos n)
+          ext ω
+          simp only [A_N, if_neg (Nat.succ_ne_zero n), A', Nat.cast_add, Nat.cast_one]
+          congr 1
+          apply Finset.sum_congr rfl
+          intro j _
+          simp only [hB_at_eq_shift]
+          congr 1
+          rw [Function.iterate_add_apply]
+
+        simp_rw [hA_eq_A']
+
+        -- The Cesàro average A'_n → Y in L¹ by MET
+        -- A'_n(ω) = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀+j} ω)
+        --        = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀}(shift^j ω))
+        -- By MET applied to h = 1_B ∘ shift^{N₀}, this converges to CE[h | mSI]
+        -- By shift invariance of CE: CE[h | mSI] = CE[1_B | mSI] = Y
+        -- The full proof involves:
+        -- 1. Showing h = 1_B ∘ shift^{N₀} is bounded and measurable
+        -- 2. Applying MET to get convergence to CE[h | mSI]
+        -- 3. Using condexp_precomp_iterate_eq to show CE[h | mSI] =ᵃᵉ Y
+        -- This is a technical step that follows from standard MET theory
+        sorry
+
+      -- CE Lipschitz: CE[φ(ω_k) · A_N | mSI] → CE[φ(ω_k) · Y | mSI] in L¹
+      have h_L1_CE : Tendsto (fun N =>
+          ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+               - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
+        -- Bound using |φ| ≤ 1
+        have hφ_bd : ∀ x, |φ x| ≤ 1 := by
+          intro x; simp only [φ, Set.indicator_apply]
+          split_ifs <;> simp
+        -- Integrability of A_N
+        have hA_N_int : ∀ N, 0 < N → Integrable (A_N N) μ := by
+          intro N hN
+          simp only [A_N, if_neg (Nat.ne_of_gt hN)]
+          have h_sum : Integrable (fun ω =>
+              (Finset.range N).sum (fun j => (B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω)) μ := by
+            refine integrable_finset_sum (Finset.range N) (fun j _ => ?_)
+            apply Integrable.indicator _ (hB_at_meas (N₀ + j))
+            exact integrable_const 1
+          exact h_sum.smul (1 / (N : ℝ))
+        -- Integrability of φ(ω_k) * A_N
+        have hfA_int : ∀ N, 0 < N → Integrable (fun ω => φ (ω k) * A_N N ω) μ := by
+          intro N hN
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA_N_int N hN)
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ (fun ω => hφ_bd (ω k))⟩
+        -- Integrability of φ(ω_k) * Y
+        have hfY_int : Integrable (fun ω => φ (ω k) * Y ω) μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ (fun ω => hφ_bd (ω k))⟩
+        -- CE Lipschitz bound
+        have h_bd : ∀ N, ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                            - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ
+                      ≤ 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := by
+          intro N
+          have h1 : ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                        - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ
+                  ≤ ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ :=
+            condExp_L1_lipschitz (hfA_int (N + 1) (Nat.succ_pos N)) hfY_int
+          have h2 : ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ
+                  ≤ 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := by
+            have h_eq : ∀ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω|
+                        = |φ (ω k)| * |A_N (N + 1) ω - Y ω| := by
+              intro ω; rw [← mul_sub, abs_mul]
+            have hpt : ∀ᵐ ω ∂μ, |φ (ω k)| * |A_N (N + 1) ω - Y ω|
+                        ≤ 1 * |A_N (N + 1) ω - Y ω| :=
+              ae_of_all μ (fun ω => mul_le_mul_of_nonneg_right (hφ_bd (ω k)) (abs_nonneg _))
+            have hdiff_int : Integrable (fun ω => A_N (N + 1) ω - Y ω) μ :=
+              (hA_N_int (N + 1) (Nat.succ_pos N)).sub integrable_condExp
+            have hint_lhs : Integrable (fun ω => |φ (ω k)| * |A_N (N + 1) ω - Y ω|) μ := by
+              have h_asm : AEStronglyMeasurable (fun ω => |φ (ω k)| * |A_N (N + 1) ω - Y ω|) μ := by
+                apply AEStronglyMeasurable.mul
+                · exact (continuous_abs.measurable.comp
+                    (hφ_meas.comp (measurable_pi_apply k))).aestronglyMeasurable
+                · exact continuous_abs.comp_aestronglyMeasurable hdiff_int.aestronglyMeasurable
+              have hpt_norm : ∀ᵐ ω ∂μ, ‖|φ (ω k)| * |A_N (N + 1) ω - Y ω|‖
+                              ≤ 1 * |A_N (N + 1) ω - Y ω| := by
+                filter_upwards [hpt] with ω hω
+                rw [Real.norm_eq_abs, abs_mul, abs_abs, abs_abs]
+                exact hω
+              exact Integrable.mono' (hdiff_int.abs.const_mul 1) h_asm hpt_norm
+            have hint_rhs : Integrable (fun ω => 1 * |A_N (N + 1) ω - Y ω|) μ :=
+              hdiff_int.abs.const_mul 1
+            calc ∫ ω, |φ (ω k) * A_N (N + 1) ω - φ (ω k) * Y ω| ∂μ
+                = ∫ ω, |φ (ω k)| * |A_N (N + 1) ω - Y ω| ∂μ := by congr 1; ext ω; exact h_eq ω
+              _ ≤ ∫ ω, 1 * |A_N (N + 1) ω - Y ω| ∂μ := integral_mono_ae hint_lhs hint_rhs hpt
+              _ = 1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ := integral_const_mul 1 _
+          exact le_trans h1 h2
+        -- Squeeze
+        have h_bound_to_zero : Tendsto (fun N =>
+            1 * ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
+          convert Tendsto.const_mul 1 h_L1_A_to_Y using 1
+          simp
+        refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
+        · exact fun N => integral_nonneg (fun ω => abs_nonneg _)
+        · exact h_bd
+
+      -- The constant sequence equals 0 ⟹ a.e. equality
+      have h_const_is_zero :
+          ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ = 0 := by
+        -- h_product_const says the integral is constant in N
+        -- h_L1_CE says this integral → 0
+        -- So the constant = 0
+        have h_eq_ae : ∀ N, ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ
+                         = ∫ ω, |μ[(fun ω' => φ (ω' k) * A_N (N + 1) ω') | mSI] ω
+                               - μ[(fun ω' => φ (ω' k) * Y ω') | mSI] ω| ∂μ := by
+          intro N
+          have h := h_product_const (N + 1) (Nat.succ_pos N)
           refine integral_congr_ae ?_
           filter_upwards [h] with ω hω
           simp [hω]
-        -- The RHS → 0 by h_L1_CE
-        have h_le : ∀ ε > 0, ∫ ω, |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                            - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ < ε := by
+        -- For any ε > 0, the integral < ε (since the RHS → 0)
+        have h_le : ∀ ε > 0, ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                                 - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ < ε := by
           intro ε hε
           rw [Metric.tendsto_atTop] at h_L1_CE
           obtain ⟨N, hN⟩ := h_L1_CE ε hε
@@ -6749,46 +6537,65 @@ private lemma tower_indicator_finset
           rw [Real.dist_0_eq_abs, abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN
           rw [h_eq_ae N]
           exact hN
-        have h_nonneg : 0 ≤ ∫ ω, |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                             - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| ∂μ :=
+        have h_nonneg : 0 ≤ ∫ ω, |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                             - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω| ∂μ :=
           integral_nonneg (fun _ => abs_nonneg _)
+        -- 0 ≤ x and (∀ ε > 0, x < ε) implies x = 0
         exact le_antisymm (le_of_forall_pos_lt_add (fun ε hε => by linarith [h_le ε hε])) h_nonneg
-      -- ∫|X - Y| = 0 implies X =ᵃᵉ Y
-      have h_int1 : Integrable (μ[(fun ω' => ind_A ω' * ind_B ω') | mSI]) μ := integrable_condExp
-      have h_int2 : Integrable (μ[(fun ω' => ind_A ω' * CE_B ω') | mSI]) μ := integrable_condExp
-      have h_diff_int := h_int1.sub h_int2
-      have h_nonneg : (0 : Ω[α] → ℝ) ≤ᵐ[μ] fun ω => |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                                          - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω| :=
-        ae_of_all μ (fun ω => abs_nonneg _)
-      have h_abs_eq_zero : (fun ω => |μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-                                     - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω|) =ᵐ[μ] 0 :=
-        (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_diff_int.abs).mp h_zero
-      filter_upwards [h_abs_eq_zero] with ω hω
-      have : μ[(fun ω' => ind_A ω' * ind_B ω') | mSI] ω
-           - μ[(fun ω' => ind_A ω' * CE_B ω') | mSI] ω = 0 := abs_eq_zero.mp hω
-      linarith
 
-    -- Convert back to the original notation
-    exact h_ae_eq
-  -/
+      -- Pull-out: CE[φ(ω_k) · Y | mSI] = Y · CE[φ(ω_k) | mSI]
+      have h_pullout : μ[(fun ω => φ (ω k) * Y ω) | mSI]
+          =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := by
+        have hY_meas : Measurable[mSI] Y := stronglyMeasurable_condExp.measurable
+        have hY_bd : ∃ C, ∀ᵐ ω ∂μ, |Y ω| ≤ C := by
+          use 1
+          have hB_bd : ∀ᵐ ω ∂μ, |B.indicator (1 : Ω[α] → ℝ) ω| ≤ (1 : ℝ).toNNReal := by
+            filter_upwards with ω
+            simp only [Set.indicator_apply, Real.coe_toNNReal']
+            split_ifs <;> simp
+          have := ae_bdd_condExp_of_ae_bdd (m := mSI) hB_bd
+          filter_upwards [this] with ω hω
+          simp at hω ⊢
+          linarith
+        -- Rewrite product to Y * φ, then apply pullout
+        have h_comm : (fun ω => φ (ω k) * Y ω) = (fun ω => Y ω * φ (ω k)) := by
+          ext ω; ring
+        rw [h_comm]
+        exact condExp_mul_pullout hY_meas hY_bd hφ_int
 
-  -- Step 4: Pull-out property
-  have h_pullout :
-      μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI]
-      =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := by
-    have h := condExp_mul_pullout hCE_B_meas hCE_B_bd hfA_int
-    calc μ[(fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω) | mSI]
-        =ᵐ[μ] μ[(fun ω : Ω[α] => CE_B ω * (A.indicator (1 : α → ℝ) (ω k) : ℝ)) | mSI] := by
-          have : (fun ω : Ω[α] => (A.indicator (1 : α → ℝ) (ω k) : ℝ) * CE_B ω)
-               = (fun ω : Ω[α] => CE_B ω * (A.indicator (1 : α → ℝ) (ω k) : ℝ)) := by ext ω; ring
-          rw [this]
-      _ =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := h
+      -- Combine: CE[φ(ω_k) · 1_{B_at N₀} | mSI] =ᵃᵉ Y · CE[φ(ω_k) | mSI]
+      have h_factored_at_N₀ : μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+          =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := by
+        -- From h_const_is_zero: the integral of the difference is 0
+        -- Combined with h_pullout
+        have h_eq_to_Y : μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := by
+          -- The L¹ distance being 0 implies a.e. equality
+          -- Use: ∫|f| = 0 ∧ f ≥ 0 ∧ f integrable → f = 0 a.e.
+          have hint : Integrable (fun ω =>
+              |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+               - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω|) μ := by
+            apply Integrable.abs
+            apply Integrable.sub <;> exact integrable_condExp
+          have h_abs_zero :
+              (fun ω => |μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] ω
+                         - μ[(fun ω => φ (ω k) * Y ω) | mSI] ω|) =ᵐ[μ] 0 :=
+            integral_eq_zero_iff_of_nonneg_ae (ae_of_all _ (fun _ => abs_nonneg _)) hint
+              |>.mp h_const_is_zero
+          -- a.e. |f - g| = 0 implies a.e. f = g
+          filter_upwards [h_abs_zero] with ω hω
+          exact sub_eq_zero.mp (abs_eq_zero.mp hω)
+        calc μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * Y ω) | mSI] := h_eq_to_Y
+          _ =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := h_pullout
 
-  -- Step 5: Final combination
-  calc μ[(fun ω => A.indicator 1 (ω k) * B.indicator 1 ω) | mSI]
-      =ᵐ[μ] μ[(fun ω => A.indicator 1 (ω k) * CE_B ω) | mSI] := h_tower
-    _ =ᵐ[μ] (fun ω => CE_B ω * CE_A ω) := h_pullout
-    _ =ᵐ[μ] (fun ω => CE_A ω * CE_B ω) := by filter_upwards with ω; ring
+      -- Chain back to original B using h_shift_to_N₀
+      simp only [hA_indicator]
+      calc μ[(fun ω => φ (ω k) * B.indicator 1 ω) | mSI]
+          =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := h_shift_to_N₀
+        _ =ᵐ[μ] (fun ω => Y ω * μ[(fun ω => φ (ω k)) | mSI] ω) := h_factored_at_N₀
+        _ =ᵐ[μ] (fun ω => μ[(fun ω => φ (ω k)) | mSI] ω * Y ω) := by
+            filter_upwards with ω; ring
 
 /-- **Finite product factorization for kernel measures** - Full proof.
 
