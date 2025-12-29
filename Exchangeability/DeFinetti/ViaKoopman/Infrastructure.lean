@@ -1013,6 +1013,43 @@ lemma reindex_perm_preimage_shiftInvariant (π : Equiv.Perm ℕ) (M : ℕ)
       simp only [Set.mem_preimage]; exact h1
     rw [h_iter_M] at h2; exact h2
 
+/-! ### Cycle permutation for lag constancy -/
+
+/-- A cycle on [L, R] that maps n → n-1 (for L < n ≤ R) and L → R.
+This is useful for proving lag constancy of cylinder sets: it shifts coordinates
+down by 1 within the range, wrapping L to R. -/
+def cycleShiftDown (L R : ℕ) (hLR : L ≤ R) : Equiv.Perm ℕ where
+  toFun := fun n =>
+    if L < n ∧ n ≤ R then n - 1
+    else if n = L then R
+    else n
+  invFun := fun n =>
+    if L ≤ n ∧ n < R then n + 1
+    else if n = R then L
+    else n
+  left_inv := by intro n; simp only; split_ifs <;> omega
+  right_inv := by intro n; simp only; split_ifs <;> omega
+
+lemma cycleShiftDown_lt (L R n : ℕ) (hLR : L ≤ R) (hn : n < L) :
+    cycleShiftDown L R hLR n = n := by
+  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
+
+lemma cycleShiftDown_gt (L R n : ℕ) (hLR : L ≤ R) (hn : R < n) :
+    cycleShiftDown L R hLR n = n := by
+  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
+
+lemma cycleShiftDown_sub (L R n : ℕ) (hLR : L ≤ R) (hLn : L < n) (hnR : n ≤ R) :
+    cycleShiftDown L R hLR n = n - 1 := by
+  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
+
+lemma cycleShiftDown_L (L R : ℕ) (hLR : L ≤ R) :
+    cycleShiftDown L R hLR L = R := by
+  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
+
+/-- The cycle is identity beyond R. -/
+lemma cycleShiftDown_id_beyond (L R : ℕ) (hLR : L ≤ R) (n : ℕ) (hn : R < n) :
+    cycleShiftDown L R hLR n = n := cycleShiftDown_gt L R n hLR hn
+
 /-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
 when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
@@ -1033,7 +1070,7 @@ end LagConstancyProof
 /-- For exchangeable measures, set integrals are equal for functions that agree on reindexing.
 This is a key step in proving lag-constancy: ∫_s F = ∫_s G when F ∘ reindex τ = G
 and the set s is shift-invariant (hence also reindex-invariant). -/
-private lemma setIntegral_eq_of_reindex_eq
+lemma setIntegral_eq_of_reindex_eq
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
     (τ : Equiv.Perm ℕ)
@@ -1057,7 +1094,7 @@ private lemma setIntegral_eq_of_reindex_eq
     _ = ∫ ω in s, G ω ∂μ := by congr 1
 
 /-- If ∫_s (F - G) = 0 for all s in sub-σ-algebra, then CE[F|m] = CE[G|m] a.e. -/
-private lemma condExp_ae_eq_of_setIntegral_diff_eq_zero
+lemma condExp_ae_eq_of_setIntegral_diff_eq_zero
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
     {F G : (ℕ → α) → ℝ}
