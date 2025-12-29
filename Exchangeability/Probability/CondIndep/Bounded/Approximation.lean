@@ -209,3 +209,145 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
     have h_univ : μ Set.univ = 1 := measure_univ
     rw [h_ae_false] at h_univ
     simp at h_univ
+
+/-!
+## Eapprox-based approximation for real-valued functions
+
+The following lemma provides a simple function approximation sequence for measurable
+functions `f : α → ℝ` via the eapprox construction on positive/negative parts.
+
+This is used in the conditional independence extension proofs where we need:
+1. Pointwise bound: `|sf n x| ≤ |f x|` (not just ae, but everywhere)
+2. Pointwise convergence: `sf n x → f x` for all x
+
+Unlike `approx_bounded_measurable` which uses `StronglyMeasurable.approxBounded`,
+this construction works via the ENNReal eapprox machinery and provides deterministic
+(not almost-everywhere) bounds.
+-/
+
+/-- **Eapprox-based simple function approximation for real-valued functions.**
+
+Given a measurable `f : α → ℝ`, this constructs a sequence of simple functions
+that approximate `f` pointwise with the key property that `|sf n x| ≤ |f x|`
+holds *everywhere* (not just almost everywhere).
+
+The construction uses `SimpleFunc.eapprox` on the positive and negative parts:
+- Split f = f⁺ - f⁻ where f⁺ = max(f, 0), f⁻ = max(-f, 0)
+- Apply eapprox to ofReal ∘ f⁺ and ofReal ∘ f⁻
+- Convert back to ℝ via toReal
+- Take the difference
+
+**Key properties:**
+1. `|sf n x| ≤ |f x|` for all n, x (deterministic bound)
+2. `sf n x → f x` as n → ∞ for all x (pointwise convergence)
+-/
+lemma eapprox_real_approx {α : Type*} [MeasurableSpace α] (f : α → ℝ) (hf : Measurable f) :
+    ∃ (sf : ℕ → SimpleFunc α ℝ),
+      (∀ n x, |sf n x| ≤ |f x|) ∧
+      (∀ x, Filter.Tendsto (fun n => sf n x) Filter.atTop (nhds (f x))) := by
+  -- Positive/negative parts
+  let fp : α → ℝ := fun a => max (f a) 0
+  let fm : α → ℝ := fun a => max (-f a) 0
+
+  have hfp_meas : Measurable fp := hf.max measurable_const
+  have hfm_meas : Measurable fm := hf.neg.max measurable_const
+
+  -- Lift to ENNReal
+  let gp : α → ℝ≥0∞ := fun a => ENNReal.ofReal (fp a)
+  let gm : α → ℝ≥0∞ := fun a => ENNReal.ofReal (fm a)
+
+  -- Eapprox sequences in ENNReal
+  let up : ℕ → SimpleFunc α ℝ≥0∞ := SimpleFunc.eapprox gp
+  let um : ℕ → SimpleFunc α ℝ≥0∞ := SimpleFunc.eapprox gm
+
+  -- Convert back to ℝ
+  let sp : ℕ → SimpleFunc α ℝ := fun n => (up n).map ENNReal.toReal
+  let sm : ℕ → SimpleFunc α ℝ := fun n => (um n).map ENNReal.toReal
+
+  -- Final approximation sequence
+  let sf : ℕ → SimpleFunc α ℝ := fun n => sp n - sm n
+
+  refine ⟨sf, ?_, ?_⟩
+
+  -- Property 1: |sf n x| ≤ |f x| for all n, x
+  · intro n x
+    -- sp n x ≤ fp x and sm n x ≤ fm x
+    have h_sp_le : sp n x ≤ fp x := by
+      simp only [sp, up, gp, fp]
+      have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (f a) 0)) n x
+                  ≤ ENNReal.ofReal (max (f x) 0) := by
+        have := @SimpleFunc.iSup_eapprox_apply α _ (fun a => ENNReal.ofReal (max (f a) 0))
+                  (hf.max measurable_const).ennreal_ofReal x
+        rw [← this]
+        exact le_iSup (fun k => SimpleFunc.eapprox _ k x) n
+      have h_fin : ENNReal.ofReal (max (f x) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+      have h_toReal := ENNReal.toReal_mono h_fin h_le
+      rw [ENNReal.toReal_ofReal (le_max_right _ _)] at h_toReal
+      exact h_toReal
+
+    have h_sm_le : sm n x ≤ fm x := by
+      simp only [sm, um, gm, fm]
+      have h_le : SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (-f a) 0)) n x
+                  ≤ ENNReal.ofReal (max (-f x) 0) := by
+        have := @SimpleFunc.iSup_eapprox_apply α _ (fun a => ENNReal.ofReal (max (-f a) 0))
+                  (hf.neg.max measurable_const).ennreal_ofReal x
+        rw [← this]
+        exact le_iSup (fun k => SimpleFunc.eapprox _ k x) n
+      have h_fin : ENNReal.ofReal (max (-f x) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+      have h_toReal := ENNReal.toReal_mono h_fin h_le
+      rw [ENNReal.toReal_ofReal (le_max_right _ _)] at h_toReal
+      exact h_toReal
+
+    -- sp n x and sm n x are nonnegative
+    have h_sp_nn : 0 ≤ sp n x := ENNReal.toReal_nonneg
+    have h_sm_nn : 0 ≤ sm n x := ENNReal.toReal_nonneg
+
+    -- |sp - sm| ≤ sp + sm when both nonnegative
+    have h_abs_le : |sp n x - sm n x| ≤ sp n x + sm n x := by
+      rw [abs_sub_le_iff]
+      constructor <;> linarith
+
+    -- sp + sm ≤ fp + fm
+    have h_sum_le : sp n x + sm n x ≤ fp x + fm x :=
+      add_le_add h_sp_le h_sm_le
+
+    -- fp + fm = |f| (positive part + negative part = absolute value)
+    have h_parts : fp x + fm x = |f x| := by
+      simp only [fp, fm]
+      exact max_zero_add_max_neg_zero_eq_abs_self (f x)
+
+    calc |sf n x| = |sp n x - sm n x| := rfl
+      _ ≤ sp n x + sm n x := h_abs_le
+      _ ≤ fp x + fm x := h_sum_le
+      _ = |f x| := h_parts
+
+  -- Property 2: sf n x → f x for all x
+  · intro x
+    have h_sp_tendsto : Filter.Tendsto (fun n => sp n x) Filter.atTop (nhds (fp x)) := by
+      simp only [sp, up, gp, fp]
+      have h_tend_enn : Filter.Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (f a) 0)) n x)
+                                Filter.atTop
+                                (nhds (ENNReal.ofReal (max (f x) 0))) := by
+        apply SimpleFunc.tendsto_eapprox
+        exact (hf.max measurable_const).ennreal_ofReal
+      have h_fin : ENNReal.ofReal (max (f x) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+      have h_cont := ENNReal.tendsto_toReal h_fin
+      have := h_cont.comp h_tend_enn
+      rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
+
+    have h_sm_tendsto : Filter.Tendsto (fun n => sm n x) Filter.atTop (nhds (fm x)) := by
+      simp only [sm, um, gm, fm]
+      have h_tend_enn : Filter.Tendsto (fun n => SimpleFunc.eapprox (fun a => ENNReal.ofReal (max (-f a) 0)) n x)
+                                Filter.atTop
+                                (nhds (ENNReal.ofReal (max (-f x) 0))) := by
+        apply SimpleFunc.tendsto_eapprox
+        exact (hf.neg.max measurable_const).ennreal_ofReal
+      have h_fin : ENNReal.ofReal (max (-f x) 0) ≠ ∞ := ENNReal.ofReal_ne_top
+      have h_cont := ENNReal.tendsto_toReal h_fin
+      have := h_cont.comp h_tend_enn
+      rwa [ENNReal.toReal_ofReal (le_max_right _ _)] at this
+
+    have := h_sp_tendsto.sub h_sm_tendsto
+    simp only [sf, fp, fm, SimpleFunc.coe_sub] at this ⊢
+    convert this using 2
+    exact (max_zero_sub_eq_self (f x)).symm
