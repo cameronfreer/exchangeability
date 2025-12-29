@@ -654,7 +654,11 @@ lemma weighted_sums_converge_L1_smul
             |c| * |alpha ω - (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)| := by rw [abs_mul]
         _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| +
             |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := by
-          rw [_h_avg_eq', abs_sub_comm]
+          congr 1
+          · -- First term: use _h_avg_eq' to rewrite c * (average) to average of c*f
+            rw [← _h_avg_eq']
+          · -- Second term: swap order in absolute value
+            rw [abs_sub_comm]
 
     -- Integrate the pointwise bound
     have h_int_bound : ∫ ω, |alpha_c ω - c * alpha ω| ∂μ ≤
@@ -670,19 +674,29 @@ lemma weighted_sums_converge_L1_smul
             integral_mono h_abs_int h_sum_int h_pw
         _ = ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
             |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
-          rw [integral_add (h_avg_cf_int.sub h_alpha_c_int).abs
-              ((h_avg_f_int.sub h_alpha_int).abs.const_mul _)]
-          rw [integral_mul_left]
+          have h_int1 : Integrable (fun ω => |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω|) μ :=
+            (h_avg_cf_int.sub h_alpha_c_int).abs
+          have h_int2 : Integrable (fun ω => |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) μ :=
+            (h_avg_f_int.sub h_alpha_int).abs.const_mul _
+          rw [integral_add h_int1 h_int2, integral_const_mul]
 
-    -- Final bound: < ε + |c| * (ε / (|c| + 1)) < 2ε
-    calc ∫ ω, |alpha_c ω - c * alpha ω| ∂μ
-        ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
-          |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := h_int_bound
-      _ < ε + |c| * (ε / (|c| + 1)) := by linarith [hM₁, hM₂]
-      _ < ε + ε := by linarith [_h_bound]
-      _ = 2 * ε := by ring
-      _ < 4 * ε := by linarith
-      _ = ∫ ω, |alpha_c ω - c * alpha ω| ∂μ := by simp [hε_def]
+    -- Derive |c| * ∫|avg_f - alpha| ≤ |c| * (ε/(|c|+1))
+    have h_scaled : |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ ≤ |c| * (ε / (|c| + 1)) := by
+      exact mul_le_mul_of_nonneg_left (le_of_lt hM₂) (abs_nonneg _)
+
+    -- Final bound: < ε + |c| * (ε / (|c| + 1)) < 2ε < 4ε = ∫|...|
+    -- This gives ∫|...| < ∫|...|, a contradiction
+    have h_strict_ineq : ∫ ω, |alpha_c ω - c * alpha ω| ∂μ < 4 * ε :=
+      calc ∫ ω, |alpha_c ω - c * alpha ω| ∂μ
+          ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
+            |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := h_int_bound
+        _ < ε + |c| * (ε / (|c| + 1)) := by linarith [hM₁, h_scaled]
+        _ < ε + ε := by linarith [_h_bound]
+        _ = 2 * ε := by ring
+        _ < 4 * ε := by linarith
+    -- But 4 * ε = ∫|...|, so we have ∫|...| < ∫|...|
+    have h_eq_4eps : ∫ ω, |alpha_c ω - c * alpha ω| ∂μ = 4 * ε := by linarith [hε_def]
+    linarith
 
   -- From ∫|alpha_c - c*alpha| = 0, conclude alpha_c =ᵐ c*alpha
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_c ω - c * alpha ω| := by
@@ -813,13 +827,31 @@ lemma weighted_sums_converge_L1_add
             ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)| := by rw [h_rewrite]
         _ ≤ |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
             |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω +
-             (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := abs_add_le _ _
+             (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by
+          -- Apply abs_add_le with correct associativity
+          have h := abs_add_le (-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω))
+              ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω +
+               (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)
+          convert h using 1
+          ring
         _ ≤ |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
-            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
-            |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by
-          have := abs_add_le ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω)
+            (|(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω|) := by
+          -- First, fix the parenthesization inside the absolute value from the previous step
+          -- The previous RHS has |A - α_f + B - α_g| which parses as |((A - α_f) + B) - α_g|
+          -- We need |(A - α_f) + (B - α_g)| to apply abs_add_le
+          have h_paren : |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω +
+                          (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| =
+                         |((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω) +
+                          ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)| := by
+            congr 1; ring
+          rw [h_paren]
+          have h_tri := abs_add_le ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω)
               ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)
-          linarith
+          exact add_le_add_left h_tri _
+        _ = |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by ring
         _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| +
             |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
             |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by rw [abs_neg]
@@ -849,15 +881,22 @@ lemma weighted_sums_converge_L1_add
           · exact (h_avg_fg_int.sub h_alpha_fg_int).abs.add (h_avg_f_int.sub h_alpha_f_int).abs
           · exact (h_avg_g_int.sub h_alpha_g_int).abs
 
-    -- Final bound: < ε + ε + ε = 3ε < 4ε
-    calc ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ
-        ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| ∂μ +
-          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| ∂μ +
-          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| ∂μ := h_int_bound
-      _ < ε + ε + ε := by linarith [hM_fg, hM_f, hM_g]
-      _ = 3 * ε := by ring
-      _ < 4 * ε := by linarith
-      _ = ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ := by simp [hε_def]
+    -- Final bound: < ε + ε + ε = 3ε < 4ε = ∫|...|
+    -- This gives ∫|...| < ∫|...|, a contradiction
+    have h_strict_ineq : ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ < 4 * ε :=
+      calc ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ
+          ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| ∂μ := h_int_bound
+        _ < ε + ε + ε := by
+          have h1 := add_lt_add hM_fg hM_f
+          have h2 := add_lt_add h1 hM_g
+          convert h2 using 1 <;> ring
+        _ = 3 * ε := by ring
+        _ < 4 * ε := by linarith
+    -- But 4 * ε = ∫|...|, so we have ∫|...| < ∫|...|
+    have h_eq_4eps : ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ = 4 * ε := by linarith [hε_def]
+    linarith
 
   -- From ∫|alpha_fg - (alpha_f + alpha_g)| = 0, conclude alpha_fg =ᵐ alpha_f + alpha_g
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_fg ω - (alpha_f ω + alpha_g ω)| := by
@@ -1003,15 +1042,30 @@ lemma weighted_sums_converge_L1_one_sub
               (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by rw [h_rewrite]
           _ ≤ |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
               |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
-               (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := abs_add_le _ _
+               (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by
+            -- Fix parenthesization: |-A + B - C| parses as |(-A + B) - C|, need |(-A) + (B - C)|
+            have h_paren : |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω) +
+                            (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
+                            (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| =
+                           |(-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)) +
+                            ((((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
+                             (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω))| := by
+              congr 1; ring
+            rw [h_paren]
+            exact abs_add_le _ _
           _ ≤ |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
-              |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)| +
-              |(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by
-            have := abs_sub_le (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) 0
+              (|(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)| +
+              |(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)|) := by
+            -- Apply triangle inequality: |B - C| ≤ |B| + |C|. Use abs_sub_le B 0 C.
+            have h_bound := abs_sub_le
+                (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) 0
                 (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)
-            simp only [sub_zero] at this
-            linarith [abs_add_le (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)
-                (-(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω))]
+            simp only [sub_zero, zero_sub, abs_neg] at h_bound
+            exact add_le_add_left h_bound _
+          -- Convert right-associative to left-associative
+          _ = |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
+              |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)| +
+              |(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by ring
           _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
               |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
               |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := by rw [abs_neg]
