@@ -2220,18 +2220,185 @@ lemma directing_measure_bridge
 
     -- The products on both sides are in [0,1], so both integrands are nonneg.
     -- The key is that their expectations are equal via the U-stat argument.
+
+    -- Step B.4: Apply prod_tendsto_L1_of_L1_tendsto
+    -- We have p N i → α_funcs i in L¹ for each i (from h_coord_conv)
+    -- Therefore ∏_i p N i → ∏_i α_funcs i in L¹
+
+    -- Bounds on p N i: since I ∈ [0,1], averages are in [0,1]
+    have p_nonneg : ∀ N i ω, 0 ≤ p N i ω := fun N i ω => by
+      simp only [p]
+      apply mul_nonneg
+      · positivity
+      · apply Finset.sum_nonneg; intro j _; exact I_nonneg i (j.val + 1) ω
+
+    have p_le_one : ∀ N i ω, p N i ω ≤ 1 := fun N i ω => by
+      simp only [p]
+      calc (1 / ((N + 1 : ℕ) : ℝ)) * ∑ j : Fin (N + 1), I i (j.val + 1) ω
+          ≤ (1 / ((N + 1 : ℕ) : ℝ)) * ∑ _j : Fin (N + 1), (1 : ℝ) := by
+            apply mul_le_mul_of_nonneg_left
+            · apply Finset.sum_le_sum; intro j _; exact I_le_one i (j.val + 1) ω
+            · positivity
+        _ = (1 / ((N + 1 : ℕ) : ℝ)) * (N + 1 : ℕ) := by simp
+        _ = 1 := by field_simp
+
+    have p_abs_le_one : ∀ N i ω, |p N i ω| ≤ 1 := fun N i ω => by
+      rw [abs_of_nonneg (p_nonneg N i ω)]
+      exact p_le_one N i ω
+
+    -- Define r_funcs to be the direct probability measure values (pointwise bounded)
+    -- This equals α_funcs a.e. but has pointwise bounds in [0,1]
+    let r_funcs : Fin (n + 1) → Ω → ℝ := fun i ω =>
+      (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal
+
+    -- r_funcs is pointwise bounded since ν is a probability measure
+    have r_nonneg : ∀ i ω, 0 ≤ r_funcs i ω := fun i ω => ENNReal.toReal_nonneg
+
+    have r_le_one : ∀ i ω, r_funcs i ω ≤ 1 := fun i ω => by
+      simp only [r_funcs]
+      have h_prob : IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+        directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+      have h1 : (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal
+          ≤ (directing_measure X hX_contract hX_meas hX_L2 ω Set.univ).toReal := by
+        apply ENNReal.toReal_mono (measure_ne_top _ _)
+        exact measure_mono (Set.subset_univ _)
+      have h2 : (directing_measure X hX_contract hX_meas hX_L2 ω Set.univ).toReal = 1 := by
+        simp [measure_univ]
+      linarith
+
+    have r_abs_le_one : ∀ i ω, |r_funcs i ω| ≤ 1 := fun i ω => by
+      rw [abs_of_nonneg (r_nonneg i ω)]
+      exact r_le_one i ω
+
+    -- r_funcs = α_funcs a.e.
+    have r_eq_α_ae : ∀ i, r_funcs i =ᵐ[μ] α_funcs i := fun i => by
+      filter_upwards [(hα_funcs i).2.2.2] with ω hω
+      simp only [r_funcs]
+      exact hω.symm
+
+    -- Measurability of p N i
+    have p_meas : ∀ N i, AEStronglyMeasurable (p N i) μ := fun N i => by
+      apply Measurable.aestronglyMeasurable
+      simp only [p]
+      apply Measurable.const_mul
+      apply Finset.measurable_sum
+      intro j _
+      simp only [I]
+      exact (measurable_const.indicator (hB (σ i))).comp (hX_meas (j.val + 1))
+
+    -- Measurability of α_funcs
+    have α_meas : ∀ i, AEStronglyMeasurable (α_funcs i) μ := fun i =>
+      (hα_funcs i).1.aestronglyMeasurable
+
+    -- Measurability of r_funcs
+    have r_meas : ∀ i, AEStronglyMeasurable (r_funcs i) μ := fun i =>
+      (α_meas i).congr (r_eq_α_ae i).symm
+
+    -- L¹ convergence to α_funcs: convert ε-δ to Tendsto form
+    have h_L1_conv : ∀ i, Tendsto (fun N => ∫ ω, |p N i ω - α_funcs i ω| ∂μ) atTop (𝓝 0) := by
+      intro i
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      obtain ⟨M, hM⟩ := (hα_funcs i).2.2.1 ε hε
+      refine ⟨M, fun N hN => ?_⟩
+      simp only [Real.dist_eq, sub_zero]
+      -- |∫|·|| - 0| = ∫|·| since integral of abs is nonneg
+      rw [abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+      -- p N uses (N+1) in denominator and sums over Fin (N+1)
+      -- hM m says: for m ≥ M, ∫ |1/m * ∑_{k : Fin m} I i (k+1) - α| < ε
+      -- So we apply hM with m = N+1
+      have hN1 : N + 1 ≥ M := Nat.le_add_right_of_le hN
+      specialize hM (N + 1) hN1
+      -- Now hM : ∫ |1/(N+1) * ∑_{k : Fin (N+1)} I i (k+1) - α_funcs i| < ε
+      -- This matches p N i exactly (definitionally equal up to coercion)
+      simp only [p]
+      exact hM
+
+    -- L¹ convergence to r_funcs (follows from α_funcs since they're a.e. equal)
+    have h_L1_conv_r : ∀ i, Tendsto (fun N => ∫ ω, |p N i ω - r_funcs i ω| ∂μ) atTop (𝓝 0) := by
+      intro i
+      have h_ae_eq : ∀ N, (fun ω => |p N i ω - r_funcs i ω|) =ᵐ[μ]
+          (fun ω => |p N i ω - α_funcs i ω|) := fun N => by
+        filter_upwards [r_eq_α_ae i] with ω hω
+        simp only [hω]
+      simp only [fun N => integral_congr_ae (h_ae_eq N)]
+      exact h_L1_conv i
+
+    -- Apply prod_tendsto_L1_of_L1_tendsto with r_funcs (which has pointwise bounds)
+    have h_prod_L1 : Tendsto (fun N => ∫ ω, |q N ω - ∏ i : Fin (n + 1), r_funcs i ω| ∂μ)
+        atTop (𝓝 0) := by
+      -- q N ω = ∏_i p N i ω, so this follows from prod_tendsto_L1_of_L1_tendsto
+      have h := prod_tendsto_L1_of_L1_tendsto (fun N i => p N i) r_funcs
+        p_abs_le_one r_abs_le_one p_meas r_meas h_L1_conv_r
+      -- The goal matches h exactly since q N ω = ∏_i p N i ω by definition
+      exact h
+
+    -- Step B.5: The a.e. equality α_funcs i = ν(·)(B' i).toReal
+    have h_ae_eq : ∀ᵐ ω ∂μ, ∏ i : Fin (n + 1), α_funcs i ω =
+        ∏ i : Fin (n + 1), (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal := by
+      -- Combine the a.e. equalities for each coordinate
+      have h_all : ∀ᵐ ω ∂μ, ∀ i : Fin (n + 1),
+          α_funcs i ω = (directing_measure X hX_contract hX_meas hX_L2 ω (B' i)).toReal := by
+        apply ae_all_iff.mpr
+        intro i
+        exact (hα_funcs i).2.2.2
+      filter_upwards [h_all] with ω hω
+      congr 1
+      ext i
+      exact hω i
+
+    -- Step B.6: Convert RHS to use toReal
+    -- ν ω (B' j) = ofReal ((ν ω (B' j)).toReal) when ν ω (B' j) ≠ ⊤
+    -- Since ν is a probability measure, ν ω (B' j) ≤ 1 < ⊤
+    have h_rhs_convert : ∀ ω, ∏ j : Fin (n + 1),
+        directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j))
+      = ENNReal.ofReal (∏ j : Fin (n + 1),
+        (directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j))).toReal) := by
+      intro ω
+      have h_ne_top : ∀ j, directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j)) ≠ ⊤ := by
+        intro j
+        have h_prob : IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+          directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+        exact measure_ne_top _ _
+      rw [ENNReal.ofReal_prod_of_nonneg]
+      · congr 1
+        ext j
+        exact (ENNReal.ofReal_toReal (h_ne_top j)).symm
+      · intro j _
+        exact ENNReal.toReal_nonneg
+
+    simp_rw [h_rhs_convert]
+
+    -- Step B.7: Now goal is:
+    -- ∫⁻ ofReal (∏_j 1_{B'_j}(X_j)) dμ = ∫⁻ ofReal (∏_j ν(·)(B'_j).toReal) dμ
     --
-    -- REMAINING STEPS (U-stat expansion):
-    -- 1. Show E[q N] → E[∏_i I i i] using Fintype.prod_sum expansion + collision bound
-    -- 2. Show E[q N] → E[∏_i α_funcs i] using prod_tendsto_L1_of_L1_tendsto
-    -- 3. Conclude E[∏_i I i i] = E[∏_i α_funcs i] by tendsto_nhds_unique
-    -- 4. Use a.e. equality: α_funcs i = (ν ω (B' i)).toReal a.e.
-    -- 5. Convert between real and ENNReal integrals
+    -- Since both products are in [0,1] and the integrands are equal a.e.
+    -- (via the L¹ limit argument), the integrals are equal.
     --
-    -- The mathematical argument is sound; full formalization deferred to:
-    -- - Detailed Fintype.prod_sum expansion
-    -- - Falling factorial limit computation
-    -- - Product L¹ convergence assembly
+    -- The remaining step is to show the pointwise a.e. equality:
+    -- ∏_j 1_{B'_j}(X_j) = ∏_j ν(·)(B'_j).toReal a.e.
+    --
+    -- This is NOT true pointwise! The LHS is 0 or 1, the RHS is a product of probabilities.
+    -- The equality is only at the level of EXPECTATIONS.
+    --
+    -- So we need a different approach: show the INTEGRALS are equal.
+    --
+    -- Key insight: By the U-stat expansion,
+    --   ∫ ∏_j 1_{B'_j}(X_j) dμ = lim_N ∫ q N dμ = ∫ ∏_j α_funcs j dμ = ∫ ∏_j ν(·)(B'_j).toReal dμ
+    --
+    -- Then convert real integrals to ENNReal lintegrals.
+
+    -- FINAL STEP: The integral equality via L¹ limit
+    -- This requires showing that ∫ ∏_j 1_{B'_j}(X_j) dμ = ∫ ∏_j α_funcs j dμ
+    -- which follows from the U-stat expansion showing both equal lim_N ∫ q N dμ.
+    --
+    -- The U-stat expansion argument (collision bound) is the key remaining piece:
+    -- E[q N] → E[∏_i I i i] as N → ∞
+    --
+    -- This combined with E[q N] → E[∏_i α_funcs i] (from h_prod_L1) gives:
+    -- E[∏_i I i i] = E[∏_i α_funcs i]
+    --
+    -- Deferred to separate lemma for collision bound + falling factorial computation.
 
     sorry
 
