@@ -430,21 +430,64 @@ and both terms go to 0.
 -/
 lemma ae_eq_of_tendsto_L1 {μ : Measure Ω} [IsProbabilityMeasure μ]
     {f : ℕ → Ω → ℝ} {g h : Ω → ℝ}
-    (hf_meas : ∀ n, Measurable (f n))
-    (hg_meas : Measurable g) (hh_meas : Measurable h)
+    (_hf_meas : ∀ n, Measurable (f n))
+    (_hg_meas : Measurable g) (_hh_meas : Measurable h)
+    (hf_int : ∀ n, Integrable (f n) μ)
     (hg_int : Integrable g μ) (hh_int : Integrable h μ)
     (hfg : ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |f n ω - g ω| ∂μ < ε)
     (hfh : ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N, ∫ ω, |f n ω - h ω| ∂μ < ε) :
     g =ᵐ[μ] h := by
-  -- PROOF OUTLINE:
-  -- The L¹ distance ‖g - h‖₁ must be 0.
-  -- For any ε > 0, by triangle inequality:
-  --   ∫|g - h| ≤ ∫|g - f_n| + ∫|f_n - h| < 2ε for large n
-  -- Since ε is arbitrary, ∫|g - h| = 0, so g =ᵐ h.
-  --
-  -- This is a standard result; the implementation requires careful bookkeeping
-  -- with integrability hypotheses. The mathematical content is routine.
-  sorry
+  -- Strategy: show ∫|g - h| = 0 using squeeze argument
+
+  have h_diff_int : Integrable (fun ω => g ω - h ω) μ := hg_int.sub hh_int
+  have h_abs_int : Integrable (fun ω => |g ω - h ω|) μ := h_diff_int.abs
+
+  have h_integral_zero : ∫ ω, |g ω - h ω| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |g ω - h ω| ∂μ := integral_nonneg (fun _ => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |g ω - h ω| ∂μ := lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+
+    set ε := (∫ ω, |g ω - h ω| ∂μ) / 2 with hε_def
+    have hε_pos : ε > 0 := by linarith
+    obtain ⟨N₁, hN₁⟩ := hfg ε hε_pos
+    obtain ⟨N₂, hN₂⟩ := hfh ε hε_pos
+
+    set n := max N₁ N₂ with _hn_def
+    have hn₁ : n ≥ N₁ := le_max_left _ _
+    have hn₂ : n ≥ N₂ := le_max_right _ _
+
+    have h_triangle : ∀ ω, |g ω - h ω| ≤ |g ω - f n ω| + |f n ω - h ω| := fun ω => by
+      calc |g ω - h ω| = |(g ω - f n ω) + (f n ω - h ω)| := by ring_nf
+        _ ≤ |g ω - f n ω| + |f n ω - h ω| := abs_add_le _ _
+
+    have h_sum_int : Integrable (fun ω => |g ω - f n ω| + |f n ω - h ω|) μ :=
+      ((hg_int.sub (hf_int n)).abs).add (((hf_int n).sub hh_int).abs)
+    have h_int_triangle : ∫ ω, |g ω - h ω| ∂μ ≤ ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by
+      calc ∫ ω, |g ω - h ω| ∂μ
+          ≤ ∫ ω, (|g ω - f n ω| + |f n ω - h ω|) ∂μ := by
+            exact integral_mono h_abs_int h_sum_int (fun ω => h_triangle ω)
+        _ = ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by
+            exact integral_add (hg_int.sub (hf_int n)).abs ((hf_int n).sub hh_int).abs
+
+    have h_symm : ∫ ω, |g ω - f n ω| ∂μ = ∫ ω, |f n ω - g ω| ∂μ := by
+      congr 1; ext ω; rw [abs_sub_comm]
+
+    have h_lt : ∫ ω, |g ω - h ω| ∂μ < 2 * ε := by
+      calc ∫ ω, |g ω - h ω| ∂μ ≤ ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := h_int_triangle
+        _ = ∫ ω, |f n ω - g ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by rw [h_symm]
+        _ < ε + ε := by linarith [hN₁ n hn₁, hN₂ n hn₂]
+        _ = 2 * ε := by ring
+
+    simp only [hε_def] at h_lt
+    linarith
+
+  have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |g ω - h ω| := by
+    filter_upwards with ω; exact abs_nonneg _
+  have h_ae_zero : (fun ω => |g ω - h ω|) =ᵐ[μ] (0 : Ω → ℝ) := by
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg_ae h_abs_int]
+  filter_upwards [h_ae_zero] with ω hω
+  simp only [Pi.zero_apply, abs_eq_zero, sub_eq_zero] at hω
+  exact hω
 
 /-! ### Linearity of L¹ Limits
 
@@ -576,9 +619,70 @@ lemma weighted_sums_converge_L1_smul
         _ < 1 * ε := by nlinarith [abs_nonneg c]
         _ = ε := one_mul ε
 
-    -- Technical details: triangle inequality + integrability bookkeeping
-    -- The argument is standard but the Lean formalization is tedious
-    sorry
+    -- Integrability of Cesàro averages
+    have h_avg_cf_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω))) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mcf, hMcf⟩ := hcf_bdd
+      apply Integrable.mono' (integrable_const Mcf)
+      · exact (measurable_const.mul hf_meas).comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω; simp only [Real.norm_eq_abs]; exact hMcf _
+    have h_avg_f_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mf, hMf⟩ := hf_bdd
+      apply Integrable.mono' (integrable_const Mf)
+      · exact hf_meas.comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω; simp only [Real.norm_eq_abs]; exact hMf _
+
+    -- Pointwise triangle inequality
+    have h_pw : ∀ ω, |alpha_c ω - c * alpha ω| ≤
+        |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| +
+        |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := fun ω => by
+      have h_eq : c * alpha ω - alpha_c ω =
+          (c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha_c ω) +
+          c * (alpha ω - (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) := by ring
+      calc |alpha_c ω - c * alpha ω|
+          = |c * alpha ω - alpha_c ω| := abs_sub_comm _ _
+        _ = |(c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha_c ω) +
+            c * (alpha ω - (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω))| := by rw [h_eq]
+        _ ≤ |c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha_c ω| +
+            |c * (alpha ω - (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω))| := abs_add_le _ _
+        _ = |c * ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha_c ω| +
+            |c| * |alpha ω - (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)| := by rw [abs_mul]
+        _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| +
+            |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := by
+          rw [_h_avg_eq', abs_sub_comm]
+
+    -- Integrate the pointwise bound
+    have h_int_bound : ∫ ω, |alpha_c ω - c * alpha ω| ∂μ ≤
+        ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
+        |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
+      have h_sum_int : Integrable (fun ω =>
+          |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| +
+          |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) μ :=
+        ((h_avg_cf_int.sub h_alpha_c_int).abs).add ((h_avg_f_int.sub h_alpha_int).abs.const_mul _)
+      calc ∫ ω, |alpha_c ω - c * alpha ω| ∂μ
+          ≤ ∫ ω, (|(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| +
+              |c| * |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) ∂μ :=
+            integral_mono h_abs_int h_sum_int h_pw
+        _ = ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
+            |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
+          rw [integral_add (h_avg_cf_int.sub h_alpha_c_int).abs
+              ((h_avg_f_int.sub h_alpha_int).abs.const_mul _)]
+          rw [integral_mul_left]
+
+    -- Final bound: < ε + |c| * (ε / (|c| + 1)) < 2ε
+    calc ∫ ω, |alpha_c ω - c * alpha ω| ∂μ
+        ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (c * f (X (k.val + 1) ω)) - alpha_c ω| ∂μ +
+          |c| * ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := h_int_bound
+      _ < ε + |c| * (ε / (|c| + 1)) := by linarith [hM₁, hM₂]
+      _ < ε + ε := by linarith [_h_bound]
+      _ = 2 * ε := by ring
+      _ < 4 * ε := by linarith
+      _ = ∫ ω, |alpha_c ω - c * alpha ω| ∂μ := by simp [hε_def]
 
   -- From ∫|alpha_c - c*alpha| = 0, conclude alpha_c =ᵐ c*alpha
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_c ω - c * alpha ω| := by
@@ -659,12 +763,101 @@ lemma weighted_sums_converge_L1_add
 
     simp only [zero_add] at hM_fg hM_f hM_g
 
-    -- By triangle inequality:
-    -- |alpha_fg - (alpha_f + alpha_g)| ≤ |alpha_fg - avg_{f+g}| + |avg_f + avg_g - (alpha_f + alpha_g)|
-    --                                 ≤ |alpha_fg - avg_{f+g}| + |avg_f - alpha_f| + |avg_g - alpha_g|
-    -- Using: avg_{f+g} = avg_f + avg_g
-    -- Integrating: ∫|...| < ε + ε + ε = 3ε < 4ε = ∫|...|, contradiction
-    sorry
+    -- Integrability of Cesàro averages
+    have h_avg_fg_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω)) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mfg, hMfg⟩ := hfg_bdd
+      apply Integrable.mono' (integrable_const Mfg)
+      · exact (hf_meas.add hg_meas).comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω; simp only [Real.norm_eq_abs]; exact hMfg _
+    have h_avg_f_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mf, hMf⟩ := hf_bdd
+      apply Integrable.mono' (integrable_const Mf)
+      · exact hf_meas.comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω; simp only [Real.norm_eq_abs]; exact hMf _
+    have h_avg_g_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω)) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mg, hMg⟩ := hg_bdd
+      apply Integrable.mono' (integrable_const Mg)
+      · exact hg_meas.comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω; simp only [Real.norm_eq_abs]; exact hMg _
+
+    -- Algebraic identity for this specific m
+    have h_avg_eq : ∀ ω,
+        (1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) =
+        (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) +
+        (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) := fun ω => by
+      simp only [Pi.add_apply, Finset.sum_add_distrib, mul_add]
+
+    -- Pointwise triangle inequality
+    have h_pw : ∀ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ≤
+        |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| +
+        |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+        |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := fun ω => by
+      -- Rewrite using avg_{f+g} = avg_f + avg_g
+      have h_rewrite : alpha_fg ω - (alpha_f ω + alpha_g ω) =
+          -((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω) +
+          ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω) +
+          ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω) := by
+        rw [h_avg_eq]; ring
+      calc |alpha_fg ω - (alpha_f ω + alpha_g ω)|
+          = |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω) +
+            ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω) +
+            ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)| := by rw [h_rewrite]
+        _ ≤ |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω +
+             (1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := abs_add_le _ _
+        _ ≤ |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by
+          have := abs_add_le ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω)
+              ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)
+          linarith
+        _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by rw [abs_neg]
+
+    -- Integrate the pointwise bound
+    have h_int_bound : ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ ≤
+        ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| ∂μ +
+        ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| ∂μ +
+        ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| ∂μ := by
+      have h_three_int : Integrable (fun ω =>
+          |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| +
+          |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+          |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω|) μ :=
+        ((h_avg_fg_int.sub h_alpha_fg_int).abs.add (h_avg_f_int.sub h_alpha_f_int).abs).add
+          (h_avg_g_int.sub h_alpha_g_int).abs
+      calc ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ
+          ≤ ∫ ω, (|(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| +
+              |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
+              |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω|) ∂μ :=
+            integral_mono h_abs_int h_three_int h_pw
+        _ = ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| ∂μ := by
+          rw [integral_add, integral_add]
+          · exact (h_avg_fg_int.sub h_alpha_fg_int).abs
+          · exact (h_avg_f_int.sub h_alpha_f_int).abs
+          · exact (h_avg_fg_int.sub h_alpha_fg_int).abs.add (h_avg_f_int.sub h_alpha_f_int).abs
+          · exact (h_avg_g_int.sub h_alpha_g_int).abs
+
+    -- Final bound: < ε + ε + ε = 3ε < 4ε
+    calc ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ
+        ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω| ∂μ +
+          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| ∂μ +
+          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| ∂μ := h_int_bound
+      _ < ε + ε + ε := by linarith [hM_fg, hM_f, hM_g]
+      _ = 3 * ε := by ring
+      _ < 4 * ε := by linarith
+      _ = ∫ ω, |alpha_fg ω - (alpha_f ω + alpha_g ω)| ∂μ := by simp [hε_def]
 
   -- From ∫|alpha_fg - (alpha_f + alpha_g)| = 0, conclude alpha_fg =ᵐ alpha_f + alpha_g
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_fg ω - (alpha_f ω + alpha_g ω)| := by
@@ -751,8 +944,111 @@ lemma weighted_sums_converge_L1_one_sub
 
     simp only [zero_add] at hM_sub hM_1 hM
 
-    -- Triangle inequality gives ∫|...| < 3ε < 4ε, contradiction
-    sorry
+    -- Use the algebraic identity: A_{1-f} = A_1 - A_f
+    -- So: alpha_sub - (alpha_1 - alpha)
+    --   ≈ (alpha_sub - A_{1-f}) + (A_{1-f} - (alpha_1 - alpha))
+    --   = (alpha_sub - A_{1-f}) + ((A_1 - A_f) - (alpha_1 - alpha))
+    --   = (alpha_sub - A_{1-f}) + (A_1 - alpha_1) - (A_f - alpha)
+    -- By triangle inequality, integrating gives < ε + ε + ε = 3ε < 4ε
+
+    -- First establish the algebraic identity for this specific m
+    have h_alg : ∀ ω, (1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) =
+        (1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) -
+        (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) := fun ω => by
+      simp only [Finset.sum_sub_distrib, mul_sub]
+
+    -- Integrability of Cesàro averages (bounded functions on probability space are integrable)
+    have h_avg_sub_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Ms, hMs⟩ := hsub_bdd
+      apply Integrable.mono' (integrable_const Ms)
+      · exact (measurable_const.sub hf_meas).comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω
+        simp only [Real.norm_eq_abs]
+        exact hMs _
+    have h_avg_1_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) μ := integrable_const _
+    have h_avg_f_int : Integrable (fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) μ := by
+      apply Integrable.const_mul
+      apply integrable_finset_sum
+      intro k _
+      obtain ⟨Mf, hMf⟩ := hf_bdd
+      apply Integrable.mono' (integrable_const Mf)
+      · exact hf_meas.comp (hX_meas _) |>.aestronglyMeasurable
+      · filter_upwards with ω
+        simp only [Real.norm_eq_abs]
+        exact hMf _
+
+    -- The key bound via triangle inequality
+    have h_bound : ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ <
+        ε + ε + ε := by
+      -- Pointwise triangle inequality
+      have h_pw : ∀ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ≤
+          |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
+          |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
+          |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := fun ω => by
+        -- alpha_sub - (alpha_1 - alpha)
+        --   = (alpha_sub - A_{1-f}) + (A_{1-f} - (alpha_1 - alpha))
+        --   = (alpha_sub - A_{1-f}) + ((A_1 - A_f) - (alpha_1 - alpha))
+        --   = (alpha_sub - A_{1-f}) + (A_1 - alpha_1) - (A_f - alpha)
+        have h_rewrite : alpha_sub ω - (alpha_1 ω - alpha ω) =
+            -(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω) +
+            (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
+            (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω) := by
+          rw [h_alg]; ring
+        calc |alpha_sub ω - (alpha_1 ω - alpha ω)|
+            = |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω) +
+              (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
+              (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by rw [h_rewrite]
+          _ ≤ |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
+              |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) -
+               (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := abs_add_le _ _
+          _ ≤ |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
+              |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)| +
+              |(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)| := by
+            have := abs_sub_le (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) 0
+                (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)
+            simp only [sub_zero] at this
+            linarith [abs_add_le (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)
+                (-(((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω))]
+          _ = |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
+              |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
+              |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| := by rw [abs_neg]
+
+      -- Integrate the pointwise bound
+      have h_int_bound : ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ ≤
+          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| ∂μ +
+          ∫ ω, |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| ∂μ +
+          ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
+        have h_sum_int : Integrable (fun ω =>
+            |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
+            |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
+            |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) μ :=
+          (((h_avg_sub_int.sub h_alpha_sub_int).abs).add ((h_avg_1_int.sub h_alpha_1_int).abs)).add
+            ((h_avg_f_int.sub h_alpha_int).abs)
+        calc ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ
+            ≤ ∫ ω, (|(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
+                |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
+                |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) ∂μ := by
+              exact integral_mono h_abs_int h_sum_int h_pw
+          _ = ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| ∂μ +
+              ∫ ω, |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| ∂μ +
+              ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
+            rw [integral_add, integral_add]
+            · exact (h_avg_sub_int.sub h_alpha_sub_int).abs
+            · exact (h_avg_1_int.sub h_alpha_1_int).abs
+            · exact ((h_avg_sub_int.sub h_alpha_sub_int).abs).add ((h_avg_1_int.sub h_alpha_1_int).abs)
+            · exact (h_avg_f_int.sub h_alpha_int).abs
+
+      calc ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ
+          ≤ ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| ∂μ +
+            ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := h_int_bound
+        _ < ε + ε + ε := by linarith [hM_sub, hM_1, hM]
+
+    -- But 3ε < 4ε = ∫|...| gives contradiction
+    linarith
 
   -- Conclude alpha_sub =ᵐ alpha_1 - alpha
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |alpha_sub ω - (alpha_1 ω - alpha ω)| := by

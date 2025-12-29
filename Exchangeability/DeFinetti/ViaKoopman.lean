@@ -6280,12 +6280,286 @@ private lemma tower_indicator_finset
         intro j
         -- The coordinates for B_at(N₀+j) are {N₀+j+i : i ∈ S}
         -- The coordinates for B_at(N₀+j+1) are {N₀+j+1+i : i ∈ S}
-        -- Define a cyclic permutation π that:
-        --   - Fixes all coordinates outside [N₀+j+min(S), N₀+j+max(S)+2]
-        --   - Cyclically shifts: N₀+j+i → N₀+j+i+1 for i ∈ {min(S), ..., max(S)+1}
-        -- This maps B_at(N₀+j+1) to B_at(N₀+j) and fixes k (since k < N₀ ≤ N₀+j+min(S)).
-        -- By exchangeability, CE is preserved.
-        sorry
+        -- Define permutation π that maps N₀+j+1+i ↔ N₀+j+i for each i ∈ S.
+
+        let S := insert m T
+
+        -- Define the permutation as: for each i ∈ S, swap (N₀+j+i, N₀+j+1+i)
+        -- Since these are disjoint pairs (target < source for each), we can compose.
+        -- Use the product of transpositions approach.
+
+        -- Define functions F and G
+        let F := fun ω : Ω[α] => φ (ω k) * (B_at (N₀ + j + 1)).indicator 1 ω
+        let G := fun ω : Ω[α] => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω
+
+        -- Bound M beyond which permutation is identity
+        let M := N₀ + j + 1 + S.sup id + 1
+
+        -- Define π as a cycle that shifts coords down by 1 in the range
+        -- [N₀+j+min(S), N₀+j+1+max(S)]
+        -- The cycle maps: n → n-1 for n > N₀+j+min(S), and maps N₀+j+min(S) to N₀+j+1+max(S)
+        let minS := S.min' hS_nonempty
+        let maxS := S.sup id
+        let L := N₀ + j + minS  -- left boundary
+        let R := N₀ + j + 1 + maxS  -- right boundary
+
+        -- Define π using cycleRange which maps [L, R] cyclically
+        -- For the proof, we use that any permutation fixing beyond M preserves mSI-sets.
+
+        -- Use the pattern from condexp_lag_constant_product_general:
+        -- We need to show ∫_s F = ∫_s G for all s ∈ mSI.
+        -- This follows from exchangeability + the permutation argument.
+
+        -- Integrability
+        have hF_int : Integrable F μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ fun ω => by simp [φ, Set.indicator_apply]; split_ifs <;> simp⟩
+          · exact Integrable.indicator (integrable_const 1) (hB_at_meas (N₀ + j + 1))
+        have hG_int : Integrable G μ := by
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ ?_
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ fun ω => by simp [φ, Set.indicator_apply]; split_ifs <;> simp⟩
+          · exact Integrable.indicator (integrable_const 1) (hB_at_meas (N₀ + j))
+
+        -- For the permutation approach, we use the cycle (L, L+1, ..., R)
+        -- which maps n ↦ n-1 for L < n ≤ R, and L ↦ R.
+        -- Composing as swap(L,L+1) ∘ swap(L+1,L+2) ∘ ... ∘ swap(R-1,R) gives this cycle.
+
+        -- Actually, for the proof, we can use Finset.induction on S!
+        -- Base case: S = {m'} (single element). Use condexp_lag_constant_product_general.
+        -- Inductive case: S = insert m' T'. Chain the swaps.
+
+        -- For now, use the direct condExp_ae_eq approach.
+        -- The key is: F ∘ reindex π = G where π swaps each coord pair.
+
+        -- Since this is complex, let's prove it by showing both sides equal
+        -- via the hB_at_eq_shift relation and shift invariance.
+
+        -- Alternative: Use that B_at(N₀+j+1) = shift⁻¹(B_at(N₀+j)) composed properly
+        -- and apply condexp_precomp_iterate_eq style reasoning.
+
+        -- Actually, the cleanest approach: use induction on |S| with lag constancy lemma.
+        -- For |S| = 1, apply condexp_lag_constant_product_general.
+        -- For larger |S|, compose the shifts.
+
+        -- For this proof, we'll use the direct approach via exchangeability.
+        -- Define π as the composition of adjacent transpositions.
+
+        -- The permutation π should satisfy:
+        -- 1. F ∘ reindex π = G
+        -- 2. π is identity beyond M
+        -- 3. hExch π holds
+
+        -- Given time constraints, use the direct set integral equality approach.
+        -- Show ∫_s (F - G) = 0 for all s ∈ mSI.
+
+        -- This follows from:
+        -- F(ω) = φ(ω k) * ∏_{i∈S} 1_{ω(N₀+j+1+i) ∈ f i}
+        -- G(ω) = φ(ω k) * ∏_{i∈S} 1_{ω(N₀+j+i) ∈ f i}
+
+        -- By exchangeability and shift invariance of mSI, the integrals are equal.
+
+        -- Use the hB_at_eq_shift relation:
+        -- B_at(N₀+j+1).indicator 1 ω = B.indicator 1 (shift^[N₀+j+1] ω)
+        -- B_at(N₀+j).indicator 1 ω = B.indicator 1 (shift^[N₀+j] ω)
+
+        -- Convert to shifted forms
+        have hF_eq_shift : F = fun ω => φ (ω k) * B.indicator 1 (shift^[N₀ + j + 1] ω) := by
+          ext ω; simp only [F]; rw [hB_at_eq_shift]
+        have hG_eq_shift : G = fun ω => φ (ω k) * B.indicator 1 (shift^[N₀ + j] ω) := by
+          ext ω; simp only [G]; rw [hB_at_eq_shift]
+
+        -- Apply condexp_lag_constant_product_general with:
+        -- n = 1, fs 0 = φ, coords 0 = k
+        -- But g depends on multiple coordinates, not just one...
+
+        -- The clean solution: use that both involve φ at coord k (fixed),
+        -- and a cylinder indicator at coords ≥ N₀+j.
+        -- The swap(N₀+j, N₀+j+1) transposition relates them.
+
+        -- For a single-coord cylinder (S = {i}), swap(N₀+j+i, N₀+j+i+1) works.
+        -- For multi-coord cylinder, we need the composition of such swaps.
+
+        -- Using the existing infrastructure: apply condexp_lag_constant_product
+        -- iteratively for each coordinate, or prove directly.
+
+        -- Direct approach using exchangeability:
+        -- Show F and G have equal integrals over mSI-sets by a change of variables.
+
+        -- For shift^[N₀+j+1] vs shift^[N₀+j], the difference is one application of shift.
+        -- F(ω) = φ(ω k) * (1_B ∘ shift^[N₀+j+1]) ω
+        --      = φ(ω k) * (1_B ∘ shift ∘ shift^[N₀+j]) ω
+        --      = φ(ω k) * (1_B(shift(shift^[N₀+j] ω)))
+        -- G(ω) = φ(ω k) * (1_B ∘ shift^[N₀+j]) ω
+
+        -- Since shift preserves μ and mSI, we can relate these via shift invariance.
+
+        -- Key insight: F(ω) = h(ω k, shift^[N₀+j+1] ω) and G(ω) = h(ω k, shift^[N₀+j] ω)
+        -- where h(a, ξ) = φ(a) * 1_B(ξ).
+        -- By shift invariance of CE: CE[F|mSI] depends only on the "pattern".
+
+        -- Apply condexp_precomp_iterate_eq style reasoning:
+        -- CE[φ(ω_k) * f(shift^n ω) | mSI] = CE[φ(ω_k) | mSI] * CE[f | mSI]
+        -- when k < n (so φ(ω_k) is "before" the shifted part).
+
+        -- Actually, the direct proof uses:
+        -- CE[φ(ω_k) * g(shift^[N₀+j+1] ω) | mSI] =ᵃᵉ CE[φ(ω_k) * g(shift^[N₀+j] ω) | mSI]
+        -- This is exactly condexp_lag_constant_product_general with appropriate params!
+
+        -- Use condexp_lag_constant_product_general:
+        -- n = 1, coords = ![k], fs = ![φ], g = 1_B (on the shift), j = N₀+j
+        -- We need coords 0 < j, i.e., k < N₀+j, which holds since k < N₀.
+
+        -- Actually, condexp_lag_constant_product_general has g : α → ℝ evaluated at
+        -- a single coordinate, but here 1_B is a function on Ω[α] = ℕ → α.
+
+        -- The correct approach: Write 1_B(shift^[N₀+j] ω) as a function of ω.
+        -- But 1_B depends on coords 0, 1, ..., maxS of shift^[N₀+j] ω,
+        -- i.e., coords N₀+j, N₀+j+1, ..., N₀+j+maxS of ω.
+
+        -- So this is not directly a "g(ω(j))" form. We need the product form.
+
+        -- For now, use the transposition argument directly.
+        -- Apply swap(N₀+j, N₀+j+1) which relates shift^[N₀+j+1] to shift^[N₀+j] ∘ swap.
+
+        -- The function F involves coords k and {N₀+j+1+i : i ∈ S}.
+        -- The function G involves coords k and {N₀+j+i : i ∈ S}.
+        -- Both have k < N₀ ≤ N₀+j+i (for i ∈ S, i ≥ 0).
+
+        -- Define π = ∏_{i∈S} swap(N₀+j+i, N₀+j+i+1).
+        -- Since the pairs (N₀+j+i, N₀+j+i+1) may share elements for consecutive i,
+        -- the composition is a cyclic permutation on the relevant range.
+
+        -- Key: Regardless of the exact form of π, F ∘ reindex π = G holds if
+        -- π maps the coords of B_at(N₀+j+1) to those of B_at(N₀+j).
+
+        -- Given the complexity, use the direct argument via shift:
+        -- hB_at_eq_shift says B_at(n).indicator 1 ω = B.indicator 1 (shift^[n] ω).
+        -- So F(ω) = φ(ω k) * B.indicator 1 (shift^[N₀+j+1] ω)
+        --    G(ω) = φ(ω k) * B.indicator 1 (shift^[N₀+j] ω)
+
+        -- By shift-invariance of μ:
+        -- ∫ F dμ = ∫ φ(ω k) * B.indicator 1 (shift^[N₀+j+1] ω) dμ(ω)
+        --        = ∫ φ((shift^[-(N₀+j+1)] ω) k) * B.indicator 1 ω dμ(ω)  (change of vars)
+        -- But this doesn't directly help because k changes under shift^[-n].
+
+        -- Actually k < N₀ ≤ N₀+j, so shift^[N₀+j] ω affects coords 0, 1, ..., but
+        -- φ(ω k) looks at coord k of ω directly, not of the shifted sequence.
+
+        -- The key observation: for mSI-sets s, ∫_s F = ∫_s G by exchangeability.
+        -- This is because F and G have the same "shape" (same function types at same
+        -- relative positions), just shifted, and mSI sets are shift-invariant.
+
+        -- Proof via exchangeability: For any permutation π, ∫ f dμ = ∫ f ∘ reindex π dμ.
+        -- Choose π so that F ∘ reindex π = G.
+
+        -- Define π:
+        -- For each i ∈ S: π(N₀+j+1+i) = N₀+j+i and π(N₀+j+i) = N₀+j+1+i
+        -- (swap each pair)
+        -- For other n: π(n) = n
+
+        -- This is a product of disjoint transpositions (if pairs don't overlap).
+        -- When S has consecutive elements, pairs DO overlap, so π is more complex.
+
+        -- Regardless, π exists as a finite permutation. Use Equiv.Perm.ofSeparateBlocks
+        -- or define explicitly.
+
+        -- Use cycle permutation to relate B_at(N₀+j+1) and B_at(N₀+j)
+        -- The cycle maps n → n-1 for coords in (L, R], and L → R.
+        -- This transforms coords {N₀+j+1+i : i ∈ S} to {N₀+j+i : i ∈ S}.
+
+        -- Define bounds for the cycle
+        let minS := S.min' hS_nonempty
+        let maxS := S.max' hS_nonempty
+        let L := N₀ + j + minS  -- minimum coord for B_at(N₀+j)
+        let R := N₀ + j + 1 + maxS  -- maximum coord for B_at(N₀+j+1)
+
+        have hLR : L ≤ R := by
+          simp only [L, R, minS, maxS]
+          have h_min_le_max : S.min' hS_nonempty ≤ S.max' hS_nonempty := Finset.min'_le_max' S hS_nonempty
+          omega
+
+        -- Define the cycle permutation
+        let π := cycleShiftDown L R hLR
+
+        -- Key: π maps source coords to target coords
+        -- For i ∈ S: π(N₀+j+1+i) = N₀+j+i (since L < N₀+j+1+i ≤ R for i ∈ S)
+        have hπ_coord : ∀ i ∈ S, π (N₀ + j + 1 + i) = N₀ + j + i := by
+          intro i hi
+          have h_minS : minS ≤ i := Finset.min'_le S i hi
+          have h_maxS : i ≤ maxS := Finset.le_max' S i hi
+          have hL_lt : L < N₀ + j + 1 + i := by simp only [L, minS]; omega
+          have hR_ge : N₀ + j + 1 + i ≤ R := by simp only [R, maxS]; omega
+          rw [cycleShiftDown_sub L R (N₀ + j + 1 + i) hLR hL_lt hR_ge]
+          omega
+
+        -- π fixes k (since k < N₀ ≤ L)
+        have hπ_k : π k = k := by
+          have hk_lt_L : k < L := by
+            simp only [L, minS]
+            have hminS_nonneg : 0 ≤ minS := Nat.zero_le minS
+            omega
+          exact cycleShiftDown_lt L R k hLR hk_lt_L
+
+        -- π is identity beyond R, so M = R + 1 works
+        have hπ_id_beyond : ∀ n, R < n → π n = n := fun n hn =>
+          cycleShiftDown_gt L R n hLR hn
+
+        -- F ∘ reindex π = G
+        have hFG : (F ∘ Exchangeability.reindex π) = G := by
+          ext ω
+          simp only [Function.comp_apply, F, G]
+          congr 1
+          · -- φ part: (reindex π ω) k = ω (π k) = ω k
+            simp only [Exchangeability.reindex_apply, hπ_k]
+          · -- Indicator part: (B_at (N₀+j+1)).indicator 1 (reindex π ω) = (B_at (N₀+j)).indicator 1 ω
+            simp only [Set.indicator_apply, Pi.one_apply]
+            -- Show: reindex π ω ∈ B_at(N₀+j+1) ↔ ω ∈ B_at(N₀+j)
+            congr 1
+            apply propext
+            simp only [B_at, Set.mem_iInter, Set.mem_setOf_eq]
+            constructor
+            · intro h i hi
+              have := h i hi
+              simp only [Exchangeability.reindex_apply] at this
+              rwa [hπ_coord i hi] at this
+            · intro h i hi
+              simp only [Exchangeability.reindex_apply]
+              rw [hπ_coord i hi]
+              exact h i hi
+
+        -- Measurability
+        have hF_meas : Measurable F := by
+          apply Measurable.mul
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact measurable_const.indicator (hB_at_meas (N₀ + j + 1))
+
+        -- μ.map (reindex π) = μ (exchangeability)
+        have hμ_inv : Measure.map (Exchangeability.reindex π) μ = μ := hExch π
+
+        -- mSI sets are π-invariant (use reindex_perm_preimage_shiftInvariant)
+        have hπ_inv : ∀ s, MeasurableSet[mSI] s →
+            (Exchangeability.reindex π) ⁻¹' s = s := by
+          intro s hs
+          have hs_shift := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+          exact reindex_perm_preimage_shiftInvariant π (R + 1)
+            (fun n hn => hπ_id_beyond n (by omega)) s hs_shift
+
+        -- Set integrals are equal on mSI sets
+        have h_int_eq : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ →
+            ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := fun s hs _ => by
+          -- hs : MeasurableSet[shiftInvariantSigma] s, so hs.1 : MeasurableSet s
+          have hs_meas : MeasurableSet s := hs.1
+          exact setIntegral_eq_of_reindex_eq π hμ_inv F G hFG hF_meas s hs_meas (hπ_inv s hs)
+
+        -- Apply condExp_ae_eq_of_setIntegral_diff_eq_zero
+        have h_diff_zero : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ →
+            ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
+          simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
+                     h_int_eq s hs hμs, sub_self]
+
+        exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
 
       -- Hence CE[φ(ω_k) · A_N | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI]
       have h_product_const : ∀ N, 0 < N →
@@ -6424,16 +6698,107 @@ private lemma tower_indicator_finset
         simp_rw [hA_eq_A']
 
         -- The Cesàro average A'_n → Y in L¹ by MET
-        -- A'_n(ω) = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀+j} ω)
-        --        = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀}(shift^j ω))
-        -- By MET applied to h = 1_B ∘ shift^{N₀}, this converges to CE[h | mSI]
-        -- By shift invariance of CE: CE[h | mSI] = CE[1_B | mSI] = Y
-        -- The full proof involves:
-        -- 1. Showing h = 1_B ∘ shift^{N₀} is bounded and measurable
-        -- 2. Applying MET to get convergence to CE[h | mSI]
-        -- 3. Using condexp_precomp_iterate_eq to show CE[h | mSI] =ᵃᵉ Y
-        -- This is a technical step that follows from standard MET theory
-        sorry
+        -- Strategy: A'_n(ω) = A''_n(shift^{N₀} ω) where A'' is standard Cesàro.
+        -- By shift invariance: ∫|A'_n - Y| = ∫|A''_n - Y| → 0.
+
+        -- Define the "standard" Cesàro average (without the N₀ offset)
+        let A'' : ℕ → Ω[α] → ℝ := fun n ω =>
+          (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j =>
+            B.indicator 1 (shift^[j] ω))
+
+        -- A'_n ω = A''_n(shift^{N₀} ω)
+        have hA'_eq_A'' : ∀ n, A' n = fun ω => A'' n (shift^[N₀] ω) := by
+          intro n
+          ext ω
+          simp only [A', A'']
+          congr 1
+          apply Finset.sum_congr rfl
+          intro j _
+          congr 1
+          rw [Function.iterate_add_apply, add_comm]
+
+        -- Y is shift-invariant (mSI-measurable)
+        have hY_shift_inv : ∀ m, (fun ω => Y (shift^[m] ω)) =ᵐ[μ] Y := fun m => by
+          -- Y = CE[B.indicator 1 | mSI], so Y is mSI-measurable
+          -- For mSI-measurable functions, Y(shift^m ω) = Y(ω) a.e.
+          have hY_meas : AEStronglyMeasurable Y μ := stronglyMeasurable_condExp.aestronglyMeasurable
+          -- mSI-measurable functions are shift-invariant
+          filter_upwards [condExp_ae_eq_condExp (α := Ω[α])] with ω _
+          -- For mSI-measurable functions, the value is constant on shift orbits
+          -- This follows from shift⁻¹(mSI) = mSI
+          sorry  -- TODO: needs condExp shift invariance property
+
+        -- Key: ∫|A'_n - Y| = ∫|A''_n ∘ shift^{N₀} - Y ∘ shift^{N₀}| = ∫|A''_n - Y| by shift invariance of μ
+        have h_integral_eq : ∀ n, ∫ ω, |A' n ω - Y ω| ∂μ = ∫ ω, |A'' n ω - Y ω| ∂μ := by
+          intro n
+          rw [hA'_eq_A' n]
+          -- Use change of variables via shift^{N₀}
+          have hσ_N₀ : MeasurePreserving (shift^[N₀]) μ μ := by
+            induction N₀ with
+            | zero => simp; exact MeasurePreserving.id μ
+            | succ m ih =>
+              simp only [Function.iterate_succ']
+              exact hσ.comp ih
+          -- ∫ f(shift^{N₀} ω) dμ(ω) = ∫ f(ξ) dμ(ξ)
+          have h1 := MeasurePreserving.integral_comp hσ_N₀ (measurable_shift.iterate N₀)
+          -- Apply to |A''_n - Y|
+          have h_diff_meas : Measurable (fun ω => |A'' n ω - Y ω|) := by
+            apply Measurable.abs
+            apply Measurable.sub
+            · -- A'' n is measurable
+              apply Measurable.mul measurable_const
+              apply Finset.measurable_sum
+              intro j _
+              exact measurable_const.indicator hB_meas |>.comp (measurable_shift.iterate j)
+            · exact stronglyMeasurable_condExp.measurable
+          -- Now the integral equals
+          calc ∫ ω, |A' n ω - Y ω| ∂μ
+              = ∫ ω, |A'' n (shift^[N₀] ω) - Y ω| ∂μ := by rw [hA'_eq_A']
+            _ = ∫ ω, |A'' n (shift^[N₀] ω) - Y (shift^[N₀] ω)| ∂μ := by
+                -- Y ω = Y (shift^{N₀} ω) a.e. by shift invariance of Y
+                apply integral_congr_ae
+                filter_upwards [hY_shift_inv N₀] with ω hω
+                rw [hω]
+            _ = ∫ ξ, |A'' n ξ - Y ξ| ∂μ := by
+                -- Change of variables ξ = shift^{N₀} ω
+                rw [← h1 h_diff_meas.aestronglyMeasurable]
+                rfl
+
+        simp_rw [h_integral_eq]
+
+        -- Now apply L1_cesaro_convergence to A'' and Y
+        -- A''_n(ω) = (1/(n+1)) ∑_{j<n+1} (B.indicator 1)(shift^j ω)
+        -- This is the Cesàro average of f(shift^j ω) where f = B.indicator 1
+
+        -- Use that B.indicator 1 is a bounded cylinder function, apply MET.
+        -- The indicator function depends on coords in S ⊆ {0, ..., maxS}
+
+        -- Actually, we need to handle this more carefully since B.indicator 1 is not
+        -- a simple single-coordinate function g(ω_0).
+
+        -- For bounded functions on probability spaces, L² MET → L¹ convergence.
+        -- B.indicator 1 is bounded by 1 and L², so birkhoff average → CE[B.indicator 1 | mSI].
+
+        -- Apply L1_cesaro_convergence_bounded for bounded case
+        have hB_bd : ∃ C, ∀ ω, |B.indicator 1 ω| ≤ C := ⟨1, fun ω => by
+          simp only [Set.indicator_apply, Pi.one_apply]
+          split_ifs <;> simp⟩
+
+        -- The Cesàro A''_n involves shift^j ω, but L1_cesaro_convergence expects g(ω j).
+        -- Need to use the relationship: B.indicator 1 (shift^j ω) = (B.indicator 1)(shift^j ω)
+        -- which depends on coords 0, ..., maxS of shift^j ω, i.e., coords j, j+1, ..., j+maxS of ω.
+
+        -- This is NOT a simple g(ω_j) form. We need a more general MET result.
+
+        -- Use the bounded case with the shift operator directly.
+        -- By birkhoffCylinder_tendsto_condexp style argument:
+        -- For bounded f, (1/n) ∑_{j<n} f(shift^j ω) → CE[f | mSI] in L².
+        -- L² → L¹ on probability spaces.
+
+        -- For now, use the fact that B.indicator 1 is bounded and apply the general MET.
+        -- This follows from L1_cesaro_convergence pattern applied to the product space.
+
+        sorry  -- TODO: Complete with proper MET application for bounded functions
 
       -- CE Lipschitz: CE[φ(ω_k) · A_N | mSI] → CE[φ(ω_k) · Y | mSI] in L¹
       have h_L1_CE : Tendsto (fun N =>
