@@ -417,6 +417,103 @@ lemma directing_measure_measurable
     -- Apply to s to conclude
     exact (h_induction s hs).2
 
+/-! ### Linearity of L¹ Limits
+
+The following lemmas establish that the L¹ limit functional from `weighted_sums_converge_L1`
+is linear: if f and g have L¹ limits α_f and α_g, then f + g has limit α_f + α_g,
+and c * f has limit c * α_f.
+
+These are essential for the functional monotone class argument that extends from
+indicators of half-lines to all bounded measurable functions.
+-/
+
+-- LINEARITY LEMMAS for the functional monotone class argument
+--
+-- These lemmas establish that the L¹ limit functional from `weighted_sums_converge_L1`
+-- is linear and continuous. They are essential for extending the base case
+-- (indicators of half-lines) to all bounded measurable functions.
+--
+-- PROOF STRATEGY: Each follows from:
+-- 1. The Cesàro averages satisfy the algebraic identity
+--    (e.g., (1/N) Σ c*f(X_k) = c * (1/N) Σ f(X_k))
+-- 2. L¹ limits are unique up to a.e. equality
+-- 3. Therefore the limits satisfy the same identity
+--
+-- These are routine but require careful handling of the existential .choose
+
+/-- Scalar multiplication of L¹ limits: if f has L¹ limit α, then c*f has L¹ limit c*α. -/
+lemma weighted_sums_converge_L1_smul
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (c : ℝ)
+    (hcf_bdd : ∃ M, ∀ x, |c * f x| ≤ M) :
+    let alpha := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose
+    let alpha_c := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (fun x => c * f x) (measurable_const.mul hf_meas) hcf_bdd).choose
+    alpha_c =ᵐ[μ] fun ω => c * alpha ω := by
+  intro alpha alpha_c
+  -- (1/N) Σ c*f(X_k) = c * (1/N) Σ f(X_k), so limits satisfy same identity
+  sorry
+
+/-- Addition of L¹ limits: if f has limit α_f and g has limit α_g, then f+g has limit α_f + α_g. -/
+lemma weighted_sums_converge_L1_add
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f g : ℝ → ℝ) (hf_meas : Measurable f) (hg_meas : Measurable g)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) (hg_bdd : ∃ M, ∀ x, |g x| ≤ M)
+    (hfg_bdd : ∃ M, ∀ x, |f x + g x| ≤ M) :
+    let alpha_f := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose
+    let alpha_g := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 g hg_meas hg_bdd).choose
+    let alpha_fg := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (fun x => f x + g x) (hf_meas.add hg_meas) hfg_bdd).choose
+    alpha_fg =ᵐ[μ] fun ω => alpha_f ω + alpha_g ω := by
+  intro alpha_f alpha_g alpha_fg
+  -- (1/N) Σ (f+g)(X_k) = (1/N) Σ f(X_k) + (1/N) Σ g(X_k), so limits add
+  sorry
+
+/-- Subtraction/complement: L¹ limit of (1 - f) is (1 - limit of f).
+
+This is used for the complement step in the π-λ argument:
+1_{Sᶜ} = 1 - 1_S, so the limit for the complement is 1 minus the limit for the set. -/
+lemma weighted_sums_converge_L1_one_sub
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (hsub_bdd : ∃ M, ∀ x, |1 - f x| ≤ M) :
+    let alpha := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose
+    let alpha_1 := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose
+    let alpha_sub := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (fun x => 1 - f x) (measurable_const.sub hf_meas) hsub_bdd).choose
+    alpha_sub =ᵐ[μ] fun ω => alpha_1 ω - alpha ω := by
+  intro alpha alpha_1 alpha_sub
+  -- alpha_1 = 1 a.e. (constant averages), then subtraction follows from linearity
+  sorry
+
+/-- The L¹ limit of the constant function 1 is 1 a.e.
+
+This is immediate since the Cesàro average of constant 1 is exactly 1:
+(1/N) Σ_k 1 = (1/N) * N = 1. -/
+lemma weighted_sums_converge_L1_const_one
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+        (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose
+    =ᵐ[μ] fun _ => (1 : ℝ) := by
+  -- (1/N) * N = 1 for all N > 0, so L¹ limit is exactly 1
+  sorry
+
 /-- The directing measure integrates to give α_f.
 
 For any bounded measurable f, we have α_f(ω) = ∫ f dν(ω) a.e.
