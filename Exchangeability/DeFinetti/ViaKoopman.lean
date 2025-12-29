@@ -6297,7 +6297,105 @@ private lemma tower_indicator_finset
         -- CE[φ · A_N | mSI] = (1/N) ∑_{j=0}^{N-1} CE[φ · 1_{B_at(N₀+j)} | mSI]
         --                   = (1/N) · N · CE[φ · 1_{B_at N₀} | mSI]  (by lag constancy)
         --                   = CE[φ · 1_{B_at N₀} | mSI]
-        sorry
+
+        -- Step 1: Expand A_N
+        have hA_N_expand : (fun ω => φ (ω k) * A_N N ω) = fun ω =>
+            (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+              φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) := by
+          ext ω
+          simp only [A_N, if_neg (Nat.ne_of_gt hN), one_div]
+          -- φ(ω k) * ((↑N)⁻¹ * ∑ j, ...) = (↑N)⁻¹ * ∑ j, φ(ω k) * ...
+          rw [mul_comm (φ (ω k)) ((N : ℝ)⁻¹ * _)]
+          rw [mul_assoc]
+          congr 1
+          rw [Finset.sum_mul]
+          apply Finset.sum_congr rfl
+          intro j _
+          ring
+
+        -- Step 2: Integrability of each term
+        have h_term_int : ∀ j, Integrable (fun ω =>
+            φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) μ := by
+          intro j
+          have h_ind_int : Integrable ((B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ)) μ :=
+            Integrable.indicator (integrable_const 1) (hB_at_meas (N₀ + j))
+          have h_ind_bd : ∃ C, ∀ᵐ ω ∂μ, |(B_at (N₀ + j)).indicator (1 : Ω[α] → ℝ) ω| ≤ C := by
+            use 1; filter_upwards with ω
+            simp only [Set.indicator_apply, Pi.one_apply]
+            split_ifs <;> simp
+          refine integrable_mul_of_ae_bdd_left ?_ ?_ h_ind_int
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact ⟨1, ae_of_all μ fun ω => by simp [φ, Set.indicator_apply]; split_ifs <;> simp⟩
+
+        -- Step 3: Integrability of the sum
+        have h_sum_int : Integrable (fun ω =>
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) μ :=
+          integrable_finset_sum (Finset.range N) (fun j _ => h_term_int j)
+
+        -- Step 4: Pull out the scalar (1/N) from CE
+        have h_scalar : μ[(fun ω => (1 / N : ℝ) *
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI]
+            =ᵐ[μ] (fun ω => (1 / N : ℝ) * μ[(fun ω' =>
+              (Finset.range N).sum (fun j => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω')) | mSI] ω) := by
+          have := condExp_smul (μ := μ) (m := mSI) (1 / N : ℝ)
+            (fun ω => (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω))
+          convert this using 2 <;> ext ω <;> ring
+
+        -- Step 5: Distribute CE over the sum
+        have h_sum_ce : μ[(fun ω =>
+            (Finset.range N).sum (fun j => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI]
+            =ᵐ[μ] (fun ω => (Finset.range N).sum (fun j =>
+              μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω)) :=
+          condExp_sum_finset (shiftInvariantSigma_le (α := α)) (Finset.range N)
+            (fun j ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)
+            (fun j _ => h_term_int j)
+
+        -- Step 6: Use lag constancy to show each CE equals CE[φ · 1_{B_at N₀}]
+        -- Chain: CE[φ · 1_{B_at(N₀+j)}] =ᵃᵉ CE[φ · 1_{B_at(N₀+j-1)}] =ᵃᵉ ... =ᵃᵉ CE[φ · 1_{B_at N₀}]
+        have h_all_equal : ∀ j,
+            μ[(fun ω => φ (ω k) * (B_at (N₀ + j)).indicator 1 ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+          intro j
+          -- Induction on j: j = 0 is trivial, j+1 follows from h_lag_const
+          induction j with
+          | zero => simp only [add_zero]; rfl
+          | succ n ih =>
+            -- CE[φ · 1_{B_at(N₀+n+1)}] =ᵃᵉ CE[φ · 1_{B_at(N₀+n)}] by h_lag_const
+            have h_step := h_lag_const n
+            -- Convert (N₀ + n + 1) to (N₀ + (n + 1)) form
+            have hN₀_n_add : N₀ + n + 1 = N₀ + (n + 1) := by ring
+            rw [hN₀_n_add] at h_step
+            calc μ[(fun ω => φ (ω k) * (B_at (N₀ + (n + 1))).indicator 1 ω) | mSI]
+                =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at (N₀ + n)).indicator 1 ω) | mSI] := h_step
+              _ =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := ih
+
+        -- Step 7: The sum of equal terms equals N times the common value
+        have h_sum_const : (fun ω => (Finset.range N).sum (fun j =>
+              μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω))
+            =ᵐ[μ] (fun ω => (N : ℝ) * μ[(fun ω' => φ (ω' k) * (B_at N₀).indicator 1 ω') | mSI] ω) := by
+          -- Get ae_eq for each term
+          have h_ae_terms := ae_all_iff.mpr (fun j => h_all_equal j)
+          filter_upwards [h_ae_terms] with ω hω
+          simp only [Finset.sum_congr rfl (fun j _ => hω j)]
+          rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
+        -- Step 8: Combine: (1/N) * N * CE[...] = CE[...]
+        calc μ[(fun ω => φ (ω k) * A_N N ω) | mSI]
+            =ᵐ[μ] μ[(fun ω => (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+                φ (ω k) * (B_at (N₀ + j)).indicator 1 ω)) | mSI] := by
+              exact condExp_congr_ae (ae_of_all μ fun ω => by rw [hA_N_expand])
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * μ[(fun ω' =>
+                (Finset.range N).sum (fun j =>
+                  φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω')) | mSI] ω) := h_scalar
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * (Finset.range N).sum (fun j =>
+                μ[(fun ω' => φ (ω' k) * (B_at (N₀ + j)).indicator 1 ω') | mSI] ω)) := by
+              filter_upwards [h_sum_ce] with ω hω; rw [hω]
+          _ =ᵐ[μ] (fun ω => (1 / N : ℝ) * ((N : ℝ) *
+                μ[(fun ω' => φ (ω' k) * (B_at N₀).indicator 1 ω') | mSI] ω)) := by
+              filter_upwards [h_sum_const] with ω hω; rw [hω]
+          _ =ᵐ[μ] μ[(fun ω => φ (ω k) * (B_at N₀).indicator 1 ω) | mSI] := by
+              filter_upwards with ω
+              field_simp [Nat.ne_of_gt hN]
 
       -- MET gives: A_N → Y in L¹ where Y = CE[1_B | mSI]
       have h_L1_A_to_Y : Tendsto (fun N =>
