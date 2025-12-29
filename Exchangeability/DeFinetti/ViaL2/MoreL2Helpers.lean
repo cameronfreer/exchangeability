@@ -540,20 +540,75 @@ lemma weighted_sums_converge_L1_const_one
     (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
         (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose
     =ᵐ[μ] fun _ => (1 : ℝ) := by
-  -- PROOF OUTLINE:
-  -- (1/N) * N = 1 for all N > 0, so L¹ limit is exactly 1.
-  --
-  -- The Cesàro average A n m ω = (1/m) * Σ_{k<m} 1 = (1/m) * m = 1 for m > 0.
-  -- Since A n m = 1 pointwise and converges in L¹ to alpha, we have alpha =ᵐ 1.
-  --
-  -- The proof uses:
-  -- 1. h_conv gives ∀ ε > 0, ∃ M, ∀ m ≥ M, ∫|A n m - alpha| < ε
-  -- 2. A n m = 1 pointwise (since sum of m ones divided by m equals 1)
-  -- 3. Therefore ∫|1 - alpha| can be made arbitrarily small
-  -- 4. By positivity of integral, alpha =ᵐ 1
-  --
-  -- The implementation requires careful handling of the indexing and casting.
-  sorry
+  -- (1/m) * m = 1 for all m > 0, so L¹ limit is exactly 1.
+  let alpha := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose
+  have h_spec := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+      (fun _ => (1 : ℝ)) measurable_const ⟨1, fun _ => by norm_num⟩).choose_spec
+  have h_alpha_L1 : MemLp alpha 1 μ := h_spec.2.1
+  have h_conv := h_spec.2.2
+
+  -- Key: the Cesàro average of constant 1 equals 1 exactly for m > 0
+  have h_avg_eq_one : ∀ n (m : ℕ), m > 0 →
+      ∀ ω, (1 / (m : ℝ)) * ∑ k : Fin m, (fun _ => (1 : ℝ)) (X (n + k.val + 1) ω) = 1 := by
+    intro n m hm ω
+    simp only [Finset.sum_const, Finset.card_fin, nsmul_eq_mul, mul_one]
+    have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.ne_of_gt hm)
+    field_simp
+
+  -- Use h_conv at starting index 0
+  have h_conv_0 := h_conv 0
+
+  -- The integral ∫|1 - alpha| is constant in m (doesn't depend on m)
+  -- but by h_conv, for any ε > 0, we can make ∫|A_m - alpha| < ε for large m
+  -- Since A_m = 1 exactly, we have ∫|1 - alpha| < ε for any ε > 0
+  -- Therefore ∫|1 - alpha| = 0, so alpha =ᵐ 1
+
+  have h_alpha_int : Integrable alpha μ := h_alpha_L1.integrable le_rfl
+  have h_one_int : Integrable (fun _ : Ω => (1 : ℝ)) μ := integrable_const 1
+  have h_diff_int : Integrable (fun ω => 1 - alpha ω) μ := h_one_int.sub h_alpha_int
+  have h_abs_int : Integrable (fun ω => |1 - alpha ω|) μ := h_diff_int.abs
+
+  -- Goal: show ∫|1 - alpha| = 0
+  -- Strategy: show ∫|1 - alpha| < ε for all ε > 0
+  have h_integral_zero : ∫ ω, |1 - alpha ω| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |1 - alpha ω| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |1 - alpha ω| ∂μ := lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+    -- Get M such that for m ≥ M, ∫|A_m - alpha| < (∫|1 - alpha|) / 2
+    set ε := (∫ ω, |1 - alpha ω| ∂μ) / 2 with hε_def
+    have hε_pos : ε > 0 := by linarith
+    obtain ⟨M, hM⟩ := h_conv_0 ε hε_pos
+    -- Choose m = max 1 M to ensure m ≥ M and m > 0
+    set m := max 1 M with hm_def
+    have hm_pos : m > 0 := Nat.lt_of_lt_of_le (by norm_num) (le_max_left _ _)
+    have hm_ge_M : m ≥ M := le_max_right _ _
+    specialize hM m hm_ge_M
+    -- hM says: ∫|(1/m) * Σ_{k<m} 1 - alpha| < ε
+    -- Since (1/m) * m = 1, this simplifies to ∫|1 - alpha| < ε
+    -- Simplify hM: Σ_{k : Fin m} 1 = m, so (1/m) * m = 1
+    have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.ne_of_gt hm_pos)
+    simp only [Finset.sum_const, Finset.card_fin, nsmul_eq_mul, mul_one,
+               one_div, inv_mul_cancel₀ hm_ne] at hM
+    -- Now hM : ∫|1 - alpha| < ε = (∫|1 - alpha|) / 2
+    -- This contradicts ∫|1 - alpha| > 0
+    linarith
+
+  -- Now use that ∫|f| = 0 and f ≥ 0 implies f =ᵐ 0
+  have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |1 - alpha ω| := by
+    filter_upwards with ω
+    exact abs_nonneg _
+  have h_ae_zero : (fun ω => |1 - alpha ω|) =ᵐ[μ] (0 : Ω → ℝ) := by
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg_ae h_abs_int]
+  -- From |1 - alpha| =ᵐ 0, get 1 - alpha =ᵐ 0, i.e., alpha =ᵐ 1
+  have h_diff_zero : (fun ω => 1 - alpha ω) =ᵐ[μ] (0 : Ω → ℝ) := by
+    filter_upwards [h_ae_zero] with ω hω
+    simp only [Pi.zero_apply, abs_eq_zero] at hω ⊢
+    exact hω
+  -- Therefore alpha =ᵐ 1
+  filter_upwards [h_diff_zero] with ω hω
+  simp only [Pi.zero_apply] at hω
+  linarith [hω]
 
 /-- The directing measure integrates to give α_f.
 
