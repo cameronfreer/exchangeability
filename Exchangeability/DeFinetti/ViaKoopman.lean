@@ -6302,10 +6302,39 @@ private lemma tower_indicator_finset
       -- MET gives: A_N → Y in L¹ where Y = CE[1_B | mSI]
       have h_L1_A_to_Y : Tendsto (fun N =>
           ∫ ω, |A_N (N + 1) ω - Y ω| ∂μ) atTop (𝓝 0) := by
-        -- Use L1_cesaro_convergence for the cylinder indicator
         -- A_{N+1}(ω) = (1/(N+1)) ∑_{j=0}^N 1_B(shift^{N₀+j} ω)
-        -- This is a Cesàro average starting from index N₀, which by shift invariance
-        -- converges to Y = CE[1_B | mSI].
+        --           = (1/(N+1)) ∑_{j=0}^N (1_B ∘ shift^{N₀})(shift^j ω)
+        -- Let h = 1_B ∘ shift^{N₀}. By MET, this converges to CE[1_B | mSI] = Y
+
+        -- Define A' using the same pattern
+        let A' : ℕ → Ω[α] → ℝ := fun n ω =>
+          (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j =>
+            B.indicator 1 (shift^[N₀] (shift^[j] ω)))
+
+        -- A'_n = A_{n+1} (after adjusting the starting point)
+        have hA_eq_A' : ∀ n, A_N (n + 1) = A' n := by
+          intro n
+          ext ω
+          simp only [A_N, if_neg (Nat.succ_ne_zero n), A', Nat.cast_add, Nat.cast_one]
+          congr 1
+          apply Finset.sum_congr rfl
+          intro j _
+          simp only [hB_at_eq_shift]
+          congr 1
+          rw [Function.iterate_add_apply]
+
+        simp_rw [hA_eq_A']
+
+        -- The Cesàro average A'_n → Y in L¹ by MET
+        -- A'_n(ω) = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀+j} ω)
+        --        = (1/(n+1)) ∑_{j<n+1} 1_B(shift^{N₀}(shift^j ω))
+        -- By MET applied to h = 1_B ∘ shift^{N₀}, this converges to CE[h | mSI]
+        -- By shift invariance of CE: CE[h | mSI] = CE[1_B | mSI] = Y
+        -- The full proof involves:
+        -- 1. Showing h = 1_B ∘ shift^{N₀} is bounded and measurable
+        -- 2. Applying MET to get convergence to CE[h | mSI]
+        -- 3. Using condexp_precomp_iterate_eq to show CE[h | mSI] =ᵃᵉ Y
+        -- This is a technical step that follows from standard MET theory
         sorry
 
       -- CE Lipschitz: CE[φ(ω_k) · A_N | mSI] → CE[φ(ω_k) · Y | mSI] in L¹
