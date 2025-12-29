@@ -964,6 +964,55 @@ private lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → �
       simp only [Set.mem_preimage]; exact h1
     rw [h_iter_k2] at h2; exact h2
 
+/-- **Generalized reindex preimage invariance**: For any permutation π that is identity
+beyond some bound M, shift-invariant sets are reindex-invariant.
+
+This generalizes `reindex_swap_preimage_shiftInvariant` from transpositions to arbitrary
+finite-support permutations. The proof uses the same key insight: shift^[M] commutes with
+reindex π when π is identity beyond M, so membership in shift-invariant sets is preserved. -/
+lemma reindex_perm_preimage_shiftInvariant (π : Equiv.Perm ℕ) (M : ℕ)
+    (h_id_beyond : ∀ n, M ≤ n → π n = n)
+    (s : Set (ℕ → α)) (hs : isShiftInvariant (α := α) s) :
+    (Exchangeability.reindex π) ⁻¹' s = s := by
+  ext ω
+  simp only [Set.mem_preimage]
+  -- Use that s is shift-invariant: ω ∈ s ↔ shift^[m] ω ∈ s for any m
+  obtain ⟨_, hs_shift⟩ := hs
+  have h_iter : ∀ m, (shift (α := α))^[m] ⁻¹' s = s := by
+    intro m
+    induction m with
+    | zero => simp
+    | succ n ih =>
+      calc shift^[n + 1] ⁻¹' s = shift^[n] ⁻¹' (shift ⁻¹' s) := by
+              simp only [Function.iterate_succ', Set.preimage_comp]
+        _ = shift^[n] ⁻¹' s := by rw [hs_shift]
+        _ = s := ih
+  -- Key: shift^[M] (reindex π ω) = shift^[M] ω pointwise
+  have h_eq : shift^[M] (Exchangeability.reindex π ω) = shift^[M] ω := by
+    ext n
+    rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply]
+    -- π (n + M) = n + M since n + M ≥ M
+    have hle : M ≤ n + M := Nat.le_add_left M n
+    rw [h_id_beyond (n + M) hle]
+  have h_iter_M := h_iter M
+  constructor
+  · -- Assume reindex π ω ∈ s, show ω ∈ s
+    intro h
+    have h1 : (Exchangeability.reindex π ω) ∈ (shift (α := α))^[M] ⁻¹' s := by
+      rw [h_iter_M]; exact h
+    simp only [Set.mem_preimage] at h1
+    rw [h_eq] at h1
+    have h2 : ω ∈ (shift (α := α))^[M] ⁻¹' s := by simp only [Set.mem_preimage]; exact h1
+    rw [h_iter_M] at h2; exact h2
+  · -- Assume ω ∈ s, show reindex π ω ∈ s
+    intro h
+    have h1 : ω ∈ (shift (α := α))^[M] ⁻¹' s := by rw [h_iter_M]; exact h
+    simp only [Set.mem_preimage] at h1
+    rw [← h_eq] at h1
+    have h2 : (Exchangeability.reindex π ω) ∈ (shift (α := α))^[M] ⁻¹' s := by
+      simp only [Set.mem_preimage]; exact h1
+    rw [h_iter_M] at h2; exact h2
+
 /-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
 when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
