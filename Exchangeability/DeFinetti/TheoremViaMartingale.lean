@@ -74,38 +74,16 @@ theorem conditionallyIID_of_contractable
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X) :
     ConditionallyIID μ X := by
-  -- Conditional expectation kernels live under a finite-measure assumption
-  haveI : IsFiniteMeasure μ := inferInstance
-
-  -- 1) Directing measure from the tail σ-algebra
-  set ν : Ω → Measure α := directingMeasure (μ := μ) X hX_meas with hν_def
-
-  -- 2) νω is a probability measure
-  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
-    directingMeasure_isProb (μ := μ) X hX_meas
-
-  -- 3) measurability of evaluations ω ↦ νω(B)
-  have hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B) :=
-    directingMeasure_measurable_eval (μ := μ) X hX_meas
-
-  -- 4) conditional laws of all coordinates agree with ν
-  have hν_law :
-      ∀ n (B : Set α), MeasurableSet B →
-        (fun ω => (ν ω B).toReal)
-          =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
-    intro n B hB
-    exact conditional_law_eq_directingMeasure (μ := μ) X hContract hX_meas n B hB
-
-  -- 5) finite-dimensional product formula for strictly-monotone selections
-  have hProduct :
-      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
-        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-          = μ.bind (fun ω => Measure.pi (fun _ : Fin m => ν ω)) := by
-    intro m k hk
-    exact finite_product_formula X hContract hX_meas ν hν_prob hν_meas hν_law m k hk
-
-  -- 6) package as ConditionallyIID (only needs the StrictMono case)
-  exact ⟨ν, hν_prob, hν_meas, hProduct⟩
+  -- Directing measure from the tail σ-algebra
+  let ν := directingMeasure (μ := μ) X hX_meas
+  exact ⟨ν,
+    directingMeasure_isProb X hX_meas,
+    directingMeasure_measurable_eval X hX_meas,
+    fun m k hk => finite_product_formula X hContract hX_meas ν
+      (directingMeasure_isProb X hX_meas)
+      (directingMeasure_measurable_eval X hX_meas)
+      (fun n B hB => conditional_law_eq_directingMeasure X hContract hX_meas n B hB)
+      m k hk⟩
 
 /-- **de Finetti's theorem (martingale proof):** Exchangeable ⇒ Conditionally i.i.d.
 
@@ -121,9 +99,8 @@ theorem deFinetti
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X) :
-    ConditionallyIID μ X := by
-  have hContr := contractable_of_exchangeable hX_exch hX_meas
-  exact conditionallyIID_of_contractable X hX_meas hContr
+    ConditionallyIID μ X :=
+  conditionallyIID_of_contractable X hX_meas (contractable_of_exchangeable hX_exch hX_meas)
 
 /-- **Full equivalence (martingale proof):** Exchangeable ⇔ Conditionally i.i.d.
 
