@@ -2826,21 +2826,53 @@ lemma directing_measure_integral
         -- 4. So alphaIic t = L¹ limit a.e., hence h_raw.choose = alphaIic t a.e.
         -- 5. By base: alphaIic t = ∫ 1_{Iic t} dν a.e.
         -- 6. Combining: h_raw.choose = ∫ 1_{Iic t} dν a.e.
-        -- Key observation: Both h_raw.choose and alphaIic are L¹ limits of the same Cesàro
-        -- averages of 1_{Iic t} ∘ X. By uniqueness of L¹ limits, they agree a.e.
+        -- Key observation: h_raw.choose and the internal limit in alphaIic are the same term
+        -- by proof irrelevance (both come from weighted_sums_converge_L1 with definitionally
+        -- equal arguments). So alphaIic t = max 0 (min 1 (h_raw.choose)) definitionally.
         --
-        -- Technical details:
-        -- 1. h_raw.choose is the L¹ limit from weighted_sums_converge_L1 for ind_t
-        -- 2. alphaIic t is defined as max 0 (min 1 (internal_alpha)) where internal_alpha
-        --    is the L¹ limit from weighted_sums_converge_L1 for indIic t
-        -- 3. Since ind_t = indIic t definitionally, by L¹ uniqueness, h_raw.choose =ᵐ internal_alpha
-        -- 4. The L¹ limit of [0,1]-valued averages is a.e. in [0,1] (closed set convergence)
-        -- 5. So alphaIic t = internal_alpha a.e. (clipping is a.e. identity on [0,1])
-        -- 6. Combined: h_raw.choose =ᵐ alphaIic t, and by base: alphaIic t =ᵐ ∫ ind_t dν
-        --
-        -- This step requires L1_unique_of_two_limits and closed set convergence properties.
-        -- The mathematical content is complete; the Lean implementation is technical bookkeeping.
-        sorry
+        -- Strategy:
+        -- 1. Show h_raw.choose is a.e. in [0,1] (closed set convergence)
+        -- 2. Therefore clipping is a.e. identity: h_raw.choose =ᵐ alphaIic t
+        -- 3. By base: alphaIic t =ᵐ ∫ ind_t dν(·)
+        -- 4. Transitivity: h_raw.choose =ᵐ ∫ ind_t dν(·)
+
+        -- Step 1: Show h_raw.choose ∈ [0,1] a.e. using closed set convergence
+        -- The Cesàro averages are in [0,1] pointwise, and they converge to h_raw.choose in L¹.
+        -- L¹ convergence implies convergence in measure, which has a.e. converging subsequence.
+        -- Since [0,1] is closed, the a.e. limit is a.e. in [0,1].
+        have h_raw_in_01 : ∀ᵐ ω ∂μ, 0 ≤ h_raw.choose ω ∧ h_raw.choose ω ≤ 1 := by
+          -- For now, we defer this step. The argument is:
+          -- - L¹ convergence → convergence in measure → a.e. convergent subsequence
+          -- - Each Cesàro average (1/m) Σ ind_t(X_k) ∈ [0,1] (sum of 0s and 1s divided by m)
+          -- - By IsClosed.mem_of_tendsto for the closed set [0,1], limit is a.e. in [0,1]
+          --
+          -- This requires showing the L¹ convergence is also atTop convergence in measure,
+          -- extracting the a.e. subsequence, and applying closed set membership.
+          -- Technical bookkeeping ~30 lines.
+          sorry
+
+        -- Step 2: Clipping is a.e. identity on [0,1]
+        have h_clip_id : ∀ᵐ ω ∂μ, max 0 (min 1 (h_raw.choose ω)) = h_raw.choose ω := by
+          filter_upwards [h_raw_in_01] with ω ⟨h0, h1⟩
+          rw [min_comm, min_eq_left h1, max_eq_right h0]
+
+        -- Step 3: h_raw.choose =ᵐ alphaIic t
+        -- By proof irrelevance, h_raw and the internal existential in alphaIic are the same,
+        -- so h_raw.choose = internal_alpha definitionally. Then alphaIic = max 0 (min 1 internal_alpha).
+        have h_eq_alpha : ∀ᵐ ω ∂μ, h_raw.choose ω = alphaIic X hX_contract hX_meas hX_L2 t ω := by
+          -- alphaIic t ω = max 0 (min 1 ((weighted_sums_converge_L1 ... indIic ...).choose ω))
+          -- But ind_t = indIic t definitionally, and by proof irrelevance the proofs match
+          -- So h_raw.choose = the internal .choose in alphaIic definitionally
+          -- Combined with h_clip_id: h_raw.choose = max 0 (min 1 h_raw.choose) = alphaIic a.e.
+          filter_upwards [h_clip_id] with ω hω
+          -- alphaIic t ω = max 0 (min 1 (internal_limit ω)) where internal_limit = h_raw.choose
+          -- by proof irrelevance (same weighted_sums_converge_L1 call)
+          rw [← hω]
+          rfl  -- By proof irrelevance: the internal .choose in alphaIic = h_raw.choose
+
+        -- Step 4: Transitivity with base
+        filter_upwards [h_eq_alpha, h_base] with ω hω1 hω2
+        rw [hω1, hω2]
       -- Apply L1_transfer to convert convergence
       have h_raw_int := h_raw.choose_spec.2.1.integrable le_rfl
       exact L1_transfer h_raw.choose (fun ω => ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
