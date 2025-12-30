@@ -84,16 +84,11 @@ variable {α : Type*} [MeasurableSpace α]
 -- Ensure Lp spaces work with p = 2
 attribute [local instance] fact_one_le_two_ennreal
 
-/-- Path space: sequences indexed by ℕ taking values in α. -/
-abbrev PathSpace (α : Type*) := ℕ → α
-
-notation3 "Ω[" α "]" => PathSpace α
+-- NOTE: PathSpace and Ω[α] notation are now defined in PathSpace.Shift
+-- The shift operator (shift ω) n = ω(n+1) is fundamental to ergodic theory and
+-- is defined there along with shift_measurable.
 
 variable {Ω : Type*} [MeasurableSpace Ω]
-
--- NOTE: shift definition and measurability lemmas are imported from PathSpace.Shift
--- The shift operator (shift ω) n = ω(n+1) is fundamental to ergodic theory and
--- is now defined in a central location to avoid duplication.
 
 -- Product measure setup will need specific API from mathlib
 -- For now we work with abstract measure-preserving assumptions
