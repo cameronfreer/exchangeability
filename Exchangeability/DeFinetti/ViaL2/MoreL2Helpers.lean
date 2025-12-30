@@ -2635,9 +2635,24 @@ lemma directing_measure_integral
   -- Since f is bounded by M and ν(ω) is a probability measure, |∫ f dν(ω)| ≤ M
   -- This makes ω ↦ ∫ f dν(ω) bounded and hence integrable against μ
   have h_int_L1 : Integrable (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
-    -- Technical proof: bounded function is integrable against probability measure
-    -- Follows from h_int_meas (measurability) and boundedness |∫ f dν(ω)| ≤ M
-    sorry
+    obtain ⟨M, hM⟩ := hf_bdd
+    -- The integral is bounded: |∫ f dν(ω)| ≤ M for all ω
+    -- Therefore integrable against any probability measure μ
+    have h_bound : ∀ ω, ‖∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)‖ ≤ M := by
+      intro ω
+      have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+      calc ‖∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)‖
+          ≤ ∫ x, ‖f x‖ ∂(directing_measure X hX_contract hX_meas hX_L2 ω) :=
+            norm_integral_le_integral_norm _
+        _ ≤ ∫ x, M ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+            apply integral_mono_of_nonneg
+            · exact ae_of_all _ (fun _ => norm_nonneg _)
+            · exact integrable_const M
+            · apply ae_of_all; intro x
+              simp only [Real.norm_eq_abs]; exact hM x
+        _ = M := by simp [integral_const, h_prob.measure_univ]
+    exact Integrable.mono' (integrable_const M) h_int_meas.aestronglyMeasurable
+      (ae_of_all _ h_bound)
 
   -- Step C: L¹ convergence property
   -- The proof proceeds in three sub-steps:
@@ -2708,9 +2723,20 @@ lemma directing_measure_integral
     simp only [zero_add] at hM₁ hM₂
     have h1 := hM₁ m hm₁
     have h2 := hM₂ m hm₂
-    -- The triangle inequality argument gives ∫|α - ∫fdν| < 2ε < 3ε = ∫|α - ∫fdν|
-    -- This is a contradiction
-    -- The detailed proof is in the comments; here we defer the technical calc step
+    -- The triangle inequality for integrals gives:
+    -- ∫|α - ∫fdν| ≤ ∫|avg - α| + ∫|avg - ∫fdν| < ε + ε = 2ε
+    -- But by definition: ε = (∫|α - ∫fdν|) / 3
+    -- So ∫|α - ∫fdν| = 3ε < 2ε, contradiction for ε > 0
+    --
+    -- Mathematical proof:
+    -- Let avg(ω) = (1/m) Σ f(X_{k+1}(ω)). By triangle inequality:
+    --   |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν|  (pointwise)
+    -- Integrating:
+    --   ∫|α - ∫fdν|dμ ≤ ∫|α - avg|dμ + ∫|avg - ∫fdν|dμ < ε + ε = 2ε
+    -- Since ε = (∫|α - ∫fdν|dμ) / 3, we get 3ε < 2ε, contradiction.
+    --
+    -- Technical implementation requires showing avg is integrable (which it is,
+    -- since f is bounded and the sum is finite). We defer this bookkeeping.
     sorry
 
   -- Conclude alpha = ∫ f dν a.e.
