@@ -2940,15 +2940,33 @@ lemma directing_measure_integral
             _ = 1 := by simp [h_prob.measure_univ]))
         ε' hε'
 
-    -- Stage B & C: Approximate f by step functions and conclude
-    -- For bounded measurable f with |f| ≤ M_bound:
-    -- 1. Build dyadic step functions s_k with |s_k| ≤ M_bound and |f - s_k| ≤ M_bound/k
-    -- 2. Use linearity: h_ind_L1_conv extends to step functions via _smul and _add
-    -- 3. Triangle inequality: decompose the error and bound each piece
+    -- ════════════════════════════════════════════════════════════════════════
+    -- Stage B: Ioc intervals via linearity
+    -- ════════════════════════════════════════════════════════════════════════
+    -- For Ioc(a,b) = Iic b \ Iic a, we have 1_{Ioc(a,b)} = 1_{Iic b} - 1_{Iic a}.
+    -- By weighted_sums_converge_L1_add (subtraction version via negation):
+    -- avg(1_{Ioc}) → ∫ 1_{Ioc} dν in L¹
     --
-    -- Technical details require ~60 more lines setting up the approximation.
-    -- The mathematical argument is complete: both avg and ∫·dν are linear,
-    -- agree on generators, and are bounded - so they agree on all bounded measurable f.
+    -- For finite linear combinations Σ c_i · 1_{Ioc(a_i, b_i)}:
+    -- Use weighted_sums_converge_L1_smul and _add iteratively.
+
+    -- ════════════════════════════════════════════════════════════════════════
+    -- Stage C: Approximate bounded measurable f by step functions
+    -- ════════════════════════════════════════════════════════════════════════
+    -- For f : ℝ → ℝ measurable with |f| ≤ M:
+    -- 1. Use SimpleFunc.approxOn to build step functions s_k → f pointwise
+    --    with |s_k| ≤ M and ‖f - s_k‖_∞ → 0
+    -- 2. By Stage B: avg(s_k) → ∫ s_k dν in L¹ for each k
+    -- 3. By DCT: ∫ s_k dν → ∫ f dν pointwise (bounded by M)
+    -- 4. Triangle: ∫|avg(f) - ∫fdν| ≤ ∫|avg(f) - avg(s_k)| + ∫|avg(s_k) - ∫s_k dν|
+    --                               + ∫|∫s_k dν - ∫fdν|
+    --    First term: ≤ 2‖f - s_k‖_∞ → 0 (bounded averages)
+    --    Second term: → 0 by Stage B
+    --    Third term: ≤ ‖s_k - f‖_∞ → 0 (bounded integrals)
+    --
+    -- Technical implementation: ~80 lines using SimpleFunc.approxOn,
+    -- weighted_sums_converge_L1_add/smul, and epsilon/3 arguments.
+
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
