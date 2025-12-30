@@ -4066,10 +4066,28 @@ lemma directing_measure_bridge
           -- This uses directing_measure_integral with offset indices
           have h_block_L1 : Tendsto (fun N => ∫ ω, |q_block N ω - ∏ i, r_funcs i ω| ∂μ)
               atTop (𝓝 0) := by
-            -- The block averages p_block N i converge to ν(B' i) in L¹
-            -- by the same argument as standard Cesàro averages
-            -- (contractability gives same L² bounds for any offset)
-            -- Then apply prod_tendsto_L1_of_L1_tendsto
+            -- ══════════════════════════════════════════════════════════════════════
+            -- Proof Structure for L¹ convergence:
+            -- ══════════════════════════════════════════════════════════════════════
+            --
+            -- p_block N i ω = (1/N) * ∑ k : Fin N, I i (i*N + k) ω
+            --               = (1/N) * ∑ k, 1_{B' i}(X_{i*N + k} ω)
+            --
+            -- This is a Cesàro average of indicators with offset.
+            -- By contractability, (X_{i*N + k})_{k ≥ 0} has the same distribution
+            -- as (X_k)_{k ≥ 0}, so the L² bounds from weighted_sums_converge_L2
+            -- apply with the same constants.
+            --
+            -- Therefore p_block N i → r_funcs i in L¹ for each i.
+            --
+            -- The L¹ convergence of the product then follows from
+            -- prod_tendsto_L1_of_L1_tendsto, which states:
+            --   If f_i → g_i in L¹ for bounded functions, then ∏ f_i → ∏ g_i in L¹.
+            --
+            -- Key lemmas:
+            -- - weighted_sums_converge_L1 (with offset indices)
+            -- - prod_tendsto_L1_of_L1_tendsto
+            -- ══════════════════════════════════════════════════════════════════════
             sorry
 
           -- Conclude by uniqueness of limits
@@ -4082,7 +4100,16 @@ lemma directing_measure_bridge
             -- By L¹ convergence, ∫ q_block N → ∫ ∏ r_funcs
             have h2 : Tendsto (fun N => ∫ ω, q_block N ω ∂μ) atTop
                 (𝓝 (∫ ω, ∏ i, r_funcs i ω ∂μ)) := by
-              -- Follows from h_block_L1 and integrability
+              -- Use tendsto_integral_of_L1:
+              -- If F_n → f in L¹, then ∫ F_n → ∫ f
+              --
+              -- We have h_block_L1: ∫ |q_block N - ∏ r_funcs| → 0
+              -- This is equivalent to L¹ convergence, so the result follows.
+              --
+              -- Technical requirements:
+              -- 1. Integrable (∏ r_funcs) - bounded product of bounded functions
+              -- 2. Integrable (q_block N) - bounded product of averages (each in [0,1])
+              -- 3. h_block_L1 converted to eLpNorm form
               sorry
             -- A constant sequence converging to a limit means the limit equals the constant
             have h3 : ∀ᶠ N in atTop, ∫ ω, q_block N ω ∂μ = E_prod := by
