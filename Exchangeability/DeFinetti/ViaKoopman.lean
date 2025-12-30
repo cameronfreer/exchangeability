@@ -65,12 +65,12 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 
 **Active sorries** (4 total):
 
-1. **Line 1626** - `condexp_product_factorization_ax` inductive step
+1. **Line 1626** - `condexp_product_factorization_consecutive` inductive step
    - Needs conditional independence for product factorization
    - Strategy: Use `condIndep_simpleFunc` from CondIndep.lean
 
 2. **Line 1713** - `condexp_product_factorization_general` inductive step
-   - Depends on `condexp_product_factorization_ax`
+   - Depends on `condexp_product_factorization_consecutive`
    - Once ax is done, this follows from shift invariance
 
 3. **Line 4460** - `ce_lipschitz_convergence`
@@ -113,7 +113,7 @@ modular files to improve navigability and enable parallel development.
 - **Planned file**: Can merge into Infrastructure.lean
 
 ### Section 3: Product Factorization (Lines ~1600-1900) ⚠️ 2 sorries
-- `condexp_product_factorization_ax` - product of bounded functions factorizes
+- `condexp_product_factorization_consecutive` - product of bounded functions factorizes
 - `condexp_product_factorization_general` - generalization to arbitrary indices
 - **Status**: Lines 1661, 1748 have sorries (inductive steps need CI)
 - **Key dependency**: `condIndep_simpleFunc` from CondIndep.lean
@@ -124,7 +124,7 @@ modular files to improve navigability and enable parallel development.
 - **Status**: No sorries
 
 ### Section 5: Cylinder Functions (Lines ~3100-3543) ✅ COMPLETE
-- Helper lemmas for indicator_product_bridge_ax
+- Helper lemmas for indicator_product_bridge
 - MeasureTheory namespace extensions
 - **Status**: No sorries
 
@@ -1603,7 +1603,7 @@ or some finite-index restriction of that.
 
 The "hard" step is constructing `h_indep_XY` from `hciid` using CondIndep.lean machinery.
 -/
-lemma condexp_product_factorization_ax
+lemma condexp_product_factorization_consecutive
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -1709,7 +1709,7 @@ Proof of base case (m = 0) - kept for reference:
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
-This extends `condexp_product_factorization_ax` from coordinates `ω 0, ω 1, ...`
+This extends `condexp_product_factorization_consecutive` from coordinates `ω 0, ω 1, ...`
 to arbitrary indices `ω (k 0), ω (k 1), ...`.
 
 **Proof Strategy**: Use shift-invariance to reduce to the standard case.
@@ -1731,7 +1731,7 @@ standard selection via shifts, then apply the shift equivariance of CE.
    F : Ω[α] → ℝ := fun ω => ∏ i, g i ω               -- product at coordinate 0
    F' : Ω[α] → ℝ := fun ω => ∏ i, g i ((shift^[k i]) ω)  -- integrand in _general
    ```
-   F' is the integrand here, F is the one for `condexp_product_factorization_ax`
+   F' is the integrand here, F is the one for `condexp_product_factorization_consecutive`
 
 4. Using `condexp_precomp_iterate_eq` repeatedly + integrability of finite products:
    `μ[F' | shiftInvariantSigma] =ᵐ[μ] μ[F | shiftInvariantSigma]`
@@ -1739,16 +1739,16 @@ standard selection via shifts, then apply the shift equivariance of CE.
 
 5. Conclude:
    ```lean
-   have h_ax := condexp_product_factorization_ax μ hσ hExch m fs hmeas hbd
+   have h_ax := condexp_product_factorization_consecutive μ hσ hExch m fs hmeas hbd
    -- h_ax : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
    -- From step (4): μ[F' | ℐ] =ᵐ[μ] μ[F | ℐ]
    -- Compose these a.e.-equalities to get the desired result
    ```
 
-**Dependencies**: Once `condexp_product_factorization_ax` is done, this follows from:
+**Dependencies**: Once `condexp_product_factorization_consecutive` is done, this follows from:
 - `condexp_precomp_iterate_eq`
 - Measurability/integrability lemmas (already available)
-The only genuinely hard part is still the independence in `condexp_product_factorization_ax`.
+The only genuinely hard part is still the independence in `condexp_product_factorization_consecutive`.
 -/
 lemma condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1760,14 +1760,14 @@ lemma condexp_product_factorization_general
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
-  -- Proof by induction on m (same structure as condexp_product_factorization_ax)
+  -- Proof by induction on m (same structure as condexp_product_factorization_consecutive)
   induction m with
   | zero =>
     -- Base case: Both sides simplify to 1 for empty products
     simp only [Finset.univ_eq_empty, Finset.prod_empty]
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   | succ n IH =>
-    -- Inductive step: Use condexp_product_factorization_ax with a relabeling argument
+    -- Inductive step: Use condexp_product_factorization_consecutive with a relabeling argument
     -- Key insight: The RHS doesn't depend on k, so we just need to show LHS equals RHS
     -- See detailed strategy in the doc comment above the lemma.
     sorry
@@ -1937,7 +1937,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
     -- This follows from the tower+pullout proof structure used in ax
 
     -- We prove this directly using the pullout property + L1 convergence argument
-    -- (Same structure as the h_tower proof in condexp_product_factorization_ax)
+    -- (Same structure as the h_tower proof in condexp_product_factorization_consecutive)
 
     -- For simplicity, we observe that the final result follows from ax + coordinate relabeling
     -- The RHS is: ∏_{i : Fin (n+1)} ∫ fs i dν
@@ -2018,7 +2018,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
           _ = Cg := by simp [measure_univ]
 
       -- ═══════════════════════════════════════════════════════════════════════
-      -- TOWER + PULLOUT PROOF (adapting the structure from condexp_product_factorization_ax)
+      -- TOWER + PULLOUT PROOF (adapting the structure from condexp_product_factorization_consecutive)
       -- ═══════════════════════════════════════════════════════════════════════
       --
       -- Goal: CE[P · g(ω_{kn}) | mSI] = (∏ ∫ fs'_i dν) · (∫ g dν)
@@ -2128,7 +2128,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
       -- CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
       have h_tower : μ[(fun ω => P ω * g (ω M)) | mSI]
           =ᵐ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
-        -- This follows the same Cesàro + MET pattern as in condexp_product_factorization_ax
+        -- This follows the same Cesàro + MET pattern as in condexp_product_factorization_consecutive
         -- Define A_m = (1/m) Σ_{j=0}^{m-1} g(ω_{M+j})
         let A := fun m : ℕ => fun ω => if m = 0 then 0
           else (1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (M + j)))
@@ -2435,7 +2435,7 @@ Proof of base case (m = 0) - kept for reference:
 /- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
-1. Apply `condexp_product_factorization_ax` to indicator functions
+1. Apply `condexp_product_factorization_consecutive` to indicator functions
    - Indicators are bounded measurable functions
    - Product of indicators gives cylinder set probabilities
 
@@ -2454,7 +2454,7 @@ This connects the conditional expectation factorization to measure-theoretic for
 Well-structured proof with clear sections:
 - Setup: Define F (real-valued product) and G (kernel product)
 - Prove F, G measurable, bounded, integrable
-- Show ∫ F = ∫ G using tower property and condexp_product_factorization_ax
+- Show ∫ F = ∫ G using tower property and condexp_product_factorization_consecutive
 - Convert to ENNReal using ofReal_integral correspondence
 
 The proof is straightforward measure theory with clear dependencies. No subdivision needed.
@@ -2478,7 +2478,7 @@ private lemma prod_ofReal_toReal_meas {m : ℕ} (ν : Ω[α] → Measure α) (B 
   congr; funext i
   exact ENNReal.ofReal_toReal (hν i)
 
-/-! ### Helper lemmas for indicator_product_bridge_ax -/
+/-! ### Helper lemmas for indicator_product_bridge -/
 
 private lemma indicator_product_properties
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ]
@@ -2594,7 +2594,7 @@ private lemma kernel_measure_product_properties
 
   exact ⟨hG_meas, hG_nonneg, hG_bd, hG_int, h_indicator_integral⟩
 
-lemma indicator_product_bridge_ax
+lemma indicator_product_bridge
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -2717,12 +2717,12 @@ lemma indicator_product_bridge_ax
 1. Measurability of coordinates: `measurable_pi_apply`
 2. Probability kernel ν: from `IsMarkovKernel.isProbabilityMeasure`
 3. Measurability of ν: from `ν_eval_measurable` (for measurable sets)
-4. Bridge condition: from `indicator_product_bridge_ax`
+4. Bridge condition: from `indicator_product_bridge`
 
 Note: `conditional_iid_from_directing_measure` was updated to only require
 measurability for measurable sets, matching what `ν_eval_measurable` provides.
 -/
-lemma exchangeable_implies_ciid_modulo_bridge_ax
+lemma exchangeable_implies_ciid_modulo_bridge
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
@@ -2740,7 +2740,7 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
     exact ν_eval_measurable hs
   -- 4. Bridge condition: product of indicators = product of measures
   · intro m k hk B hB_meas
-    exact indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
+    exact indicator_product_bridge μ hσ hExch m k hk B hB_meas
 
 section MainConvergence
 
@@ -8580,7 +8580,7 @@ the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν.
 
 **Proof structure note** (218 lines, lines 4977-5194):
-The proof body is commented out and delegated to `condexp_product_factorization_ax`.
+The proof body is commented out and delegated to `condexp_product_factorization_consecutive`.
 The commented-out proof shows the intended inductive structure:
 - Base case: m = 0 (trivial)
 - Inductive step: split product into (first m factors) * (last factor)
@@ -8606,7 +8606,7 @@ theorem condexp_product_factorization
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax μ hσ hExch hciid m fs hmeas hbd
+  condexp_product_factorization_consecutive μ hσ hExch hciid m fs hmeas hbd
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -8919,18 +8919,7 @@ integral of the product of measures ν(ω)(B_i). This is exactly the "bridge con
 needed by CommonEnding.
 -/
 
-/-- Bridge in ENNReal form needed by `CommonEnding`. -/
-theorem indicator_product_bridge
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
-    (hB_meas : ∀ i, MeasurableSet (B i)) :
-    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
-
-/-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
+/-! ### Exchangeable implies ConditionallyIID
 
 This theorem shows the complete logical chain from exchangeability to ConditionallyIID,
 assuming the `indicator_product_bridge` lemma. The bridge lemma itself requires
@@ -8943,13 +8932,5 @@ conditional independence, which must come from ergodic theory or martingale theo
 4. Apply indicator_product_bridge to get the bridge condition
 5. Use CommonEnding.conditional_iid_from_directing_measure to conclude
 -/
-
-/-- Final wrapper to `ConditionallyIID` (kept modular behind an axiom). -/
-theorem exchangeable_implies_ciid_modulo_bridge
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) :=
-  exchangeable_implies_ciid_modulo_bridge_ax (μ := μ) (α := α) hσ hExch
 
 end Exchangeability.DeFinetti.ViaKoopman

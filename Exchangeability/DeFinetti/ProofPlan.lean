@@ -156,7 +156,7 @@ private lemma condexp_pair_factorization_MET
 
 ### Step 3: Finite Product Factorization by Induction
 
-**Goal**: Replace `condexp_product_factorization_ax` (line 433)
+**Goal**: Replace `condexp_product_factorization_consecutive` (line 433)
 
 **Proof**: Straightforward induction using Step 2
 
@@ -216,7 +216,7 @@ theorem condexp_product_factorization_general
 
 ### Step 5: Indicator Bridge
 
-**Goal**: Convert `indicator_product_bridge_ax` to theorem (line 1155)
+**Goal**: Convert `indicator_product_bridge` to theorem (line 1155)
 
 **Proof**: Immediate application of Step 4 with fᵢ = 1_{Bᵢ}
 
@@ -226,7 +226,7 @@ Already implemented correctly, just remove "axiom" keyword!
 
 ### Step 6: Final Assembly
 
-**Goal**: Convert `exchangeable_implies_ciid_modulo_bridge_ax` to theorem (line 1179)
+**Goal**: Convert `exchangeable_implies_ciid_modulo_bridge` to theorem (line 1179)
 
 **Proof**: With Step 5 proved, invoke `CommonEnding.conditional_iid_from_directing_measure`
 
@@ -240,10 +240,10 @@ Already implemented correctly, just remove "axiom" keyword!
 
 1. ~~`condindep_pair_given_tail`~~ → No longer needed (bypassed by Step 2)
 2. ~~`kernel_integral_product_factorization`~~ → No longer needed (bypassed by Step 2)
-3. ~~`condexp_product_factorization_ax`~~ → **Theorem** (Step 3)
+3. ~~`condexp_product_factorization_consecutive`~~ → **Theorem** (Step 3)
 4. ~~`condexp_product_factorization_general`~~ → **Theorem** (Step 4)
-5. ~~`indicator_product_bridge_ax`~~ → **Theorem** (Step 5)
-6. ~~`exchangeable_implies_ciid_modulo_bridge_ax`~~ → **Theorem** (Step 6)
+5. ~~`indicator_product_bridge`~~ → **Theorem** (Step 5)
+6. ~~`exchangeable_implies_ciid_modulo_bridge`~~ → **Theorem** (Step 6)
 7. `condexpL2_koopman_comm` → **Theorem** (Step 1, ~50 lines of standard Hilbert space)
 
 ### Axioms Remaining After Refactor:
