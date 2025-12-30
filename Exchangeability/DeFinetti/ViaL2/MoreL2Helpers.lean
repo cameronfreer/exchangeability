@@ -2604,7 +2604,126 @@ lemma directing_measure_integral
   -- - The measure-theoretic properties of ν(·)
   -- All mathematical content is documented above.
 
-  sorry
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- PROOF STRUCTURE: Uniqueness of L¹ limits
+  -- ═══════════════════════════════════════════════════════════════════════════
+  --
+  -- We show that ∫ f dν(·) satisfies the same L¹ limit property as alpha,
+  -- so by uniqueness of L¹ limits, alpha = ∫ f dν a.e.
+  --
+  -- Step A: Show ω ↦ ∫ f dν(ω) is measurable
+  -- Step B: Show ω ↦ ∫ f dν(ω) is in L¹(μ)
+  -- Step C: Show ∫ ω, |(1/m) Σ f(X_k ω) - ∫ f dν(ω)| dμ → 0
+  -- Step D: Conclude by uniqueness: alpha = ∫ f dν a.e.
+  --
+  -- Step C is the key step requiring π-λ + linearity + approximation.
+  -- For indicators 1_{Iic t}, Step C follows from the base case.
+  -- Extension via π-λ to all Borel indicators, linearity for simple functions,
+  -- and approximation for bounded measurable f.
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Step A: Measurability of ∫ f dν(·)
+  -- This follows from the measurability of directing_measure as a kernel
+  -- combined with the measurability of f
+  have h_int_meas : Measurable (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+    -- The proof requires showing directing_measure is a measurable kernel
+    -- and applying StronglyMeasurable.integral_kernel_prod_right
+    -- For now, we defer this technical step
+    sorry
+
+  -- Step B: Integrability of ∫ f dν(·)
+  -- Since f is bounded by M and ν(ω) is a probability measure, |∫ f dν(ω)| ≤ M
+  -- This makes ω ↦ ∫ f dν(ω) bounded and hence integrable against μ
+  have h_int_L1 : Integrable (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+    -- Technical proof: bounded function is integrable against probability measure
+    -- Follows from h_int_meas (measurability) and boundedness |∫ f dν(ω)| ≤ M
+    sorry
+
+  -- Step C: L¹ convergence property
+  -- The proof proceeds in three sub-steps:
+  -- C1. For indicators 1_{Iic t}: follows from base case + h_base_connection
+  -- C2. For indicators 1_{Ioc a b}: linearity (1_{Ioc a b} = 1_{Iic b} - 1_{Iic a})
+  -- C3. For simple step functions: iterated linearity
+  -- C4. For bounded measurable f: approximation by step functions + DCT
+
+  -- Sub-step C1: For indicators of Iic t, Cesàro averages converge to ν(Iic t).toReal in L¹
+  -- This follows from:
+  -- - weighted_sums_converge_L1 for 1_{Iic t} gives alphaIic t as L¹ limit
+  -- - h_base_connection: alphaIic t = ν(Iic t).toReal a.e.
+  -- - Therefore the L¹ limit is ν(Iic t).toReal
+
+  -- Sub-step C2-C3: For step functions built from Ioc intervals
+  -- 1_{Ioc(a,b)} = 1_{Iic b} - 1_{Iic a}
+  -- By linearity (weighted_sums_converge_L1_add applied to subtraction):
+  -- L¹ limit for 1_{Ioc(a,b)} = alphaIic b - alphaIic a = ν(Iic b) - ν(Iic a) = ν(Ioc(a,b)) a.e.
+  -- For step functions Σ c_k 1_{Ioc(a_k, b_k)}, iterate linearity.
+
+  -- Sub-step C4: For bounded measurable f with |f| ≤ M
+  -- Approximate f by step functions: s_n(x) = Σ_{k} (k/n) 1_{Ioc(k/n, (k+1)/n)}(x)
+  -- By sub-step C3: Cesàro averages of s_n(X_i) → ∫ s_n dν in L¹
+  -- By DCT (uniform bound 2M and pointwise convergence):
+  -- - ∫ |s_n(X_i) - f(X_i)| dμ → 0 (uniformly in i)
+  -- - ∫ |∫ s_n dν - ∫ f dν| dμ → 0
+  -- Triangle inequality completes the proof.
+
+  -- The technical implementation requires ~100 lines setting up the approximation.
+  -- For now, we defer to the established mathematics and use sorry.
+  have h_L1_conv : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) -
+        ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε := by
+    -- Technical implementation: see documentation above
+    -- Core mathematical argument:
+    -- 1. Approximate f by step functions s_n built from Ioc intervals
+    -- 2. For each s_n, use linearity (h_base_connection + weighted_sums_converge_L1_add)
+    --    to show Cesàro averages converge to ∫ s_n dν in L¹
+    -- 3. Pass to limit via DCT (uniform bound |f|, |s_n| ≤ M)
+    sorry
+
+  -- Step D: Conclude by uniqueness of L¹ limits
+  -- Both alpha and ∫ f dν(·) satisfy the L¹ convergence property
+  -- By uniqueness (integral of |difference| = 0), they agree a.e.
+  have h_conv := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose_spec.2.2
+  -- alpha satisfies: ∀ n ε, ε > 0 → ∃ M, ∀ m ≥ M, ∫|avg - alpha| < ε
+  -- h_L1_conv: ∀ n ε, ε > 0 → ∃ M, ∀ m ≥ M, ∫|avg - ∫ f dν| < ε
+  -- By triangle inequality: ∫|alpha - ∫ f dν| ≤ ∫|avg - alpha| + ∫|avg - ∫ f dν|
+  -- Taking limits: ∫|alpha - ∫ f dν| = 0, so alpha = ∫ f dν a.e.
+
+  -- Uniqueness argument: show ∫|alpha - ∫ f dν| = 0
+  have h_diff_zero : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ = 0 := by
+    by_contra h_ne
+    have h_nonneg : 0 ≤ ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ :=
+      integral_nonneg (fun _ => abs_nonneg _)
+    have h_pos : 0 < ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ :=
+      lt_of_le_of_ne h_nonneg (Ne.symm h_ne)
+    set ε := (∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ) / 3 with hε_def
+    have hε_pos : ε > 0 := by linarith
+    -- Get bounds from both convergence properties
+    obtain ⟨M₁, hM₁⟩ := h_conv 0 ε hε_pos
+    obtain ⟨M₂, hM₂⟩ := h_L1_conv 0 ε hε_pos
+    set m := max M₁ M₂ with hm_def
+    have hm₁ : m ≥ M₁ := le_max_left _ _
+    have hm₂ : m ≥ M₂ := le_max_right _ _
+    -- Triangle inequality: |α - ∫fdν| ≤ |avg - α| + |avg - ∫fdν|
+    -- Both RHS terms are < ε for large enough m, giving contradiction
+    simp only [zero_add] at hM₁ hM₂
+    have h1 := hM₁ m hm₁
+    have h2 := hM₂ m hm₂
+    -- The triangle inequality argument gives ∫|α - ∫fdν| < 2ε < 3ε = ∫|α - ∫fdν|
+    -- This is a contradiction
+    -- The detailed proof is in the comments; here we defer the technical calc step
+    sorry
+
+  -- Conclude alpha = ∫ f dν a.e.
+  have h_abs_int : Integrable (fun ω => |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|) μ := by
+    apply Integrable.abs
+    exact (hα_L1.integrable le_rfl).sub h_int_L1
+  have h_ae_zero : (fun ω => |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|) =ᵐ[μ] 0 := by
+    have h_nonneg : 0 ≤ᵐ[μ] fun ω => |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| := by
+      filter_upwards with ω; exact abs_nonneg _
+    rwa [← integral_eq_zero_iff_of_nonneg_ae h_nonneg h_abs_int]
+  filter_upwards [h_ae_zero] with ω hω
+  simp only [Pi.zero_apply, abs_eq_zero, sub_eq_zero] at hω
+  exact hω
 
 /-- **Packaged directing measure theorem:** Existence of a directing kernel with all
 key properties bundled together.
