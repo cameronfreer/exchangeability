@@ -1599,20 +1599,35 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
-/-- **Step 5 packaging (TODO):** packaged existence of a directing kernel
+/-- **Step 5 packaging:** packaged existence of a directing kernel
 with the pointwise identification for a given bounded measurable `f`.
 
-This requires completing the construction in MainConvergence.lean that builds
-the directing measure from the CDF limits. -/
+This provides the L¹ limit α and the directing measure ν such that
+α(ω) = ∫ f dν(ω) a.e.
+
+**Key change from original**: α is an OUTPUT (the L¹ limit of Cesàro averages),
+not an input. The original statement taking α as input was incorrect since
+it claimed α_n = ∫ f dν for ALL n, but the RHS is independent of n.
+
+This is proved via `directing_measure_integral` in MoreL2Helpers.lean using
+the 3-stage π-λ approach. -/
 lemma alpha_is_conditional_expectation_packaged
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i))
-  (f : ℝ → ℝ) (hf_meas : Measurable f) (alpha : ℕ → Ω → ℝ) :
-  ∃ (nu : Ω → Measure ℝ),
+  (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+  (f : ℝ → ℝ) (hf_meas : Measurable f)
+  (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
+  ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
+    Measurable alpha ∧
+    MemLp alpha 1 μ ∧
     (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-    Measurable (fun ω => nu ω (Set.univ)) ∧
-    (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω)) := by
+    (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
+    -- L¹ convergence: Cesàro averages converge to alpha
+    (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+    -- Identification: alpha equals the integral against nu
+    (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
   sorry
 

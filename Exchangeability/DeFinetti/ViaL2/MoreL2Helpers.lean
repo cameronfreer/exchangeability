@@ -2003,6 +2003,55 @@ lemma directing_measure_integral
 
   -- The mathematical content is established; the formal implementation requires
   -- substantial but routine bookkeeping following the functional monotone class pattern.
+
+  -- ════════════════════════════════════════════════════════════════════════════════
+  -- IMPLEMENTATION: 3-stage π-λ approach
+  -- ════════════════════════════════════════════════════════════════════════════════
+
+  -- STAGE 1: π-λ on sets (indicators)
+  -- Define G = {S : MeasurableSet | L¹ limit of 1_S = ν(S).toReal a.e.}
+
+  -- Helper: For any Borel set S, get the L¹ limit of its indicator
+  have ind_limit : ∀ S : Set ℝ, MeasurableSet S →
+      ∃ (αS : Ω → ℝ), Measurable αS ∧ MemLp αS 1 μ ∧
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n + k.val + 1) ω) - αS ω| ∂μ < ε) := by
+    intro S _
+    have h_ind_meas : Measurable (S.indicator (fun _ : ℝ => (1 : ℝ))) :=
+      Measurable.indicator measurable_const ‹MeasurableSet S›
+    have h_ind_bdd : ∃ M, ∀ x, |S.indicator (fun _ : ℝ => (1 : ℝ)) x| ≤ M := ⟨1, by
+      intro x; by_cases hx : x ∈ S <;> simp [Set.indicator, hx, abs_of_nonneg]⟩
+    obtain ⟨αS, hαS_meas, hαS_L1, hαS_conv⟩ :=
+      weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 _ h_ind_meas h_ind_bdd
+    exact ⟨αS, hαS_meas, hαS_L1, hαS_conv⟩
+
+  -- The key identification property: for Iic t, the limit equals ν(Iic t).toReal
+  -- This is established in 'base' above
+
+  -- STAGE 2: Simple functions (via linearity)
+  -- For simple function s = Σᵢ cᵢ · 1_{Sᵢ} with disjoint Sᵢ:
+  -- The L¹ limit is Σᵢ cᵢ · αSᵢ by linearity (weighted_sums_converge_L1_add, _smul)
+  -- If each αSᵢ = ν(Sᵢ).toReal a.e., then the limit equals ∫ s dν
+
+  -- STAGE 3: Bounded measurable (via approximation)
+  -- For bounded measurable f with |f| ≤ M:
+  -- 1. Approximate f by simple functions sₙ → f pointwise with |sₙ| ≤ M
+  -- 2. The L¹ limits αₙ satisfy αₙ = ∫ sₙ dν a.e. (Stage 2)
+  -- 3. By dominated convergence: ∫ sₙ dν → ∫ f dν
+  -- 4. By L¹ continuity: αₙ → α (the L¹ limit for f)
+  -- 5. Therefore α = ∫ f dν a.e.
+
+  -- The complete formal proof requires π-λ induction (MeasurableSpace.induction_on_inter)
+  -- combined with the linearity lemmas. This is substantial but routine bookkeeping.
+
+  -- KEY TECHNICAL LEMMA needed (deferred):
+  -- For bounded f, the L¹ limit is continuous under bounded pointwise convergence.
+  -- This follows from dominated convergence applied to the Cesàro averages.
+
+  -- For now, we document the complete proof structure and defer the implementation.
+  -- The linearity infrastructure (weighted_sums_converge_L1_add, _smul, _one_sub)
+  -- is complete, so the remaining work is π-λ bookkeeping and approximation arguments.
+
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
@@ -3574,18 +3623,39 @@ lemma directing_measure_bridge
           -- The resolution is that contractable sequences ARE exchangeable (de Finetti),
           -- so this equality holds. But we're in the middle of proving de Finetti!
           --
-          -- ALTERNATIVE APPROACH: Use the fact that the strictly monotone selections
-          -- (which are 1/m! of all injective selections) give the correct value, and
-          -- show the average over all injective selections also converges to E_prod
-          -- by a symmetry argument.
+          -- ALTERNATIVE APPROACH (BLOCK-SEPARATED AVERAGES):
+          -- Instead of expanding over all injective φ (which requires exchangeability),
+          -- use disjoint ordered blocks where EVERY selection is automatically StrictMono.
           --
-          -- For now, we assume this claim and defer the full proof.
+          -- KEY INSIGHT: With blocks B_i = {i*N, i*N+1, ..., (i+1)*N-1}, when we expand
+          -- the product of block averages, each term uses indices:
+          --   k_φ(i) := i*N + φ(i)  for φ : Fin m → Fin N
+          --
+          -- For ANY φ, k_φ is StrictMono because:
+          --   k_φ(i) = i*N + φ(i) < (i+1)*N ≤ (i+1)*N + φ(i+1) = k_φ(i+1)
+          --
+          -- Therefore contractability applies to EVERY term (no exchangeability needed)!
+          --
+          -- PROOF STRUCTURE:
+          -- 1. Define block averages: A(N, i, ω) = (1/N) Σ_{j∈Block(i)} 1_{Bᵢ}(X_j(ω))
+          -- 2. Product: Q(N, ω) = ∏ᵢ A(N, i, ω)
+          -- 3. Each term in expansion has strictMono indices → contractability applies
+          -- 4. E[Q_N] = E[∏ᵢ 1_{Bᵢ}(Xᵢ)] for all N (since every term equals E_prod)
+          -- 5. L¹ convergence: A(N, i) → ν(Bᵢ) by directing_measure_integral
+          -- 6. Product convergence: Q_N → ∏ᵢ ν(Bᵢ) by prod_tendsto_L1_of_L1_tendsto
+          -- 7. Expectations converge: E[∏ᵢ 1_{Bᵢ}(Xᵢ)] = E[∏ᵢ ν(Bᵢ)]
+          --
+          -- This resolves the circularity completely!
+          --
+          -- For now, we mark the current approach (which has circularity) and
+          -- defer the block-separated implementation.
           have h_inj_eq : ∀ N ≥ n, ∀ (φ : Fin (n + 1) → Fin (N + 1)),
               Function.Injective φ →
                 ∫ ω, ∏ j : Fin (n + 1), I j (φ j).val ω ∂μ = E_prod := by
             intro N hN φ hφ
-            -- Deferred: requires exchangeability (consequence of de Finetti)
-            -- or a sophisticated symmetry argument using the specific structure of B and σ.
+            -- DEFERRED: Replace with block-separated approach to avoid circularity.
+            -- The block-separated approach makes every selection StrictMono,
+            -- so contractability applies directly without needing exchangeability.
             sorry
 
           -- U-stat expansion: ∫ q N → E_prod
@@ -3676,10 +3746,10 @@ lemma directing_measure_bridge
             specialize hM1 N hN_ge_M1
             rw [Real.dist_eq, abs_of_nonneg] at hM1
             · simp only [Real.dist_eq]
-              -- DEFERRED: Full U-stat expansion proof.
-              -- The argument above shows the bound, assuming h_inj_eq.
-              -- Both h_inj_eq and this step are logically equivalent to
-              -- establishing exchangeability from contractability (de Finetti).
+              -- DEFERRED: Replace with block-separated approach.
+              -- The current U-stat expansion has circularity (requires exchangeability).
+              -- Block-separated averages resolve this - see h_inj_eq comment above for details.
+              -- Both sorries will be eliminated by the block-separated implementation.
               sorry
             · rw [sub_zero]
               apply div_nonneg (Nat.cast_nonneg _)
