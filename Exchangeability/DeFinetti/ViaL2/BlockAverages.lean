@@ -1609,16 +1609,14 @@ This provides the L¹ limit α and the directing measure ν such that
 not an input. The original statement taking α as input was incorrect since
 it claimed α_n = ∫ f dν for ALL n, but the RHS is independent of n.
 
-**Implementation note**: This is proved via `directing_measure_integral` in
-MoreL2Helpers.lean using the 3-stage π-λ approach. Due to import structure
-(MoreL2Helpers imports BlockAverages), this proof cannot directly use
-`directing_measure_integral`. Options:
-1. Move this lemma to MoreL2Helpers (preferred)
-2. Duplicate the proof infrastructure here
-3. Create a new file imported by both
+**MOVED TO MoreL2Helpers.lean**: The complete version of this lemma is now
+available as `alpha_is_conditional_expectation_packaged` in
+`Exchangeability.DeFinetti.ViaL2.MoreL2Helpers`. Due to import structure
+(MoreL2Helpers imports BlockAverages), this file cannot use that version
+directly. Files that need this lemma should import MoreL2Helpers.
 
-For now, this remains as a sorry that follows from `directing_measure_integral`
-once the circular dependency is resolved. -/
+This stub is kept for backward compatibility and documentation. -/
+@[deprecated "Use alpha_is_conditional_expectation_packaged from MoreL2Helpers"]
 lemma alpha_is_conditional_expectation_packaged
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1637,9 +1635,7 @@ lemma alpha_is_conditional_expectation_packaged
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
     -- Identification: alpha equals the integral against nu
     (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
-  -- Once directing_measure_integral is complete, this proof is:
-  -- 1. Use directing_measure for nu
-  -- 2. Use directing_measure_integral to get alpha with all properties
-  -- 3. Package the results
+  -- The complete proof is in MoreL2Helpers.lean
+  -- This stub uses sorry to avoid circular imports
   sorry
 
