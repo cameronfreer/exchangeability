@@ -1050,6 +1050,115 @@ lemma cycleShiftDown_L (L R : ℕ) (hLR : L ≤ R) :
 lemma cycleShiftDown_id_beyond (L R : ℕ) (hLR : L ≤ R) (n : ℕ) (hn : R < n) :
     cycleShiftDown L R hLR n = n := cycleShiftDown_gt L R n hLR hn
 
+/-! ### Disjoint offset swap permutation
+
+For shifting cylinders from coords {i : i ∈ S} to {offset + i : i ∈ S} while fixing coords outside.
+This is used in `h_shift_to_N₀` to show CE[φ(ω_k) · 1_B | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI].
+-/
+
+/-- Permutation that swaps i ↔ offset+i for all i in a finite set S,
+where all elements of S are less than offset. This is an involution. -/
+def disjointOffsetSwap (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset) : Equiv.Perm ℕ where
+  toFun := fun n =>
+    if n ∈ S then offset + n
+    else if n - offset ∈ S ∧ offset ≤ n then n - offset
+    else n
+  invFun := fun n =>
+    if n ∈ S then offset + n
+    else if n - offset ∈ S ∧ offset ≤ n then n - offset
+    else n
+  left_inv := by
+    intro n
+    simp only
+    by_cases h1 : n ∈ S
+    · -- n ∈ S, toFun n = offset + n
+      rw [if_pos h1]
+      -- invFun (offset + n): is offset + n ∈ S? No, since offset + n ≥ offset > i for all i ∈ S
+      have hnotS : offset + n ∉ S := by
+        intro habs; have := hS (offset + n) habs; omega
+      rw [if_neg hnotS]
+      have hcond : offset + n - offset ∈ S ∧ offset ≤ offset + n := by
+        simp only [Nat.add_sub_cancel_left, h1, Nat.le_add_right, and_self]
+      rw [if_pos hcond]
+      simp only [Nat.add_sub_cancel_left]
+    · -- n ∉ S
+      rw [if_neg h1]
+      by_cases h2 : n - offset ∈ S ∧ offset ≤ n
+      · -- n - offset ∈ S and offset ≤ n, toFun n = n - offset
+        rw [if_pos h2, if_pos h2.1]
+        omega
+      · -- neither condition, toFun n = n
+        rw [if_neg h2, if_neg h1, if_neg h2]
+  right_inv := by
+    intro n
+    simp only
+    by_cases h1 : n ∈ S
+    · -- n ∈ S
+      rw [if_pos h1]
+      have hnotS : offset + n ∉ S := by
+        intro habs; have := hS (offset + n) habs; omega
+      rw [if_neg hnotS]
+      have hcond : offset + n - offset ∈ S ∧ offset ≤ offset + n := by
+        simp only [Nat.add_sub_cancel_left, h1, Nat.le_add_right, and_self]
+      rw [if_pos hcond]
+      simp only [Nat.add_sub_cancel_left]
+    · -- n ∉ S
+      rw [if_neg h1]
+      by_cases h2 : n - offset ∈ S ∧ offset ≤ n
+      · rw [if_pos h2, if_pos h2.1]
+        omega
+      · rw [if_neg h2, if_neg h1, if_neg h2]
+
+/-- disjointOffsetSwap maps i to offset + i for i ∈ S. -/
+lemma disjointOffsetSwap_mem (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
+    (i : ℕ) (hi : i ∈ S) : disjointOffsetSwap S offset hS i = offset + i := by
+  simp only [disjointOffsetSwap, Equiv.coe_fn_mk, hi, ↓reduceIte]
+
+/-- disjointOffsetSwap maps offset + i to i for i ∈ S. -/
+lemma disjointOffsetSwap_offset_mem (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
+    (i : ℕ) (hi : i ∈ S) : disjointOffsetSwap S offset hS (offset + i) = i := by
+  simp only [disjointOffsetSwap, Equiv.coe_fn_mk]
+  have h1 : offset + i ∉ S := by
+    intro habs
+    have := hS (offset + i) habs
+    omega
+  rw [if_neg h1]
+  have hcond : offset + i - offset ∈ S ∧ offset ≤ offset + i := by
+    simp only [Nat.add_sub_cancel_left, hi, Nat.le_add_right, and_self]
+  rw [if_pos hcond]
+  simp only [Nat.add_sub_cancel_left]
+
+/-- disjointOffsetSwap fixes n when n ∉ S and n < offset. -/
+lemma disjointOffsetSwap_lt (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
+    (n : ℕ) (hn_notin : n ∉ S) (hn_lt : n < offset) : disjointOffsetSwap S offset hS n = n := by
+  simp only [disjointOffsetSwap, Equiv.coe_fn_mk, hn_notin, ↓reduceIte]
+  split_ifs with h
+  · exfalso
+    omega
+  · rfl
+
+/-- disjointOffsetSwap is identity beyond offset + max(S). -/
+lemma disjointOffsetSwap_id_beyond (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
+    (n : ℕ) (hn : S.sup id + offset < n) : disjointOffsetSwap S offset hS n = n := by
+  simp only [disjointOffsetSwap, Equiv.coe_fn_mk]
+  have h1 : n ∉ S := by
+    intro habs
+    have hsup : (id n : ℕ) ≤ S.sup id := Finset.le_sup (f := id) habs
+    simp only [id_eq] at hsup
+    have : n ≤ S.sup id := hsup
+    linarith
+  simp only [h1, ↓reduceIte]
+  split_ifs with h
+  · exfalso
+    obtain ⟨hmem, hle⟩ := h
+    have hsup : (id (n - offset) : ℕ) ≤ S.sup id := Finset.le_sup (f := id) hmem
+    simp only [id_eq] at hsup
+    have hsub : n - offset ≤ S.sup id := hsup
+    -- n - offset ≤ S.sup id and offset ≤ n implies n ≤ S.sup id + offset
+    have hle' : n ≤ S.sup id + offset := Nat.sub_le_iff_le_add.mp hsub
+    omega
+  · rfl
+
 /-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
 when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :

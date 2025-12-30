@@ -18,6 +18,7 @@ import Exchangeability.Ergodic.BirkhoffAvgCLM
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
+import Exchangeability.Probability.CesaroHelpers
 import Exchangeability.Probability.CondExp
 import Exchangeability.PathSpace.Shift
 import Mathlib.Tactic
@@ -26,6 +27,7 @@ import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
 import Exchangeability.DeFinetti.ViaKoopman.Quantization
 import Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions
 import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
+import Exchangeability.Probability.IntegrationHelpers
 
 open Filter MeasureTheory
 
@@ -63,12 +65,12 @@ Theorem and Koopman operator. This proof has the **heaviest dependencies**.
 
 **Active sorries** (4 total):
 
-1. **Line 1626** - `condexp_product_factorization_ax` inductive step
+1. **Line 1626** - `condexp_product_factorization_consecutive` inductive step
    - Needs conditional independence for product factorization
    - Strategy: Use `condIndep_simpleFunc` from CondIndep.lean
 
 2. **Line 1713** - `condexp_product_factorization_general` inductive step
-   - Depends on `condexp_product_factorization_ax`
+   - Depends on `condexp_product_factorization_consecutive`
    - Once ax is done, this follows from shift invariance
 
 3. **Line 4460** - `ce_lipschitz_convergence`
@@ -111,7 +113,7 @@ modular files to improve navigability and enable parallel development.
 - **Planned file**: Can merge into Infrastructure.lean
 
 ### Section 3: Product Factorization (Lines ~1600-1900) ⚠️ 2 sorries
-- `condexp_product_factorization_ax` - product of bounded functions factorizes
+- `condexp_product_factorization_consecutive` - product of bounded functions factorizes
 - `condexp_product_factorization_general` - generalization to arbitrary indices
 - **Status**: Lines 1661, 1748 have sorries (inductive steps need CI)
 - **Key dependency**: `condIndep_simpleFunc` from CondIndep.lean
@@ -122,7 +124,7 @@ modular files to improve navigability and enable parallel development.
 - **Status**: No sorries
 
 ### Section 5: Cylinder Functions (Lines ~3100-3543) ✅ COMPLETE
-- Helper lemmas for indicator_product_bridge_ax
+- Helper lemmas for indicator_product_bridge
 - MeasureTheory namespace extensions
 - **Status**: No sorries
 
@@ -1601,7 +1603,7 @@ or some finite-index restriction of that.
 
 The "hard" step is constructing `h_indep_XY` from `hciid` using CondIndep.lean machinery.
 -/
-lemma condexp_product_factorization_ax
+lemma condexp_product_factorization_consecutive
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -1707,7 +1709,7 @@ Proof of base case (m = 0) - kept for reference:
 
 /-- **Generalized product factorization** for arbitrary coordinate indices.
 
-This extends `condexp_product_factorization_ax` from coordinates `ω 0, ω 1, ...`
+This extends `condexp_product_factorization_consecutive` from coordinates `ω 0, ω 1, ...`
 to arbitrary indices `ω (k 0), ω (k 1), ...`.
 
 **Proof Strategy**: Use shift-invariance to reduce to the standard case.
@@ -1729,7 +1731,7 @@ standard selection via shifts, then apply the shift equivariance of CE.
    F : Ω[α] → ℝ := fun ω => ∏ i, g i ω               -- product at coordinate 0
    F' : Ω[α] → ℝ := fun ω => ∏ i, g i ((shift^[k i]) ω)  -- integrand in _general
    ```
-   F' is the integrand here, F is the one for `condexp_product_factorization_ax`
+   F' is the integrand here, F is the one for `condexp_product_factorization_consecutive`
 
 4. Using `condexp_precomp_iterate_eq` repeatedly + integrability of finite products:
    `μ[F' | shiftInvariantSigma] =ᵐ[μ] μ[F | shiftInvariantSigma]`
@@ -1737,16 +1739,16 @@ standard selection via shifts, then apply the shift equivariance of CE.
 
 5. Conclude:
    ```lean
-   have h_ax := condexp_product_factorization_ax μ hσ hExch m fs hmeas hbd
+   have h_ax := condexp_product_factorization_consecutive μ hσ hExch m fs hmeas hbd
    -- h_ax : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
    -- From step (4): μ[F' | ℐ] =ᵐ[μ] μ[F | ℐ]
    -- Compose these a.e.-equalities to get the desired result
    ```
 
-**Dependencies**: Once `condexp_product_factorization_ax` is done, this follows from:
+**Dependencies**: Once `condexp_product_factorization_consecutive` is done, this follows from:
 - `condexp_precomp_iterate_eq`
 - Measurability/integrability lemmas (already available)
-The only genuinely hard part is still the independence in `condexp_product_factorization_ax`.
+The only genuinely hard part is still the independence in `condexp_product_factorization_consecutive`.
 -/
 lemma condexp_product_factorization_general
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
@@ -1758,14 +1760,14 @@ lemma condexp_product_factorization_general
     (hbd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     μ[fun ω => ∏ i, fs i (ω (k i)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ i, ∫ x, fs i x ∂(ν (μ := μ) ω)) := by
-  -- Proof by induction on m (same structure as condexp_product_factorization_ax)
+  -- Proof by induction on m (same structure as condexp_product_factorization_consecutive)
   induction m with
   | zero =>
     -- Base case: Both sides simplify to 1 for empty products
     simp only [Finset.univ_eq_empty, Finset.prod_empty]
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   | succ n IH =>
-    -- Inductive step: Use condexp_product_factorization_ax with a relabeling argument
+    -- Inductive step: Use condexp_product_factorization_consecutive with a relabeling argument
     -- Key insight: The RHS doesn't depend on k, so we just need to show LHS equals RHS
     -- See detailed strategy in the doc comment above the lemma.
     sorry
@@ -1935,7 +1937,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
     -- This follows from the tower+pullout proof structure used in ax
 
     -- We prove this directly using the pullout property + L1 convergence argument
-    -- (Same structure as the h_tower proof in condexp_product_factorization_ax)
+    -- (Same structure as the h_tower proof in condexp_product_factorization_consecutive)
 
     -- For simplicity, we observe that the final result follows from ax + coordinate relabeling
     -- The RHS is: ∏_{i : Fin (n+1)} ∫ fs i dν
@@ -2016,7 +2018,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
           _ = Cg := by simp [measure_univ]
 
       -- ═══════════════════════════════════════════════════════════════════════
-      -- TOWER + PULLOUT PROOF (adapting the structure from condexp_product_factorization_ax)
+      -- TOWER + PULLOUT PROOF (adapting the structure from condexp_product_factorization_consecutive)
       -- ═══════════════════════════════════════════════════════════════════════
       --
       -- Goal: CE[P · g(ω_{kn}) | mSI] = (∏ ∫ fs'_i dν) · (∫ g dν)
@@ -2126,7 +2128,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
       -- CE[P·g(ω_M)|mSI] = CE[P·CE[g(ω_0)|mSI]|mSI]
       have h_tower : μ[(fun ω => P ω * g (ω M)) | mSI]
           =ᵐ[μ] μ[(fun ω => P ω * μ[(fun ω => g (ω 0)) | mSI] ω) | mSI] := by
-        -- This follows the same Cesàro + MET pattern as in condexp_product_factorization_ax
+        -- This follows the same Cesàro + MET pattern as in condexp_product_factorization_consecutive
         -- Define A_m = (1/m) Σ_{j=0}^{m-1} g(ω_{M+j})
         let A := fun m : ℕ => fun ω => if m = 0 then 0
           else (1 / (m : ℝ)) * (Finset.range m).sum (fun j => g (ω (M + j)))
@@ -2433,7 +2435,7 @@ Proof of base case (m = 0) - kept for reference:
 /- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
-1. Apply `condexp_product_factorization_ax` to indicator functions
+1. Apply `condexp_product_factorization_consecutive` to indicator functions
    - Indicators are bounded measurable functions
    - Product of indicators gives cylinder set probabilities
 
@@ -2452,7 +2454,7 @@ This connects the conditional expectation factorization to measure-theoretic for
 Well-structured proof with clear sections:
 - Setup: Define F (real-valued product) and G (kernel product)
 - Prove F, G measurable, bounded, integrable
-- Show ∫ F = ∫ G using tower property and condexp_product_factorization_ax
+- Show ∫ F = ∫ G using tower property and condexp_product_factorization_consecutive
 - Convert to ENNReal using ofReal_integral correspondence
 
 The proof is straightforward measure theory with clear dependencies. No subdivision needed.
@@ -2476,7 +2478,7 @@ private lemma prod_ofReal_toReal_meas {m : ℕ} (ν : Ω[α] → Measure α) (B 
   congr; funext i
   exact ENNReal.ofReal_toReal (hν i)
 
-/-! ### Helper lemmas for indicator_product_bridge_ax -/
+/-! ### Helper lemmas for indicator_product_bridge -/
 
 private lemma indicator_product_properties
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ]
@@ -2592,7 +2594,7 @@ private lemma kernel_measure_product_properties
 
   exact ⟨hG_meas, hG_nonneg, hG_bd, hG_int, h_indicator_integral⟩
 
-lemma indicator_product_bridge_ax
+lemma indicator_product_bridge
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
@@ -2715,12 +2717,12 @@ lemma indicator_product_bridge_ax
 1. Measurability of coordinates: `measurable_pi_apply`
 2. Probability kernel ν: from `IsMarkovKernel.isProbabilityMeasure`
 3. Measurability of ν: from `ν_eval_measurable` (for measurable sets)
-4. Bridge condition: from `indicator_product_bridge_ax`
+4. Bridge condition: from `indicator_product_bridge`
 
 Note: `conditional_iid_from_directing_measure` was updated to only require
 measurability for measurable sets, matching what `ν_eval_measurable` provides.
 -/
-lemma exchangeable_implies_ciid_modulo_bridge_ax
+lemma exchangeable_implies_ciid_modulo_bridge
     (μ : Measure (Ω[α])) [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
@@ -2738,7 +2740,7 @@ lemma exchangeable_implies_ciid_modulo_bridge_ax
     exact ν_eval_measurable hs
   -- 4. Bridge condition: product of indicators = product of measures
   · intro m k hk B hB_meas
-    exact indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
+    exact indicator_product_bridge μ hσ hExch m k hk B hB_meas
 
 section MainConvergence
 
@@ -6246,9 +6248,118 @@ private lemma tower_indicator_finset
         -- This is precisely what exchangeability says: permuting coordinate labels
         -- doesn't change the CE given mSI.
 
-        -- Use `condExp_map_reindex_eq` if available, or prove directly.
-        -- For now, use sorry for this technical step (it follows from exchangeability).
-        sorry
+        -- Use direct permutation approach: swap each i ∈ S with N₀ + i.
+        -- Since S ⊆ {0, ..., N₀-1} and {N₀+i : i ∈ S} ⊆ {N₀, ...}, these are disjoint.
+        -- And k < N₀, so k ∉ {N₀+i : i ∈ S}, hence k is fixed.
+        -- The permutation is a product of disjoint transpositions swap(i, N₀+i) for i ∈ S.
+        -- By exchangeability, this preserves μ, and the CE equality follows from the
+        -- same setIntegral_eq_of_reindex_eq pattern as h_lag_const.
+
+        let S := insert m T
+        let π := disjointOffsetSwap S N₀ hN₀_gt_S
+
+        -- F is the RHS function (B_at N₀)
+        -- G is the LHS function (B)
+        let F := fun ω : Ω[α] => φ (ω k) * (B_at N₀).indicator 1 ω
+        let G := fun ω : Ω[α] => φ (ω k) * B.indicator 1 ω
+
+        -- k ∉ S (= insert m T) is given by hkS
+        have hk_notin_S : k ∉ S := hkS
+
+        -- Show F ∘ reindex π = G
+        have hFG : F ∘ Exchangeability.reindex π = G := by
+          ext ω
+          simp only [Function.comp_apply, Exchangeability.reindex_apply, F, G]
+          have hk_fix : π k = k := disjointOffsetSwap_lt S N₀ hN₀_gt_S k hk_notin_S hN₀_gt_k
+          rw [hk_fix]
+          -- Now show: (B_at N₀).indicator 1 (reindex π ω) = B.indicator 1 ω
+          congr 1
+          simp only [Set.indicator_apply, B_at, B]
+          -- Show: (reindex π ω) ∈ ⋂ i ∈ S, {ω' | ω'(N₀ + i) ∈ f i} ↔ ω ∈ ⋂ i ∈ S, {ω' | ω' i ∈ f i}
+          congr 1
+          ext
+          constructor
+          · intro h; simp only [Set.mem_iInter] at h ⊢; intro i hi
+            have hi' := h i hi
+            simp only [Set.mem_setOf_eq, Exchangeability.reindex_apply] at hi'
+            have hπ : π (N₀ + i) = i := disjointOffsetSwap_offset_mem S N₀ hN₀_gt_S i hi
+            rw [hπ] at hi'; exact hi'
+          · intro h; simp only [Set.mem_iInter] at h ⊢; intro i hi
+            simp only [Set.mem_setOf_eq, Exchangeability.reindex_apply]
+            have hπ : π (N₀ + i) = i := disjointOffsetSwap_offset_mem S N₀ hN₀_gt_S i hi
+            rw [hπ]; exact h i hi
+
+        -- Measurability
+        have hF_meas : Measurable F := by
+          apply Measurable.mul
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact measurable_const.indicator (hB_at_meas N₀)
+
+        -- Helper: φ is bounded by 1
+        have hφ_bd' : ∀ x, |φ x| ≤ 1 := fun x => by
+          simp only [φ, Set.indicator_apply]; by_cases hx : x ∈ A <;> simp [hx]
+
+        -- Integrability: F and G are bounded by 1, hence integrable
+        have hF_int : Integrable F μ :=
+          integrable_of_bounded_measurable hF_meas 1 (fun ω => by
+            simp only [F, abs_mul]
+            calc |φ (ω k)| * |(B_at N₀).indicator 1 ω|
+                ≤ 1 * 1 := by
+                  apply mul_le_mul (hφ_bd' (ω k))
+                  · simp only [Set.indicator_apply]; split_ifs <;> simp
+                  · simp only [Set.indicator_apply]; split_ifs <;> simp
+                  · norm_num
+              _ = 1 := by ring)
+        have hG_meas : Measurable G := by
+          apply Measurable.mul
+          · exact hφ_meas.comp (measurable_pi_apply k)
+          · exact measurable_const.indicator hB_meas
+        have hG_int : Integrable G μ :=
+          integrable_of_bounded_measurable hG_meas 1 (fun ω => by
+            simp only [G, abs_mul]
+            calc |φ (ω k)| * |B.indicator 1 ω|
+                ≤ 1 * 1 := by
+                  apply mul_le_mul (hφ_bd' (ω k))
+                  · simp only [Set.indicator_apply]; split_ifs <;> simp
+                  · simp only [Set.indicator_apply]; split_ifs <;> simp
+                  · norm_num
+              _ = 1 := by ring)
+
+        -- Bound M for identity
+        let M := (insert m T).sup id + N₀ + 1
+
+        -- π is identity beyond M
+        have h_id_beyond : ∀ n, M ≤ n → π n = n := by
+          intro n hn
+          apply disjointOffsetSwap_id_beyond S N₀ hN₀_gt_S n
+          simp only [M, S] at hn ⊢
+          omega
+
+        -- Show μ is π-invariant by exchangeability
+        have hμ_inv : Measure.map (Exchangeability.reindex π) μ = μ := hExch π
+
+        -- mSI sets are π-invariant
+        have hπ_inv : ∀ s, MeasurableSet[mSI] s → (Exchangeability.reindex π) ⁻¹' s = s := by
+          intro s hs
+          have hs_shift := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+          exact reindex_perm_preimage_shiftInvariant π M h_id_beyond s hs_shift
+
+        -- Show ∫_s F = ∫_s G for all s ∈ mSI
+        have h_int_eq : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ →
+            ∫ ω in s, F ω ∂μ = ∫ ω in s, G ω ∂μ := fun s hs _ => by
+          have hs_meas : MeasurableSet s := hs.1
+          exact setIntegral_eq_of_reindex_eq π hμ_inv F G hFG hF_meas s hs_meas (hπ_inv s hs)
+
+        -- Show ∫_s (F - G) = 0 for all s ∈ mSI
+        have h_diff_zero : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ →
+            ∫ ω in s, (F - G) ω ∂μ = 0 := fun s hs hμs => by
+          simp only [Pi.sub_apply, integral_sub hF_int.integrableOn hG_int.integrableOn,
+            h_int_eq s hs hμs, sub_self]
+
+        -- Apply condExp equality lemma
+        have h_eq := condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
+        -- We need to flip F and G to match the goal
+        exact h_eq.symm
 
       -- Cesàro average of shifted cylinders
       let A_N : ℕ → Ω[α] → ℝ := fun N ω =>
@@ -6715,45 +6826,66 @@ private lemma tower_indicator_finset
           apply Finset.sum_congr rfl
           intro j _
           congr 1
-          rw [Function.iterate_add_apply, add_comm]
+          -- shift^[N₀] (shift^[j] ω) = shift^[j] (shift^[N₀] ω)
+          rw [← Function.iterate_add_apply, ← Function.iterate_add_apply, add_comm]
 
         -- Y is shift-invariant (mSI-measurable)
+        -- Y = CE[B.indicator 1 | mSI] is mSI-measurable, hence Y ∘ shift^[m] =ᵐ Y
+        -- by induction on m: shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq gives base case,
+        -- and measure preservation of shift^n pulls back the ae_eq hypothesis.
         have hY_shift_inv : ∀ m, (fun ω => Y (shift^[m] ω)) =ᵐ[μ] Y := fun m => by
-          -- Y = CE[B.indicator 1 | mSI], so Y is mSI-measurable
-          -- For mSI-measurable functions, Y(shift^m ω) = Y(ω) a.e.
-          have hY_meas : AEStronglyMeasurable Y μ := stronglyMeasurable_condExp.aestronglyMeasurable
-          -- mSI-measurable functions are shift-invariant
-          filter_upwards [condExp_ae_eq_condExp (α := Ω[α])] with ω _
-          -- For mSI-measurable functions, the value is constant on shift orbits
-          -- This follows from shift⁻¹(mSI) = mSI
-          sorry  -- TODO: needs condExp shift invariance property
+          have hY_aesm : AEStronglyMeasurable[mSI] Y μ :=
+            stronglyMeasurable_condExp.aestronglyMeasurable
+          induction m with
+          | zero => simp only [Function.iterate_zero, Function.id_comp]; rfl
+          | succ n ih =>
+            have h_single := shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq hσ hY_aesm
+            have hσ_n : MeasurePreserving (shift^[n]) μ μ := hσ.iterate n
+            simp only [Function.iterate_succ']
+            -- (Y ∘ shift) ∘ shift^n =ᵐ Y ∘ shift^n by pullback of h_single
+            -- Y ∘ shift^n =ᵐ Y by ih
+            have h_pullback : (fun ω => Y (shift (shift^[n] ω))) =ᵐ[μ] (fun ω => Y (shift^[n] ω)) := by
+              -- Pull back h_single through shift^n using ae_eq_comp
+              -- h_single : (Y ∘ shift) =ᵐ[μ] Y, and hσ_n.map_eq : μ.map shift^n = μ
+              -- By ae_eq_comp: if g =ᵐ[μ.map f] g' then g ∘ f =ᵐ[μ] g' ∘ f
+              -- Here: (Y ∘ shift) =ᵐ[μ] Y, and μ = μ.map shift^n
+              -- So: (Y ∘ shift) ∘ shift^n =ᵐ[μ] Y ∘ shift^n
+              have hf_aem : AEMeasurable (shift^[n]) μ := hσ_n.measurable.aemeasurable
+              have h_ae_at_map : (fun ω => Y (shift ω)) =ᵐ[μ.map (shift^[n])] Y := by
+                rw [hσ_n.map_eq]; exact h_single
+              have h := ae_eq_comp hf_aem h_ae_at_map
+              simp only [Function.comp_def] at h
+              exact h
+            exact h_pullback.trans ih
 
         -- Key: ∫|A'_n - Y| = ∫|A''_n ∘ shift^{N₀} - Y ∘ shift^{N₀}| = ∫|A''_n - Y| by shift invariance of μ
         have h_integral_eq : ∀ n, ∫ ω, |A' n ω - Y ω| ∂μ = ∫ ω, |A'' n ω - Y ω| ∂μ := by
           intro n
-          rw [hA'_eq_A' n]
           -- Use change of variables via shift^{N₀}
-          have hσ_N₀ : MeasurePreserving (shift^[N₀]) μ μ := by
-            induction N₀ with
-            | zero => simp; exact MeasurePreserving.id μ
-            | succ m ih =>
-              simp only [Function.iterate_succ']
-              exact hσ.comp ih
-          -- ∫ f(shift^{N₀} ω) dμ(ω) = ∫ f(ξ) dμ(ξ)
-          have h1 := MeasurePreserving.integral_comp hσ_N₀ (measurable_shift.iterate N₀)
+          have hσ_N₀ : MeasurePreserving (shift^[N₀]) μ μ := hσ.iterate N₀
           -- Apply to |A''_n - Y|
+          have hY_meas : Measurable Y := by
+            have hY_sm : StronglyMeasurable[mSI] Y := stronglyMeasurable_condExp
+            exact hY_sm.measurable.mono (shiftInvariantSigma_le (α := α)) le_rfl
           have h_diff_meas : Measurable (fun ω => |A'' n ω - Y ω|) := by
-            apply Measurable.abs
+            -- Note: for ℝ, |x| = ‖x‖, so we use Measurable.norm
+            have : (fun ω => |A'' n ω - Y ω|) = (fun ω => ‖A'' n ω - Y ω‖) := by
+              ext ω; exact Real.norm_eq_abs _
+            rw [this]
+            apply Measurable.norm
             apply Measurable.sub
             · -- A'' n is measurable
               apply Measurable.mul measurable_const
               apply Finset.measurable_sum
               intro j _
               exact measurable_const.indicator hB_meas |>.comp (measurable_shift.iterate j)
-            · exact stronglyMeasurable_condExp.measurable
+            · exact hY_meas
+          have h_diff_smeas : StronglyMeasurable (fun ω => |A'' n ω - Y ω|) :=
+            h_diff_meas.stronglyMeasurable
           -- Now the integral equals
           calc ∫ ω, |A' n ω - Y ω| ∂μ
-              = ∫ ω, |A'' n (shift^[N₀] ω) - Y ω| ∂μ := by rw [hA'_eq_A']
+              = ∫ ω, |A'' n (shift^[N₀] ω) - Y ω| ∂μ := by
+                simp only [hA'_eq_A'']
             _ = ∫ ω, |A'' n (shift^[N₀] ω) - Y (shift^[N₀] ω)| ∂μ := by
                 -- Y ω = Y (shift^{N₀} ω) a.e. by shift invariance of Y
                 apply integral_congr_ae
@@ -6761,8 +6893,9 @@ private lemma tower_indicator_finset
                 rw [hω]
             _ = ∫ ξ, |A'' n ξ - Y ξ| ∂μ := by
                 -- Change of variables ξ = shift^{N₀} ω
-                rw [← h1 h_diff_meas.aestronglyMeasurable]
-                rfl
+                -- ∫ f(shift^{N₀} ω) dμ(ω) = ∫ f(ξ) d(μ.map shift^{N₀})(ξ) = ∫ f(ξ) dμ(ξ)
+                rw [(integral_map_of_stronglyMeasurable hσ_N₀.measurable h_diff_smeas).symm,
+                    hσ_N₀.map_eq]
 
         simp_rw [h_integral_eq]
 
@@ -6780,9 +6913,9 @@ private lemma tower_indicator_finset
         -- B.indicator 1 is bounded by 1 and L², so birkhoff average → CE[B.indicator 1 | mSI].
 
         -- Apply L1_cesaro_convergence_bounded for bounded case
-        have hB_bd : ∃ C, ∀ ω, |B.indicator 1 ω| ≤ C := ⟨1, fun ω => by
-          simp only [Set.indicator_apply, Pi.one_apply]
-          split_ifs <;> simp⟩
+        have hB_bd : ∃ C, ∀ ω, |B.indicator (1 : Ω[α] → ℝ) ω| ≤ C := ⟨1, fun ω => by
+          simp only [Set.indicator_apply]
+          split_ifs with h <;> norm_num⟩
 
         -- The Cesàro A''_n involves shift^j ω, but L1_cesaro_convergence expects g(ω j).
         -- Need to use the relationship: B.indicator 1 (shift^j ω) = (B.indicator 1)(shift^j ω)
@@ -6795,10 +6928,238 @@ private lemma tower_indicator_finset
         -- For bounded f, (1/n) ∑_{j<n} f(shift^j ω) → CE[f | mSI] in L².
         -- L² → L¹ on probability spaces.
 
-        -- For now, use the fact that B.indicator 1 is bounded and apply the general MET.
-        -- This follows from L1_cesaro_convergence pattern applied to the product space.
+        -- Strategy: Use MET (birkhoffAverage_tendsto_condexp) for L² convergence,
+        -- then L2_tendsto_implies_L1_tendsto_of_bounded for L¹.
 
-        sorry  -- TODO: Complete with proper MET application for bounded functions
+        -- Step 1: B.indicator 1 is in L² (bounded on probability space)
+        let h : Ω[α] → ℝ := B.indicator (1 : Ω[α] → ℝ)
+        have hh_meas : Measurable h := measurable_const.indicator hB_meas
+        have hh_bd : ∀ ω, |h ω| ≤ 1 := fun ω => by
+          simp only [h, Set.indicator_apply]
+          split_ifs <;> norm_num
+
+        have hh_memLp : MemLp h 2 μ := by
+          apply MemLp.of_bound hh_meas.aestronglyMeasurable 1
+          exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).le.trans (hh_bd ω))
+
+        -- Step 2: Y is in L² (conditional expectation of L² function)
+        have hY_memLp : MemLp Y 2 μ := by
+          -- Y = CE[h | mSI] where h is bounded by 1, so Y is bounded by 1 a.e.
+          -- Hence Y ∈ L² on a probability space
+          have hY_bd : ∀ᵐ ω ∂μ, |Y ω| ≤ 1 := by
+            simp only [Y]
+            have hh_ae_bd : ∀ᵐ ω ∂μ, |h ω| ≤ (1 : ℝ) := ae_of_all μ hh_bd
+            have := @ae_bdd_condExp_of_ae_bdd Ω[α] mSI _ μ 1 h hh_ae_bd
+            simp only [NNReal.coe_one] at this
+            exact this
+          have hY_sm : StronglyMeasurable[mSI] Y := stronglyMeasurable_condExp
+          apply MemLp.of_bound (hY_sm.measurable.mono (shiftInvariantSigma_le (α := α))
+            le_rfl).aestronglyMeasurable 1
+          exact hY_bd.mono (fun ω hω => (Real.norm_eq_abs _).le.trans hω)
+
+        -- Step 3: A'' n is bounded
+        have hA''_bd : ∀ n ω, |A'' n ω| ≤ 1 := fun n ω => by
+          simp only [A'']
+          have hsum_bd : |(Finset.range (n + 1)).sum (fun j => h (shift^[j] ω))| ≤ (n + 1) := by
+            calc |(Finset.range (n + 1)).sum (fun j => h (shift^[j] ω))|
+                ≤ (Finset.range (n + 1)).sum (fun j => |h (shift^[j] ω)|) :=
+                  Finset.abs_sum_le_sum_abs _ _
+              _ ≤ (Finset.range (n + 1)).sum (fun _ => (1 : ℝ)) := by
+                  apply Finset.sum_le_sum; intro j _; exact hh_bd _
+              _ = (n + 1) := by simp
+          have hn_pos : (0 : ℝ) < n + 1 := by positivity
+          calc |1 / (↑n + 1) * (Finset.range (n + 1)).sum (fun j => h (shift^[j] ω))|
+              = |1 / (↑n + 1)| * |(Finset.range (n + 1)).sum (fun j => h (shift^[j] ω))| :=
+                abs_mul _ _
+            _ ≤ (1 / (n + 1)) * (n + 1) := by
+                apply mul_le_mul
+                · rw [abs_of_pos]; positivity
+                · exact hsum_bd
+                · positivity
+                · positivity
+            _ = 1 := by field_simp
+
+        -- Step 4: A'' n is measurable
+        have hA''_meas : ∀ n, Measurable (A'' n) := fun n => by
+          simp only [A'']
+          apply Measurable.mul measurable_const
+          apply Finset.measurable_sum
+          intro j _
+          exact hh_meas.comp (measurable_shift.iterate j)
+
+        -- Step 5: Apply L2_tendsto_implies_L1_tendsto_of_bounded
+        -- We need L² convergence: ∫(A'' n - Y)² → 0
+        -- This follows from MET: birkhoff average of h → condExp[h | mSI] in L²
+
+        -- The key is that A'' n = (1/(n+1)) ∑_{j<n+1} h ∘ shift^j
+        -- which is the Birkhoff average of h.
+        -- By MET (birkhoffAverage_tendsto_condexp), this converges to condexpL2 h in L².
+        -- condexpL2 h = Y a.e. (both are CE[h | mSI]).
+
+        -- For now, use a direct squeeze argument with the bounded convergence theorem.
+        -- Since A'' n and Y are both bounded by 1, |A'' n - Y| ≤ 2.
+        -- The L² convergence from MET gives pointwise a.e. convergence along a subsequence.
+        -- By bounded convergence theorem, this gives L¹ convergence.
+
+        -- Actually, we use the existing L1_cesaro_convergence infrastructure indirectly.
+        -- The key observation: for bounded functions, L¹ Cesàro convergence follows from
+        -- the shift-invariance structure.
+
+        -- Use a direct approach: the Cesàro average of shifts of a bounded function
+        -- converges to its conditional expectation given the shift-invariant σ-algebra.
+
+        -- This is a well-known consequence of MET. For bounded functions:
+        -- ‖(1/n)∑_{j<n} h∘σ^j - E[h|I]‖_1 ≤ ‖(1/n)∑_{j<n} h∘σ^j - E[h|I]‖_2 → 0
+
+        have hL2_conv : Tendsto (fun n => ∫ ω, (A'' n ω - Y ω)^2 ∂μ) atTop (𝓝 0) := by
+          -- Step 5a: Lift h to Lp
+          let hL2 : Lp ℝ 2 μ := hh_memLp.toLp h
+          have hL2_eq_h : (hL2 : Ω[α] → ℝ) =ᵐ[μ] h := MemLp.coeFn_toLp hh_memLp
+
+          -- Step 5b: Apply MET to get L² convergence in Lp norm
+          have hMET := birkhoffAverage_tendsto_condexp hσ hL2
+
+          -- Step 5c: condexpL2 hL2 =ᵃᵉ Y = μ[h | mSI]
+          have hcondexp_eq : (condexpL2 (μ := μ) hL2 : Ω[α] → ℝ) =ᵐ[μ] Y := by
+            have h1 := condexpL2_ae_eq_condExp hL2
+            -- h1 : condexpL2 hL2 =ᵃᵉ μ[hL2 | mSI]
+            -- We need μ[hL2 | mSI] =ᵃᵉ μ[h | mSI] = Y
+            have h2 : μ[(hL2 : Ω[α] → ℝ) | shiftInvariantSigma] =ᵐ[μ]
+                μ[h | shiftInvariantSigma] := condExp_congr_ae hL2_eq_h
+            exact h1.trans h2
+
+          -- Step 5d: Each koopman iterate a.e. equals h ∘ shift^k
+          have h_iter_eq : ∀ k, (fun ω => ((koopman shift hσ)^[k] hL2) ω) =ᵐ[μ]
+              (fun ω => h (shift^[k] ω)) := by
+            intro k
+            induction k with
+            | zero =>
+              simp only [Function.iterate_zero, id_eq]
+              exact hL2_eq_h
+            | succ k' ih =>
+              -- koopman^[k'+1] = koopman ∘ koopman^[k']
+              have hstep : (fun ω => ((koopman shift hσ)^[k'+1] hL2) ω) =ᵐ[μ]
+                  (fun ω => ((koopman shift hσ)^[k'] hL2) (shift ω)) := by
+                rw [Function.iterate_succ_apply']
+                exact Lp.coeFn_compMeasurePreserving ((koopman shift hσ)^[k'] hL2) hσ
+              have hpull := eventuallyEq_comp_measurePreserving hσ ih
+              have hshift : (fun ω => h (shift^[k'] (shift ω))) =ᵐ[μ]
+                  (fun ω => h (shift^[k'+1] ω)) := by
+                apply ae_of_all; intro ω
+                simp only [Function.iterate_succ_apply]
+              exact hstep.trans (hpull.trans hshift)
+
+          -- Step 5e: birkhoffAverage (n+1) hL2 =ᵃᵉ A'' n
+          have h_birk_eq : ∀ n, (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2 ω)
+              =ᵐ[μ] A'' n := by
+            intro n
+            -- Expand birkhoffAverage
+            have h_def : birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2 =
+                ((n+1 : ℕ) : ℝ)⁻¹ • (∑ k ∈ Finset.range (n+1), (koopman shift hσ)^[k] hL2) := by
+              rw [birkhoffAverage.eq_1, birkhoffSum.eq_1]
+            -- Sum of Lp elements coerces to sum of coercions a.e.
+            have h_sum_coe : (fun ω => (∑ k ∈ Finset.range (n+1), (koopman shift hσ)^[k] hL2 : Lp ℝ 2 μ) ω)
+                =ᵐ[μ] (fun ω => ∑ k ∈ Finset.range (n+1), ((koopman shift hσ)^[k] hL2) ω) :=
+              coeFn_finset_sum (Finset.range (n+1)) (fun k => (koopman shift hσ)^[k] hL2)
+            -- Combine to get birkhoff =ᵃᵉ scaled sum of h ∘ shift^k
+            have h_terms : (fun ω => ∑ k ∈ Finset.range (n+1), ((koopman shift hσ)^[k] hL2) ω)
+                =ᵐ[μ] (fun ω => ∑ k ∈ Finset.range (n+1), h (shift^[k] ω)) := by
+              have hterms_each : ∀ k ∈ Finset.range (n+1),
+                  (fun ω => ((koopman shift hσ)^[k] hL2) ω) =ᵐ[μ] (fun ω => h (shift^[k] ω)) :=
+                fun k _ => h_iter_eq k
+              have hcount : (Finset.range (n+1) : Set ℕ).Countable := Finset.countable_toSet _
+              have hae := (MeasureTheory.ae_ball_iff hcount).mpr hterms_each
+              filter_upwards [hae] with ω hω
+              exact Finset.sum_congr rfl hω
+            -- Combine: birkhoff =ᵃᵉ (1/(n+1)) * ∑ h ∘ shift^k = A'' n
+            calc (fun ω => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2 ω)
+                =ᵐ[μ] fun ω => ((n+1 : ℕ) : ℝ)⁻¹ • (∑ k ∈ Finset.range (n+1),
+                    ((koopman shift hσ)^[k] hL2 : Ω[α] → ℝ) ω) := by
+                  filter_upwards [Lp.coeFn_smul ((n+1 : ℕ) : ℝ)⁻¹
+                    (∑ k ∈ Finset.range (n+1), (koopman shift hσ)^[k] hL2),
+                    h_sum_coe] with ω hω_smul hω_sum
+                  rw [h_def, hω_smul, Pi.smul_apply, hω_sum]
+              _ =ᵐ[μ] fun ω => ((n+1 : ℕ) : ℝ)⁻¹ * ∑ k ∈ Finset.range (n+1),
+                    ((koopman shift hσ)^[k] hL2) ω := by
+                  filter_upwards with ω
+                  rw [smul_eq_mul]
+              _ =ᵐ[μ] fun ω => ((n+1 : ℕ) : ℝ)⁻¹ * ∑ k ∈ Finset.range (n+1), h (shift^[k] ω) := by
+                  filter_upwards [h_terms] with ω hω
+                  rw [hω]
+              _ =ᵐ[μ] A'' n := by
+                  apply ae_of_all; intro ω
+                  -- A'' n ω = (1/(n+1)) * ∑_{j<n+1} B.indicator 1 (shift^j ω)
+                  -- LHS = (n+1)⁻¹ * ∑_{k<n+1} h (shift^k ω)
+                  -- And h = B.indicator 1, so they are equal
+                  simp only [A'', one_div, h, Nat.cast_add, Nat.cast_one]
+
+          -- Step 5f: L² norm convergence → integral convergence
+          -- ‖f‖₂² = ∫ |f|² dμ for probability measures
+          -- So Tendsto ‖birk(n+1) - condexp‖₂ → 0 implies ∫ (A''n - Y)² → 0
+          have hΦ : Continuous (fun x : Lp ℝ 2 μ => ‖x - condexpL2 (μ := μ) hL2‖) :=
+            continuous_norm.comp (continuous_sub_right _)
+          have hL2_norm : Tendsto (fun n => ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n hL2
+              - condexpL2 (μ := μ) hL2‖) atTop (𝓝 0) := by
+            have := (hΦ.tendsto (condexpL2 (μ := μ) hL2)).comp hMET
+            simpa [sub_self, norm_zero]
+
+          -- Need: ∫ (A'' n - Y)² → 0
+          -- From: ‖birk(n+1) - condexp‖₂ → 0 and a.e. equalities
+          -- Use: ‖f‖₂² = ∫ |f|² = ∫ f² for real-valued f
+          have h_norm_sq_eq : ∀ n, ∫ ω, (A'' n ω - Y ω)^2 ∂μ ≤
+              ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2
+                - condexpL2 (μ := μ) hL2‖^2 := by
+            intro n
+            let diff_Lp := birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2
+              - condexpL2 (μ := μ) hL2
+            -- A'' n - Y =ᵃᵉ diff_Lp
+            have h_ae : (fun ω => A'' n ω - Y ω) =ᵐ[μ] (fun ω => diff_Lp ω) := by
+              have h_sub := Lp.coeFn_sub (birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2)
+                (condexpL2 (μ := μ) hL2)
+              filter_upwards [h_birk_eq n, hcondexp_eq, h_sub] with ω hb hc hsub
+              simp only [Pi.sub_apply] at hsub ⊢
+              rw [← hb, ← hc, hsub]
+            -- ∫ (A'' n - Y)² = ∫ diff_Lp²
+            have h_int_eq : ∫ ω, (A'' n ω - Y ω)^2 ∂μ = ∫ ω, (diff_Lp ω)^2 ∂μ := by
+              apply integral_congr_ae
+              filter_upwards [h_ae] with ω hω
+              rw [hω]
+            -- ∫ diff_Lp² = ‖diff_Lp‖₂²
+            -- Standard fact: for f ∈ L²(μ), ‖f‖₂² = ∫ |f|² dμ
+            -- This follows from the definition of the L² norm:
+            -- ‖f‖₂ = (eLpNorm f 2 μ).toReal = (∫⁻ ‖f‖² dμ)^(1/2)
+            -- So ‖f‖₂² = ∫⁻ ‖f‖² dμ = ∫ ‖f‖² dμ = ∫ f² dμ (for real f)
+            have h_norm_eq : ∫ ω, (diff_Lp ω)^2 ∂μ = ‖diff_Lp‖^2 := by
+              -- ‖f‖² = ⟪f, f⟫ in L²
+              have h1 : ‖diff_Lp‖^2 = inner (𝕜 := ℝ) diff_Lp diff_Lp :=
+                (real_inner_self_eq_norm_sq diff_Lp).symm
+              -- ⟪f, f⟫ = ∫ ⟪f x, f x⟫ dμ
+              have h2 : inner (𝕜 := ℝ) diff_Lp diff_Lp =
+                  ∫ ω, inner (𝕜 := ℝ) (diff_Lp ω : ℝ) (diff_Lp ω) ∂μ := L2.inner_def diff_Lp diff_Lp
+              -- For real numbers, ⟪r, r⟫_ℝ = r²
+              have h3 : ∀ r : ℝ, inner (𝕜 := ℝ) r r = r^2 := fun r => by
+                rw [real_inner_self_eq_norm_sq, Real.norm_eq_abs, sq_abs]
+              rw [h1, h2]
+              congr 1
+              ext ω
+              exact (h3 (diff_Lp ω)).symm
+            rw [h_int_eq, h_norm_eq]
+
+          -- Conclude using squeeze
+          -- Need: ‖birk(n+1) - condexp‖² → 0
+          have h_shift : Tendsto (fun n => ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2
+              - condexpL2 (μ := μ) hL2‖) atTop (𝓝 0) := hL2_norm.comp (tendsto_add_atTop_nat 1)
+          have h_upper : Tendsto (fun n => ‖birkhoffAverage ℝ (koopman shift hσ) (fun f => f) (n+1) hL2
+              - condexpL2 (μ := μ) hL2‖^2) atTop (𝓝 0) := by
+            simpa using h_shift.pow 2
+          have h_lower : ∀ n, 0 ≤ ∫ ω, (A'' n ω - Y ω)^2 ∂μ := fun n =>
+            integral_nonneg (fun ω => sq_nonneg _)
+          exact tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h_upper
+            (Eventually.of_forall h_lower)
+            (Eventually.of_forall h_norm_sq_eq)
+
+        exact Exchangeability.Probability.IntegrationHelpers.L2_tendsto_implies_L1_tendsto_of_bounded
+          A'' Y hA''_meas ⟨1, fun n ω => hA''_bd n ω⟩ hY_memLp hL2_conv
 
       -- CE Lipschitz: CE[φ(ω_k) · A_N | mSI] → CE[φ(ω_k) · Y | mSI] in L¹
       have h_L1_CE : Tendsto (fun N =>
@@ -7037,8 +7398,36 @@ lemma kernel_indep_finset
           = {ω' | ω' k ∈ A} ∩ B := by
         rw [Finset.set_biInter_insert]
 
-      -- Use filter_upwards to get ω-dependent statements
-      filter_upwards [h_IH] with ω h_IH_ω
+      -- Step 1: Apply tower_indicator_finset to get CE factorization (before filtering)
+      -- tower_indicator_finset expects f : ℕ → Set α and builds B from it
+      -- Our B is already defined as ⋂ i ∈ S, {ω' | ω' i ∈ f i}
+      -- We pass (f k) as A and f as the function
+      have h_tower := tower_indicator_finset hσ hExch k (f k) hf_k S hk f hf_S
+
+      -- Step 2: Set up integrability for CE-to-kernel conversion
+      have hA_k_meas : MeasurableSet {ω' : Ω[α] | ω' k ∈ A} :=
+        hA_meas.preimage (measurable_pi_apply k)
+      have hA_k_int : Integrable (fun ω' => A.indicator (1 : α → ℝ) (ω' k)) μ := by
+        apply Integrable.indicator _ hA_k_meas
+        exact integrable_const 1
+      have hB_int : Integrable (fun ω' => B.indicator (1 : Ω[α] → ℝ) ω') μ := by
+        apply Integrable.indicator _ hB_meas
+        exact integrable_const 1
+      have hAB_int : Integrable (fun ω' => A.indicator (1 : α → ℝ) (ω' k) * B.indicator (1 : Ω[α] → ℝ) ω') μ := by
+        apply Integrable.bdd_mul hB_int
+        · exact ((measurable_const.indicator hA_meas).comp (measurable_pi_apply k)).aestronglyMeasurable
+        · refine ⟨1, fun ω' => ?_⟩
+          unfold Set.indicator
+          by_cases hA : ω' k ∈ A <;> simp [hA]
+
+      -- Step 3: Get CE-to-kernel conversion a.e. conditions
+      have hm := shiftInvariantSigma_le (α := α)
+      have h_ce_Ak := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hm hA_k_int
+      have h_ce_B := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hm hB_int
+      have h_ce_AB := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel hm hAB_int
+
+      -- Step 4: filter_upwards on ALL a.e. conditions
+      filter_upwards [h_IH, h_tower, h_ce_Ak, h_ce_B, h_ce_AB] with ω h_IH_ω h_tower_ω h_ce_Ak_ω h_ce_B_ω h_ce_AB_ω
 
       -- The product splits as product over {k} times product over S
       have h_prod_eq : ∏ i ∈ insert k S, κ ω {ω' | ω' i ∈ f i}
@@ -7048,45 +7437,59 @@ lemma kernel_indep_finset
       -- Rewrite using the intersection and product decompositions
       rw [h_inter_eq, h_prod_eq]
 
-      -- Need: κ({ω' | ω' k ∈ A} ∩ B) = κ({ω' | ω' k ∈ A}) · ∏ i∈S κ({ω' | ω' i ∈ f i})
       -- By IH: ∏ i∈S κ({ω' | ω' i ∈ f i}) = κ(B)
       rw [← h_IH_ω]
 
       -- Now need: κ({ω' | ω' k ∈ A} ∩ B) = κ({ω' | ω' k ∈ A}) · κ(B)
-      -- This is kernel independence of coordinate k from the cylinder B over S (with k ∉ S)
 
-      -- Proof strategy: By nested induction on S, using kernel_indep_pair for base case
-      -- and the tower + pull-out properties for the inductive step.
+      -- Step 5: Convert indicator integrals to measures using integral_indicator_one
+      have h_int_Ak : ∫ ω', (A.indicator (1 : α → ℝ) (ω' k)) ∂(κ ω) = (κ ω {ω' | ω' k ∈ A}).toReal := by
+        have h_eq : (fun ω'' : Ω[α] => A.indicator (1 : α → ℝ) (ω'' k)) =
+            (fun ω'' : Ω[α] => ({ω' : Ω[α] | ω' k ∈ A}.indicator (1 : Ω[α] → ℝ) ω'')) := by
+          ext ω''
+          simp only [Set.indicator, Pi.one_apply, Set.mem_setOf_eq]
+        rw [h_eq, integral_indicator_one hA_k_meas, Measure.real]
 
-      -- We use that the outer IH gives κ(B_S) = ∏_{i ∈ S} κ({i ∈ f_i}) (product form).
-      -- For nested induction, we show κ(A_k ∩ B_S) = κ(A_k) · κ(B_S) by:
-      -- - Base S = {m}: use kernel_indep_pair for (k, m)
-      -- - Step S = T ∪ {m}: use nested IH + tower property
+      have h_int_B : ∫ ω', (B.indicator (1 : Ω[α] → ℝ) ω') ∂(κ ω) = (κ ω B).toReal := by
+        rw [integral_indicator_one hB_meas, Measure.real]
 
-      -- The proof uses CE factorization via tower (Cesàro + MET) + pull-out.
-      -- This is a placeholder for the full proof which requires substantial infrastructure.
+      have h_int_AB : ∫ ω', (A.indicator (1 : α → ℝ) (ω' k) * B.indicator (1 : Ω[α] → ℝ) ω') ∂(κ ω)
+          = (κ ω ({ω' | ω' k ∈ A} ∩ B)).toReal := by
+        have h_eq : (fun ω'' : Ω[α] => A.indicator (1 : α → ℝ) (ω'' k) * B.indicator (1 : Ω[α] → ℝ) ω'') =
+            (fun ω'' : Ω[α] => (({ω' : Ω[α] | ω' k ∈ A} ∩ B).indicator (1 : Ω[α] → ℝ) ω'')) := by
+          ext ω''
+          simp only [Set.indicator, Pi.one_apply, Set.mem_setOf_eq, Set.mem_inter_iff]
+          by_cases hk' : ω'' k ∈ A <;> by_cases hB' : ω'' ∈ B <;> simp [hk', hB']
+        rw [h_eq, integral_indicator_one (hA_k_meas.inter hB_meas), Measure.real]
 
-      -- For measurable cylinder sets at disjoint coordinates, the conditional kernel
-      -- satisfies independence. This follows from the ergodic structure (shift invariance
-      -- + exchangeability) via the mean ergodic theorem.
+      -- Step 6: Use finiteness to convert via ENNReal.toReal
+      have h_finite_AB : κ ω ({ω' | ω' k ∈ A} ∩ B) ≠ ⊤ := measure_ne_top _ _
+      have h_finite_Ak : κ ω {ω' | ω' k ∈ A} ≠ ⊤ := measure_ne_top _ _
+      have h_finite_B : κ ω B ≠ ⊤ := measure_ne_top _ _
+      have h_finite_prod : κ ω {ω' | ω' k ∈ A} * κ ω B ≠ ⊤ := ENNReal.mul_ne_top h_finite_Ak h_finite_B
 
-      -- Use kernel_indep_pair for the special case when S reduces to a single coordinate
-      -- after the first "split". The general case extends by the tower property.
+      rw [← (ENNReal.toReal_eq_toReal_iff' h_finite_AB h_finite_prod).mp]
 
-      -- Key insight: For any disjoint coordinate sets {k} and S, the tower property gives:
-      -- CE[1_{A_k} · 1_B | mSI] = CE[1_{A_k} · CE[1_B | mSI] | mSI]
-      --                        = CE[1_B | mSI] · CE[1_{A_k} | mSI]  (pull-out)
-      --                        = κ(B) · κ(A_k)
-      --
-      -- The tower_indicator_finset lemma proves the CE factorization,
-      -- and the CE-to-kernel conversion completes the proof.
-      --
-      -- This sorry is dependent on h_tower sorry in tower_indicator_finset.
-      -- Once h_tower is proven, this can be filled by:
-      -- 1. Apply tower_indicator_finset to get CE factorization
-      -- 2. Convert CE[1_S | mSI] to kernel using condExp_ae_eq_integral_condExpKernel
-      -- 3. The indicator integral equals the kernel measure: ∫ 1_S dκ = κ(S)
-      sorry
+      -- Step 7: Use h_tower_ω and h_ce_*_ω to complete the proof
+      -- h_tower_ω: CE[1_Ak · 1_B | mSI](ω) = CE[1_Ak | mSI](ω) · CE[1_B | mSI](ω)
+      -- h_ce_Ak_ω: CE[1_Ak | mSI](ω) = ∫ 1_Ak dκ(ω)
+      -- h_ce_B_ω: CE[1_B | mSI](ω) = ∫ 1_B dκ(ω)
+      -- h_ce_AB_ω: CE[1_Ak · 1_B | mSI](ω) = ∫ (1_Ak · 1_B) dκ(ω)
+
+      -- Chain: κ(Ak ∩ B).toReal = ∫ 1_{Ak∩B} dκ = ∫ 1_Ak · 1_B dκ = CE[1_Ak · 1_B | mSI](ω)
+      --                        = CE[1_Ak | mSI](ω) · CE[1_B | mSI](ω)
+      --                        = (∫ 1_Ak dκ) · (∫ 1_B dκ) = κ(Ak).toReal · κ(B).toReal
+      --                        = (κ(Ak) · κ(B)).toReal
+
+      calc (κ ω ({ω' | ω' k ∈ A} ∩ B)).toReal
+          = ∫ ω', (A.indicator 1 (ω' k) * B.indicator 1 ω') ∂(κ ω) := h_int_AB.symm
+        _ = μ[(fun ω' => A.indicator 1 (ω' k) * B.indicator 1 ω') | mSI] ω := h_ce_AB_ω.symm
+        _ = μ[(fun ω' => A.indicator 1 (ω' k)) | mSI] ω * μ[(fun ω' => B.indicator 1 ω') | mSI] ω := h_tower_ω
+        _ = (∫ ω', A.indicator 1 (ω' k) ∂(κ ω)) * (∫ ω', B.indicator 1 ω' ∂(κ ω)) := by
+            rw [h_ce_Ak_ω, h_ce_B_ω]
+        _ = (κ ω {ω' | ω' k ∈ A}).toReal * (κ ω B).toReal := by rw [h_int_Ak, h_int_B]
+        _ = (κ ω {ω' | ω' k ∈ A} * κ ω B).toReal := by
+            rw [ENNReal.toReal_mul]
 
 /-! ### Kernel independence and integral factorization
 
@@ -8177,7 +8580,7 @@ the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν.
 
 **Proof structure note** (218 lines, lines 4977-5194):
-The proof body is commented out and delegated to `condexp_product_factorization_ax`.
+The proof body is commented out and delegated to `condexp_product_factorization_consecutive`.
 The commented-out proof shows the intended inductive structure:
 - Base case: m = 0 (trivial)
 - Inductive step: split product into (first m factors) * (last factor)
@@ -8203,7 +8606,7 @@ theorem condexp_product_factorization
     (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
     μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
       =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_ax μ hσ hExch hciid m fs hmeas hbd
+  condexp_product_factorization_consecutive μ hσ hExch hciid m fs hmeas hbd
   /-
   · -- Inductive step: split product into (product of first m factors) * (last factor)
     -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
@@ -8516,18 +8919,7 @@ integral of the product of measures ν(ω)(B_i). This is exactly the "bridge con
 needed by CommonEnding.
 -/
 
-/-- Bridge in ENNReal form needed by `CommonEnding`. -/
-theorem indicator_product_bridge
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
-    (hB_meas : ∀ i, MeasurableSet (B i)) :
-    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
-      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ :=
-  indicator_product_bridge_ax μ hσ hExch m k hk B hB_meas
-
-/-! ### Exchangeable implies ConditionallyIID (modulo the bridge axiom)
+/-! ### Exchangeable implies ConditionallyIID
 
 This theorem shows the complete logical chain from exchangeability to ConditionallyIID,
 assuming the `indicator_product_bridge` lemma. The bridge lemma itself requires
@@ -8540,13 +8932,5 @@ conditional independence, which must come from ergodic theory or martingale theo
 4. Apply indicator_product_bridge to get the bridge condition
 5. Use CommonEnding.conditional_iid_from_directing_measure to conclude
 -/
-
-/-- Final wrapper to `ConditionallyIID` (kept modular behind an axiom). -/
-theorem exchangeable_implies_ciid_modulo_bridge
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
-    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) :=
-  exchangeable_implies_ciid_modulo_bridge_ax (μ := μ) (α := α) hσ hExch
 
 end Exchangeability.DeFinetti.ViaKoopman
