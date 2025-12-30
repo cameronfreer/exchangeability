@@ -9,8 +9,7 @@
 | **ViaMartingale** | **0** | Pass | **COMPLETE (Default)** |
 | ViaL2 | 5 | Pass | ~90% complete |
 | ViaKoopman | 11 | Pass | ~80% complete |
-| Extras | 1 | Pass | Non-blocking |
-| **Total** | **17** | Pass | |
+| **Total** | **16** | Pass | |
 
 **All three approaches build successfully with no errors or warnings.**
 
@@ -120,16 +119,6 @@ theorem l2_contractability_bound ...
 
 ---
 
-## Extra Files
-
-| File | Sorries | Status |
-|------|---------|--------|
-| `ContractableVsExchangeable_Extras.lean` | 1 | Non-blocking |
-
-**Note:** Line 260 - pedagogical swap symmetry, not on critical path.
-
----
-
 ## Quick Commands
 
 ```bash
@@ -151,4 +140,3 @@ grep -rn "^\s*sorry" --include="*.lean" Exchangeability/
 
 1. **ViaL2** - 5 sorries (all in ViaL2/*), core L² bound done
 2. **ViaKoopman** - 11 sorries, ergodic infrastructure complete
-3. **Extras** - 1 non-blocking sorry

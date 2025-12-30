@@ -254,10 +254,10 @@ example (m : ℝ) (hm : ∀ i, ∫ ω, X i ω ∂μ = m) {i j : ℕ} (hij : i �
 
 If we tried to prove uniform covariance by showing (X_i, X_j) ~ (X_j, X_i), that WOULD be circular:
 
-```lean
+```
 -- ❌ CIRCULAR: We can't prove this from contractability alone!
 have h_swap : Measure.map (fun ω => (X i ω, X j ω)) μ =
-              Measure.map (fun ω => (X j ω, X i ω)) μ := sorry
+              Measure.map (fun ω => (X j ω, X i ω)) μ := ⟨...⟩ -- impossible!
 ```
 
 This would require exchangeability, which is what we're trying to prove!

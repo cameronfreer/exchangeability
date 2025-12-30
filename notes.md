@@ -95,10 +95,7 @@
 
 | File | Sorries | Status |
 |------|---------|--------|
-| ContractableVsExchangeable_Extras.lean | 1 | Non-blocking |
-
-**Details:**
-- Line 260: Swap symmetry `(X j, X i) ~ (X i, X j)` - pedagogical, not on critical path
+| ContractableVsExchangeable_Extras.lean | 0 | Complete |
 
 ---
 
@@ -109,7 +106,6 @@
 | **ViaMartingale** | **0** | **COMPLETE (Default)** |
 | ViaL2 | 5 | ~90% complete |
 | ViaKoopman | 11 | ~80% complete |
-| Extras | 1 | Non-blocking |
-| **Total** | **17** | |
+| **Total** | **16** | |
 
 **ViaMartingale is the default proof with 0 blocking issues.**
