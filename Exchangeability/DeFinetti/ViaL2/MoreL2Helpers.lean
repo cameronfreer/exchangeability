@@ -4022,14 +4022,17 @@ lemma directing_measure_bridge
               apply measurable_pi_lambda; intro j; exact hX_meas _
             have h_proj_id_meas : Measurable (fun ω : Ω => (fun i => X (k_id i) ω)) := by
               apply measurable_pi_lambda; intro j; exact hX_meas _
+            -- AEStronglyMeasurable for g (bounded measurable → AEStronglyMeasurable)
+            have hg_aesm_φ : AEStronglyMeasurable g (Measure.map (fun ω => (fun i => X (k_φ i) ω)) μ) :=
+              hg_meas.aestronglyMeasurable
+            have hg_aesm_id : AEStronglyMeasurable g (Measure.map (fun ω => (fun i => X (k_id i) ω)) μ) :=
+              hg_meas.aestronglyMeasurable
             -- By change of variables (integral over pushforward)
-            -- h_map : Measure.map (proj_φ) μ = Measure.map (proj_id) μ
-            -- The integrals are equal because they're integrals of g over equal measures
-            -- This uses integral_map to convert ∫ g ∘ proj dμ = ∫ g d(map proj μ)
-            -- TODO: Work out integral_map AEStronglyMeasurable requirements
+            -- integral_map: ∫ y, g y ∂(map φ μ) = ∫ x, g (φ x) ∂μ
+            -- So: ∫ x, g (φ x) ∂μ = ∫ y, g y ∂(map φ μ)
             simp only [E_prod, I, k_φ, k_id]
-            -- Use the equal distribution from contractability
-            sorry
+            rw [← integral_map h_proj_φ_meas.aemeasurable hg_aesm_φ,
+                ← integral_map h_proj_id_meas.aemeasurable hg_aesm_id, h_map]
 
           -- E[q_block N] = E_prod for all N > 0
           -- This follows from expanding q_block and using h_term_eq
