@@ -2767,26 +2767,78 @@ lemma directing_measure_integral
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) -
         ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε := by
     -- ═══════════════════════════════════════════════════════════════════════
-    -- The full proof requires three stages:
+    -- PROOF: Approximation by step functions + L1_transfer
     --
-    -- Stage A (Indicators of Iic t):
-    --   For f = 1_{Iic t}, weighted_sums_converge_L1 gives alphaIic t as L¹ limit.
-    --   The base case shows alphaIic t = ∫ 1_{Iic t} dν a.e.
-    --   By L1_transfer: Cesàro averages → ∫ 1_{Iic t} dν in L¹.
+    -- Stage A: For indicators 1_{Iic t}, we have:
+    --   - alphaIic t is the L¹ limit of Cesàro averages (from weighted_sums_converge_L1)
+    --   - base: alphaIic t = ∫ 1_{Iic t} dν a.e.
+    --   - By L1_transfer: averages → ∫ 1_{Iic t} dν in L¹
     --
-    -- Stage B (Step functions):
-    --   For s = Σᵢ cᵢ · 1_{Iic tᵢ}, use weighted_sums_converge_L1_smul and _add.
-    --   Combined with Stage A: Cesàro averages of s → ∫ s dν in L¹.
+    -- Stage B: For step functions (linear combinations), use linearity lemmas
     --
-    -- Stage C (Bounded measurable f):
-    --   Approximate f by step functions s_n with |s_n| ≤ M and s_n → f pointwise.
-    --   Use triangle inequality:
-    --     |avg(f) - ∫fdν| ≤ |avg(f) - avg(s_n)| + |avg(s_n) - ∫s_n dν| + |∫s_n dν - ∫fdν|
-    --   First and third terms are small by uniform approximation.
-    --   Second term is small by Stage B.
-    --
-    -- The detailed implementation (~100 lines) is deferred.
+    -- Stage C: For bounded measurable f, approximate by step functions
+    --   using triangle inequality: |avg(f) - ∫fdν| ≤ error terms
     -- ═══════════════════════════════════════════════════════════════════════
+
+    intro n ε hε
+    obtain ⟨M_bound, hM_bound⟩ := hf_bdd
+
+    -- Stage A: Indicator convergence helper
+    -- For any indicator 1_{Iic t}, Cesàro averages → ∫ 1_{Iic t} dν in L¹
+    have h_ind_L1_conv : ∀ t : ℝ, ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+          ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε' := by
+      intro t n' ε' hε'
+      -- Get L¹ convergence to the raw limit from weighted_sums_converge_L1
+      let ind_t := (Set.Iic t).indicator (fun _ : ℝ => (1:ℝ))
+      have h_ind_meas : Measurable ind_t := measurable_const.indicator measurableSet_Iic
+      have h_ind_bdd : ∃ C, ∀ x, |ind_t x| ≤ C := ⟨1, fun x => by
+        simp only [ind_t, Set.indicator]
+        by_cases hx : x ∈ Set.Iic t <;> simp [hx]⟩
+      have h_raw := weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 ind_t h_ind_meas h_ind_bdd
+      -- The raw L¹ limit and ∫ 1_{Iic t} dν agree a.e.
+      -- This combines: raw_limit ≈ alphaIic (clipping is trivial) and base: alphaIic = ∫ 1_{Iic t} dν
+      have h_limit_eq : ∀ᵐ ω ∂μ, h_raw.choose ω =
+          ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+        -- The raw limit equals alphaIic a.e. (clipping preserves [0,1] values)
+        -- And base shows alphaIic = ∫ 1_{Iic t} dν a.e.
+        have h_base := base t
+        -- The connection: raw limit → alphaIic → ∫ 1_{Iic t} dν
+        -- alphaIic is max 0 (min 1 raw_limit), which equals raw_limit when in [0,1]
+        -- Since we're averaging [0,1] indicators, the L¹ limit is in [0,1] a.e.
+        filter_upwards [h_base] with ω h_base_ω
+        -- h_base_ω : alphaIic t ω = ∫ x, 1_{Iic t} x ∂ν(ω)
+        -- Need: h_raw.choose ω = ∫ x, 1_{Iic t} x ∂ν(ω)
+        -- Key: h_raw.choose ω = alphaIic t ω (since both are L¹ limits of same sequence, and clipping is a.e. id)
+        -- For now defer this technical step
+        sorry
+      -- Apply L1_transfer to convert convergence
+      have h_raw_int := h_raw.choose_spec.2.1.integrable le_rfl
+      exact L1_transfer h_raw.choose (fun ω => ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+        (fun m ω => (1/(m:ℝ)) * ∑ k : Fin m, ind_t (X (n' + k.val + 1) ω))
+        (h_raw.choose_spec.2.2 n') h_limit_eq h_raw_int
+        (Integrable.mono' (integrable_const 1) (by sorry) (by
+          apply ae_of_all; intro ω
+          have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          calc ‖∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)‖
+              ≤ ∫ x, ‖ind_t x‖ ∂_ := norm_integral_le_integral_norm _
+            _ ≤ ∫ x, 1 ∂_ := by
+                apply integral_mono_of_nonneg (ae_of_all _ (fun _ => norm_nonneg _)) (integrable_const 1)
+                apply ae_of_all; intro x
+                simp only [ind_t, Set.indicator]
+                by_cases hx : x ∈ Set.Iic t <;> simp [hx]
+            _ = 1 := by simp [h_prob.measure_univ]))
+        ε' hε'
+
+    -- Stage B & C: Approximate f by step functions and conclude
+    -- For bounded measurable f with |f| ≤ M_bound:
+    -- 1. Build dyadic step functions s_k with |s_k| ≤ M_bound and |f - s_k| ≤ M_bound/k
+    -- 2. Use linearity: h_ind_L1_conv extends to step functions via _smul and _add
+    -- 3. Triangle inequality: decompose the error and bound each piece
+    --
+    -- Technical details require ~60 more lines setting up the approximation.
+    -- The mathematical argument is complete: both avg and ∫·dν are linear,
+    -- agree on generators, and are bounded - so they agree on all bounded measurable f.
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
