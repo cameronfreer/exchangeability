@@ -2862,16 +2862,42 @@ lemma directing_measure_integral
                       intro k _; simp [ind_t, Set.indicator]; split_ifs <;> norm_num
                   _ = (1 / (m : ℝ)) * m := by simp
                   _ = 1 := by field_simp [hm_pos.ne']
-          -- Direct argument: if α > 1 or α < 0 on a set of positive measure,
-          -- the L¹ convergence fails since A_m ∈ [0,1] but α is bounded away from [0,1].
-          --
-          -- Proof sketch:
-          -- - If μ{α > 1} > 0: For all m, on this set |A_m - α| ≥ α - 1 > 0 (since A_m ≤ 1)
-          --   So ∫|A_m - α| ≥ ∫_{α>1} (α - 1) > 0, contradicting ∫|A_m - α| → 0.
-          -- - Similarly for μ{α < 0} > 0.
-          --
-          -- This uses: integral_pos_iff_support_of_nonneg_ae, setIntegral_le_integral, etc.
-          -- Technical bookkeeping ~50 lines.
+          -- Use convergence in measure approach:
+          -- L¹ convergence → convergence in measure → a.e. convergent subsequence
+          -- Since A_m ∈ [0,1] (closed) and subsequence converges pointwise, limit ∈ [0,1]
+
+          -- Get L¹ convergence as a tendsto statement
+          have h_L1_conv := h_raw.choose_spec.2.2 0
+
+          -- Extract the eLpNorm convergence for tendstoInMeasure
+          -- The h_raw.choose_spec.2.2 gives: ∀ ε > 0, ∃ M, ∀ m ≥ M, ∫|A_m - α| < ε
+          -- We need to convert this to Tendsto eLpNorm atTop (𝓝 0)
+
+          -- For now, we use the direct contradiction argument:
+          -- If μ{α > 1} > 0: On that set, for all m, |A_m - α| ≥ α - 1 > 0 (since A_m ≤ 1)
+          -- This bounds ∫|A_m - α| ≥ ∫_{α>1}(α - 1) > 0, contradicting convergence to 0.
+          -- Similarly for μ{α < 0} > 0.
+
+          -- Alternative approach using convergence in measure:
+          -- 1. The Cesàro averages A_m := (1/m) Σ ind_t(X_{k+1}) converge to α in L¹
+          -- 2. L¹ convergence implies convergence in measure (tendstoInMeasure_of_tendsto_eLpNorm)
+          -- 3. Convergence in measure has a.e. convergent subsequence
+          --    (TendstoInMeasure.exists_seq_tendsto_ae)
+          -- 4. For a.e. ω, there exists subsequence A_{n_k}(ω) → α(ω) pointwise
+          -- 5. Since A_{n_k}(ω) ∈ [0,1] for all k and [0,1] is closed, α(ω) ∈ [0,1]
+          --    (IsClosed.mem_of_tendsto)
+
+          -- Alternatively (direct argument):
+          -- If μ{α > 1} > 0, then ∫|A_m - α| ≥ ∫_{α>1}(α - 1) > 0 for all m,
+          -- contradicting ∫|A_m - α| → 0.
+          -- Similarly for μ{α < 0} > 0.
+
+          -- Technical requirements:
+          -- - Convert ε-δ L¹ convergence to Filter.Tendsto eLpNorm
+          -- - Apply convergence in measure lemmas
+          -- - Use IsClosed Icc 0 1 and mem_of_tendsto
+          -- Deferred: ~50 lines
+
           sorry
 
         -- Step 2: Clipping is a.e. identity on [0,1]
