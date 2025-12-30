@@ -3976,7 +3976,109 @@ lemma directing_measure_bridge
           --
           -- The key lemma block_index_strictMono (line ~2853) is proven.
           -- TODO: Implement Steps 1-5 using the existing infrastructure.
-          sorry
+
+          -- ════════════════════════════════════════════════════════════════════════
+          -- IMPLEMENTATION: Block-separated proof
+          -- ════════════════════════════════════════════════════════════════════════
+
+          -- Define block-separated averages using disjoint blocks
+          -- Block i uses indices {i*N, i*N+1, ..., i*N+(N-1)}
+          let p_block : ℕ → Fin (n + 1) → Ω → ℝ := fun N i ω =>
+            if hN : N = 0 then 0
+            else (1 / (N : ℝ)) * ∑ k : Fin N, I i (i.val * N + k.val) ω
+
+          let q_block : ℕ → Ω → ℝ := fun N ω => ∏ i : Fin (n + 1), p_block N i ω
+
+          -- Key property: block indices are strictly monotone
+          -- For any φ : Fin (n+1) → Fin N, the function i ↦ i*N + φ(i) is StrictMono
+          have h_block_mono : ∀ N > 0, ∀ φ : Fin (n + 1) → Fin N,
+              StrictMono (fun i : Fin (n + 1) => i.val * N + (φ i).val) := by
+            intro N hN φ
+            exact block_index_strictMono hN φ
+
+          -- By contractability, each term in the expansion equals E_prod
+          -- E[∏_i 1_{B'_i}(X_{i*N+φ(i)})] = E[∏_i 1_{B'_i}(X_i)]
+          have h_term_eq : ∀ N > 0, ∀ φ : Fin (n + 1) → Fin N,
+              ∫ ω, ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω ∂μ = E_prod := by
+            intro N hN φ
+            -- The indices form a StrictMono function
+            have h_mono := h_block_mono N hN φ
+            -- Define the two index functions
+            let k_φ : Fin (n + 1) → ℕ := fun i => i.val * N + (φ i).val
+            let k_id : Fin (n + 1) → ℕ := fun i => i.val + 1
+            have h_id_mono : StrictMono k_id := fun a b hab => Nat.add_lt_add_right hab 1
+            -- By contractability
+            have h_map := hX_contract.allStrictMono_eq (n + 1) k_φ k_id h_mono h_id_mono
+            -- The function to integrate
+            let g : (Fin (n + 1) → ℝ) → ℝ := fun x =>
+              ∏ j : Fin (n + 1), (B (σ j)).indicator (fun _ => (1 : ℝ)) (x j)
+            -- Measurability of g
+            have hg_meas : Measurable g := by
+              apply Finset.measurable_prod
+              intro j _
+              exact (measurable_const.indicator (hB (σ j))).comp (measurable_pi_apply j)
+            -- Measurability of projection functions
+            have h_proj_φ_meas : Measurable (fun ω : Ω => (fun i => X (k_φ i) ω)) := by
+              apply measurable_pi_lambda; intro j; exact hX_meas _
+            have h_proj_id_meas : Measurable (fun ω : Ω => (fun i => X (k_id i) ω)) := by
+              apply measurable_pi_lambda; intro j; exact hX_meas _
+            -- By change of variables (integral over pushforward)
+            -- h_map : Measure.map (proj_φ) μ = Measure.map (proj_id) μ
+            -- The integrals are equal because they're integrals of g over equal measures
+            -- This uses integral_map to convert ∫ g ∘ proj dμ = ∫ g d(map proj μ)
+            -- TODO: Work out integral_map AEStronglyMeasurable requirements
+            simp only [E_prod, I, k_φ, k_id]
+            -- Use the equal distribution from contractability
+            sorry
+
+          -- E[q_block N] = E_prod for all N > 0
+          -- This follows from expanding q_block and using h_term_eq
+          have h_exp_const : ∀ N > 0, ∫ ω, q_block N ω ∂μ = E_prod := by
+            intro N hN
+            -- Expand q_block N = (1/N^(n+1)) * ∑_φ ∏_i I i (i*N + φ(i))
+            -- Each term has expectation E_prod by h_term_eq
+            -- Sum over N^(n+1) terms, divide by N^(n+1), get E_prod
+            simp only [q_block, p_block, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+            -- The full expansion proof requires Fintype.prod_sum and careful bookkeeping
+            -- For now, we defer the details
+            sorry
+
+          -- q_block N → ∏ r_funcs in L¹
+          -- This uses directing_measure_integral with offset indices
+          have h_block_L1 : Tendsto (fun N => ∫ ω, |q_block N ω - ∏ i, r_funcs i ω| ∂μ)
+              atTop (𝓝 0) := by
+            -- The block averages p_block N i converge to ν(B' i) in L¹
+            -- by the same argument as standard Cesàro averages
+            -- (contractability gives same L² bounds for any offset)
+            -- Then apply prod_tendsto_L1_of_L1_tendsto
+            sorry
+
+          -- Conclude by uniqueness of limits
+          -- E_prod = lim E[q_block N] = E[lim q_block N] = E[∏ r_funcs]
+          have h_int_prod_r_eq : ∫ ω, ∏ i : Fin (n + 1), r_funcs i ω ∂μ = E_prod := by
+            -- E_prod = ∫ q_block N for all N > 0 (constant)
+            -- ∫ q_block N → ∫ ∏ r_funcs (by L¹ convergence)
+            -- Therefore ∫ ∏ r_funcs = E_prod
+            have h1 : ∀ N > 0, ∫ ω, q_block N ω ∂μ = E_prod := h_exp_const
+            -- By L¹ convergence, ∫ q_block N → ∫ ∏ r_funcs
+            have h2 : Tendsto (fun N => ∫ ω, q_block N ω ∂μ) atTop
+                (𝓝 (∫ ω, ∏ i, r_funcs i ω ∂μ)) := by
+              -- Follows from h_block_L1 and integrability
+              sorry
+            -- A constant sequence converging to a limit means the limit equals the constant
+            have h3 : ∀ᶠ N in atTop, ∫ ω, q_block N ω ∂μ = E_prod := by
+              filter_upwards [Filter.eventually_gt_atTop 0] with N hN
+              exact h1 N hN
+            -- Convert Eventually to EventuallyEq for congr'
+            have h3' : (fun N => ∫ ω, q_block N ω ∂μ) =ᶠ[atTop] fun _ => E_prod :=
+              h3.mono (fun N hN => hN)
+            exact tendsto_nhds_unique h2 (tendsto_const_nhds.congr' h3'.symm)
+
+          -- Final step: show ∫ ∏ I j (j+1) = ∫ ∏ r_funcs
+          -- h_int_prod_r_eq shows: ∫ ∏ r_funcs = E_prod
+          -- Goal is: ∫ ∏ I j (j+1) = ∫ ∏ r_funcs
+          -- Since E_prod = ∫ ∏ I j (j+1) by definition, we have the result
+          exact h_int_prod_r_eq.symm
       _ = ∫ ω, ∏ j, (directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j))).toReal ∂μ := by
           apply integral_congr_ae
           filter_upwards with ω
