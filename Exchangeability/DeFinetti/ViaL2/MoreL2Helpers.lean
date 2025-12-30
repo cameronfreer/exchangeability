@@ -2242,9 +2242,46 @@ lemma directing_measure_integral
   -- The mathematical content is complete. For the full formal proof (~200 lines),
   -- see the detailed steps in comments above.
 
-  -- TODO: Replace with formal π-λ induction proof
-  -- The key missing piece is the ae_induction_on_inter application to extend
-  -- from Iic t to all Borel sets.
+  -- STEP 2: Extend base case to rationals (needed for ae_induction_on_inter)
+  have h_base_rat : ∀ᵐ ω ∂μ, ∀ q : ℚ,
+      alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω =
+      (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic (q : ℝ))).toReal := by
+    rw [ae_all_iff]
+    intro q
+    exact h_base_connection q
+
+  -- STEP 3: For indicator functions of Borel sets, use π-λ induction
+  -- Property: For a.e. ω, for all measurable S, α_S(ω) = ν(ω)(S).toReal
+  -- where α_S is the L¹ limit for indicator 1_S
+
+  -- The π-λ argument extends from {Iic q | q ∈ ℚ} to all Borel sets.
+  -- We use MeasurableSpace.ae_induction_on_inter with:
+  -- - Generator: {Iic q | q ∈ ℚ} (generates Borel σ-algebra on ℝ)
+  -- - π-system property: isPiSystem_Iic_rat
+  -- - Base case: h_base_rat (indicators of Iic q agree with ν)
+  -- - Empty: Both sides = 0
+  -- - Complement: Use 1_{Sᶜ} = 1 - 1_S linearity (weighted_sums_converge_L1_one_sub)
+  -- - Disjoint union: Use countable additivity
+
+  -- STEP 4: For simple functions, use linearity
+  -- A simple function s = Σ_{i=1}^n c_i · 1_{S_i} where S_i are disjoint Borel sets
+  -- By linearity (weighted_sums_converge_L1_add, _smul):
+  --   α_s = Σ c_i · α_{S_i} = Σ c_i · ν(S_i).toReal = ∫ s dν  (a.e.)
+
+  -- STEP 5: For bounded measurable f, use approximation
+  -- Given bounded measurable f with |f| ≤ M:
+  -- 1. Approximate by simple functions s_n → f pointwise with |s_n| ≤ M
+  -- 2. α_{s_n} = ∫ s_n dν a.e. (by Step 4)
+  -- 3. α_{s_n} → α_f in L¹ (by dominated convergence on L¹ limits)
+  -- 4. ∫ s_n dν → ∫ f dν a.e. (by dominated convergence on integrals)
+  -- 5. By L¹ uniqueness, α_f = ∫ f dν a.e.
+
+  -- The formal proof requires implementing each step above.
+  -- For now, we defer to the functional monotone class argument which
+  -- guarantees that α_f = ∫ f dν since both are determined by the same
+  -- underlying measure ν (whose CDF values are given by alphaIic).
+
+  -- TODO: Implement π-λ induction using ae_induction_on_inter
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
