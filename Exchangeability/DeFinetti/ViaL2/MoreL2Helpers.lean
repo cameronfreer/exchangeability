@@ -4038,12 +4038,28 @@ lemma directing_measure_bridge
           -- This follows from expanding q_block and using h_term_eq
           have h_exp_const : ∀ N > 0, ∫ ω, q_block N ω ∂μ = E_prod := by
             intro N hN
-            -- Expand q_block N = (1/N^(n+1)) * ∑_φ ∏_i I i (i*N + φ(i))
-            -- Each term has expectation E_prod by h_term_eq
-            -- Sum over N^(n+1) terms, divide by N^(n+1), get E_prod
-            simp only [q_block, p_block, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
-            -- The full expansion proof requires Fintype.prod_sum and careful bookkeeping
-            -- For now, we defer the details
+            -- ══════════════════════════════════════════════════════════════════════
+            -- Proof Structure:
+            -- ══════════════════════════════════════════════════════════════════════
+            -- q_block N ω = ∏ i, p_block N i ω
+            --             = ∏ i, (1/N) * ∑ k : Fin N, I i (i*N + k) ω
+            --
+            -- By Fintype.prod_sum (product-sum interchange):
+            --   ∏ i, (∑ k, (1/N) * I i (i*N+k))
+            --   = ∑ φ : (Fin (n+1) → Fin N), ∏ i, (1/N) * I i (i*N + φ(i))
+            --   = ∑ φ, (1/N)^(n+1) * ∏ i, I i (i*N + φ(i))
+            --
+            -- Taking expectation:
+            --   E[q_block N] = ∑ φ, (1/N)^(n+1) * E[∏ i, I i (i*N + φ(i))]
+            --                = ∑ φ, (1/N)^(n+1) * E_prod     [by h_term_eq]
+            --                = N^(n+1) * (1/N)^(n+1) * E_prod
+            --                = E_prod
+            --
+            -- Key lemmas used:
+            -- - Fintype.prod_sum: ∏ i, ∑ k, f i k = ∑ φ, ∏ i, f i (φ i)
+            -- - integral_finset_sum: ∫ ∑ f = ∑ ∫ f (with integrability)
+            -- - h_term_eq: each term equals E_prod by contractability
+            -- ══════════════════════════════════════════════════════════════════════
             sorry
 
           -- q_block N → ∏ r_funcs in L¹
