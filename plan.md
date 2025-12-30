@@ -1,52 +1,57 @@
 # Project Status: de Finetti Theorem Formalization
 
-**Last Updated:** 2025-12-27
+**Last Updated:** 2025-12-30
 
 ## Executive Summary
 
-| Proof Approach | Sorries | Axioms | Admits | Build | Status |
-|---------------|---------|--------|--------|-------|--------|
-| **ViaMartingale** | **0** | 0 | 0 | ✅ | **COMPLETE (Default)** |
-| ViaL2 | 6 | 0 | 0 | ✅ | ~85% complete |
-| ViaKoopman | 12 | 0 | 1 | ✅ | ~80% complete |
-| Shared/Orphan | 0 | 0 | 0 | ✅ | Complete |
+| Proof Approach | Sorries | Build | Status |
+|---------------|---------|-------|--------|
+| **ViaMartingale** | **0** | Pass | **COMPLETE (Default)** |
+| ViaL2 | 5 | Pass | ~90% complete |
+| ViaKoopman | 11 | Pass | ~80% complete |
+| Extras | 1 | Pass | Non-blocking |
+| **Total** | **17** | Pass | |
 
-**All three approaches build successfully with no errors.**
+**All three approaches build successfully with no errors or warnings.**
 
 ---
 
-## ViaMartingale ✅ COMPLETE
+## ViaMartingale - COMPLETE
 
 **Status:** Production-ready. Default proof in public API.
 
-**Main File:** `Exchangeability/DeFinetti/ViaMartingale.lean` (4,854 lines)
+**Main File:** `Exchangeability/DeFinetti/ViaMartingale.lean`
 
-| Metric | Count |
+| Metric | Value |
 |--------|-------|
 | Sorries | **0** |
-| Admits | **0** |
 | Axioms | **0** |
-| Build | ✅ Success |
+| Warnings | **0** |
+| Build | Pass |
 
-### Extracted Submodules (1,993 lines total)
+### Extracted Submodules (All Complete)
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `ViaMartingale/ShiftOperations.lean` | 126 | path, shiftRV, shiftProcess, shift_contractable |
-| `ViaMartingale/RevFiltration.lean` | 142 | revFiltration, tailSigma, revFiltration_antitone |
-| `ViaMartingale/FutureFiltration.lean` | 175 | futureFiltration, tailSigma_le, futureFiltration_antitone |
-| `ViaMartingale/FutureRectangles.lean` | 464 | π-system machinery, measure_ext_of_future_rectangles |
-| `ViaMartingale/CondExpConvergence.lean` | 186 | condexp_convergence, extreme_members_equal_on_tail |
-| `ViaMartingale/DirectingMeasure.lean` | 168 | directingMeasure, conditional_law_eq_directingMeasure |
-| `ViaMartingale/FiniteCylinders.lean` | 562 | finFutureSigma, contractable_finite_cylinder_measure |
-| `ViaMartingale/KallenbergLemma.lean` | 170 | indProd, indProd_integrable, indProd_measurable |
+| File | Description |
+|------|-------------|
+| `ViaMartingale/ShiftOperations.lean` | path, shiftRV, shiftProcess |
+| `ViaMartingale/RevFiltration.lean` | revFiltration, tailSigma |
+| `ViaMartingale/FutureFiltration.lean` | futureFiltration |
+| `ViaMartingale/FutureRectangles.lean` | pi-system machinery |
+| `ViaMartingale/CondExpConvergence.lean` | condexp convergence |
+| `ViaMartingale/DirectingMeasure.lean` | directingMeasure |
+| `ViaMartingale/FiniteCylinders.lean` | finite cylinder measure |
+| `ViaMartingale/IndicatorAlgebra.lean` | indProd lemmas |
+| `ViaMartingale/DropInfo.lean` | drop-info lemma |
+| `ViaMartingale/Factorization.lean` | block factorization |
+| `ViaMartingale/FiniteProduct.lean` | product formula |
+| `ViaMartingale/PairLawEquality.lean` | pair law equality |
+| `ViaMartingale/LocalInfrastructure.lean` | local helpers |
 
 ### Dependencies - All Complete
-- `CondIndep/` - 0 sorries
-- `TripleLawDropInfo/` - 0 sorries
-- `ConditionalKernel/` - 0 sorries
-- `Martingale/` - 0 sorries
-- All other imports - 0 sorries
+- `CondIndep/*` - Conditional independence
+- `TripleLawDropInfo/*` - Triple law drop info
+- `ConditionalKernel/*` - Conditional kernels
+- `Martingale/*` - Martingale convergence
 
 ### Key Theorems
 - `deFinetti_viaMartingale` - Main theorem
@@ -56,25 +61,20 @@
 
 ## ViaL2 (Elementary Approach)
 
-**Status:** 6 sorries remaining, core theorem complete
-
-**Files:**
-- `ViaL2.lean` (hub) - clean
-- `L2Helpers.lean` (~930 lines) - complete
-- `ViaL2/` submodules - 6 sorries
+**Status:** 5 sorries remaining, core theorem complete
 
 ### Sorry Locations
 
 | File | Line | Context |
 |------|------|---------|
-| `ViaL2/BlockAverages.lean` | 1617 | `directing_measure_eq` |
-| `ViaL2/MoreL2Helpers.lean` | 511 | Stieltjes construction |
-| `ViaL2/MoreL2Helpers.lean` | 568 | Bounded measurable extension |
-| `ViaL2/MoreL2Helpers.lean` | 1528 | `directing_measure_bridge` |
-| `ViaL2/CesaroConvergence.lean` | 3745, 3749 | Integrability of bounded functions (technical) |
+| `ViaL2/BlockAverages.lean` | 1632 | Block average convergence |
+| `ViaL2/MoreL2Helpers.lean` | 2311 | L2 helper lemma |
+| `ViaL2/MoreL2Helpers.lean` | 4089 | Integration bound |
+| `ViaL2/MoreL2Helpers.lean` | 4117 | Integration bound |
+| `ViaL2/MoreL2Helpers.lean` | 4139 | Integration bound |
 
 ### Key Completed Theorem
-**Kallenberg's Lemma 1.2** (L2Helpers.lean:847) - FULLY PROVED
+**Kallenberg's Lemma 1.2** (L2Helpers.lean) - FULLY PROVED
 ```lean
 theorem l2_contractability_bound ...
 ```
@@ -87,64 +87,46 @@ theorem l2_contractability_bound ...
 
 ## ViaKoopman (Ergodic Approach)
 
-**Status:** 12 sorries + 1 admit
+**Status:** 11 sorries remaining
 
-**File:** `ViaKoopman.lean` (7,457 lines)
+### Sorry Locations
 
-### Sorry Locations (Clustered)
-
-**Kernel Independence (3):**
-| Line | Lemma |
-|------|-------|
-| 5169 | `kernel_indep_pair_01` |
-| 5188 | `kernel_indep_pair` |
-| 5208 | `kernel_indep_finset` |
-
-**Product Factorization (4):**
-| Line | Lemma |
-|------|-------|
+**ViaKoopman.lean (9 sorries):**
+| Line | Context |
+|------|---------|
 | 1627 | `condexp_product_factorization_ax` |
 | 1705 | `condexp_product_factorization_ax_integral` |
 | 1771 | `condexp_product_factorization_general` |
 | 2430 | `condexp_product_factorization_general_bounded` |
+| 5297 | Requires reformulation |
+| 6251 | Technical step (exchangeability) |
+| 6729 | condExp shift invariance |
+| 6801 | MET application for bounded functions |
+| 7089 | tower_indicator_finset dependent |
 
-**Convergence (3):**
-| Line | Lemma |
-|------|-------|
-| 4518 | `ce_lipschitz_convergence` |
-| 4778 | `h_tower_of_lagConst_from_one` |
-| 5994 | `indep_finset_insert` |
-
-**Other (2):**
-| Line | Lemma |
-|------|-------|
-| 5333 | `ν_measurable_tail` |
-| 7340 | `condexp_cylinder_factorizes` |
+**TheoremViaKoopman.lean (2 sorries):**
+| Line | Context |
+|------|---------|
+| 196 | Contractability implies path exchangeability |
+| 215 | Contractability implies path exchangeability |
 
 ### Supporting Ergodic Files - ALL COMPLETE
-| File | Lines | Sorries |
-|------|-------|---------|
-| `Ergodic/KoopmanMeanErgodic.lean` | 324 | 0 |
-| `Ergodic/InvariantSigma.lean` | 1048 | 0 |
-| `Ergodic/ProjectionLemmas.lean` | 221 | 0 |
-| `Ergodic/BirkhoffAvgCLM.lean` | 270 | 0 |
+| File | Status |
+|------|--------|
+| `Ergodic/KoopmanMeanErgodic.lean` | Complete |
+| `Ergodic/InvariantSigma.lean` | Complete |
+| `Ergodic/ProjectionLemmas.lean` | Complete |
+| `Ergodic/BirkhoffAvgCLM.lean` | Complete |
 
 ---
 
-## Extra Files (Not on Critical Path)
+## Extra Files
 
-### `ContractableVsExchangeable_Extras.lean` ✅ COMPLETE
-Pedagogical documentation of contractable↔exchangeable relationship.
-Uses de Finetti theorem to prove swap invariance `(X 0, X 1) ~ (X 1, X 0)`.
+| File | Sorries | Status |
+|------|---------|--------|
+| `ContractableVsExchangeable_Extras.lean` | 1 | Non-blocking |
 
-### `ViaKoopman/Infrastructure.lean` ✅ COMPLETE
-Supporting infrastructure for ViaKoopman.
-
-**Deleted:**
-- ~~CondIndepHelpers.lean~~ - Dead code, superseded by `CondIndep/*`.
-
-**Complete:**
-- `Tail/ShiftInvariance.lean` - Now has 0 sorries. The `cesaro_convergence_all_shifts` lemma was moved to `CesaroConvergence.lean` to resolve circular import.
+**Note:** Line 260 - pedagogical swap symmetry, not on critical path.
 
 ---
 
@@ -152,7 +134,7 @@ Supporting infrastructure for ViaKoopman.
 
 ```bash
 # Build specific approach
-lake build Exchangeability.DeFinetti.ViaMartingale  # ✅ Complete
+lake build Exchangeability.DeFinetti.ViaMartingale  # Complete
 lake build Exchangeability.DeFinetti.ViaL2
 lake build Exchangeability.DeFinetti.ViaKoopman
 
@@ -160,13 +142,13 @@ lake build Exchangeability.DeFinetti.ViaKoopman
 lake build
 
 # Check for sorries
-grep -rn "^\s*sorry" Exchangeability/DeFinetti/ViaMartingale.lean
+grep -rn "^\s*sorry" --include="*.lean" Exchangeability/
 ```
 
 ---
 
 ## Priority for Further Work
 
-1. **ViaL2** - 6 sorries (all in ViaL2/*), core L² bound done
-2. **ViaKoopman** - 12 sorries + 1 admit, ergodic infrastructure complete
-3. **Extras** - ✅ Complete
+1. **ViaL2** - 5 sorries (all in ViaL2/*), core L² bound done
+2. **ViaKoopman** - 11 sorries, ergodic infrastructure complete
+3. **Extras** - 1 non-blocking sorry
