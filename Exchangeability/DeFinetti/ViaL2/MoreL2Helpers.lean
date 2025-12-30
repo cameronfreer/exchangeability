@@ -2727,7 +2727,16 @@ lemma directing_measure_integral
     -- ∫|α - ∫fdν| ≤ ∫|avg - α| + ∫|avg - ∫fdν| < ε + ε = 2ε
     -- But by definition: ε = (∫|α - ∫fdν|) / 3
     -- So ∫|α - ∫fdν| = 3ε < 2ε, contradiction for ε > 0
-    -- Technical proof of triangle inequality step:
+    --
+    -- Mathematical proof:
+    -- Let avg(ω) = (1/m) Σ f(X_{k+1}(ω)). By triangle inequality:
+    --   |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν|  (pointwise)
+    -- Integrating:
+    --   ∫|α - ∫fdν|dμ ≤ ∫|α - avg|dμ + ∫|avg - ∫fdν|dμ < ε + ε = 2ε
+    -- Since ε = (∫|α - ∫fdν|dμ) / 3, we get 3ε < 2ε, contradiction.
+    --
+    -- Technical implementation requires showing avg is integrable (which it is,
+    -- since f is bounded and the sum is finite). We defer this bookkeeping.
     sorry
 
   -- Conclude alpha = ∫ f dν a.e.
