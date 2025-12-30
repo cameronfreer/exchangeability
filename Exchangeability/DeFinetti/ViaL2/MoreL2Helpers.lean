@@ -2042,15 +2042,64 @@ lemma directing_measure_integral
   -- 5. Therefore α = ∫ f dν a.e.
 
   -- The complete formal proof requires π-λ induction (MeasurableSpace.induction_on_inter)
-  -- combined with the linearity lemmas. This is substantial but routine bookkeeping.
+  -- combined with the linearity lemmas.
 
-  -- KEY TECHNICAL LEMMA needed (deferred):
-  -- For bounded f, the L¹ limit is continuous under bounded pointwise convergence.
-  -- This follows from dominated convergence applied to the Cesàro averages.
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+  -- STAGE 1: π-λ extension from Iic to all Borel sets
+  -- ═══════════════════════════════════════════════════════════════════════════════════
 
-  -- For now, we document the complete proof structure and defer the implementation.
-  -- The linearity infrastructure (weighted_sums_converge_L1_add, _smul, _one_sub)
-  -- is complete, so the remaining work is π-λ bookkeeping and approximation arguments.
+  -- Define the "good" property: S is good if the L¹ limit of 1_S equals ν(S).toReal a.e.
+  -- We use the fact that alphaIic gives us the L¹ limit for indicators of Iic t.
+
+  -- Key insight: For indicator 1_S where S is Borel:
+  -- - L¹ limit exists from weighted_sums_converge_L1
+  -- - We need to show this limit equals ν(S).toReal a.e.
+
+  -- The base case (Iic t) is established in 'base'.
+  -- Complement closure: 1_{Sᶜ} = 1 - 1_S, so use weighted_sums_converge_L1_one_sub
+  -- Disjoint union closure: 1_{S₁ ∪ S₂} = 1_{S₁} + 1_{S₂}, use weighted_sums_converge_L1_add
+
+  -- For the full π-λ proof, we would use MeasurableSpace.induction_on_inter.
+  -- The π-system is {Iic t | t ∈ ℝ}, which generates the Borel σ-algebra.
+
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+  -- STAGE 2: Simple functions via linearity
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+
+  -- For simple function s = Σᵢ cᵢ · 1_{Sᵢ} with disjoint measurable Sᵢ:
+  -- By weighted_sums_converge_L1_smul and weighted_sums_converge_L1_add (iterated):
+  --   L¹ limit of s = Σᵢ cᵢ · (L¹ limit of 1_{Sᵢ}) a.e.
+  --                 = Σᵢ cᵢ · ν(Sᵢ).toReal a.e.  (by Stage 1)
+  --                 = ∫ s dν
+
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+  -- STAGE 3: Bounded measurable via approximation
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+
+  -- For our specific bounded measurable f with |f| ≤ M:
+  -- 1. Use SimpleFunc.approxOn to get simple sₙ → f pointwise with |sₙ| ≤ M
+  -- 2. By Stage 2: L¹ limit of sₙ = ∫ sₙ dν a.e.
+  -- 3. By dominated convergence on integration: ∫ sₙ dν(ω) → ∫ f dν(ω) for each ω
+  -- 4. By dominated convergence on L¹ limits:
+  --    The L¹ limit functional is continuous under bounded pointwise convergence
+  --    (this follows from DCT applied to the Cesàro averages)
+  -- 5. Therefore: L¹ limit of f = lim (L¹ limit of sₙ) = lim ∫ sₙ dν = ∫ f dν a.e.
+
+  -- The alpha from weighted_sums_converge_L1 is exactly this L¹ limit for f.
+  -- So alpha = ∫ f dν a.e., which is what we want to prove.
+
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+  -- IMPLEMENTATION NOTE:
+  -- ═══════════════════════════════════════════════════════════════════════════════════
+  -- The linearity lemmas (weighted_sums_converge_L1_add, _smul, _one_sub) are complete.
+  -- The main remaining work is:
+  -- 1. Formal π-λ induction via MeasurableSpace.induction_on_inter
+  -- 2. Handling countable disjoint unions (need DCT for L¹ limits)
+  -- 3. Simple function decomposition and iteration of linearity
+  -- 4. SimpleFunc.approxOn approximation setup
+
+  -- For now, we use the fact that the mathematical argument is complete and defer
+  -- the formal Lean implementation of these routine but lengthy steps.
 
   sorry
 
@@ -3647,116 +3696,41 @@ lemma directing_measure_bridge
           --
           -- This resolves the circularity completely!
           --
-          -- For now, we mark the current approach (which has circularity) and
-          -- defer the block-separated implementation.
-          have h_inj_eq : ∀ N ≥ n, ∀ (φ : Fin (n + 1) → Fin (N + 1)),
-              Function.Injective φ →
-                ∫ ω, ∏ j : Fin (n + 1), I j (φ j).val ω ∂μ = E_prod := by
-            intro N hN φ hφ
-            -- DEFERRED: Replace with block-separated approach to avoid circularity.
-            -- The block-separated approach makes every selection StrictMono,
-            -- so contractability applies directly without needing exchangeability.
-            sorry
-
-          -- U-stat expansion: ∫ q N → E_prod
-          have h_qN_tends : Tendsto (fun N => ∫ ω, q N ω ∂μ) atTop (𝓝 E_prod) := by
-            rw [Metric.tendsto_atTop]
-            intro ε hε
-            -- For large N, the non-injective fraction is < ε/2
-            have h_frac := nonInjective_fraction_tendsto_zero (n + 1)
-            rw [Metric.tendsto_atTop] at h_frac
-            obtain ⟨M1, hM1⟩ := h_frac (ε / 2) (half_pos hε)
-            -- Also need N ≥ n so injective maps exist
-            let M := max M1 n
-            refine ⟨M, fun N hN => ?_⟩
-            -- q N ω = (1/(N+1))^{n+1} * ∑_φ ∏_j I j (φ(j)+1)
-            -- where the sum is over φ : Fin (n+1) → Fin (N+1)
-            -- Actually, q N = ∏_i p N i = ∏_i (1/(N+1)) ∑_k I i (k+1)
-            -- For clarity, let's compute ∫ q N directly using the definition
-
-            -- Due to technical complexity with Fintype.prod_sum in Lean 4,
-            -- we use a squeeze argument instead.
-            -- |∫ q N - E_prod| ≤ |∫ q N - ∫ ∏ r_funcs| + |∫ ∏ r_funcs - E_prod|
-            -- The first term → 0 by h_int_prod_r.
-            -- The second term will be shown small via the same limit.
-
-            -- Since both h_int_prod_r and what we're proving give the same limit,
-            -- we use that ∫ ∏ r_funcs is the limit of ∫ q N.
-            -- Then E_prod also equals this limit by the expansion argument.
-
-            -- For a cleaner proof, note that we already have h_int_prod_r showing
-            -- ∫ q N → ∫ ∏ r_funcs. If we can show E_prod = ∫ ∏ r_funcs (the goal!),
-            -- then h_int_prod_r gives us this tendsto.
-
-            -- This is circular! We need a direct argument.
-            -- The direct argument uses the expansion formula.
-
-            -- DIRECT COMPUTATION:
-            -- ∫ q N ω dμ(ω) is linear in the product expansion.
-            -- However, the formal expansion is complex.
-            -- Instead, use that q N is uniformly bounded in [0,1] and
-            -- converges pointwise to a limit (which by DCT equals the integral limit).
-
-            -- Actually, the L¹ bound directly gives convergence to the limit.
-            -- Since h_prod_L1 shows ‖q N - ∏ r_funcs‖₁ → 0,
-            -- the integrals must converge: ∫ q N → ∫ ∏ r_funcs.
-
-            -- We claim E_prod = ∫ ∏ r_funcs, which is what we're trying to prove!
-            -- This seems circular. The resolution is that we need the U-stat expansion
-            -- to establish the equality, not assume it.
-
-            -- RESOLUTION: The U-stat expansion shows that for each N,
-            -- |∫ q N - E_prod| ≤ (non-injective fraction) * 2 → 0.
-            -- This is because:
-            -- ∫ q N = (1/(N+1))^m * ∑_φ ∫ ∏ I j (φ j)
-            -- For injective φ: ∫ ∏ I = E_prod
-            -- For non-injective φ: |∫ ∏ I| ≤ 1
-            -- So |∫ q N - E_prod| ≤ |∫ q N - (# inj/(N+1)^m) * E_prod|
-            --                       + |(# inj/(N+1)^m) * E_prod - E_prod|
-            -- = (# non-inj/(N+1)^m) * (bound) + (1 - # inj/(N+1)^m) * |E_prod|
-            -- = O(non-inj fraction) → 0
-
-            -- For now, use a simplified bound that directly leverages measurability
-            -- and the L¹ framework we've built.
-
-            -- Since this is getting complex, let's use the existing infrastructure:
-            -- We showed h_int_prod_r: ∫ q N → ∫ ∏ r_funcs
-            -- We need: E_prod = ∫ ∏ r_funcs
-
-            -- The key insight is that BOTH limits are determined by the sequence ∫ q N.
-            -- Since limits are unique, if we can show ∫ q N → E_prod, then E_prod = ∫ ∏ r_funcs.
-
-            -- For a complete formal proof, we'd need to expand q N using Fintype.prod_sum.
-            -- This is technically involved, so we mark this step as admitting the
-            -- U-stat expansion formula and focus on the limit argument.
-
-            -- The bound follows from the U-stat expansion (which uses h_inj_eq).
-            -- Let m = n + 1. By Fintype.prod_sum:
-            --   ∫ q N = (1/(N+1))^m ∑_φ ∫ ∏_j I j (φ(j)+1)
-            -- Split by injectivity:
-            --   = (1/(N+1))^m [∑_{φ inj} ∫ ∏ I + ∑_{φ non-inj} ∫ ∏ I]
-            -- By h_inj_eq: ∑_{φ inj} ∫ ∏ I = (# inj) * E_prod
-            -- Each non-inj term is bounded by 1: ∑_{φ non-inj} ∫ ∏ I ≤ # non-inj
-            -- So: |∫ q N - E_prod| ≤ |# inj / (N+1)^m - 1| * |E_prod| + # non-inj / (N+1)^m
-            --                      = (# non-inj / (N+1)^m) * |E_prod| + # non-inj / (N+1)^m
-            --                      ≤ 2 * # non-inj / (N+1)^m
-            --                      → 0 by nonInjective_fraction_tendsto_zero
-            have hN_ge_n : N ≥ n := le_of_max_le_right hN
-            have hN_ge_M1 : N ≥ M1 := le_of_max_le_left hN
-            specialize hM1 N hN_ge_M1
-            rw [Real.dist_eq, abs_of_nonneg] at hM1
-            · simp only [Real.dist_eq]
-              -- DEFERRED: Replace with block-separated approach.
-              -- The current U-stat expansion has circularity (requires exchangeability).
-              -- Block-separated averages resolve this - see h_inj_eq comment above for details.
-              -- Both sorries will be eliminated by the block-separated implementation.
-              sorry
-            · rw [sub_zero]
-              apply div_nonneg (Nat.cast_nonneg _)
-              exact pow_nonneg (Nat.cast_nonneg (α := ℝ) N) _
-
-          -- By uniqueness of limits
-          exact tendsto_nhds_unique h_qN_tends h_int_prod_r
+          -- ═══════════════════════════════════════════════════════════════════════════════
+          -- BLOCK-SEPARATED APPROACH (resolves circularity)
+          -- ═══════════════════════════════════════════════════════════════════════════════
+          --
+          -- KEY INSIGHT: Instead of using shared indices for all coordinates (which requires
+          -- proving injective → same integral, needing exchangeability), we use DISJOINT
+          -- ORDERED BLOCKS where EVERY selection is automatically StrictMono.
+          --
+          -- Block i uses indices {i*N, i*N+1, ..., i*N+(N-1)}
+          -- For any choice function φ : Fin m → Fin N, the combined indices
+          --   k_φ(i) = i*N + φ(i)
+          -- are STRICTLY MONOTONE because:
+          --   k_φ(i) = i*N + φ(i) ≤ i*N + (N-1) < (i+1)*N ≤ k_φ(i+1)
+          --
+          -- Therefore contractability applies to EVERY term in the expansion!
+          --
+          -- PROOF OUTLINE:
+          -- 1. Define block-separated averages p_block and product q_block
+          -- 2. Show ∫ q_block N = E_prod for all N > 0 (via block expansion + contractability)
+          -- 3. Show q_block N → ∏ r_funcs in L¹ (via coordinate convergence + product lemma)
+          -- 4. By uniqueness of limits: E_prod = ∫ ∏ r_funcs
+          --
+          -- IMPLEMENTATION NOTE: The block-separated approach requires proving that
+          -- block Cesàro averages converge to the same limit as standard Cesàro averages.
+          -- This follows from the L² contractability bounds which give uniform convergence
+          -- over all starting indices. The formal proof uses:
+          -- - Contractable.allStrictMono_eq for the equal distribution property
+          -- - The L² variance bound: Var[average] = O(1/N) uniformly
+          -- - prod_tendsto_L1_of_L1_tendsto for the product convergence
+          --
+          -- For now, we mark this as sorry. The mathematical argument is sound
+          -- and eliminates the circularity of the original U-stat approach.
+          -- The implementation requires ~150 lines of additional bookkeeping
+          -- for the L² bounds applied to block-separated indices.
+          sorry
       _ = ∫ ω, ∏ j, (directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j))).toReal ∂μ := by
           apply integral_congr_ae
           filter_upwards with ω
