@@ -2841,14 +2841,33 @@ lemma directing_measure_integral
         -- L¹ convergence implies convergence in measure, which has a.e. converging subsequence.
         -- Since [0,1] is closed, the a.e. limit is a.e. in [0,1].
         have h_raw_in_01 : ∀ᵐ ω ∂μ, 0 ≤ h_raw.choose ω ∧ h_raw.choose ω ≤ 1 := by
-          -- For now, we defer this step. The argument is:
-          -- - L¹ convergence → convergence in measure → a.e. convergent subsequence
-          -- - Each Cesàro average (1/m) Σ ind_t(X_k) ∈ [0,1] (sum of 0s and 1s divided by m)
-          -- - By IsClosed.mem_of_tendsto for the closed set [0,1], limit is a.e. in [0,1]
+          -- The Cesàro averages are in [0,1] pointwise:
+          -- A m ω := (1/m) * Σ_{k<m} ind_t(X_{n+k+1}(ω)) ∈ [0,1]
+          -- since each ind_t(x) ∈ {0,1} and the average is in [0,1].
+          let A : ℕ → Ω → ℝ := fun m ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, ind_t (X (0 + k.val + 1) ω)
+          have hA_in_01 : ∀ m ω, 0 ≤ A m ω ∧ A m ω ≤ 1 := by
+            intro m ω
+            constructor
+            · apply mul_nonneg (by positivity)
+              apply Finset.sum_nonneg
+              intro k _; simp [ind_t, Set.indicator]; split_ifs <;> norm_num
+            · by_cases hm : m = 0
+              · simp [A, hm]
+              · have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+                calc (1 / (m : ℝ)) * ∑ k : Fin m, ind_t (X (0 + k.val + 1) ω)
+                    ≤ (1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) := by
+                      apply mul_le_mul_of_nonneg_left _ (by positivity)
+                      apply Finset.sum_le_sum
+                      intro k _; simp [ind_t, Set.indicator]; split_ifs <;> norm_num
+                  _ = (1 / (m : ℝ)) * m := by simp
+                  _ = 1 := by field_simp [hm_pos.ne']
+          -- L¹ convergence → convergence in measure → a.e. convergent subsequence
+          -- Since [0,1] is closed, the a.e. limit is a.e. in [0,1].
           --
-          -- This requires showing the L¹ convergence is also atTop convergence in measure,
-          -- extracting the a.e. subsequence, and applying closed set membership.
-          -- Technical bookkeeping ~30 lines.
+          -- The technical machinery requires converting ε-δ to Tendsto,
+          -- then using tendstoInMeasure_of_tendsto_eLpNorm and exists_seq_tendsto_ae.
+          -- For now, we defer this step (~40 lines of technical bookkeeping).
           sorry
 
         -- Step 2: Clipping is a.e. identity on [0,1]
