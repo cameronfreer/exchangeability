@@ -2452,6 +2452,209 @@ lemma directing_measure_integral
   -- The detailed formal implementation requires connecting these abstract facts
   -- to the specific definitions in our setup. This is routine but verbose.
   -- All mathematical content is captured in the comments above.
+
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- IMPLEMENTATION: π-λ induction for indicators, then extend to f
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- For each Borel set S, define αS as the L¹ limit for indicator 1_S
+  -- We show: for a.e. ω, for all Borel S, αS(ω) = ν(ω)(S).toReal
+
+  -- Helper: indicator function for a set S
+  let ind : Set ℝ → ℝ → ℝ := fun S x => S.indicator (fun _ => (1 : ℝ)) x
+
+  -- Helper: for any measurable S, the indicator is measurable and bounded
+  have ind_meas : ∀ S, MeasurableSet S → Measurable (ind S) := fun S hS =>
+    measurable_const.indicator hS
+  have ind_bdd : ∀ S, ∃ M, ∀ x, |ind S x| ≤ M := fun S =>
+    ⟨1, fun x => by simp only [ind, Set.indicator]; split_ifs <;> norm_num⟩
+
+  -- For each measurable S, get the L¹ limit
+  have ind_limit : ∀ S, MeasurableSet S →
+      ∃ αS : Ω → ℝ, Measurable αS ∧ MemLp αS 1 μ ∧
+        (∀ n ε, ε > 0 → ∃ M : ℕ, ∀ m ≥ M,
+          ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, ind S (X (n + k.val + 1) ω) - αS ω| ∂μ < ε) := by
+    intro S hS
+    exact weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 (ind S) (ind_meas S hS) (ind_bdd S)
+
+  -- STEP 1: Use ae_induction_on_inter to show indicator limits equal ν(S).toReal a.e.
+
+  -- The predicate: C(ω, S) means "the L¹ limit for 1_S equals ν(ω)(S).toReal"
+  -- But since αS is defined via choice, we formulate this via the uniqueness of L¹ limits:
+  -- For a.e. ω, ν(ω)(S).toReal is the unique L¹ limit for 1_S
+
+  -- Key insight: The L¹ limit is unique. So instead of tracking αS directly,
+  -- we show that ν(S).toReal satisfies the same limit property.
+  -- For indicators of Iic t, this is the base case.
+  -- For complements/unions, we use the linearity of both sides.
+
+  -- Since the full π-λ argument is lengthy, we use the following shortcut:
+  -- For our specific f, we approximate by simple functions and use DCT.
+
+  -- STEP 2: Approximate f by simple functions approaching from Iic values
+
+  -- For bounded measurable f with |f| ≤ M, both sides of the identification are:
+  -- - Linear in f
+  -- - Agree on indicators of Iic t (base case)
+  -- - Continuous under bounded pointwise convergence (DCT)
+  -- By functional uniqueness, they must agree.
+
+  -- The key observation: for our specific f, both alpha and ∫ f dν(·) are
+  -- uniquely determined by the underlying conditional CDF structure.
+
+  -- For the base case indicators of Iic t:
+  -- alphaIic t = ∫ 1_{Iic t} dν a.e. (from 'base')
+  -- The L¹ limit for 1_{Iic t} equals alphaIic t (clipping is trivial for [0,1])
+
+  -- For general bounded measurable f:
+  -- The L¹ limit alpha is uniquely determined by the convergence of Cesàro averages.
+  -- The integral ∫ f dν(·) is uniquely determined by ν(·).
+  -- Both are uniquely characterized by their values on the generating algebra.
+
+  -- Since we have the base case (agreement on Iic t), and both sides satisfy:
+  -- 1. Linearity (for alpha: weighted_sums_converge_L1_add/smul)
+  -- 2. DCT continuity (for alpha: from Cesàro average bounds)
+  -- They must agree on all bounded measurable f.
+
+  -- IMPLEMENTATION: Use the characterization via layer cake / level sets
+
+  -- For f bounded by [-M, M], we can write:
+  -- f(x) = -M + ∫_{-M}^{f(x)} 1 dt = -M + ∫_{-M}^M 1_{t < f(x)} dt
+  -- This expresses f as an integral of indicators.
+
+  -- Cesàro average: (1/N) Σ f(X_k) = -M + ∫_{-M}^M (1/N) Σ 1_{t < f(X_k)} dt
+  -- By Fubini/dominated convergence: limit = -M + ∫_{-M}^M (limit of 1_{t < f(·)}) dt
+
+  -- For indicators 1_{f > t} where t ∈ (-M, M):
+  -- The set {x : f(x) > t} is Borel (since f is measurable)
+  -- By the indicator case: L¹ limit for 1_{f > t} = ν({x : f(x) > t}).toReal a.e.
+
+  -- Integrating: alpha = -M + ∫_{-M}^M ν({f > t}).toReal dt = ∫ f dν a.e.
+
+  -- This argument requires careful Fubini exchange, which is valid since
+  -- the integrands are bounded by 1.
+
+  -- For the formal proof, we use the direct approximation approach:
+
+  -- FINAL APPROACH: Direct identification via measure uniqueness
+
+  -- Key fact: For a.e. ω, the directing measure ν(ω) is uniquely determined by
+  -- its CDF values ν(ω)(Iic t) = (ofReal (F_ω t)).toReal where F_ω is the Stieltjes CDF.
+  -- These CDF values equal alphaIic t ω a.e. (from base case + Stieltjes construction).
+
+  -- The integral ∫ f dν(ω) is uniquely determined by ν(ω) and f.
+  -- The L¹ limit alpha is uniquely determined by the convergence of Cesàro averages.
+
+  -- Both are built from the same underlying distributional structure:
+  -- - ν(ω) comes from the Stieltjes extension of alphaIic(·, ω)
+  -- - alpha comes from the L¹ limit of Cesàro averages of f(X_i)
+
+  -- The identification uses that Cesàro averages converge to conditional expectations,
+  -- and the conditional expectation of f(X_0) given the tail σ-algebra equals ∫ f dν.
+
+  -- This is the core content of the de Finetti theorem: the directing measure ν
+  -- is exactly the conditional distribution of X_0 given the exchangeable σ-algebra.
+
+  -- For the formal proof, we would need to:
+  -- 1. Show that ∫ f dν(·) is measurable and in L¹
+  -- 2. Show that the Cesàro averages of f(X_i) converge to ∫ f dν(·) in L¹
+  -- 3. By uniqueness of L¹ limits, alpha = ∫ f dν a.e.
+
+  -- Step 2 is the key step requiring the conditional independence structure.
+  -- This follows from the tower property and conditional i.i.d. structure.
+
+  -- For now, we defer to the established infrastructure and use the fact that
+  -- the mathematical content is sound. The formal verification requires
+  -- connecting the abstract machinery to our specific setup.
+
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- CORE π-λ PROOF: Show indicator limits equal ν(S).toReal for all Borel S
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Define the predicate for ae_induction_on_inter:
+  -- C(ω, S) := "the L¹ limit for indicator 1_S at ω equals ν(ω)(S).toReal"
+  --
+  -- Since each αS is defined via existential choice, we need to be careful.
+  -- The key is that the L¹ limit is unique: if β satisfies the L¹ limit property
+  -- for 1_S, then β = αS a.e.
+  --
+  -- So we formulate C as: "ν(ω)(S).toReal is AN L¹ limit for 1_S at ω"
+  -- meaning: the Cesàro averages of 1_S(X_i) converge to ν(ω)(S).toReal
+
+  -- Actually, the cleanest formulation uses the specific αS from weighted_sums_converge_L1.
+  -- For each S, let αS := (weighted_sums_converge_L1 ...).choose
+  -- Then C(ω, S) := αS(ω) = ν(ω)(S).toReal
+
+  -- π-λ induction for indicator limits:
+  -- We show: for a.e. ω, for all Borel S, the L¹ limit for 1_S equals ν(ω)(S).toReal
+
+  have h_indicator_eq : ∀ᵐ ω ∂μ, ∀ S, MeasurableSet S →
+      (ind_limit S ‹MeasurableSet S›).choose ω =
+      (directing_measure X hX_contract hX_meas hX_L2 ω S).toReal := by
+    -- Use ae_induction_on_inter with the generator {Iic q | q ∈ ℚ}
+    apply MeasurableSpace.ae_induction_on_inter Real.borel_eq_generateFrom_Iic_rat
+      Real.isPiSystem_Iic_rat
+
+    -- Case 1: Empty set
+    · -- For ∅: α_∅ = 0 = ν(∅).toReal
+      filter_upwards with ω
+      -- The L¹ limit for indicator of ∅ is 0 (constant 0 function)
+      -- ν(∅) = 0 for any measure
+      simp only [Set.indicator_empty, measure_empty, ENNReal.zero_toReal]
+      -- The L¹ limit for the zero function is 0
+      -- (weighted_sums_converge_L1 for f=0 gives limit 0)
+      -- Need to show: (ind_limit ∅ _).choose ω = 0
+      -- This follows from uniqueness of L¹ limits: the limit for 0 is 0
+      sorry
+
+    -- Case 2: Basic sets (Iic q for q ∈ ℚ)
+    · -- For Iic q: α_{Iic q} = ν(Iic q).toReal by base case h_base_rat
+      rw [ae_all_iff]
+      intro t ht
+      -- t is in ⋃ a : ℚ, {Iic a}, so t = Iic q for some q : ℚ
+      simp only [Set.iUnion_singleton_eq_range, Set.mem_range, Set.mem_singleton_iff] at ht
+      obtain ⟨q, rfl⟩ := ht
+      -- Use h_base_connection: alphaIic q = ν(Iic q).toReal a.e.
+      -- Need to connect alphaIic to the L¹ limit from weighted_sums_converge_L1
+      filter_upwards [h_base_connection q] with ω hω
+      -- hω: alphaIic q ω = (directing_measure ... ω (Iic q)).toReal
+      -- Goal: (ind_limit (Iic q) _).choose ω = (directing_measure ... ω (Iic q)).toReal
+      -- The L¹ limit for 1_{Iic q} equals alphaIic q (after clipping, which is trivial)
+      -- This requires connecting the two existential choices
+      sorry
+
+    -- Case 3: Complements
+    · -- If α_S = ν(S).toReal a.e., then α_{Sᶜ} = ν(Sᶜ).toReal a.e.
+      -- Uses: α_{Sᶜ} = 1 - α_S (from weighted_sums_converge_L1_one_sub)
+      -- And: ν(Sᶜ) = 1 - ν(S) (probability measure)
+      filter_upwards with ω S _hS hS_eq
+      -- hS_eq: α_S(ω) = ν(ω)(S).toReal
+      -- Goal: α_{Sᶜ}(ω) = ν(ω)(Sᶜ).toReal
+      -- By weighted_sums_converge_L1_one_sub: α_{Sᶜ} = α_1 - α_S a.e.
+      -- where α_1 is the L¹ limit for the constant 1 function
+      -- By probability measure: α_1 = 1 a.e.
+      -- So α_{Sᶜ} = 1 - α_S = 1 - ν(S).toReal
+      -- Also ν(Sᶜ) = ν(Set.univ) - ν(S) = 1 - ν(S) (probability measure)
+      -- So ν(Sᶜ).toReal = (1 - ν(S)).toReal = 1 - ν(S).toReal (for prob measures)
+      sorry
+
+    -- Case 4: Countable disjoint unions
+    · -- If α_{Sₙ} = ν(Sₙ).toReal a.e. for all n, then α_{⋃Sₙ} = ν(⋃Sₙ).toReal a.e.
+      -- Uses: α_{⋃Sₙ} = Σ α_{Sₙ} (from DCT on L¹ limits + weighted_sums_converge_L1_add)
+      -- And: ν(⋃Sₙ) = Σ ν(Sₙ) (σ-additivity)
+      filter_upwards with ω f hf_disj hf_meas hf_eq
+      -- hf_eq: ∀ i, α_{f i}(ω) = ν(ω)(f i).toReal
+      -- Goal: α_{⋃ f}(ω) = ν(ω)(⋃ f).toReal
+      sorry
+
+  -- STEP 2: Use indicator identification to prove the main result for f
+
+  -- Now we know: for a.e. ω, for all Borel S, α_S(ω) = ν(ω)(S).toReal
+  -- We use this to show α_f = ∫ f dν a.e. by approximation.
+
+  -- Approximate f by simple functions and use DCT
+  -- (This part is deferred; the indicator case is the key mathematical content)
+
   sorry
 
 /-- **Packaged directing measure theorem:** Existence of a directing kernel with all
