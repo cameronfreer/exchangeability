@@ -2800,17 +2800,36 @@ lemma directing_measure_integral
       -- This combines: raw_limit ≈ alphaIic (clipping is trivial) and base: alphaIic = ∫ 1_{Iic t} dν
       have h_limit_eq : ∀ᵐ ω ∂μ, h_raw.choose ω =
           ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-        -- The raw limit equals alphaIic a.e. (clipping preserves [0,1] values)
-        -- And base shows alphaIic = ∫ 1_{Iic t} dν a.e.
+        -- Strategy: h_raw.choose =ᵐ alphaIic t (both are L¹ limits of same sequence)
+        --           alphaIic t =ᵐ ∫ 1_{Iic t} dν (by base)
         have h_base := base t
-        -- The connection: raw limit → alphaIic → ∫ 1_{Iic t} dν
-        -- alphaIic is max 0 (min 1 raw_limit), which equals raw_limit when in [0,1]
-        -- Since we're averaging [0,1] indicators, the L¹ limit is in [0,1] a.e.
+
+        -- By proof irrelevance: ind_t and the function in alphaIic's definition are the same
+        -- The measurability and boundedness proofs are Props, so by proof irrelevance
+        -- h_raw.choose is definitionally equal to the raw limit in alphaIic
+        -- alphaIic then clips this to [0,1], but since the limit is a.e. in [0,1]
+        -- (being the L¹ limit of [0,1]-valued averages), clipping is a.e. identity
+
+        -- The key a.e. equality follows from base which already establishes:
+        -- alphaIic t =ᵐ ∫ 1_{Iic t} dν
+        -- And we just need h_raw.choose =ᵐ alphaIic t
+
+        -- This is technical: the L¹ limit is unique a.e., and alphaIic's internal limit
+        -- agrees with h_raw.choose a.e. because they're both L¹ limits of the same sequence.
+        -- The clipping max 0 (min 1 ·) doesn't change values in [0,1], and the L¹ limit
+        -- of [0,1]-valued functions is a.e. in [0,1].
+
+        -- For now, we defer this technical step. The mathematical argument is:
+        -- 1. h_raw.choose is the L¹ limit of Cesàro averages of 1_{Iic t} ∘ X
+        -- 2. alphaIic t is max 0 (min 1 (that same L¹ limit))
+        -- 3. The L¹ limit of [0,1]-valued averages is a.e. in [0,1]
+        -- 4. So alphaIic t = L¹ limit a.e., hence h_raw.choose = alphaIic t a.e.
+        -- 5. By base: alphaIic t = ∫ 1_{Iic t} dν a.e.
+        -- 6. Combining: h_raw.choose = ∫ 1_{Iic t} dν a.e.
         filter_upwards [h_base] with ω h_base_ω
-        -- h_base_ω : alphaIic t ω = ∫ x, 1_{Iic t} x ∂ν(ω)
-        -- Need: h_raw.choose ω = ∫ x, 1_{Iic t} x ∂ν(ω)
-        -- Key: h_raw.choose ω = alphaIic t ω (since both are L¹ limits of same sequence, and clipping is a.e. id)
-        -- For now defer this technical step
+        -- Need: h_raw.choose ω = ∫ ind_t dν(ω)
+        -- Have: alphaIic t ω = ∫ ind_t dν(ω)
+        -- The connection h_raw.choose ≈ alphaIic uses proof irrelevance
         sorry
       -- Apply L1_transfer to convert convergence
       have h_raw_int := h_raw.choose_spec.2.1.integrable le_rfl
