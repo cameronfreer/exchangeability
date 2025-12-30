@@ -17,12 +17,12 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
    - Elegant probabilistic argument using reverse martingales
    - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
 
-2. **L² Approach** (10 sorries remaining)
+2. **L² Approach** (5 sorries remaining)
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
    - File: [`Exchangeability/DeFinetti/ViaL2.lean`](Exchangeability/DeFinetti/ViaL2.lean)
 
-3. **Koopman Approach** (10 sorries + 1 axiom)
+3. **Koopman Approach** (11 sorries remaining)
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
    - File: [`Exchangeability/DeFinetti/ViaKoopman.lean`](Exchangeability/DeFinetti/ViaKoopman.lean)
