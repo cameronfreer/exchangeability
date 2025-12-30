@@ -81,13 +81,8 @@ lemma directingMeasure_isProb
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) := by
-  intro ω
-  -- Strategy: condExpKernel is an IsMarkovKernel, so each condExpKernel ω is a probability measure
-  --           Pushing forward preserves probability via Measure.isProbabilityMeasure_map
-  -- directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)
-  unfold directingMeasure
-  exact Measure.isProbabilityMeasure_map (hX 0).aemeasurable
+    ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX ω) :=
+  fun _ => Measure.isProbabilityMeasure_map (hX 0).aemeasurable
 
 /-- **X₀-marginal identity**: the conditional expectation of the indicator
 of `X 0 ∈ B` given the tail equals the directing measure of `B` (toReal).
@@ -141,10 +136,8 @@ lemma conditional_law_eq_of_X0_marginal
     (hν : ∀ B : Set α, MeasurableSet B →
         (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X])
     (n : ℕ) (B : Set α) (hB : MeasurableSet B) :
-    (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
-  have h0 := hν B hB
-  have hn := extreme_members_equal_on_tail hX hX_meas n B hB
-  exact ae_eq_trans h0 hn.symm
+    (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] :=
+  (hν B hB).trans (extreme_members_equal_on_tail hX hX_meas n B hB).symm
 
 /-- **All coordinates share the directing measure as their conditional law.**
 

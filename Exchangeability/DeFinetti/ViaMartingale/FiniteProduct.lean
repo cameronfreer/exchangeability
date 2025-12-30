@@ -132,12 +132,8 @@ lemma measure_pi_univ_pi
     {m : ℕ} (μi : Fin m → Measure α) [∀ i, SigmaFinite (μi i)]
     (C : Fin m → Set α) :
   (Measure.pi (fun i : Fin m => μi i)) (Set.univ.pi C)
-    = ∏ i : Fin m, μi i (C i) := by
-  -- Convert Set.univ.pi to the pi univ form expected by Measure.pi_pi
-  have h_eq : Set.univ.pi C = Set.pi Set.univ C := rfl
-  rw [h_eq]
-  -- Now apply Measure.pi_pi from Mathlib
-  exact Measure.pi_pi (fun i : Fin m => μi i) C
+    = ∏ i : Fin m, μi i (C i) :=
+  Measure.pi_pi μi C
 
 /-- Bind computation on rectangles for finite product measures. -/
 lemma bind_apply_univ_pi
