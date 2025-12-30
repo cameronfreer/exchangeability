@@ -44,7 +44,7 @@ lemma condIndep_indicator_of_dropInfoY
   {Ω : Type*} [inst_mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
   {Y Z W : Ω → ℝ}
   {mW : MeasurableSpace Ω}
-  (hmW_le : mW ≤ inst_mΩ)  -- mW is a sub-σ-algebra of the ambient space
+  (_hmW_le : mW ≤ inst_mΩ)  -- mW is a sub-σ-algebra of the ambient space
   (hmW_le_mZW : mW ≤ MeasurableSpace.comap (fun ω => (Z ω, W ω)) inferInstance)  -- mW ≤ σ(Z,W)
   (dropY :
     ∀ A : Set ℝ, MeasurableSet A →
@@ -95,8 +95,7 @@ lemma condIndep_indicator_of_dropInfoY
     obtain ⟨S, hS_meas, rfl⟩ := hs
     exact hS_meas.preimage (hZ.prodMk hW)
 
-  -- SigmaFinite instances for trim (needed for condExp lemmas)
-  haveI hσW : SigmaFinite (μ.trim hmW_le) := sigmaFinite_trim_of_le μ hmW_le
+  -- SigmaFinite instance for trim (needed for condExp lemmas)
   haveI hσZW : SigmaFinite (μ.trim hmZW_le) := sigmaFinite_trim_of_le μ hmZW_le
 
   -- Integrability of indicators (bounded by 1)

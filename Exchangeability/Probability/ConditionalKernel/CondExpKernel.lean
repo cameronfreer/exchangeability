@@ -22,10 +22,6 @@ open MeasureTheory ProbabilityTheory
 open scoped ENNReal
 
 variable {Ω Γ E : Type*}
-variable [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
-variable [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]
-variable [Nonempty Ω] [Nonempty Γ] [Nonempty E]
-variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 /-!
 ### Representation lemma: Conditional expectation via conditional distribution
@@ -37,6 +33,10 @@ can be expressed as integration against the conditional distribution kernel.
 This is the key link between conditional expectation (a measure-theoretic notion)
 and conditional distribution (a kernel-theoretic notion). -/
 lemma condExp_indicator_eq_integral_condDistrib
+    [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
+    [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]
+    [Nonempty Ω] [Nonempty Γ] [Nonempty E]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ζ : Ω → Γ) (hζ : Measurable ζ)
     (ξ : Ω → E) (hξ : Measurable ξ)
     (B : Set E) (hB : MeasurableSet B) :

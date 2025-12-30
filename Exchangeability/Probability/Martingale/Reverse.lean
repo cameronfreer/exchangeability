@@ -67,7 +67,7 @@ noncomputable def revCEFinite (f : Ω → ℝ) (𝔽 : ℕ → MeasurableSpace �
 lemma revCEFinite_martingale
     [IsProbabilityMeasure μ]
     (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (hf : Integrable f μ) (N : ℕ) :
+    (f : Ω → ℝ) (_hf : Integrable f μ) (N : ℕ) :
     Martingale (fun n => revCEFinite (μ := μ) f 𝔽 N n) (revFiltration 𝔽 h_antitone h_le N) μ := by
   constructor
   · -- Adapted: revCE N n is 𝔽_{N-n}-measurable
@@ -87,7 +87,7 @@ lemma revCEFinite_martingale
 
 This is a standard property: `‖μ[f | m]‖₁ ≤ ‖f‖₁`. -/
 lemma eLpNorm_one_condExp_le_of_integrable
-    {m : MeasurableSpace Ω} (f : Ω → ℝ) (hf : Integrable f μ) :
+    {m : MeasurableSpace Ω} (f : Ω → ℝ) (_hf : Integrable f μ) :
     eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
   eLpNorm_one_condExp_le_eLpNorm f
 

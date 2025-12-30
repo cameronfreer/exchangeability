@@ -78,7 +78,7 @@ theorem condExp_tendsto_iSup
     {𝔽 : ℕ → MeasurableSpace Ω}
     (h_filtration : Monotone 𝔽)
     (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (h_f_int : Integrable f μ) :
+    (f : Ω → ℝ) (_h_f_int : Integrable f μ) :
     ∀ᵐ ω ∂μ, Tendsto
       (fun n => μ[f | 𝔽 n] ω)
       atTop

@@ -336,7 +336,7 @@ private lemma product_measure_on_rectangle {Ω α : Type*} [MeasurableSpace α]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω)) (m : ℕ)
     (B : Fin m → Set α) (ω : Ω) :
     ∏ i : Fin m, ν ω (B i)
-      = (Measure.pi fun i : Fin m => ν ω) {x : Fin m → α | ∀ i, x i ∈ B i} := by
+      = (Measure.pi fun _i : Fin m => ν ω) {x : Fin m → α | ∀ i, x i ∈ B i} := by
   haveI : IsProbabilityMeasure (ν ω) := hν_prob ω
   have set_eq : {x : Fin m → α | ∀ i, x i ∈ B i} = Set.univ.pi fun i => B i := by
     ext x; simp [Set.pi]

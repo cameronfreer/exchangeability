@@ -27,14 +27,14 @@ open MeasureTheory Filter Set Function
 
 namespace Exchangeability.Probability
 
-variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+variable {Ω : Type*}
 
 /-- Package a decreasing family of σ-algebras on `ℕ` as an increasing filtration on `ℕᵒᵈ`.
 
 For a decreasing sequence (𝔽 n) of σ-algebras, this creates an increasing filtration on
 `OrderDual ℕ` where `𝔾 i := 𝔽 (ofDual i)`. Since `i ≤ j` in `ℕᵒᵈ` iff `ofDual j ≤ ofDual i`
 in `ℕ`, antitonicity of 𝔽 becomes monotonicity of 𝔾. -/
-def Filtration.ofAntitone (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
+def Filtration.ofAntitone [MeasurableSpace Ω] (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
     (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) :
     Filtration (OrderDual ℕ) (inferInstance : MeasurableSpace Ω) where
   seq := fun i => F (OrderDual.ofDual i)
@@ -44,7 +44,7 @@ def Filtration.ofAntitone (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
   le' := fun i => hle (OrderDual.ofDual i)
 
 @[simp]
-lemma Filtration.ofAntitone_apply (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
+lemma Filtration.ofAntitone_apply [MeasurableSpace Ω] (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
     (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) (i : OrderDual ℕ) :
     (Filtration.ofAntitone F hF hle) i = F (OrderDual.ofDual i) := rfl
 

@@ -704,7 +704,7 @@ This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`
 which works for any family of sub-σ-algebras (not just filtrations). -/
 lemma uniformIntegrable_condexp_antitone
     [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
-    (h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (_h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     (f : Ω → ℝ) (hf : Integrable f μ) :
     UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ :=
   hf.uniformIntegrable_condExp h_le
@@ -723,7 +723,7 @@ The key observation: For antitone 𝔽 (𝔽 n decreases as n increases):
 This is crucial for showing that reverse martingale limits satisfy μ[Xlim | F_inf] = Xlim. -/
 lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
-    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (_h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     {g : ℕ → Ω → ℝ} {Xlim : Ω → ℝ}
     (hg_meas : ∀ n, StronglyMeasurable[𝔽 n] (g n))
     (h_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))) :
@@ -858,7 +858,7 @@ lemma ae_limit_is_condexp_iInf
   have hL1_conv_Xn : Tendsto (fun n => eLpNorm (Xlim - Xn n) 1 μ) atTop (𝓝 0) := by
     have : ∀ n, eLpNorm (Xlim - Xn n) 1 μ = eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ := by
       intro n
-      simp only [Xn, hXn_def]
+      simp only [hXn_def]
       rw [eLpNorm_sub_comm]
     simp only [this]
     exact hL1_conv
