@@ -2723,9 +2723,11 @@ lemma directing_measure_integral
     simp only [zero_add] at hM₁ hM₂
     have h1 := hM₁ m hm₁
     have h2 := hM₂ m hm₂
-    -- The triangle inequality argument gives ∫|α - ∫fdν| < 2ε < 3ε = ∫|α - ∫fdν|
-    -- This is a contradiction
-    -- The detailed proof is in the comments; here we defer the technical calc step
+    -- The triangle inequality for integrals gives:
+    -- ∫|α - ∫fdν| ≤ ∫|avg - α| + ∫|avg - ∫fdν| < ε + ε = 2ε
+    -- But by definition: ε = (∫|α - ∫fdν|) / 3
+    -- So ∫|α - ∫fdν| = 3ε < 2ε, contradiction for ε > 0
+    -- Technical proof of triangle inequality step:
     sorry
 
   -- Conclude alpha = ∫ f dν a.e.
