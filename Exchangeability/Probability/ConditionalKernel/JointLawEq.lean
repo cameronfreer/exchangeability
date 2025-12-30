@@ -25,10 +25,6 @@ open MeasureTheory ProbabilityTheory
 open scoped ENNReal
 
 variable {Ω Γ E : Type*}
-variable [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
-variable [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]
-variable [Nonempty Ω] [Nonempty Γ] [Nonempty E]
-variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 /-!
 ### Main theorem: Conditional expectation equality from joint law
@@ -54,6 +50,10 @@ from `TripleLawDropInfo.DropInfo`, with variable mapping:
 - h_law.symm provides (ξ, η) =^d (ξ, ζ) matching the drop-info lemma's (X, W) =^d (X, W')
 -/
 theorem condExp_eq_of_joint_law_eq
+    [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
+    [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]
+    [Nonempty Ω] [Nonempty Γ] [Nonempty E]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ζ η : Ω → Γ) (hζ : Measurable ζ) (hη : Measurable η)
     (ξ : Ω → E) (hξ : Measurable ξ)
     (B : Set E) (hB : MeasurableSet B)

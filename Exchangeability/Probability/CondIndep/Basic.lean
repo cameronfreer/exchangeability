@@ -140,7 +140,7 @@ lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     {X : Ω → ℝ} {W : Ω → γ}
     (hX : Measurable X) (hW : Measurable W)
     (h_indep : IndepFun X W μ)
-    (hX_int : Integrable X μ) :
+    (_hX_int : Integrable X μ) :
     μ[X | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[X]) := by
   -- Convert IndepFun to Indep of σ-algebras
   rw [IndepFun_iff_Indep] at h_indep
@@ -151,12 +151,14 @@ lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     Measurable.of_comap_le le_rfl
   exact this.stronglyMeasurable
 
+variable {μ : Measure Ω} in
 /-- Extract independence of first component from pair independence. -/
 lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
     IndepFun Y W μ :=
   h.comp measurable_fst measurable_id
 
+variable {μ : Measure Ω} in
 /-- Extract independence of second component from pair independence. -/
 lemma IndepFun.of_comp_left_snd {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :

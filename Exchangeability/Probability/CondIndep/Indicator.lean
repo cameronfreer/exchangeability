@@ -302,15 +302,15 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             · exact hψ1_int
             · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
             · filter_upwards with ω
-              simp only [Function.comp_apply, Set.indicator, norm_indicator_eq_indicator_norm]
-              by_cases h : Y ω ∈ A <;> simp [h, le_abs_self, abs_nonneg]
+              simp only [Function.comp_apply, Set.indicator]
+              by_cases h : Y ω ∈ A <;> simp [h]
           have h2_int : Integrable (((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z)) μ := by
             refine Integrable.bdd_mul' (c := |c|) ?_ ?_ ?_
             · exact hψ2_int
             · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
             · filter_upwards with ω
-              simp only [Function.comp_apply, Set.indicator, norm_indicator_eq_indicator_norm]
-              by_cases h : Y ω ∈ A <;> simp [h, le_abs_self, abs_nonneg]
+              simp only [Function.comp_apply, Set.indicator]
+              by_cases h : Y ω ∈ A <;> simp [h]
           exact condExp_add h1_int h2_int _
       _ =ᵐ[μ] (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ1 ∘ Z | MeasurableSpace.comap W (by infer_instance)])
               + (μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)] * μ[ψ2 ∘ Z | MeasurableSpace.comap W (by infer_instance)]) :=
@@ -318,7 +318,7 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
       _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
               * (μ[ψ1 ∘ Z | MeasurableSpace.comap W (by infer_instance)] + μ[ψ2 ∘ Z | MeasurableSpace.comap W (by infer_instance)]) := by
           apply Filter.EventuallyEq.of_eq
-          simp only [Pi.add_apply, Pi.mul_apply, mul_add]
+          simp only [mul_add]
       _ =ᵐ[μ] μ[(A.indicator (fun _ => c)) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
               * μ[(ψ1 + ψ2) ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           -- Apply condExp_add in reverse on RHS to combine ψ1 and ψ2
@@ -390,7 +390,7 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
       _ =ᵐ[μ] (μ[φ1 ∘ Y | MeasurableSpace.comap W (by infer_instance)] + μ[φ2 ∘ Y | MeasurableSpace.comap W (by infer_instance)])
               * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           apply Filter.EventuallyEq.of_eq
-          simp only [Pi.add_apply, Pi.mul_apply, add_mul]
+          simp only [add_mul]
       _ =ᵐ[μ] μ[(φ1 + φ2) ∘ Y | MeasurableSpace.comap W (by infer_instance)]
               * μ[ψ ∘ Z | MeasurableSpace.comap W (by infer_instance)] := by
           -- Apply condExp_add in reverse on LHS

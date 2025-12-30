@@ -544,7 +544,7 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
 
 If |f| ≤ |g| everywhere, then |E[f|m]| ≤ E[|g||m]. -/
 lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
     (h : ∀ ω, |f ω| ≤ |g ω|) :
     ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ μ[(fun ω' => |g ω'|)|m] ω := by
@@ -577,7 +577,7 @@ For integrable functions f, g, the conditional expectation is contractive in L¹
 
 This is the key operator-theoretic property that makes CE well-behaved. -/
 lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ ‹_›)
+    {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
     ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
   -- Use the mathlib lemma integral_abs_condExp_le which gives ∫|E[f|m]| ≤ ∫|f|

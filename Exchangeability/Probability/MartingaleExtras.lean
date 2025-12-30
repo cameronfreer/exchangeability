@@ -68,8 +68,8 @@ lemma revCE_tower
 lemma revCE_L1_bdd
     [IsProbabilityMeasure μ]
     {F : ℕ → MeasurableSpace Ω}
-    (h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (hf : Integrable f μ) :
+    (_h_le : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω))
+    (f : Ω → ℝ) (_hf : Integrable f μ) :
     ∀ n, eLpNorm (revCE μ F f n) 1 μ ≤ eLpNorm f 1 μ := by
   intro n
   simp only [revCE]
@@ -109,7 +109,7 @@ lemma lintegral_fatou_ofReal_norm
   {u : ℕ → α → β} {g : α → β}
   (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x)))
   (hu_meas : ∀ n, AEMeasurable (fun x => ENNReal.ofReal ‖u n x‖) μ)
-  (hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
+  (_hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
   ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
     ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
   have hae_ofReal :

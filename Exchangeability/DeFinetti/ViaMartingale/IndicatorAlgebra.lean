@@ -35,7 +35,7 @@ namespace Exchangeability.DeFinetti.ViaMartingale
 
 open Exchangeability.PathSpace
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω α : Type*}
 
 /-! ## Product of indicators for finite cylinders -/
 
@@ -76,7 +76,8 @@ lemma indProd_eq_firstRCylinder_indicator (X : ℕ → Ω → α) (r : ℕ) (C :
 
 /-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable
 under a finite measure. -/
-lemma indProd_integrable {μ : Measure Ω} [IsFiniteMeasure μ] (X : ℕ → Ω → α)
+lemma indProd_integrable [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsFiniteMeasure μ] (X : ℕ → Ω → α)
     (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     Integrable (indProd X r C) μ := by
@@ -89,7 +90,8 @@ lemma indProd_integrable {μ : Measure Ω} [IsFiniteMeasure μ] (X : ℕ → Ω 
 
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
 @[measurability, fun_prop]
-lemma indProd_stronglyMeasurable (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+lemma indProd_stronglyMeasurable [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     StronglyMeasurable (indProd X r C) := by
   rw [indProd_eq_firstRCylinder_indicator]
@@ -119,7 +121,8 @@ lemma indProd_univ (X : ℕ → Ω → α) (r : ℕ) :
 
 /-- indProd is measurable when coordinates are measurable. -/
 @[measurability, fun_prop]
-lemma indProd_measurable (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
+lemma indProd_measurable [MeasurableSpace Ω] [MeasurableSpace α]
+    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     Measurable (indProd X r C) :=
   (indProd_stronglyMeasurable X r C hX hC).measurable
