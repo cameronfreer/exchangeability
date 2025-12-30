@@ -2718,9 +2718,75 @@ lemma directing_measure_integral
   --
   -- TECHNICAL ESTIMATE: ~100-150 lines to implement fully
   -- ═══════════════════════════════════════════════════════════════════════════
+  --
+  -- IMPLEMENTATION APPROACH:
+  -- We prove h_L1_conv in three stages:
+  --
+  -- Stage A: For indicators 1_{Iic t}, use base case + L¹ transfer
+  --   - weighted_sums_converge_L1 gives: Cesàro averages → alphaIic t in L¹
+  --   - base gives: alphaIic t = ∫ 1_{Iic t} dν a.e.
+  --   - L¹ transfer: if f_n → g in L¹ and g = h a.e., then f_n → h in L¹
+  --   - Result: Cesàro averages → ∫ 1_{Iic t} dν in L¹
+  --
+  -- Stage B: For step functions (linear combinations of Iic indicators)
+  --   - Use weighted_sums_converge_L1_smul and _add
+  --   - Linearity preserves L¹ convergence
+  --
+  -- Stage C: For bounded measurable f
+  --   - Approximate by step functions via dyadic partitions
+  --   - Use bounded convergence (uniform bound M) + triangle inequality
+  --
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Key helper: L¹ transfer lemma
+  -- If f_n → g in L¹ and g = h a.e. (with g, h integrable), then f_n → h in L¹
+  --
+  -- Proof sketch:
+  -- Since g = h a.e., we have ∫|g - h| = 0.
+  -- By triangle inequality: ∫|f_n - h| ≤ ∫|f_n - g| + ∫|g - h| = ∫|f_n - g| + 0 → 0.
+  --
+  -- This is a standard fact in L¹ convergence theory.
+  have L1_transfer : ∀ (g h : Ω → ℝ) (f_seq : ℕ → Ω → ℝ),
+      (∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |f_seq n ω - g ω| ∂μ < ε) →
+      (∀ᵐ ω ∂μ, g ω = h ω) →
+      Integrable g μ → Integrable h μ →
+      (∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |f_seq n ω - h ω| ∂μ < ε) := by
+    intro g h f_seq hconv hgh _ _ ε hε
+    -- Since g = h a.e., ∫|f_n - h| = ∫|f_n - g| a.e., so same convergence
+    obtain ⟨N, hN⟩ := hconv ε hε
+    use N
+    intro n hn
+    -- The key: |f_n - h| = |f_n - g| a.e. (since g = h a.e.)
+    have h_eq : (fun ω => |f_seq n ω - h ω|) =ᵐ[μ] (fun ω => |f_seq n ω - g ω|) := by
+      filter_upwards [hgh] with ω hω
+      rw [hω]
+    rw [integral_congr_ae h_eq]
+    exact hN n hn
+
   have h_L1_conv : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) -
         ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε := by
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- The full proof requires three stages:
+    --
+    -- Stage A (Indicators of Iic t):
+    --   For f = 1_{Iic t}, weighted_sums_converge_L1 gives alphaIic t as L¹ limit.
+    --   The base case shows alphaIic t = ∫ 1_{Iic t} dν a.e.
+    --   By L1_transfer: Cesàro averages → ∫ 1_{Iic t} dν in L¹.
+    --
+    -- Stage B (Step functions):
+    --   For s = Σᵢ cᵢ · 1_{Iic tᵢ}, use weighted_sums_converge_L1_smul and _add.
+    --   Combined with Stage A: Cesàro averages of s → ∫ s dν in L¹.
+    --
+    -- Stage C (Bounded measurable f):
+    --   Approximate f by step functions s_n with |s_n| ≤ M and s_n → f pointwise.
+    --   Use triangle inequality:
+    --     |avg(f) - ∫fdν| ≤ |avg(f) - avg(s_n)| + |avg(s_n) - ∫s_n dν| + |∫s_n dν - ∫fdν|
+    --   First and third terms are small by uniform approximation.
+    --   Second term is small by Stage B.
+    --
+    -- The detailed implementation (~100 lines) is deferred.
+    -- ═══════════════════════════════════════════════════════════════════════
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
