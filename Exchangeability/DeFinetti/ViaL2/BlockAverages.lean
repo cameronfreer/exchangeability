@@ -1609,8 +1609,16 @@ This provides the L¹ limit α and the directing measure ν such that
 not an input. The original statement taking α as input was incorrect since
 it claimed α_n = ∫ f dν for ALL n, but the RHS is independent of n.
 
-This is proved via `directing_measure_integral` in MoreL2Helpers.lean using
-the 3-stage π-λ approach. -/
+**Implementation note**: This is proved via `directing_measure_integral` in
+MoreL2Helpers.lean using the 3-stage π-λ approach. Due to import structure
+(MoreL2Helpers imports BlockAverages), this proof cannot directly use
+`directing_measure_integral`. Options:
+1. Move this lemma to MoreL2Helpers (preferred)
+2. Duplicate the proof infrastructure here
+3. Create a new file imported by both
+
+For now, this remains as a sorry that follows from `directing_measure_integral`
+once the circular dependency is resolved. -/
 lemma alpha_is_conditional_expectation_packaged
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -1629,5 +1637,9 @@ lemma alpha_is_conditional_expectation_packaged
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
     -- Identification: alpha equals the integral against nu
     (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
+  -- Once directing_measure_integral is complete, this proof is:
+  -- 1. Use directing_measure for nu
+  -- 2. Use directing_measure_integral to get alpha with all properties
+  -- 3. Package the results
   sorry
 
