@@ -2862,12 +2862,16 @@ lemma directing_measure_integral
                       intro k _; simp [ind_t, Set.indicator]; split_ifs <;> norm_num
                   _ = (1 / (m : ℝ)) * m := by simp
                   _ = 1 := by field_simp [hm_pos.ne']
-          -- L¹ convergence → convergence in measure → a.e. convergent subsequence
-          -- Since [0,1] is closed, the a.e. limit is a.e. in [0,1].
+          -- Direct argument: if α > 1 or α < 0 on a set of positive measure,
+          -- the L¹ convergence fails since A_m ∈ [0,1] but α is bounded away from [0,1].
           --
-          -- The technical machinery requires converting ε-δ to Tendsto,
-          -- then using tendstoInMeasure_of_tendsto_eLpNorm and exists_seq_tendsto_ae.
-          -- For now, we defer this step (~40 lines of technical bookkeeping).
+          -- Proof sketch:
+          -- - If μ{α > 1} > 0: For all m, on this set |A_m - α| ≥ α - 1 > 0 (since A_m ≤ 1)
+          --   So ∫|A_m - α| ≥ ∫_{α>1} (α - 1) > 0, contradicting ∫|A_m - α| → 0.
+          -- - Similarly for μ{α < 0} > 0.
+          --
+          -- This uses: integral_pos_iff_support_of_nonneg_ae, setIntegral_le_integral, etc.
+          -- Technical bookkeeping ~50 lines.
           sorry
 
         -- Step 2: Clipping is a.e. identity on [0,1]
