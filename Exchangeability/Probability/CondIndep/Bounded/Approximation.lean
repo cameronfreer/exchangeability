@@ -7,6 +7,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Function.SimpleFunc
 import Mathlib.MeasureTheory.Function.SimpleFuncDense
+import Mathlib.MeasureTheory.Integral.DominatedConvergence
 
 /-!
 # Approximation Infrastructure for Bounded Measurable Extension
@@ -38,6 +39,8 @@ variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [Measura
 ## Helper lemmas for bounded measurable extension
 -/
 
+-- Omit section variable since lemma binds its own MeasurableSpace
+omit [MeasurableSpace Ω] in
 /-- **CE is continuous from L¹ to L¹ (wrapper around mathlib's lemma).**
 
 Note: This lemma uses pointwise/product topology on `Ω → ℝ` for the output convergence.
@@ -367,7 +370,7 @@ This pattern appears repeatedly in monotone class arguments. -/
 lemma tendsto_integral_mul_of_bounded_L1
     {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
     {f : Ω → ℝ} {gn : ℕ → Ω → ℝ} {g : Ω → ℝ}
-    (M : ℝ) (hM_nn : 0 ≤ M)
+    (M : ℝ) (_hM_nn : 0 ≤ M)
     (hf_asm : AEStronglyMeasurable f μ)
     (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
     (hgn_int : ∀ n, Integrable (gn n) μ) (hg_int : Integrable g μ)
@@ -429,3 +432,93 @@ lemma tendsto_setIntegral_of_L1
         refine setIntegral_le_integral ((hfn_int n).sub hf_int).abs ?_
         filter_upwards with ω; exact abs_nonneg _
     _ < ε := hN'
+
+/-- **L¹ convergence from pointwise dominated convergence.**
+
+If `fn → f` pointwise ae, `|fn - f| ≤ 2M` ae, and `M` is finite, then `∫|fn - f| → 0`.
+This wraps `tendsto_integral_of_dominated_convergence` for the common L¹ case. -/
+lemma tendsto_L1_of_pointwise_dominated
+    {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (M : ℝ) (_hM_nn : 0 ≤ M)
+    (hfn_int : ∀ n, Integrable (fn n) μ) (hf_int : Integrable f μ)
+    (h_bound : ∀ n, ∀ᵐ ω ∂μ, |fn n ω - f ω| ≤ 2 * M)
+    (h_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => fn n ω) Filter.atTop (nhds (f ω))) :
+    Filter.Tendsto (fun n => ∫ ω, |fn n ω - f ω| ∂μ) Filter.atTop (nhds 0) := by
+  have h_tendsto_diff : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => |fn n ω - f ω|) Filter.atTop (nhds 0) := by
+    filter_upwards [h_tendsto] with ω hω
+    have h1 : Filter.Tendsto (fun n => fn n ω - f ω) Filter.atTop (nhds 0) := by
+      convert hω.sub tendsto_const_nhds using 1
+      simp
+    exact tendsto_norm_zero.comp h1
+  have h_int_bound : Integrable (fun _ => 2 * M) μ := integrable_const _
+  have h_conv : Filter.Tendsto (fun n => ∫ ω, ‖fn n ω - f ω‖ ∂μ) Filter.atTop (nhds (∫ _, (0 : ℝ) ∂μ)) :=
+    tendsto_integral_of_dominated_convergence (fun _ => 2 * M)
+      (fun n => ((hfn_int n).sub hf_int).aestronglyMeasurable.norm)
+      h_int_bound
+      (fun n => by filter_upwards [h_bound n] with ω hω; simp [Real.norm_eq_abs, abs_abs, hω])
+      h_tendsto_diff
+  simp only [integral_zero] at h_conv
+  convert h_conv using 2
+
+/-- **Integrability of conditional expectation product with bounded factor.**
+
+If `f` is bounded ae by `M`, then `μ[f|m] * μ[g|m]` is integrable for any integrable `g`. -/
+lemma integrable_condExp_mul_of_bounded
+    {Ω : Type*} {m m₀ : MeasurableSpace Ω} (_hm : m ≤ m₀)
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {f g : Ω → ℝ}
+    (M : ℝ) (hM_nn : 0 ≤ M)
+    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
+    (_hg_int : Integrable g μ) :
+    Integrable (μ[f | m] * μ[g | m]) μ := by
+  have hf_ce_bdd : ∀ᵐ ω ∂μ, |μ[f | m] ω| ≤ M := by
+    have h_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ (⟨M, hM_nn⟩ : NNReal) := by
+      filter_upwards [hf_bdd] with ω hω; simpa using hω
+    simpa [Real.norm_eq_abs] using ae_bdd_condExp_of_ae_bdd (m := m) (R := ⟨M, hM_nn⟩) h_bdd
+  -- bdd_mul' (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
+  -- We want μ[f|m] * μ[g|m] where f is bounded
+  -- So use: (integrable μ[g|m]).bdd_mul' (μ[f|m].aestronglyMeasurable) (bound on μ[f|m])
+  refine Integrable.bdd_mul' (c := M)
+    (integrable_condExp (μ := μ) (m := m) (f := g))
+    (integrable_condExp (μ := μ) (m := m) (f := f)).aestronglyMeasurable ?_
+  filter_upwards [hf_ce_bdd] with ω hω
+  rw [Real.norm_eq_abs]; exact hω
+
+/-- **L¹ convergence of conditional expectations from dominated convergence.**
+
+If `fn → f` pointwise ae, uniformly bounded by `M`, then `∫|μ[fn|m] - μ[f|m]| → 0`. -/
+lemma tendsto_condExp_L1_of_dominated
+    {Ω : Type*} {m m₀ : MeasurableSpace Ω} (hm : m ≤ m₀)
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
+    (M : ℝ) (hM_nn : 0 ≤ M)
+    (hfn_asm : ∀ n, AEStronglyMeasurable (fn n) μ)
+    (hfn_bdd : ∀ n, ∀ᵐ ω ∂μ, |fn n ω| ≤ M)
+    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
+    (h_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => fn n ω) Filter.atTop (nhds (f ω))) :
+    Filter.Tendsto (fun n => ∫ ω, |μ[fn n | m] ω - μ[f | m] ω| ∂μ) Filter.atTop (nhds 0) := by
+  -- First show L¹ convergence of fn to f
+  have hfn_int : ∀ n, Integrable (fn n) μ := by
+    intro n
+    refine Integrable.of_mem_Icc (-M) M (hfn_asm n).aemeasurable ?_
+    filter_upwards [hfn_bdd n] with ω hω
+    simp only [Set.mem_Icc]; exact abs_le.mp hω
+  have hf_int : Integrable f μ := by
+    have hf_asm : AEStronglyMeasurable f μ := aestronglyMeasurable_of_tendsto_ae _ hfn_asm h_tendsto
+    refine Integrable.of_mem_Icc (-M) M hf_asm.aemeasurable ?_
+    filter_upwards [hf_bdd] with ω hω
+    simp only [Set.mem_Icc]; exact abs_le.mp hω
+  have h_bound : ∀ n, ∀ᵐ ω ∂μ, |fn n ω - f ω| ≤ 2 * M := by
+    intro n
+    filter_upwards [hfn_bdd n, hf_bdd] with ω hn hf
+    calc |fn n ω - f ω|
+        ≤ |fn n ω| + |f ω| := by
+          have := abs_add_le (fn n ω) (-(f ω))
+          simp only [abs_neg, ← sub_eq_add_neg] at this
+          exact this
+      _ ≤ M + M := add_le_add hn hf
+      _ = 2 * M := by ring
+  have h_L1 := tendsto_L1_of_pointwise_dominated μ M hM_nn hfn_int hf_int h_bound h_tendsto
+  -- Apply tendsto_condexp_L1
+  exact tendsto_condexp_L1 μ m hm hfn_int hf_int h_L1

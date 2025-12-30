@@ -199,8 +199,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       have h_mul_eq_indicator :
           (fun ω => μ[f|mW] ω * gB ω) = (Z ⁻¹' B).indicator (μ[f|mW]) := by
         funext ω; by_cases hω : ω ∈ Z ⁻¹' B
-        · simp [hgB_def, hω, Set.indicator_of_mem hω, mul_one]
-        · simp [hgB_def, hω, Set.indicator_of_notMem hω, mul_zero]
+        · simp only [hgB_def, Set.indicator_of_mem hω, mul_one]
+        · simp only [hgB_def, Set.indicator_of_notMem hω, mul_zero]
 
       -- Product integrability: rewrite to indicator, then use Integrable.indicator
       have hint_prod : Integrable (fun ω => μ[f | mW] ω * gB ω) μ := by
@@ -334,8 +334,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                 -- First: prove pointwise equality f * gB = (Z⁻¹B).indicator f
                 have h_fg_indicator : (fun ω => f ω * gB ω) = (Z ⁻¹' B).indicator f := by
                   funext ω; by_cases hω : ω ∈ Z ⁻¹' B
-                  · simp [hgB_def, hω, Set.indicator_of_mem hω, mul_one]
-                  · simp [hgB_def, hω, Set.indicator_of_notMem hω, mul_zero]
+                  · simp only [hgB_def, Set.indicator_of_mem hω, mul_one]
+                  · simp only [hgB_def, Set.indicator_of_notMem hω, mul_zero]
                 -- Second: rewrite integral
                 calc ∫ ω in W ⁻¹' C, (f ω * gB ω) ∂μ
                     = ∫ ω in W ⁻¹' C, (Z ⁻¹' B).indicator f ω ∂μ := by

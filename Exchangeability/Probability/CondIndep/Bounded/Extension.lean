@@ -79,7 +79,7 @@ lemma condIndep_simpleFunc_left
     intro n
     -- mW = MeasurableSpace.comap W inferInstance by definition
     have := @condIndep_simpleFunc Ω α β γ m₀ _ _ _ μ _ Y Z W hCI φ (sψ n) hY hZ
-    convert this using 2 <;> rfl
+    convert this using 2
 
   -- Step 2: Prove set integrals are equal for all mW-measurable sets
   have hC_sets : ∀ C, MeasurableSet[mW] C →
@@ -177,53 +177,29 @@ lemma condIndep_simpleFunc_left
         simpa [Real.norm_eq_abs] using
           ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_bdd
 
-      -- Step 5a: Convert L¹ convergence to integral form
-      have h_conv : Filter.Tendsto (fun n => ∫ ω, ‖((sψ n) ∘ Z) ω - (ψ ∘ Z) ω‖ ∂μ)
-                      Filter.atTop (nhds 0) := by
-        have h_diff_int : ∀ n, Integrable (((sψ n) ∘ Z) - (ψ ∘ Z)) μ := by
-          intro n
-          have h1 : Integrable ((sψ n) ∘ Z) μ := ((sψ n).integrable_of_isFiniteMeasure).comp_measurable hZ
-          have h2 : Integrable (ψ ∘ Z) μ := by
-            refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
-            filter_upwards [hψ_bdd] with ω hω
-            simp only [Function.comp_apply, Set.mem_Icc]
-            exact abs_le.mp hω
-          exact h1.sub h2
-        have h_int_bound : Integrable (fun _ : Ω => (2 * Mψ : ℝ)) μ := integrable_const _
-        have hMψ_nn : 0 ≤ Mψ := by
-          rcases hψ_bdd.exists with ⟨ω, hω⟩
-          exact (abs_nonneg _).trans hω
-        have h_bound : ∀ n, ∀ᵐ ω ∂μ, ‖((sψ n) ∘ Z) ω - (ψ ∘ Z) ω‖ ≤ 2 * Mψ := by
-          intro n
-          filter_upwards [hψ_bdd] with ω hω
-          calc ‖((sψ n) ∘ Z) ω - (ψ ∘ Z) ω‖
-              = |(sψ n (Z ω)) - ψ (Z ω)| := by simp [Real.norm_eq_abs]
-            _ ≤ |sψ n (Z ω)| + |ψ (Z ω)| := by
-                have := abs_add_le (sψ n (Z ω)) (-(ψ (Z ω)))
-                simp only [abs_neg, ← sub_eq_add_neg] at this
-                exact this
-            _ ≤ |ψ (Z ω)| + |ψ (Z ω)| := by linarith [h_sψ_bdd n (Z ω)]
-            _ ≤ Mψ + Mψ := by linarith
-            _ = 2 * Mψ := by ring
-        have h_tendsto_pt : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => ‖((sψ n) ∘ Z) ω - (ψ ∘ Z) ω‖) Filter.atTop (nhds 0) := by
-          filter_upwards [] with ω
-          have h1 : Filter.Tendsto (fun n => (sψ n) (Z ω)) Filter.atTop (nhds (ψ (Z ω))) :=
-            h_sψ_tendsto (Z ω)
-          have h2 : Filter.Tendsto (fun n => (sψ n (Z ω)) - ψ (Z ω)) Filter.atTop (nhds 0) := by
-            have := h1.sub (tendsto_const_nhds (x := ψ (Z ω)))
-            simp only [sub_self] at this
-            exact this
-          exact tendsto_norm_zero.comp h2
-        have h_conv' : Filter.Tendsto (fun n => ∫ ω, ‖((sψ n) ∘ Z) ω - (ψ ∘ Z) ω‖ ∂μ)
-            Filter.atTop (nhds (∫ _ω, (0 : ℝ) ∂μ)) := by
-          refine tendsto_integral_of_dominated_convergence (fun _ => 2 * Mψ) ?_ h_int_bound ?_ h_tendsto_pt
-          · intro n; exact (h_diff_int n).aestronglyMeasurable.norm
-          · intro n
-            filter_upwards [h_bound n] with ω hω
-            simp only [Real.norm_eq_abs, abs_abs]
-            exact hω
-        simp only [integral_zero] at h_conv'
-        exact h_conv'
+      -- Step 5a: L¹ convergence of sψ n ∘ Z → ψ ∘ Z using helper lemma
+      have hMψ_nn : 0 ≤ Mψ := by
+        rcases hψ_bdd.exists with ⟨ω, hω⟩
+        exact (abs_nonneg _).trans hω
+      have hsψZ_int : ∀ n, Integrable ((sψ n) ∘ Z) μ := fun n =>
+        ((sψ n).integrable_of_isFiniteMeasure).comp_measurable hZ
+      have hψZ_int' : Integrable (ψ ∘ Z) μ := by
+        refine Integrable.of_mem_Icc (-Mψ) Mψ (hψ_meas.comp hZ).aemeasurable ?_
+        filter_upwards [hψ_bdd] with ω hω; simp only [Function.comp_apply, Set.mem_Icc]; exact abs_le.mp hω
+      have h_bound : ∀ n, ∀ᵐ ω ∂μ, |((sψ n) ∘ Z) ω - (ψ ∘ Z) ω| ≤ 2 * Mψ := by
+        intro n
+        filter_upwards [hψ_bdd] with ω hω
+        have h_tri := abs_add_le ((sψ n) (Z ω)) (-(ψ (Z ω)))
+        simp only [abs_neg, ← sub_eq_add_neg, Function.comp_apply] at h_tri ⊢
+        calc |(sψ n) (Z ω) - ψ (Z ω)|
+            ≤ |(sψ n) (Z ω)| + |ψ (Z ω)| := h_tri
+          _ ≤ |ψ (Z ω)| + |ψ (Z ω)| := by linarith [h_sψ_bdd n (Z ω)]
+          _ ≤ 2 * Mψ := by linarith
+      have h_tendsto' : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => ((sψ n) ∘ Z) ω) Filter.atTop (nhds ((ψ ∘ Z) ω)) :=
+        ae_of_all μ (fun ω => h_sψ_tendsto (Z ω))
+      have h_conv : Filter.Tendsto (fun n => ∫ ω, |((sψ n) ∘ Z) ω - (ψ ∘ Z) ω| ∂μ)
+                      Filter.atTop (nhds 0) :=
+        @tendsto_L1_of_pointwise_dominated Ω m₀ μ _ _ _ Mψ hMψ_nn hsψZ_int hψZ_int' h_bound h_tendsto'
 
       -- Step 5b: Push through conditional expectation
       have h_ce_conv : Filter.Tendsto
@@ -277,7 +253,7 @@ lemma condIndep_simpleFunc_left
               ≤ ∫ ω, Mφ * |μ[((sψ n) ∘ Z) | mW] ω - μ[(ψ ∘ Z) | mW] ω| ∂μ := by
                 exact integral_mono_ae h_lhs_int h_rhs_int h_bd
             _ = Mφ * ∫ ω, |μ[((sψ n) ∘ Z) | mW] ω - μ[(ψ ∘ Z) | mW] ω| ∂μ := by
-                rw [integral_mul_left]
+                rw [integral_const_mul]
 
       -- Step 5d: Set integral convergence from global L¹ convergence
       have h_rewrite : ∀ n ω,
@@ -597,75 +573,30 @@ lemma condIndep_bddMeas_extend_left
         rcases hφ_bdd.exists with ⟨ω, hω⟩
         exact (abs_nonneg _).trans hω
 
+      -- L¹ convergence of sφ n ∘ Y → φ ∘ Y using helper lemma
+      have hφY_int : Integrable (φ ∘ Y) μ := by
+        refine Integrable.of_mem_Icc (-Mφ) Mφ (hφ_meas.comp hY).aemeasurable ?_
+        filter_upwards [hφ_bdd] with ω hω; simp only [Function.comp_apply, Set.mem_Icc]; exact abs_le.mp hω
+      have h_bound_φ : ∀ n, ∀ᵐ ω ∂μ, |((sφ n) ∘ Y) ω - (φ ∘ Y) ω| ≤ 2 * Mφ := by
+        intro n
+        filter_upwards [hφ_bdd] with ω hω
+        have h_tri := abs_add_le ((sφ n) (Y ω)) (-(φ (Y ω)))
+        simp only [abs_neg, ← sub_eq_add_neg, Function.comp_apply] at h_tri ⊢
+        calc |(sφ n) (Y ω) - φ (Y ω)|
+            ≤ |(sφ n) (Y ω)| + |φ (Y ω)| := h_tri
+          _ ≤ |φ (Y ω)| + |φ (Y ω)| := by linarith [h_sφ_bdd n (Y ω)]
+          _ ≤ 2 * Mφ := by linarith
+      have h_tendsto_φ : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => ((sφ n) ∘ Y) ω) Filter.atTop (nhds ((φ ∘ Y) ω)) :=
+        ae_of_all μ (fun ω => h_sφ_tendsto (Y ω))
       have h_sφ_L1 : Filter.Tendsto (fun n => ∫ ω, |((sφ n) ∘ Y) ω - (φ ∘ Y) ω| ∂μ)
-          Filter.atTop (nhds 0) := by
-        -- DCT with bound 2*Mφ
-        have h_bound : ∀ n, ∀ᵐ ω ∂μ, |((sφ n) ∘ Y) ω - (φ ∘ Y) ω| ≤ 2 * Mφ := by
-          intro n
-          filter_upwards [hφ_bdd] with ω hω
-          have hs : |(sφ n) (Y ω)| ≤ |φ (Y ω)| := h_sφ_bdd n (Y ω)
-          -- Use triangle: |a - b| = |a + (-b)| ≤ |a| + |-b| = |a| + |b|
-          have h_tri : |((sφ n) ∘ Y) ω - (φ ∘ Y) ω| ≤ |((sφ n) ∘ Y) ω| + |(φ ∘ Y) ω| := by
-            calc |((sφ n) ∘ Y) ω - (φ ∘ Y) ω|
-                = |((sφ n) ∘ Y) ω + (-(φ ∘ Y) ω)| := by ring_nf
-              _ ≤ |((sφ n) ∘ Y) ω| + |-(φ ∘ Y) ω| := abs_add_le _ _
-              _ = |((sφ n) ∘ Y) ω| + |(φ ∘ Y) ω| := by rw [abs_neg]
-          calc |((sφ n) ∘ Y) ω - (φ ∘ Y) ω|
-              ≤ |((sφ n) ∘ Y) ω| + |(φ ∘ Y) ω| := h_tri
-            _ = |(sφ n) (Y ω)| + |φ (Y ω)| := by simp [Function.comp_apply]
-            _ ≤ |φ (Y ω)| + |φ (Y ω)| := by linarith [hs]
-            _ = 2 * |φ (Y ω)| := by ring
-            _ ≤ 2 * Mφ := by nlinarith [hω, abs_nonneg (φ (Y ω))]
-
-        have h_tendsto_pt : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => |((sφ n) ∘ Y) ω - (φ ∘ Y) ω|)
-            Filter.atTop (nhds 0) := by
-          filter_upwards [] with ω
-          have h1 : Filter.Tendsto (fun n => (sφ n) (Y ω)) Filter.atTop (nhds (φ (Y ω))) :=
-            h_sφ_tendsto (Y ω)
-          have h2 : Filter.Tendsto (fun _ : ℕ => (φ ∘ Y) ω) Filter.atTop (nhds ((φ ∘ Y) ω)) :=
-            tendsto_const_nhds
-          have h3 : Filter.Tendsto (fun n => (sφ n) (Y ω) - (φ ∘ Y) ω)
-              Filter.atTop (nhds ((φ (Y ω)) - (φ ∘ Y) ω)) := h1.sub h2
-          simp only [Function.comp_apply, sub_self] at h3
-          have h4 : Filter.Tendsto (fun n => |(sφ n) (Y ω) - φ (Y ω)|)
-              Filter.atTop (nhds |0|) := (continuous_abs.tendsto 0).comp h3
-          simp only [abs_zero, Function.comp_apply] at h4 ⊢
-          exact h4
-
-        have h_int_bound : Integrable (fun _ => 2 * Mφ) μ := integrable_const _
-
-        -- Use tendsto_integral_of_dominated_convergence
-        -- Get integrability from bounded functions
-        have hφ_int' : Integrable (φ ∘ Y) μ := by
-          refine Integrable.of_mem_Icc (-Mφ) Mφ (hφ_meas.comp hY).aemeasurable ?_
-          filter_upwards [hφ_bdd] with ω hω
-          simp only [Function.comp_apply, Set.mem_Icc]
-          exact abs_le.mp hω
-        have h_diff_int : ∀ n, Integrable (fun ω => ((sφ n) ∘ Y) ω - (φ ∘ Y) ω) μ :=
-          fun n => (hsφ_int n).sub hφ_int'
-
-        have h_conv' : Filter.Tendsto (fun n => ∫ ω, ‖((sφ n) ∘ Y) ω - (φ ∘ Y) ω‖ ∂μ)
-            Filter.atTop (nhds (∫ _ω, (0 : ℝ) ∂μ)) := by
-          refine tendsto_integral_of_dominated_convergence (fun _ => 2 * Mφ) ?_ h_int_bound ?_ h_tendsto_pt
-          · intro n; exact (h_diff_int n).aestronglyMeasurable.norm
-          · intro n
-            filter_upwards [h_bound n] with ω hω
-            simp only [Real.norm_eq_abs, abs_abs]
-            exact hω
-        simp only [integral_zero] at h_conv'
-        convert h_conv' using 2 <;> (ext ω; exact Real.norm_eq_abs _)
+          Filter.atTop (nhds 0) :=
+        @tendsto_L1_of_pointwise_dominated Ω m₀ μ _ _ _ Mφ hMφ_nn hsφ_int hφY_int h_bound_φ h_tendsto_φ
 
       -- Step 2b: Apply tendsto_condexp_L1 to get CE convergence in L¹
-      have hφ_int : Integrable (φ ∘ Y) μ := by
-        refine Integrable.of_mem_Icc (-Mφ) Mφ (hφ_meas.comp hY).aemeasurable ?_
-        filter_upwards [hφ_bdd] with ω hω
-        simp only [Function.comp_apply, Set.mem_Icc]
-        exact abs_le.mp hω
-
       have h_ce_L1 : Filter.Tendsto
           (fun n => ∫ ω, |μ[((sφ n) ∘ Y) | mW] ω - μ[(φ ∘ Y) | mW] ω| ∂μ)
           Filter.atTop (nhds 0) :=
-        tendsto_condexp_L1 μ mW hmW_le hsφ_int hφ_int h_sφ_L1
+        tendsto_condexp_L1 μ mW hmW_le hsφ_int hφY_int h_sφ_L1
 
       -- Step 2c: Product L¹ convergence via bounded factor
       -- |(CE[sφn] - CE[φ]) * CE[ψ]| ≤ |CE[sφn] - CE[φ]| * Mψ
@@ -719,7 +650,7 @@ lemma condIndep_bddMeas_extend_left
               ≤ ∫ ω, Mψ * |μ[((sφ n) ∘ Y) | mW] ω - μ[(φ ∘ Y) | mW] ω| ∂μ := by
                 exact integral_mono_ae h_lhs_int h_rhs_int h_bd
             _ = Mψ * ∫ ω, |μ[((sφ n) ∘ Y) | mW] ω - μ[(φ ∘ Y) | mW] ω| ∂μ := by
-                rw [integral_mul_left]
+                rw [integral_const_mul]
 
       -- Step 2d: Set integral convergence from global L¹ convergence
       -- Rewrite as difference of products
