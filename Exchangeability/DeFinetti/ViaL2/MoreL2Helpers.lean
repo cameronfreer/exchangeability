@@ -2954,21 +2954,34 @@ lemma directing_measure_integral
     simp only [zero_add] at hM₁ hM₂
     have h1 := hM₁ m hm₁
     have h2 := hM₂ m hm₂
-    -- The triangle inequality for integrals gives:
-    -- ∫|α - ∫fdν| ≤ ∫|avg - α| + ∫|avg - ∫fdν| < ε + ε = 2ε
-    -- But by definition: ε = (∫|α - ∫fdν|) / 3
-    -- So ∫|α - ∫fdν| = 3ε < 2ε, contradiction for ε > 0
-    --
-    -- Mathematical proof:
-    -- Let avg(ω) = (1/m) Σ f(X_{k+1}(ω)). By triangle inequality:
-    --   |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν|  (pointwise)
-    -- Integrating:
-    --   ∫|α - ∫fdν|dμ ≤ ∫|α - avg|dμ + ∫|avg - ∫fdν|dμ < ε + ε = 2ε
-    -- Since ε = (∫|α - ∫fdν|dμ) / 3, we get 3ε < 2ε, contradiction.
-    --
-    -- Technical implementation requires showing avg is integrable (which it is,
-    -- since f is bounded and the sum is finite). We defer this bookkeeping.
-    sorry
+    -- Define the average function for index m
+    let avg : Ω → ℝ := fun ω => (1/(m:ℝ)) * ∑ k : Fin m, f (X (0 + k.val + 1) ω)
+    -- Triangle inequality: |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν| (pointwise)
+    have h_tri : ∀ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|
+        ≤ |alpha ω - avg ω| + |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| := by
+      intro ω
+      calc |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|
+          = |(alpha ω - avg ω) + (avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))| := by ring_nf
+        _ ≤ |alpha ω - avg ω| + |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| :=
+          abs_add_le (alpha ω - avg ω) _
+    -- Integrating and using h1, h2
+    -- Note: h1 has |avg - alpha|, we have |alpha - avg|, but these are equal by abs_sub_comm
+    -- The proof involves:
+    -- 1. h1' converts h1 using abs_sub_comm
+    -- 2. h_le applies triangle inequality for integrals (integral_add + integral_mono)
+    -- 3. h_lt_2ε combines via linarith
+    -- All require integrability of avg (bounded by M since f bounded)
+    have h_lt_2ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < 2 * ε := by
+      -- Proof sketch:
+      -- 1. h1 gives ∫|A_m - alpha| < ε (convert via abs_sub_comm)
+      -- 2. h2 gives ∫|A_m - ∫fdν| < ε
+      -- 3. Triangle: ∫|alpha - ∫fdν| ≤ ∫|alpha - A_m| + ∫|A_m - ∫fdν| < 2ε
+      -- Technical requirements: integrability (all bounded), integral triangle inequality
+      sorry
+    -- But 3ε = ∫|α-∫fdν|, so 3ε < 2ε, contradiction for ε > 0
+    have h_eq_3ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ = 3 * ε := by
+      simp only [hε_def]; ring
+    linarith
 
   -- Conclude alpha = ∫ f dν a.e.
   have h_abs_int : Integrable (fun ω => |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|) μ := by
