@@ -2682,16 +2682,45 @@ lemma directing_measure_integral
   -- Triangle inequality completes the proof.
 
   -- The technical implementation requires ~100 lines setting up the approximation.
-  -- For now, we defer to the established mathematics and use sorry.
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- h_L1_conv: Cesàro averages of f(X_i) converge to ∫ f dν in L¹
+  --
+  -- This is the core π-λ argument. The goal is to prove L¹ convergence
+  -- directly to ∫ f dν (not to alpha), which is then used in uniqueness.
+  --
+  -- PROOF STRUCTURE:
+  --
+  -- Step 1: Base case (indicators of Iic t)
+  --   - weighted_sums_converge_L1 gives: Cesàro averages → alphaIic t in L¹
+  --   - h_base_connection gives: alphaIic t = ν(Iic t).toReal a.e.
+  --   - ∫ 1_{Iic t} dν = ν(Iic t).toReal (definition)
+  --   - Combined: Cesàro averages → ∫ 1_{Iic t} dν in L¹
+  --   (The last step uses: if f_n → f in L¹ and f = g a.e., then f_n → g in L¹)
+  --
+  -- Step 2: π-λ extension (indicators of all Borel sets)
+  --   Define predicate P(S) := "Cesàro averages of 1_S converge to ∫ 1_S dν in L¹"
+  --   Show P is preserved under:
+  --   - Complement: 1_{Sᶜ} = 1 - 1_S, use weighted_sums_converge_L1_one_sub
+  --   - Countable disjoint union: 1_{⋃ Sᵢ} = Σ 1_{Sᵢ}, use weighted_sums_converge_L1_add
+  --     (requires some care with the countable sum, but bounded by 1)
+  --   By induction_on_inter: P holds for all Borel sets
+  --
+  -- Step 3: Linearity (simple functions)
+  --   For s = Σᵢ cᵢ · 1_{Sᵢ}, use weighted_sums_converge_L1_smul and _add
+  --   Result: Cesàro averages of s → ∫ s dν in L¹
+  --
+  -- Step 4: Approximation (bounded measurable f)
+  --   - Approximate f by simple functions s_n with |s_n| ≤ M (SimpleFunc.approxOn)
+  --   - s_n → f pointwise
+  --   - By Step 3: Cesàro averages of s_n → ∫ s_n dν in L¹
+  --   - By DCT: ∫ s_n dν → ∫ f dν and Cesàro averages of f are close to averages of s_n
+  --   - Triangle inequality completes the proof
+  --
+  -- TECHNICAL ESTIMATE: ~100-150 lines to implement fully
+  -- ═══════════════════════════════════════════════════════════════════════════
   have h_L1_conv : ∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
       ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) -
         ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε := by
-    -- Technical implementation: see documentation above
-    -- Core mathematical argument:
-    -- 1. Approximate f by step functions s_n built from Ioc intervals
-    -- 2. For each s_n, use linearity (h_base_connection + weighted_sums_converge_L1_add)
-    --    to show Cesàro averages converge to ∫ s_n dν in L¹
-    -- 3. Pass to limit via DCT (uniform bound |f|, |s_n| ≤ M)
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
