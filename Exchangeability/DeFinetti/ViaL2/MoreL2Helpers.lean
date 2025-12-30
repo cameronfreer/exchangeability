@@ -2168,6 +2168,83 @@ lemma directing_measure_integral
   -- The complete formal implementation is deferred. The mathematical argument above
   -- is sound: both functionals (L¹ limit and integral against ν) agree on the
   -- generating π-system and satisfy the required linearity/continuity properties.
+  --
+  -- ════════════════════════════════════════════════════════════════════════════════
+  -- IMPLEMENTATION: Use measure-uniqueness approach
+  -- ════════════════════════════════════════════════════════════════════════════════
+  --
+  -- KEY INSIGHT: For bounded measurable f, both ∫ f dν(ω) and α(ω) are
+  -- uniquely determined by the measure ν(ω). Since:
+  -- 1. ν(ω) is defined via Stieltjes extension from alphaIic
+  -- 2. The base case shows ν(Iic t) = alphaIic t a.e.
+  -- 3. Both the integral ∫ f dν and the L¹ limit α are linear and continuous
+  -- 4. They agree on the generating π-system {Iic t}
+  -- By uniqueness of continuous linear extension, they must agree on all bounded f.
+  --
+  -- The formal proof uses:
+  -- 1. ae_induction_on_inter for π-λ extension to all Borel set indicators
+  -- 2. Linearity for simple functions
+  -- 3. SimpleFunc.approxOn + DCT for bounded measurable
+  --
+  -- For now, we use the measure-uniqueness principle: the integral of any bounded
+  -- measurable function against a probability measure is uniquely determined by
+  -- the measure's CDF values on the generating π-system.
+
+  -- STEP 1: Connect to the base case
+  -- The L¹ limit for indicators of Iic t equals ν(Iic t).toReal a.e.
+  have h_base_connection : ∀ t : ℝ, ∀ᵐ ω ∂μ,
+      alphaIic X hX_contract hX_meas hX_L2 t ω =
+      (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal := by
+    intro t
+    filter_upwards [base t] with ω hω
+    -- hω : alphaIic t ω = ∫ 1_{Iic t} dν(ω)
+    -- Goal: alphaIic t ω = ν(ω)(Iic t).toReal
+    -- Use the fact that ∫ s.indicator 1 dν = ν.real s = (ν s).toReal
+    rw [hω]
+    -- Goal: ∫ x, (Set.Iic t).indicator (fun _ => 1) x ∂ν(ω) = (ν(ω)(Set.Iic t)).toReal
+    have h : (Set.Iic t).indicator (fun _ : ℝ => (1 : ℝ)) = (Set.Iic t).indicator 1 := rfl
+    rw [h, integral_indicator_one measurableSet_Iic, Measure.real_def]
+
+  -- STEP 2: The measure ν(ω) is uniquely determined by its CDF
+  -- (This is the fundamental property of Stieltjes measures)
+  -- ν(ω) = directing_measure, which is the Stieltjes extension of alphaIic
+
+  -- STEP 3: For bounded measurable f, the integral ∫ f dν is determined by ν
+  -- This is standard measure theory: the integral is a function of the measure
+
+  -- STEP 4: The L¹ limit α is built from the same Cesàro averages as alphaIic
+  -- By consistency of the construction, α must agree with ∫ f dν a.e.
+
+  -- TECHNICAL ARGUMENT:
+  -- For indicators 1_{Iic t}: L¹ limit = alphaIic t = ν(Iic t).toReal a.e. (base)
+  -- For simple functions: use linearity of L¹ limits (weighted_sums_converge_L1_add, _smul)
+  -- For bounded measurable f: approximate by simple functions
+
+  -- Define the L¹ limit for indicator 1_f = f (since f is the function we're approximating)
+  -- Actually, α is already the L¹ limit for f from weighted_sums_converge_L1
+
+  -- The key is that both ∫ f dν and α are uniquely determined by:
+  -- 1. The function f
+  -- 2. The underlying random measure determined by alphaIic
+
+  -- Since both agree on the generating set (indicators of Iic t by base case),
+  -- and extend linearly/continuously, they must agree everywhere.
+
+  -- For the formal proof, we would need the following chain:
+  -- 1. Show that the L¹ limit for any indicator 1_S equals ν(S).toReal a.e.
+  --    (via ae_induction_on_inter)
+  -- 2. Show that for simple functions s = Σ c_i 1_{S_i}, the L¹ limit equals ∫ s dν a.e.
+  --    (via linearity lemmas)
+  -- 3. Approximate f by simple functions s_n with |s_n| ≤ M uniformly
+  -- 4. By DCT, both the L¹ limits and integrals converge
+  -- 5. By uniqueness, α = ∫ f dν a.e.
+
+  -- The mathematical content is complete. For the full formal proof (~200 lines),
+  -- see the detailed steps in comments above.
+
+  -- TODO: Replace with formal π-λ induction proof
+  -- The key missing piece is the ae_induction_on_inter application to extend
+  -- from Iic t to all Borel sets.
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
@@ -3827,6 +3904,41 @@ lemma directing_measure_bridge
           -- and eliminates the circularity of the original U-stat approach.
           -- The implementation requires ~150 lines of additional bookkeeping
           -- for the L² bounds applied to block-separated indices.
+          --
+          -- ════════════════════════════════════════════════════════════════════════
+          -- BLOCK-SEPARATED PROOF OUTLINE
+          -- ════════════════════════════════════════════════════════════════════════
+          --
+          -- DEFINITIONS:
+          -- • p_block N i ω := (1/N) * ∑ k : Fin N, 1_{B_i}(X_{i*N+k}(ω))
+          -- • q_block N ω := ∏ i : Fin m, p_block N i ω
+          --
+          -- STEP 1: Every term in expansion is StrictMono
+          -- Expanding: q_block N = (1/N^m) * ∑_{φ : Fin m → Fin N} ∏_i 1_{B_i}(X_{i*N+φ(i)})
+          -- For each φ, the function i ↦ i*N + φ(i) is StrictMono by block_index_strictMono.
+          --
+          -- STEP 2: Contractability gives constant expectations
+          -- Since each i ↦ i*N + φ(i) is StrictMono:
+          --   E[∏_i 1_{B_i}(X_{i*N+φ(i)})] = E[∏_i 1_{B_i}(X_i)]   (by allStrictMono_eq)
+          -- This holds for ALL φ, not just injective ones!
+          --
+          -- STEP 3: E[q_block N] = E_prod for all N > 0
+          --   E[q_block N] = (1/N^m) ∑_φ E[∏_i 1_{B_i}(X_i)]
+          --                = (N^m / N^m) * E_prod = E_prod
+          --
+          -- STEP 4: L¹ convergence of block averages
+          -- By directing_measure_integral (with offset indices):
+          --   p_block N i → ν(·)(B_i).toReal in L¹
+          -- By prod_tendsto_L1_of_L1_tendsto:
+          --   q_block N → ∏_i ν(·)(B_i).toReal in L¹
+          --
+          -- STEP 5: Conclude by uniqueness
+          --   E_prod = lim E[q_block N]  (constant sequence)
+          --          = E[lim q_block N]  (L¹ convergence)
+          --          = E[∏_i ν(·)(B_i)]
+          --
+          -- The key lemma block_index_strictMono (line ~2853) is proven.
+          -- TODO: Implement Steps 1-5 using the existing infrastructure.
           sorry
       _ = ∫ ω, ∏ j, (directing_measure X hX_contract hX_meas hX_L2 ω (B (σ j))).toReal ∂μ := by
           apply integral_congr_ae
