@@ -855,29 +855,36 @@ private theorem contractability_conditional_expectation
 ## Step 5: α_n = E_n f(X_{n+1}) = ν^f
 -/
 
-/-- The limit α_n satisfies α_n = E_n f(X_{n+1}) where E_n is conditional
-expectation on σ(X_{n+1}, X_{n+2}, ...).
+/-- The L¹ limit α satisfies α = ∫ f dν a.s. for the directing measure ν.
 
-Moreover, α_n = ν^f a.s. for some directing measure ν.
+For bounded measurable f, the Cesàro averages (1/m) Σₖ f(X_{n+k+1}) converge
+in L¹ to a limit α, which equals the integral ∫ f dν(ω) a.e.
 
 **Kallenberg**: "which implies α_n = E_n f(ξ_{n+1}) = ν^f a.s."
 
-TODO: Show this characterizes α_n as the conditional expectation.
+The key insight is that α is an OUTPUT (the L¹ limit), not an input.
+The original statement taking α as input was incorrect since it claimed
+α_n = ∫ f dν for ALL n, but the RHS is independent of n.
 -/
 theorem alpha_is_conditional_expectation
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (alpha : ℕ → Ω → ℝ) :
-    ∃ (nu : Ω → Measure ℝ),
+    (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
+      Measurable alpha ∧
+      MemLp alpha 1 μ ∧
       (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-      -- tail-measurable kernel: spelled out in Step 6
-      (Measurable fun ω => nu ω (Set.univ)) ∧
-      -- α_n = ∫ f dν a.e. (the "identification" statement)
-      (∀ n, ∀ᵐ ω ∂μ, alpha n ω = ∫ x, f x ∂(nu ω)) := by
-  -- Wrapper for the axiomatized Step 5 result from MoreL2Helpers
-  exact Helpers.alpha_is_conditional_expectation_packaged X hX_contract hX_meas f hf_meas alpha
+      (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
+      -- L¹ convergence: Cesàro averages converge to alpha
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+      -- Identification: alpha equals the integral against nu
+      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
+  -- Wrapper for the axiomatized Step 5 result from BlockAverages
+  exact Helpers.alpha_is_conditional_expectation_packaged X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
 /-!
 ## Step 6: Build directing measure ν via Carathéodory extension
