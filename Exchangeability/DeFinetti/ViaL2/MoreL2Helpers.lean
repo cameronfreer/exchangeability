@@ -4086,7 +4086,97 @@ lemma directing_measure_bridge
             -- - integral_finset_sum: ∫ ∑ f = ∑ ∫ f (with integrability)
             -- - h_term_eq: each term equals E_prod by contractability
             -- ══════════════════════════════════════════════════════════════════════
-            sorry
+
+            -- Step 1: Unfold definitions
+            simp only [q_block, p_block, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+
+            -- Step 2: Rewrite ∏ i, (c * ∑ k, f i k) = ∏ i, ∑ k, c * f i k
+            have h_pull_scalar : ∀ ω, ∏ i : Fin (n + 1), (1 / (N : ℝ)) * ∑ k : Fin N, I i (i.val * N + k.val) ω =
+                ∏ i : Fin (n + 1), ∑ k : Fin N, (1 / (N : ℝ)) * I i (i.val * N + k.val) ω := by
+              intro ω
+              congr 1 with i
+              exact Finset.mul_sum Finset.univ _ _
+            simp_rw [h_pull_scalar]
+
+            -- Step 3: Apply Fintype.prod_sum to expand ∏ i, ∑ k, f i k = ∑ φ, ∏ i, f i (φ i)
+            have h_prod_sum : ∀ ω, ∏ i : Fin (n + 1), ∑ k : Fin N, (1 / (N : ℝ)) * I i (i.val * N + k.val) ω =
+                ∑ φ : Fin (n + 1) → Fin N, ∏ i : Fin (n + 1), (1 / (N : ℝ)) * I i (i.val * N + (φ i).val) ω := by
+              intro ω
+              exact Fintype.prod_sum (fun (i : Fin (n + 1)) (k : Fin N) => (1 / (N : ℝ)) * I i (i.val * N + k.val) ω)
+            simp_rw [h_prod_sum]
+
+            -- Step 4: Factor out (1/N)^(n+1) from the product
+            have h_factor : ∀ ω, ∀ φ : Fin (n + 1) → Fin N,
+                ∏ i : Fin (n + 1), (1 / (N : ℝ)) * I i (i.val * N + (φ i).val) ω =
+                (1 / (N : ℝ)) ^ (n + 1) * ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω := by
+              intro ω φ
+              rw [Finset.prod_mul_distrib, Finset.prod_const, Finset.card_fin]
+            have h_sum_factor : ∀ ω, ∑ φ : Fin (n + 1) → Fin N,
+                ∏ i : Fin (n + 1), (1 / (N : ℝ)) * I i (i.val * N + (φ i).val) ω =
+                ∑ φ : Fin (n + 1) → Fin N,
+                (1 / (N : ℝ)) ^ (n + 1) * ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω := by
+              intro ω
+              congr 1 with φ
+              exact h_factor ω φ
+            simp_rw [h_sum_factor]
+
+            -- Step 5: Pull the constant out of the sum
+            have h_pull_const : ∀ ω, ∑ φ : Fin (n + 1) → Fin N,
+                (1 / (N : ℝ)) ^ (n + 1) * ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω =
+                (1 / (N : ℝ)) ^ (n + 1) * ∑ φ : Fin (n + 1) → Fin N,
+                ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω := by
+              intro ω
+              rw [← Finset.mul_sum]
+            simp_rw [h_pull_const]
+
+            -- Step 6: Pull constant out of integral
+            rw [integral_const_mul]
+
+            -- Step 7: Use integral-sum interchange
+            -- Each term ∏ I is bounded (values in [0,1]^(n+1) so product in [0,1])
+            have h_integ : ∀ φ : Fin (n + 1) → Fin N,
+                Integrable (fun ω => ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω) μ := by
+              intro φ
+              -- Product of indicator functions is in [0,1], hence bounded
+              -- On a probability space, bounded measurable functions are integrable
+              have h_bound : ∀ ω, (∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω) ∈ Set.Icc 0 1 := by
+                intro ω
+                constructor
+                · apply Finset.prod_nonneg
+                  intro i _
+                  simp only [I, Set.indicator]
+                  split_ifs <;> norm_num
+                · apply Finset.prod_le_one
+                  · intro i _
+                    simp only [I, Set.indicator]
+                    split_ifs <;> norm_num
+                  · intro i _
+                    simp only [I, Set.indicator]
+                    split_ifs <;> norm_num
+              have h_meas : Measurable (fun ω => ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω) := by
+                apply Finset.measurable_prod
+                intro i _
+                exact (measurable_const.indicator (hB (σ i))).comp (hX_meas _)
+              exact memLp_one_iff_integrable.mp
+                (memLp_of_bounded (Filter.Eventually.of_forall h_bound) h_meas.aestronglyMeasurable 1)
+            rw [integral_finset_sum Finset.univ (fun φ _ => h_integ φ)]
+
+            -- Step 8: Apply h_term_eq to each term
+            have h_each_eq : ∀ φ : Fin (n + 1) → Fin N,
+                ∫ ω, ∏ i : Fin (n + 1), I i (i.val * N + (φ i).val) ω ∂μ = E_prod := by
+              intro φ
+              exact h_term_eq N hN φ
+            simp_rw [h_each_eq]
+
+            -- Step 9: Sum of constants
+            rw [Finset.sum_const, Finset.card_univ, Fintype.card_fun, Fintype.card_fin]
+            simp only [Fintype.card_fin, nsmul_eq_mul]
+
+            -- Step 10: Simplify (1/N)^(n+1) * N^(n+1) * E_prod = E_prod
+            have hN_pos : (0 : ℝ) < N := Nat.cast_pos.mpr hN
+            have hN_ne : (N : ℝ) ≠ 0 := ne_of_gt hN_pos
+            -- (1/N)^(n+1) * (N^(n+1) * E_prod) = E_prod
+            rw [Nat.cast_pow, one_div, ← mul_assoc, ← mul_pow, inv_mul_cancel₀ hN_ne, one_pow, one_mul]
 
           -- q_block N → ∏ r_funcs in L¹
           -- This uses directing_measure_integral with offset indices
