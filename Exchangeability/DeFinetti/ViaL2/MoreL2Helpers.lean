@@ -3016,11 +3016,26 @@ lemma directing_measure_integral
     -- 3. h_lt_2ε combines via linarith
     -- All require integrability of avg (bounded by M since f bounded)
     have h_lt_2ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < 2 * ε := by
-      -- Proof sketch:
-      -- 1. h1 gives ∫|A_m - alpha| < ε (convert via abs_sub_comm)
-      -- 2. h2 gives ∫|A_m - ∫fdν| < ε
-      -- 3. Triangle: ∫|alpha - ∫fdν| ≤ ∫|alpha - A_m| + ∫|A_m - ∫fdν| < 2ε
-      -- Technical requirements: integrability (all bounded), integral triangle inequality
+      -- ════════════════════════════════════════════════════════════════════════
+      -- Triangle inequality for L¹ integrals
+      -- ════════════════════════════════════════════════════════════════════════
+      -- Given:
+      --   h1: ∫|avg - alpha| < ε (from h_conv, uses zero_add simp)
+      --   h2: ∫|avg - ∫fdν| < ε (from h_L1_conv, uses zero_add simp)
+      --   h_tri: |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν| (pointwise, proved above)
+      --
+      -- Proof steps:
+      -- 1. h1' : ∫|alpha - avg| < ε (convert via abs_sub_comm and integral_congr_ae)
+      -- 2. h_avg_int : Integrable avg μ (Integrable.const_mul, integrable_finset_sum,
+      --    (integrable_const M).mono' with AEStronglyMeasurable)
+      -- 3. h_int1, h_int2 : integrability of |α - avg|, |avg - ∫fdν|
+      --    (use Integrable.sub.abs)
+      -- 4. Combine: ∫|α - ∫fdν| ≤ ∫(|α - avg| + |avg - ∫fdν|)  [integral_mono_of_nonneg]
+      --           = ∫|α - avg| + ∫|avg - ∫fdν|                  [integral_add]
+      --           < ε + ε = 2ε                                  [add_lt_add, h1', h2]
+      --
+      -- Technical complexity: type matching for h1 and h2 which use Fin m sums
+      -- Implementation: ~25 lines with careful term mode or convert tactics
       sorry
     -- But 3ε = ∫|α-∫fdν|, so 3ε < 2ε, contradiction for ε > 0
     have h_eq_3ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ = 3 * ε := by
