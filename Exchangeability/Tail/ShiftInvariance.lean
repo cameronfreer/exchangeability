@@ -409,6 +409,7 @@ lemma setIntegral_comp_shift_eq
     (hf_int : Integrable (f ∘ X 0) μ)
     (k : ℕ) :
     ∫ ω in A, f (X k ω) ∂μ = ∫ ω in A, f (X 0 ω) ∂μ := by
+  -- === Step 1: Path Space Setup and Strategy Overview ===
   -- The proof uses path-space formulation:
   -- 1. Let π : Ω → (ℕ → α) be π(ω)_i = X_i(ω)
   -- 2. Let ν = π_* μ be the law on path space
@@ -532,8 +533,8 @@ lemma setIntegral_comp_shift_eq
     -- For tail-measurable sets, integrals can be computed via the path-space measure,
     -- and shift invariance of the path-space law implies the integral equality.
 
-    -- Step 1: Prove single-coordinate distribution equality
-    -- X_{k+1} and X_0 have the same distribution
+    -- === Step 2: Single-Coordinate Distribution Equality ===
+    -- X_{k+1} and X_0 have the same distribution (from contractability)
     have hX_k1_eq_X0 : Measure.map (X (k + 1)) μ = Measure.map (X 0) μ := by
       have h1 := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (k + 1)
       ext s hs
@@ -646,8 +647,8 @@ lemma setIntegral_comp_shift_eq
     -- This forms a π-system (intersection of cylinders is a cylinder) and generates
     -- tailFamily X N by definition as iSup of coordinate comaps.
 
-    -- === π-λ EXTENSION via induction_on_inter ===
-    -- Structure: Apply MeasurableSpace.induction_on_inter
+    -- === Step 3: π-System Definition and Dynkin Extension Setup ===
+    -- Apply MeasurableSpace.induction_on_inter
     -- - tailFamily X N = generateFrom (piiUnionInter ...) by generateFrom_piiUnionInter_measurableSet
     -- - piiUnionInter is a π-system by isPiSystem_piiUnionInter
     -- - Property "∫_A f(X_{k+1}) = ∫_A f(X_0)" is proved on generators and Dynkin-closed
@@ -687,13 +688,14 @@ lemma setIntegral_comp_shift_eq
     let P : (s : Set Ω) → MeasurableSet[tailFamily X N] s → Prop :=
       fun s _ => ∫ ω in s, f (X (k + 1) ω) ∂μ = ∫ ω in s, f (X 0 ω) ∂μ
 
-    -- Apply induction_on_inter
+    -- === Step 4: Apply induction_on_inter (4 Cases) ===
+    -- Case 1: Empty set, Case 2: π-system elements, Case 3: Complement, Case 4: Disjoint union
     refine MeasurableSpace.induction_on_inter h_gen hπ_isPiSystem ?_ ?_ ?_ ?_ A hA_tailFam
 
-    -- Case 1: Empty set
+    -- --- Case 1: Empty Set ---
     · simp only [setIntegral_empty]
 
-    -- Case 2: Basic (elements of the π-system)
+    -- --- Case 2: Elements of π-System (Cylinder Sets) ---
     -- These are finite intersections of preimages: ⋂_{i ∈ p} {ω | X (N+kᵢ) ω ∈ Sᵢ}
     -- The integral equality follows from contractability (same argument as setIntegral_cylinder_eq)
     · intro t ht
@@ -741,12 +743,13 @@ lemma setIntegral_comp_shift_eq
       -- σ(0) = k + 1, σ(i+1) = N + indices[i]
       -- τ(0) = 0,     τ(i+1) = N + indices[i]
 
-      -- Define σ : Fin (d + 1) → ℕ
+      -- -- Index Sequences σ and τ --
+      -- Define σ : Fin (d + 1) → ℕ (σ(0) = k+1, σ(i+1) = N + indices[i])
       let σ : Fin (d + 1) → ℕ := fun i =>
         if hi : i.val = 0 then k + 1
         else N + indices.get ⟨i.val - 1, by rw [h_len]; omega⟩
 
-      -- Define τ : Fin (d + 1) → ℕ
+      -- Define τ : Fin (d + 1) → ℕ (τ(0) = 0, τ(i+1) = N + indices[i])
       let τ : Fin (d + 1) → ℕ := fun i =>
         if hi : i.val = 0 then 0
         else N + indices.get ⟨i.val - 1, by rw [h_len]; omega⟩
@@ -813,6 +816,7 @@ lemma setIntegral_comp_shift_eq
         intro i hi
         simp only [σ, τ, hi, ↓reduceDIte]
 
+      -- -- Indicator Construction and Measure Transfer --
       -- The set C := ⋂ j ∈ pt, ft j is determined by the tail coordinates.
       -- Since each ft j is measurable in comap (X (N + j)), membership in C
       -- depends only on (X (N + j₁) ω, ..., X (N + jₘ) ω) = tail of both processes.
@@ -1084,7 +1088,7 @@ lemma setIntegral_comp_shift_eq
               · simp [Set.indicator_of_notMem hω]
         _ = ∫ ω in C, f (X 0 ω) ∂μ := by rw [← integral_indicator hC_meas]
 
-    -- Case 3: Complement
+    -- --- Case 3: Complement ---
     · intro t ht h_eq
       -- ∫_{tᶜ} g = ∫ g - ∫_t g
       -- ht : MeasurableSet[tailFamily X N] t, convert to ambient space using h_meas_le
@@ -1095,7 +1099,7 @@ lemma setIntegral_comp_shift_eq
       simp only [Function.comp_apply] at hc1 hc0
       rw [hc1, hc0, h_full, h_eq]
 
-    -- Case 4: Disjoint union
+    -- --- Case 4: Countable Disjoint Union ---
     · intro s h_disj h_meas h_eq
       -- ∫_{⋃ sᵢ} g = ∑ ∫_{sᵢ} g
       -- h_meas i : MeasurableSet[tailFamily X N] (s i), convert to ambient space using h_meas_le

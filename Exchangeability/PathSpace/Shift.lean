@@ -40,6 +40,12 @@ This file provides a single canonical definition to avoid duplication across the
 
 open MeasureTheory
 
+/-- Path space: sequences indexed by ℕ taking values in α. -/
+abbrev PathSpace (α : Type*) := ℕ → α
+
+/-- Notation `Ω[α]` for path space `ℕ → α`. -/
+notation3 "Ω[" α "]" => PathSpace α
+
 namespace Exchangeability.PathSpace
 
 variable {α : Type*}
