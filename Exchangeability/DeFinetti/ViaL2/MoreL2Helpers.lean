@@ -2276,12 +2276,38 @@ lemma directing_measure_integral
   -- 4. ∫ s_n dν → ∫ f dν a.e. (by dominated convergence on integrals)
   -- 5. By L¹ uniqueness, α_f = ∫ f dν a.e.
 
-  -- The formal proof requires implementing each step above.
-  -- For now, we defer to the functional monotone class argument which
-  -- guarantees that α_f = ∫ f dν since both are determined by the same
-  -- underlying measure ν (whose CDF values are given by alphaIic).
-
-  -- TODO: Implement π-λ induction using ae_induction_on_inter
+  -- ══════════════════════════════════════════════════════════════════════════════
+  -- IMPLEMENTATION: Use ae_induction_on_inter for indicators, then lift to f
+  -- ══════════════════════════════════════════════════════════════════════════════
+  --
+  -- For INDICATORS of Borel sets, use MeasurableSpace.ae_induction_on_inter:
+  --   apply MeasurableSpace.ae_induction_on_inter Real.borel_eq_generateFrom_Iic_rat
+  --     Real.isPiSystem_Iic_rat
+  --
+  -- Required hypotheses:
+  --   h_empty: ∀ᵐ ω ∂μ, α_∅(ω) = ν(ω)(∅).toReal   [trivial: both = 0]
+  --   h_basic: ∀ᵐ ω ∂μ, ∀ q : ℚ, α_{Iic q}(ω) = ν(ω)(Iic q).toReal   [h_base_rat]
+  --   h_compl: ∀ᵐ ω ∂μ, ∀ S, C(S) → C(Sᶜ)   [use 1_{Sᶜ} = 1 - 1_S + weighted_sums_converge_L1_one_sub]
+  --   h_union: ∀ᵐ ω ∂μ, ∀ (Sᵢ) disjoint, (∀ i, C(Sᵢ)) → C(⋃ Sᵢ)   [countable additivity]
+  --
+  -- For SIMPLE FUNCTIONS:
+  --   s = Σᵢ cᵢ · 1_{Sᵢ} (disjoint Sᵢ)
+  --   α_s = Σᵢ cᵢ · α_{Sᵢ}   [by weighted_sums_converge_L1_smul, _add]
+  --       = Σᵢ cᵢ · ν(Sᵢ).toReal   [by indicator case]
+  --       = ∫ s dν
+  --
+  -- For BOUNDED MEASURABLE f (our specific case):
+  --   Use SimpleFunc.approxOn for approximation by simple functions
+  --   Apply DCT for L¹ limit convergence and integral convergence
+  --   Conclude α_f = ∫ f dν by uniqueness of limits
+  --
+  -- Key mathlib lemmas:
+  --   MeasurableSpace.ae_induction_on_inter (π-λ induction)
+  --   Real.borel_eq_generateFrom_Iic_rat (generator)
+  --   Real.isPiSystem_Iic_rat (π-system property)
+  --   weighted_sums_converge_L1_one_sub (complement closure)
+  --   weighted_sums_converge_L1_add (union closure)
+  -- ══════════════════════════════════════════════════════════════════════════════
   sorry
 
 /-- The integral of `alphaIic` equals the marginal probability.
