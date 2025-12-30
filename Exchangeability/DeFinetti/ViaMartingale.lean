@@ -242,9 +242,7 @@ lemma setIntegral_eq_integral_indicator_one_mul
   refine this.trans ?_
   refine integral_congr_ae ?ae
   filter_upwards with ω
-  by_cases hω : ω ∈ s
-  · simp [Set.indicator, hω, mul_comm]
-  · simp [Set.indicator, hω]
+  by_cases hω : ω ∈ s <;> simp [Set.indicator, hω, mul_comm]
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 lemma ae_bound_condexp_of_ae_bound
@@ -254,19 +252,12 @@ lemma ae_bound_condexp_of_ae_bound
     {g : Ω → ℝ} {C : ℝ}
     (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C) :
   ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C := by
-  -- Split on whether C ≥ 0
   by_cases hC : 0 ≤ C
-  · -- Case C ≥ 0: use the standard lemma
-    exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC⟩) hgC
-  · -- Case C < 0: hypothesis is contradictory
-    -- If |g ω| ≤ C < 0, this contradicts |g ω| ≥ 0
+  · exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC⟩) hgC
+  · -- C < 0 contradicts |g ω| ≤ C since |g ω| ≥ 0
     push_neg at hC
-    -- From the contradictory hypothesis, any conclusion follows
     filter_upwards [hgC] with ω hω
-    -- Derive False: 0 ≤ |g ω| ≤ C < 0
-    have : 0 ≤ |g ω| := abs_nonneg (g ω)
-    have : |g ω| < 0 := hω.trans_lt hC
-    linarith
+    linarith [abs_nonneg (g ω)]
 
 /-- **Adjointness for bounded `g` (L∞–L¹)**:
 If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
@@ -367,10 +358,8 @@ lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Meas
   {S : Set Ω} (hS : MeasurableSet S) (f : Ω → ℝ) :
   ∫ ω, f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω ∂ μ
   = ∫ ω in S, f ω ∂ μ := by
-  have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω)
-       = Set.indicator S (fun ω => f ω) := by
-    funext ω
-    by_cases h : ω ∈ S <;> simp [h, Set.indicator_of_mem, Set.indicator_of_notMem]
+  have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω) = S.indicator f := by
+    funext ω; by_cases h : ω ∈ S <;> simp [h]
   simp [this, integral_indicator, hS]
 
 /- DELETED: The following two lemmas are unused in this file.

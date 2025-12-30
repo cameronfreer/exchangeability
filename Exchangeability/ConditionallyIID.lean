@@ -148,8 +148,7 @@ theorem bind_map_comm {Ω α β : Type*} [MeasurableSpace Ω] [MeasurableSpace �
       = Measure.join (Measure.map (fun η => η.map f) (Measure.map κ μ)) := by
         simp only [Measure.bind, Measure.join_map_map hf]
     _ = Measure.join (Measure.map (fun ω => (κ ω).map f) μ) := by
-        rw [Measure.map_map (MeasureTheory.Measure.measurable_map f hf) hκ]
-        rfl
+        rw [Measure.map_map (Measure.measurable_map f hf) hκ]; rfl
     _ = μ.bind (fun ω => (κ ω).map f) := rfl
 
 end MeasureTheory.Measure

@@ -384,16 +384,13 @@ lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
     (hf : Measurable f) (hg : Measurable g) :
     Measure.map (fun ω i => f ω (σ i)) μ =
       Measure.map (fun ω i => g ω (σ i)) μ := by
-  -- Define the relabeling map on (Fin n → α)
-  let perm_map : (Fin n → α) → (Fin n → α) := fun h => h ∘ σ
+  let perm_map : (Fin n → α) → (Fin n → α) := (· ∘ σ)
   calc Measure.map (fun ω i => f ω (σ i)) μ
-      = Measure.map perm_map (Measure.map f μ) := by
-        rw [show (fun ω i => f ω (σ i)) = perm_map ∘ f by ext; rfl]
-        exact (Measure.map_map (measurable_perm_map (σ:=σ)) hf).symm
+      = Measure.map perm_map (Measure.map f μ) :=
+          (Measure.map_map (measurable_perm_map (σ := σ)) hf).symm
     _ = Measure.map perm_map (Measure.map g μ) := by rw [h]
-    _ = Measure.map (fun ω i => g ω (σ i)) μ := by
-        rw [show (fun ω i => g ω (σ i)) = perm_map ∘ g by ext; rfl]
-        exact Measure.map_map (measurable_perm_map (σ:=σ)) hg
+    _ = Measure.map (fun ω i => g ω (σ i)) μ :=
+          Measure.map_map (measurable_perm_map (σ := σ)) hg
 
 /-- Contractability implies the first m variables have the same joint distribution
 regardless of which m consecutive variables we pick (starting from position k). -/
