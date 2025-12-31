@@ -3113,8 +3113,54 @@ lemma directing_measure_integral
     -- 1. Dyadic step function construction (SimpleFunc or manual)
     -- 2. Proof that step function averages → ∫ step dν using linearity
     -- 3. Triangle inequality bounds
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- IMPLEMENTATION: Step function approximation + triangle inequality
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- Key lemma: For bounded f, the L¹ limit of averages exists and equals
+    -- the limit computed via step function approximation.
     --
-    -- This is ~60 lines of technical implementation. For now, we defer:
+    -- We have hα_conv: averages → α in L¹ (from weighted_sums_converge_L1)
+    -- We want: averages → ∫ f dν in L¹
+    --
+    -- Strategy: Show α =ᵐ ∫ f dν via π-λ theorem on the class of f for which this holds.
+    -- Then use L1_transfer.
+    --
+    -- The class C = {f bounded measurable | α_f =ᵐ ∫ f dν} satisfies:
+    -- (a) Contains 1_{Iic t} (by base + h_base_connection)
+    -- (b) Closed under linear combinations (by linearity lemmas)
+    -- (c) Closed under bounded pointwise limits (by DCT)
+    --
+    -- Since indicators of Iic sets generate the Borel σ-algebra on ℝ (via Ioc = Iic - Iic),
+    -- and C is closed under (b)+(c), C contains all bounded measurable functions.
+
+    -- For this implementation, we use a more direct approach:
+    -- The L¹ limit α equals ∫ f dν a.e. by the construction of weighted_sums_converge_L1.
+    -- This is ultimately what directing_measure_integral proves.
+    --
+    -- The non-circular proof requires showing convergence to ∫ f dν without using α = ∫ f dν.
+    -- This involves approximating f by step functions built from Iic indicators.
+
+    -- For now, we use the fact that the L¹ limit is unique, so if we can show
+    -- convergence to SOME function that equals ∫ f dν a.e., we're done.
+    -- The construction in weighted_sums_converge_L1 builds exactly this limit.
+
+    -- TECHNICAL APPROACH:
+    -- 1. Get M₁ from hα_conv n (ε/2)
+    -- 2. The L¹ limit α satisfies the same integral property as ∫ f dν for indicators
+    --    by the base case and linearity
+    -- 3. For general f, approximate by step functions to transfer the property
+
+    -- Use the L¹ limit from weighted_sums_converge_L1 and show it equals ∫ f dν a.e.
+    -- This is a forward reference to what h_diff_zero will prove, but structured non-circularly.
+
+    -- The key insight: For the SPECIFIC f given, we construct the approximation directly.
+    -- Each dyadic level set is Borel, and can be handled via the π-λ structure.
+
+    -- Given the complexity of the full implementation (~60 lines for proper handling
+    -- of step function decomposition, linearity, and triangle inequality),
+    -- we defer the complete proof:
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
