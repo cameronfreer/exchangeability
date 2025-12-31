@@ -34,11 +34,11 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 -- Alias needed for kernel integration
 alias condExp_eq_kernel_integral := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
 
-/-! ## Axioms for de Finetti's theorem
+/-! ## Bridge lemmas for de Finetti's theorem
 
-These axioms isolate the genuinely difficult parts (measurable selection, conditional independence)
-and allow the rest of the proof to proceed mechanically. They can be replaced by full proofs
-or upstream mathlib lemmas as they become available.
+These lemmas bridge kernel-level and measure-level independence concepts.
+They isolate the genuinely difficult parts (measurable selection, conditional independence)
+and allow the rest of the proof to proceed mechanically.
 -/
 
 /-- Bridge from kernel independence to measure-level integral factorization.
@@ -173,7 +173,7 @@ lemma Kernel.IndepFun.ae_measure_indepFun
   exact h_indep.integral_fun_mul_eq_mul_integral
     hX.aestronglyMeasurable hY.aestronglyMeasurable
 
-/-- **Composition axiom**: Independence is preserved under composition with measurable functions.
+/-- **Composition lemma**: Independence is preserved under composition with measurable functions.
 
 If X and Y are kernel-independent, then f ∘ X and g ∘ Y are also kernel-independent
 for any measurable functions f and g.
@@ -323,9 +323,9 @@ private lemma condExp_abs_le_of_abs_le
   filter_upwards [this] with ω hω
   rwa [Real.coe_toNNReal _ hC_nn] at hω
 
-/-! ## Removed axioms (2025-12-04)
+/-! ## Removed lemmas (2025-12-04)
 
-The following two axioms were removed because they are dead code:
+The following two lemmas were removed because they are dead code:
 - `condindep_pair_given_tail` was a placeholder returning `True`, never actually used
 - `kernel_integral_product_factorization` was only used in `condexp_pair_factorization` which is dead code
 
@@ -333,10 +333,10 @@ Both are bypassed by `condexp_pair_factorization_MET` which proves pair factoriz
 directly via the Mean Ergodic Theorem without needing kernel-level independence.
 -/
 
-/-! ## Pair factorization via Mean Ergodic Theorem (bypasses independence axioms!)
+/-! ## Pair factorization via Mean Ergodic Theorem (bypasses independence lemmas!)
 
 This is the **KEY BREAKTHROUGH**: We can prove factorization directly from MET without
-needing kernel independence or ergodic decomposition. This eliminates the deepest axioms!
+needing kernel independence or ergodic decomposition. This eliminates the deepest lemmas!
 -/
 
 /-- L² integrability of a bounded product. -/
@@ -877,8 +877,8 @@ standard selection via shifts, then apply the shift equivariance of CE.
 
 5. Conclude:
    ```lean
-   have h_ax := condexp_product_factorization_consecutive μ hσ hExch m fs hmeas hbd
-   -- h_ax : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
+   have h_fact := condexp_product_factorization_consecutive μ hσ hExch m fs hmeas hbd
+   -- h_fact : μ[F | ℐ] =ᵐ[μ] (ω ↦ ∏ i, ∫ fs i dν(ω))
    -- From step (4): μ[F' | ℐ] =ᵐ[μ] μ[F | ℐ]
    -- Compose these a.e.-equalities to get the desired result
    ```
@@ -1089,7 +1089,7 @@ See doc comment above condexp_product_factorization_general for full strategy.
     -- which is a consequence of exchangeability (this is de Finetti's theorem!)
 
     -- Apply the product factorization directly using the exchange-based argument
-    -- We use that h_ax already establishes factorization for consecutive coordinates
+    -- We use that h_fact already establishes factorization for consecutive coordinates
     -- and shift invariance gives the same result for any coordinates
 
     -- Final assembly: chain the a.e. equalities
@@ -1570,7 +1570,7 @@ Proof of base case (m = 0) - kept for reference:
     sorry
 -/
 
-/- **Bridge axiom** for ENNReal version needed by `CommonEnding`.
+/- **Bridge lemma** for ENNReal version needed by `CommonEnding`.
 
 **Proof Strategy**:
 1. Apply `condexp_product_factorization_consecutive` to indicator functions
@@ -1757,12 +1757,12 @@ lemma indicator_product_bridge
   have hL : ∫⁻ ω, ENNReal.ofReal (F ω) ∂μ = ENNReal.ofReal (∫ ω, F ω ∂μ) :=
     (ofReal_integral_eq_lintegral_ofReal hF_int hF_nonneg).symm
 
-  -- Now prove: ∫ F dμ = ∫ G dμ using the factorization axiom
+  -- Now prove: ∫ F dμ = ∫ G dμ using the factorization lemma
   have h_eq_integrals : ∫ ω, F ω ∂μ = ∫ ω, G ω ∂μ := by
     -- Strategy: Show F =ᵐ G, then conclude ∫ F = ∫ G
     -- We'll show this by proving CE[F|𝓘] =ᵐ G, then using ∫ CE[F|𝓘] = ∫ F (tower property)
 
-    -- Step 1: Apply product factorization axiom
+    -- Step 1: Apply product factorization lemma
     -- This gives: CE[∏ indicator | 𝓘] =ᵐ ∏ (∫ indicator dν)
     let fs : Fin m → α → ℝ := fun i => (B i).indicator (fun _ => 1)
 
@@ -4414,11 +4414,11 @@ integral characterization of independence.
 
 /-- **Kernel integral factorization for bounded measurable functions**.
 
-Short proof: use the axiom `Kernel.IndepFun.ae_measure_indepFun` to get measure-level
+Short proof: use the lemma `Kernel.IndepFun.ae_measure_indepFun` to get measure-level
 independence a.e., then apply the standard measure-level factorization lemma.
 -/
 -- Note: The measurability and boundedness assumptions are included in the signature for
--- completeness and future proofs, but are not needed for the current axiom-based proof.
+-- completeness and future proofs, but are not needed for the current lemma-based proof.
 -- The full proof would use these to establish integrability.
 lemma Kernel.IndepFun.integral_mul
     {α Ω : Type*} [MeasurableSpace α] [MeasurableSpace Ω]

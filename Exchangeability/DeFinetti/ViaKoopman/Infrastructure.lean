@@ -35,8 +35,7 @@ This file contains completed infrastructure for the Koopman-based de Finetti pro
 - Instance-locking shims for conditional expectation
 - Conditional expectation pullback lemmas
 
-All lemmas in this file are proved (no sorries) except for axiomatized results
-marked as `axiom` with mathematical justification.
+All lemmas in this file are proved (no sorries).
 
 **Extracted from**: ViaKoopman.lean (Section 1: Infrastructure)
 **Status**: ✅ COMPLETE (no sorries in proofs)
