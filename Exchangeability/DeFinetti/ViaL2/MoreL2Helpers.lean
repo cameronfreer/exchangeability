@@ -2674,14 +2674,57 @@ lemma directing_measure_integral
     -- ∫ s_k dν(ω) = Σⱼ cⱼ · (ν(ω)(Sⱼ)).toReal
     -- Each term is measurable by directing_measure_measurable.
 
-    -- Proof outline (defer implementation for now):
-    -- 1. Build s_n via SimpleFunc.approxOn f hf_meas (range f ∪ {0}) 0 _
-    -- 2. For each s_n (finite sum of c_j · 1_{S_j}):
-    --    ∫ s_n dν(ω) = Σⱼ c_j · (ν(ω)(S_j)).toReal
-    --    Each term measurable by (directing_measure_measurable _ hS_j).ennreal_toReal.const_mul
-    -- 3. By DCT: ∫ s_n dν(ω) → ∫ f dν(ω) for each ω
-    -- 4. By measurable_of_tendsto_metrizable: limit is measurable
-    sorry
+    -- Proof: Adapt StronglyMeasurable.integral_kernel from mathlib.
+    -- Key steps:
+    -- 1. Approximate f by simple functions s_n → f pointwise with |s_n| ≤ |f|
+    -- 2. For each s_n, the integral ∫ s_n dν(ω) = Σⱼ cⱼ · ν(ω)(Sⱼ).toReal is measurable
+    --    (using directing_measure_measurable for each Sⱼ)
+    -- 3. By DCT: ∫ s_n dν(ω) → ∫ f dν(ω) pointwise (bounded by M)
+    -- 4. By stronglyMeasurable_of_tendsto: limit is measurable
+
+    -- Step 1: f is StronglyMeasurable (Measurable on standard Borel space)
+    have hf_sm : StronglyMeasurable f := hf_meas.stronglyMeasurable
+
+    -- Step 2: Build approximating sequence using SimpleFunc.approxOn
+    -- Each s_n is a simple function with values in range f ∪ {0}
+    have h_sep : TopologicalSpace.SeparableSpace (Set.range f ∪ {0} : Set ℝ) :=
+      hf_sm.separableSpace_range_union_singleton
+    let s : ℕ → SimpleFunc ℝ ℝ := SimpleFunc.approxOn f hf_meas (Set.range f ∪ {0}) 0 (by simp)
+
+    -- Step 3: Define approximating sequence for the integral
+    let g : ℕ → Ω → ℝ := fun n ω => (s n).integral (directing_measure X hX_contract hX_meas hX_L2 ω)
+
+    -- Step 4: Show g n is measurable for each n (key step using directing_measure_measurable)
+    have hg_meas : ∀ n, Measurable (g n) := fun n => by
+      show Measurable (fun ω => (s n).integral (directing_measure X hX_contract hX_meas hX_L2 ω))
+      simp only [SimpleFunc.integral_eq]
+      apply Finset.measurable_sum
+      intro y _
+      apply Measurable.smul_const
+      -- Measure.real S = (μ S).toReal, so we need measurability of ω ↦ (ν(ω)(S)).toReal
+      simp only [Measure.real]
+      apply Measurable.ennreal_toReal
+      exact directing_measure_measurable X hX_contract hX_meas hX_L2 _
+        ((s n).measurableSet_fiber y)
+
+    -- Step 5: Pointwise convergence: g n ω → ∫ f dν(ω) for each ω where f is integrable
+    have h_tendsto : ∀ ω, Filter.Tendsto (fun n => g n ω) Filter.atTop
+        (nhds (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) := by
+      intro ω
+      have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+      -- f is integrable against ν(ω) since f is bounded
+      have hf_int : Integrable f (directing_measure X hX_contract hX_meas hX_L2 ω) := by
+        apply Integrable.of_mem_Icc (-M) M hf_meas.aemeasurable
+        apply ae_of_all; intro x
+        simp only [Set.mem_Icc]; exact abs_le.mp (hM x)
+      apply tendsto_integral_approxOn_of_measurable_of_range_subset hf_meas hf_int
+      exact Set.Subset.rfl
+
+    -- Step 6: Apply stronglyMeasurable_of_tendsto to conclude
+    have h_sm : StronglyMeasurable (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) :=
+      stronglyMeasurable_of_tendsto Filter.atTop (fun n => (hg_meas n).stronglyMeasurable)
+        (tendsto_pi_nhds.mpr h_tendsto)
+    exact h_sm.measurable
 
   -- Step B: Integrability of ∫ f dν(·)
   -- Since f is bounded by M and ν(ω) is a probability measure, |∫ f dν(ω)| ≤ M
