@@ -3009,7 +3009,18 @@ lemma directing_measure_integral
       exact L1_transfer h_raw.choose (fun ω => ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
         (fun m ω => (1/(m:ℝ)) * ∑ k : Fin m, ind_t (X (n' + k.val + 1) ω))
         (h_raw.choose_spec.2.2 n') h_limit_eq h_raw_int
-        (Integrable.mono' (integrable_const 1) (by sorry) (by
+        (Integrable.mono' (integrable_const 1) (by
+          -- AEStronglyMeasurable of ω ↦ ∫ ind_t dν(ω)
+          -- For indicator 1_{Iic t}, ∫ 1_{Iic t} dν = (ν(Iic t)).toReal
+          have h_eq : ∀ ω, ∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+              (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal := by
+            intro ω
+            have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            simp only [ind_t]
+            rw [integral_indicator measurableSet_Iic, setIntegral_const, smul_eq_mul, mul_one]
+            rfl
+          simp_rw [h_eq]
+          exact (directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 t).ennreal_toReal.aestronglyMeasurable) (by
           apply ae_of_all; intro ω
           have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
           calc ‖∫ x, ind_t x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)‖
