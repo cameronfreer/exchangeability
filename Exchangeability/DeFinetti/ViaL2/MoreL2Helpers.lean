@@ -3392,17 +3392,31 @@ lemma directing_measure_integral
           (Set.Iic b).indicator (fun _ => (1:ℝ)) - (Set.Iic a).indicator (fun _ => (1:ℝ)) := by
         rw [h_Ioc_eq, Set.indicator_diff h_subset]
       -- ═══════════════════════════════════════════════════════════════════════
-      -- PROOF OUTLINE (verified structure):
-      -- 1. Sum decomposition: Σ 1_{Ioc}(Xₖ) = Σ 1_{Iic b}(Xₖ) - Σ 1_{Iic a}(Xₖ)
-      --    via h_ind_eq and Finset.sum_sub_distrib
-      -- 2. Integral decomposition: ∫ 1_{Ioc} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
-      --    via MeasureTheory.integral_sub with indicator integrability
-      -- 3. Pointwise bound:
-      --    |(1/m)Σ1_{Ioc} - ∫1_{Ioc}| = |((1/m)Σ1_b - ∫1_b) - ((1/m)Σ1_a - ∫1_a)|
-      --                               ≤ |(1/m)Σ1_b - ∫1_b| + |(1/m)Σ1_a - ∫1_a|
-      --    by triangle inequality (|x - y| ≤ |x| + |y|)
-      -- 4. Integrate: ∫|...| ≤ ∫|..._b| + ∫|..._a| < ε'/2 + ε'/2 = ε'
-      --    using hM_b, hM_a from h_ind_L1_conv
+      -- PROOF SKETCH (detailed implementation causes timeouts):
+      -- Key identities established above:
+      -- • h_Ioc_eq: Set.Ioc a b = Set.Iic b \ Set.Iic a
+      -- • h_subset: Set.Iic a ⊆ Set.Iic b
+      -- • h_ind_eq: 1_{Ioc} = 1_{Iic b} - 1_{Iic a} (via Set.indicator_diff)
+      --
+      -- PROOF STEPS:
+      -- 1. Sum decomposition: Σₖ 1_{Ioc}(Xₖ) = Σₖ 1_b(Xₖ) - Σₖ 1_a(Xₖ)
+      --    Apply h_ind_eq pointwise, then use Finset.sum_sub_distrib
+      --
+      -- 2. Integral decomposition: ∫ 1_{Ioc} dν = ∫ 1_b dν - ∫ 1_a dν
+      --    Apply h_ind_eq under integral, then integral_sub with integrability
+      --    Integrability: (integrable_const 1).indicator measurableSet_Iic
+      --
+      -- 3. Pointwise triangle inequality:
+      --    |avg(Ioc) - ∫Ioc| = |(avg_b - ∫_b) - (avg_a - ∫_a)|
+      --                     ≤ |avg_b - ∫_b| + |avg_a - ∫_a|
+      --
+      -- 4. Integrate: ∫|_Ioc| ≤ ∫|_b| + ∫|_a| < ε'/2 + ε'/2 = ε'
+      --    Use integral_mono_of_nonneg + integral_add + hM_b + hM_a
+      --
+      -- TECHNICAL ISSUES: Full expansion causes deterministic timeouts due to
+      -- typeclass inference on Finset.sum_sub_distrib and integrability proofs.
+      -- Lemmas used: Finset.abs_sum_le_sum_abs, ENNReal.toReal_le_of_le_ofReal,
+      --              MeasureTheory.prob_le_one, MeasureTheory.integral_mono_of_nonneg
       -- ═══════════════════════════════════════════════════════════════════════
       sorry
 
