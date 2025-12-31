@@ -2892,12 +2892,45 @@ lemma directing_measure_integral
           -- contradicting ∫|A_m - α| → 0.
           -- Similarly for μ{α < 0} > 0.
 
-          -- Technical requirements:
-          -- - Convert ε-δ L¹ convergence to Filter.Tendsto eLpNorm
-          -- - Apply convergence in measure lemmas
-          -- - Use IsClosed Icc 0 1 and mem_of_tendsto
-          -- Deferred: ~50 lines
+          -- Direct argument: If μ{α > 1 ∨ α < 0} > 0, we derive a contradiction.
+          -- Case 1: μ{α > 1} > 0
+          --   On this set, |A_m - α| ≥ α - A_m ≥ α - 1 > 0 (since A_m ≤ 1)
+          --   So ∫|A_m - α| ≥ ∫_{α>1}(α - 1) > 0 for all m, contradicting → 0
+          -- Case 2: μ{α < 0} > 0
+          --   On this set, |A_m - α| ≥ A_m - α ≥ 0 - α = -α > 0 (since A_m ≥ 0)
+          --   So ∫|A_m - α| ≥ ∫_{α<0}(-α) > 0, contradicting → 0
 
+          -- We use the fact that A_m ∈ [0,1] pointwise (from hA_in_01).
+          -- Let α := h_raw.choose
+          let α := h_raw.choose
+
+          -- The proof structure:
+          -- 1. Assume ¬(a.e. in [0,1])
+          -- 2. Show μ{α < 0 ∨ α > 1} > 0
+          -- 3. Show ∫|A_m - α| ≥ c > 0 for all m (using set integrals)
+          -- 4. Contradict h_L1_conv which says ∫|A_m - α| → 0
+
+          -- Technical implementation requires Filter.not_eventually manipulation
+          -- and set integral bounds. Deferred.
+          -- The mathematical content is complete above.
+
+          -- Get ε from L¹ convergence such that ∫|A_m - α| < ε for large m
+          -- But ∫|A_m - α| ≥ ∫_{α<0}(-α) + ∫_{α>1}(α-1) > 0 for all m
+          -- This gives a contradiction.
+
+          -- The integral over the bad set gives a positive lower bound:
+          -- ∫|A_m - α| ≥ ∫_{α<0∨α>1} |A_m - α|
+          -- On {α < 0}: |A_m - α| ≥ -α (since A_m ≥ 0)
+          -- On {α > 1}: |A_m - α| ≥ α - 1 (since A_m ≤ 1)
+          -- So ∫|A_m - α| ≥ ∫_{α<0}(-α) + ∫_{α>1}(α-1) =: c > 0 for all m
+
+          -- Technical implementation requires:
+          -- 1. Show measurability of {α < 0} and {α > 1}
+          -- 2. Use setIntegral_le_integral to bound
+          -- 3. Show ∫_{α<0}(-α) + ∫_{α>1}(α-1) > 0 from h_bad_pos
+          -- 4. Use h_L1_conv to get ε-bound, derive contradiction
+
+          -- Deferred: ~30 lines of technical bookkeeping
           sorry
 
         -- Step 2: Clipping is a.e. identity on [0,1]
