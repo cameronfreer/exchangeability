@@ -3391,39 +3391,217 @@ lemma directing_measure_integral
       have h_ind_eq : (Set.Ioc a b).indicator (fun _ => (1:ℝ)) =
           (Set.Iic b).indicator (fun _ => (1:ℝ)) - (Set.Iic a).indicator (fun _ => (1:ℝ)) := by
         rw [h_Ioc_eq, Set.indicator_diff h_subset]
-      -- ═══════════════════════════════════════════════════════════════════════
-      -- PROOF STRUCTURE (verified but implementation causes timeouts):
-      -- Key ingredients from above:
-      --   • h_Ioc_eq: Set.Ioc a b = Set.Iic b \ Set.Iic a
-      --   • h_subset: Set.Iic a ⊆ Set.Iic b
-      --   • h_ind_eq: 1_{Ioc} = 1_{Iic b} - 1_{Iic a} (via Set.indicator_diff)
-      --   • hM_a, hM_b: L¹ convergence for Iic a and Iic b with error ε'/2
-      --
-      -- PROOF STEPS:
-      -- 1. Pointwise decomposition (from h_ind_eq):
-      --    h_pw: ∀ x, 1_{Ioc}(x) = 1_{Iic b}(x) - 1_{Iic a}(x)
-      --
-      -- 2. Sum decomposition (via simp_rw h_pw + Finset.sum_sub_distrib):
-      --    Σₖ 1_{Ioc}(Xₖ) = Σₖ 1_{Iic b}(Xₖ) - Σₖ 1_{Iic a}(Xₖ)
-      --
-      -- 3. Integral decomposition (via simp_rw h_pw + integral_sub):
-      --    ∫ 1_{Ioc} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
-      --    Integrability: (integrable_const 1).indicator measurableSet_Iic
-      --
-      -- 4. Pointwise bound (by ring + abs_sub_le + abs_neg):
-      --    |avg(Ioc) - ∫Ioc| = |((1/m)Σ_b - ∫_b) - ((1/m)Σ_a - ∫_a)|
-      --                     ≤ |(1/m)Σ_b - ∫_b| + |(1/m)Σ_a - ∫_a|
-      --
-      -- 5. Integrate (via integral_mono_of_nonneg + integral_add):
-      --    ∫|avg(Ioc) - ∫Ioc| ≤ ∫|(1/m)Σ_b - ∫_b| + ∫|(1/m)Σ_a - ∫_a|
-      --                       < ε'/2 + ε'/2 = ε'  (by hM_b + hM_a)
-      --
-      -- TECHNICAL BLOCKERS:
-      -- • simp_rw on Finset.sum_sub_distrib causes typeclass inference issues
-      -- • Integrability proofs for (integrable_const 1).indicator fail synthesis
-      -- • Full expansion triggers deterministic timeout (>200k heartbeats)
-      -- ═══════════════════════════════════════════════════════════════════════
-      sorry
+      classical
+
+      -- Short names to keep expressions manageable
+      let ν : Ω → Measure ℝ := directing_measure X hX_contract hX_meas hX_L2
+      let indIoc : ℝ → ℝ := (Set.Ioc a b).indicator (fun _ : ℝ => (1 : ℝ))
+      let indA : ℝ → ℝ := (Set.Iic a).indicator (fun _ : ℝ => (1 : ℝ))
+      let indB : ℝ → ℝ := (Set.Iic b).indicator (fun _ : ℝ => (1 : ℝ))
+      let avg (g : ℝ → ℝ) : Ω → ℝ := fun ω =>
+        (1 / (m : ℝ)) * ∑ k : Fin m, g (X (n' + k.val + 1) ω)
+      let I (g : ℝ → ℝ) : Ω → ℝ := fun ω =>
+        ∫ x, g x ∂(ν ω)
+
+      -- rewrite the hypotheses hM_a / hM_b into the local notation
+      have hM_a' : ∫ ω, |avg indA ω - I indA ω| ∂μ < ε' / 2 := by
+        simpa [avg, I, indA, ν] using hM_a
+      have hM_b' : ∫ ω, |avg indB ω - I indB ω| ∂μ < ε' / 2 := by
+        simpa [avg, I, indB, ν] using hM_b
+
+      -- Pointwise decomposition from h_ind_eq
+      have h_pw_x : ∀ x, indIoc x = indB x - indA x := by
+        intro x
+        simpa [indIoc, indA, indB] using congrArg (fun f => f x) h_ind_eq
+
+      -- Sum decomposition (avoid simp_rw; do it once, locally)
+      have h_sum_eq :
+          ∀ ω,
+            (∑ k : Fin m, indIoc (X (n' + k.val + 1) ω)) =
+              (∑ k : Fin m, indB (X (n' + k.val + 1) ω)) -
+                (∑ k : Fin m, indA (X (n' + k.val + 1) ω)) := by
+        intro ω
+        calc
+          ∑ k : Fin m, indIoc (X (n' + k.val + 1) ω)
+              =
+              ∑ k : Fin m,
+                (indB (X (n' + k.val + 1) ω) - indA (X (n' + k.val + 1) ω)) := by
+                refine Finset.sum_congr rfl ?_
+                intro k _
+                exact h_pw_x _
+          _ =
+              (∑ k : Fin m, indB (X (n' + k.val + 1) ω)) -
+                (∑ k : Fin m, indA (X (n' + k.val + 1) ω)) := by
+                simpa [Finset.sum_sub_distrib]
+
+      have h_avg_eq : ∀ ω, avg indIoc ω = avg indB ω - avg indA ω := by
+        intro ω
+        simp [avg, h_sum_eq ω, mul_sub]
+
+      -- Integral decomposition via integral_sub, with explicit inner integrability
+      have h_int_eq : ∀ ω, I indIoc ω = I indB ω - I indA ω := by
+        intro ω
+        haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+        haveI : IsFiniteMeasure (ν ω) := by infer_instance
+        have h_intB : Integrable indB (ν ω) := by
+          simpa [indB] using
+            ((integrable_const (μ := ν ω) (1 : ℝ)).indicator measurableSet_Iic)
+        have h_intA : Integrable indA (ν ω) := by
+          simpa [indA] using
+            ((integrable_const (μ := ν ω) (1 : ℝ)).indicator measurableSet_Iic)
+        have h_fun : indIoc = indB - indA := by
+          simpa [indIoc, indA, indB] using h_ind_eq
+        calc
+          I indIoc ω = ∫ x, indIoc x ∂(ν ω) := rfl
+          _ = ∫ x, (indB x - indA x) ∂(ν ω) := by
+              simpa [h_fun, Pi.sub_apply]
+          _ =
+              (∫ x, indB x ∂(ν ω)) - (∫ x, indA x ∂(ν ω)) := by
+              simpa using (integral_sub h_intB h_intA)
+          _ = I indB ω - I indA ω := rfl
+
+      -- Pointwise bound using abs_sub_le after algebraic rearrangement
+      have h_pointwise :
+          ∀ ω,
+            |avg indIoc ω - I indIoc ω| ≤
+              |avg indB ω - I indB ω| + |avg indA ω - I indA ω| := by
+        intro ω
+        have h_algebra :
+            avg indIoc ω - I indIoc ω =
+              (avg indB ω - I indB ω) - (avg indA ω - I indA ω) := by
+          rw [h_avg_eq ω, h_int_eq ω]
+          ring
+        have h1 :=
+          abs_sub_le (avg indB ω - I indB ω) 0 (avg indA ω - I indA ω)
+        simp only [sub_zero, zero_sub, abs_neg] at h1
+        rw [h_algebra]
+        exact h1
+
+      -- Integrability of the two endpoint error terms so we can use integral_add cleanly
+      have h_avgA_int : Integrable (avg indA) μ := by
+        apply Integrable.const_mul
+        apply integrable_finset_sum
+        intro k _
+        apply Integrable.mono' (integrable_const (1 : ℝ))
+        · exact
+            (measurable_const.indicator
+                (measurableSet_Iic.preimage (hX_meas (n' + k.val + 1)))).aestronglyMeasurable
+        · apply ae_of_all
+          intro ω
+          simp [indA, Set.indicator]
+          split_ifs <;> norm_num
+
+      have h_avgB_int : Integrable (avg indB) μ := by
+        apply Integrable.const_mul
+        apply integrable_finset_sum
+        intro k _
+        apply Integrable.mono' (integrable_const (1 : ℝ))
+        · exact
+            (measurable_const.indicator
+                (measurableSet_Iic.preimage (hX_meas (n' + k.val + 1)))).aestronglyMeasurable
+        · apply ae_of_all
+          intro ω
+          simp [indB, Set.indicator]
+          split_ifs <;> norm_num
+
+      have h_intA_int : Integrable (I indA) μ := by
+        apply Integrable.mono' (integrable_const (1 : ℝ))
+        · have h_eq : I indA = fun ω => (ν ω (Set.Iic a)).toReal := by
+            funext ω
+            have h :
+                (Set.Iic a).indicator (fun _ : ℝ => (1 : ℝ)) =
+                  (Set.Iic a).indicator 1 := rfl
+            simp only [I, indA, h]
+            rw [integral_indicator_one (μ := ν ω) measurableSet_Iic]
+            rfl
+          rw [h_eq]
+          exact (directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 a).ennreal_toReal
+              |>.aestronglyMeasurable
+        · apply ae_of_all
+          intro ω
+          have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          haveI := h_prob
+          calc
+            ‖I indA ω‖ = ‖∫ x, indA x ∂(ν ω)‖ := rfl
+            _ ≤ ∫ x, ‖indA x‖ ∂(ν ω) := by
+                exact norm_integral_le_integral_norm _
+            _ ≤ ∫ x, (1 : ℝ) ∂(ν ω) := by
+                apply integral_mono_of_nonneg
+                · exact ae_of_all _ (fun x => norm_nonneg _)
+                · exact integrable_const (μ := ν ω) (1 : ℝ)
+                · exact ae_of_all _ (fun x => by
+                    simp [indA, Set.indicator]
+                    split_ifs <;> norm_num)
+            _ = 1 := by
+                simp [h_prob.measure_univ]
+
+      have h_intB_int : Integrable (I indB) μ := by
+        apply Integrable.mono' (integrable_const (1 : ℝ))
+        · have h_eq : I indB = fun ω => (ν ω (Set.Iic b)).toReal := by
+            funext ω
+            have h :
+                (Set.Iic b).indicator (fun _ : ℝ => (1 : ℝ)) =
+                  (Set.Iic b).indicator 1 := rfl
+            simp only [I, indB, h]
+            rw [integral_indicator_one (μ := ν ω) measurableSet_Iic]
+            rfl
+          rw [h_eq]
+          exact (directing_measure_eval_Iic_measurable X hX_contract hX_meas hX_L2 b).ennreal_toReal
+              |>.aestronglyMeasurable
+        · apply ae_of_all
+          intro ω
+          have h_prob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          haveI := h_prob
+          calc
+            ‖I indB ω‖ = ‖∫ x, indB x ∂(ν ω)‖ := rfl
+            _ ≤ ∫ x, ‖indB x‖ ∂(ν ω) := by
+                exact norm_integral_le_integral_norm _
+            _ ≤ ∫ x, (1 : ℝ) ∂(ν ω) := by
+                apply integral_mono_of_nonneg
+                · exact ae_of_all _ (fun x => norm_nonneg _)
+                · exact integrable_const (μ := ν ω) (1 : ℝ)
+                · exact ae_of_all _ (fun x => by
+                    simp [indB, Set.indicator]
+                    split_ifs <;> norm_num)
+            _ = 1 := by
+                simp [h_prob.measure_univ]
+
+      have h_absA_int : Integrable (fun ω => |avg indA ω - I indA ω|) μ :=
+        (h_avgA_int.sub h_intA_int).abs
+      have h_absB_int : Integrable (fun ω => |avg indB ω - I indB ω|) μ :=
+        (h_avgB_int.sub h_intB_int).abs
+
+      -- Integrate pointwise bound + use hM_a', hM_b'
+      have h_le :
+          ∫ ω, |avg indIoc ω - I indIoc ω| ∂μ ≤
+              ∫ ω, (|avg indB ω - I indB ω| + |avg indA ω - I indA ω|) ∂μ := by
+        apply integral_mono_of_nonneg
+        · exact ae_of_all _ (fun ω => abs_nonneg _)
+        · exact (h_absB_int.add h_absA_int)
+        · exact ae_of_all _ h_pointwise
+
+      have h_lt_sum :
+          ∫ ω, (|avg indB ω - I indB ω| + |avg indA ω - I indA ω|) ∂μ < ε' := by
+        have h_add :
+            ∫ ω, (|avg indB ω - I indB ω| + |avg indA ω - I indA ω|) ∂μ =
+                ∫ ω, |avg indB ω - I indB ω| ∂μ +
+                  ∫ ω, |avg indA ω - I indA ω| ∂μ := by
+          simpa using (integral_add h_absB_int h_absA_int)
+        have h_sum_lt :
+            (∫ ω, |avg indB ω - I indB ω| ∂μ) +
+                (∫ ω, |avg indA ω - I indA ω| ∂μ) < ε' / 2 + ε' / 2 := by
+          exact add_lt_add hM_b' hM_a'
+        have :
+            (∫ ω, |avg indB ω - I indB ω| ∂μ) +
+                (∫ ω, |avg indA ω - I indA ω| ∂μ) < ε' := by
+          linarith
+        simpa [h_add] using this
+
+      have h_final : ∫ ω, |avg indIoc ω - I indIoc ω| ∂μ < ε' :=
+        lt_of_le_of_lt h_le h_lt_sum
+
+      -- Unfold back to exactly match the goal
+      simpa [avg, I, indIoc, ν] using h_final
 
     -- ═══════════════════════════════════════════════════════════════════════
     -- NON-CIRCULAR PROOF: Step function approximation
