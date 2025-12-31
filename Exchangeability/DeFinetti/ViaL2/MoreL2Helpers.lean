@@ -2626,9 +2626,40 @@ lemma directing_measure_integral
   -- This follows from the measurability of directing_measure as a kernel
   -- combined with the measurability of f
   have h_int_meas : Measurable (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
-    -- The proof requires showing directing_measure is a measurable kernel
-    -- and applying StronglyMeasurable.integral_kernel_prod_right
-    -- For now, we defer this technical step
+    -- Approach: Approximate f by simple functions, show measurability for each, take limit.
+    -- For simple function s = Σᵢ cᵢ · 1_{Sᵢ}: ∫ s dν(ω) = Σᵢ cᵢ · (ν(ω)(Sᵢ)).toReal
+    -- Each ω ↦ ν(ω)(Sᵢ) is measurable by directing_measure_measurable.
+    -- For general bounded f: approximate by simple functions and use pointwise limit.
+    --
+    -- Alternative: Use that for bounded f, the integral can be bounded by |∫f| ≤ M,
+    -- and the function is a.e.-defined measurable limit of indicator sums.
+    --
+    -- Implementation: For bounded measurable f with |f| ≤ M, we use:
+    -- 1. SimpleFunc.approxOn gives s_k → f pointwise with |s_k| ≤ M
+    -- 2. Each ∫ s_k dν(·) is measurable (finite sum of measurable functions)
+    -- 3. ∫ s_k dν(ω) → ∫ f dν(ω) by DCT
+    -- 4. Measurable.of_tendsto concludes
+    --
+    -- For now, we use the direct approach: indicator approximation + limit.
+    obtain ⟨M, hM⟩ := hf_bdd
+    -- The integral is a limit of integrals of step functions
+    -- For step functions, measurability follows from directing_measure_measurable
+    -- This is a standard argument: bounded measurable → approximable by simple → measurable integral
+
+    -- Construct approximating sequence using indicator sums
+    -- For each ω, ∫ f dν(ω) is the limit of Riemann-like sums
+    -- Each partial sum is measurable in ω
+
+    -- Alternative approach: Use that the integral is bounded and show it's
+    -- the pointwise limit of measurable functions.
+
+    -- For indicator functions 1_S: ∫ 1_S dν(ω) = (ν(ω)(S)).toReal
+    -- This is measurable by (directing_measure_measurable).ennreal_toReal
+
+    -- For simple functions: linear combination of the above.
+    -- For general f: approximate by simple functions.
+
+    -- The full proof requires ~40 lines. We defer for now:
     sorry
 
   -- Step B: Integrability of ∫ f dν(·)
