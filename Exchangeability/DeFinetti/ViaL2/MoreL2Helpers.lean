@@ -2972,7 +2972,7 @@ lemma directing_measure_integral
   -- Step D: Conclude by uniqueness of L¹ limits
   -- Both alpha and ∫ f dν(·) satisfy the L¹ convergence property
   -- By uniqueness (integral of |difference| = 0), they agree a.e.
-  have h_conv := (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd).choose_spec.2.2
+  -- Note: We use hα_conv (from the obtain at line 1219) which has alpha in its type.
   -- alpha satisfies: ∀ n ε, ε > 0 → ∃ M, ∀ m ≥ M, ∫|avg - alpha| < ε
   -- h_L1_conv: ∀ n ε, ε > 0 → ∃ M, ∀ m ≥ M, ∫|avg - ∫ f dν| < ε
   -- By triangle inequality: ∫|alpha - ∫ f dν| ≤ ∫|avg - alpha| + ∫|avg - ∫ f dν|
@@ -2988,7 +2988,8 @@ lemma directing_measure_integral
     set ε := (∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ) / 3 with hε_def
     have hε_pos : ε > 0 := by linarith
     -- Get bounds from both convergence properties
-    obtain ⟨M₁, hM₁⟩ := h_conv 0 ε hε_pos
+    -- hα_conv comes from the obtain at line 1219
+    obtain ⟨M₁, hM₁⟩ := hα_conv 0 ε hε_pos
     obtain ⟨M₂, hM₂⟩ := h_L1_conv 0 ε hε_pos
     set m := max M₁ M₂ with hm_def
     have hm₁ : m ≥ M₁ := le_max_left _ _
@@ -3016,27 +3017,50 @@ lemma directing_measure_integral
     -- 3. h_lt_2ε combines via linarith
     -- All require integrability of avg (bounded by M since f bounded)
     have h_lt_2ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < 2 * ε := by
-      -- ════════════════════════════════════════════════════════════════════════
-      -- Triangle inequality for L¹ integrals
-      -- ════════════════════════════════════════════════════════════════════════
-      -- Given:
-      --   h1: ∫|avg - alpha| < ε (from h_conv, uses zero_add simp)
-      --   h2: ∫|avg - ∫fdν| < ε (from h_L1_conv, uses zero_add simp)
-      --   h_tri: |α - ∫fdν| ≤ |α - avg| + |avg - ∫fdν| (pointwise, proved above)
-      --
-      -- Proof steps:
-      -- 1. h1' : ∫|alpha - avg| < ε (convert via abs_sub_comm and integral_congr_ae)
-      -- 2. h_avg_int : Integrable avg μ (Integrable.const_mul, integrable_finset_sum,
-      --    (integrable_const M).mono' with AEStronglyMeasurable)
-      -- 3. h_int1, h_int2 : integrability of |α - avg|, |avg - ∫fdν|
-      --    (use Integrable.sub.abs)
-      -- 4. Combine: ∫|α - ∫fdν| ≤ ∫(|α - avg| + |avg - ∫fdν|)  [integral_mono_of_nonneg]
-      --           = ∫|α - avg| + ∫|avg - ∫fdν|                  [integral_add]
-      --           < ε + ε = 2ε                                  [add_lt_add, h1', h2]
-      --
-      -- Technical complexity: type matching for h1 and h2 which use Fin m sums
-      -- Implementation: ~25 lines with careful term mode or convert tactics
-      sorry
+      -- Get bound M from hf_bdd for integrability arguments
+      obtain ⟨M, hM⟩ := hf_bdd
+
+      -- h1 has |avg - alpha|, we need |alpha - avg|
+      -- After simp [zero_add], h1 has: ∫|(1/m) * Σ f(X_{k+1}) - alpha| < ε
+      -- which equals ∫|avg - alpha| < ε by definition of avg
+      have h1' : ∫ ω, |alpha ω - avg ω| ∂μ < ε := by
+        simp only [avg, zero_add]
+        calc ∫ ω, |alpha ω - (1 / ↑m) * ∑ k : Fin m, f (X (k.val + 1) ω)| ∂μ
+            = ∫ ω, |(1 / ↑m) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
+              congr 1; ext ω; exact abs_sub_comm _ _
+          _ < ε := h1
+
+      -- h2: ∫|avg - ∫fdν| < ε (already in correct form after simp)
+      have h2' : ∫ ω, |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε := by
+        simp only [avg, zero_add]
+        exact h2
+
+      -- Integrability of avg: bounded function on probability space
+      have h_avg_int : Integrable avg μ := by
+        simp only [avg]
+        apply Integrable.const_mul
+        apply integrable_finset_sum
+        intro k _
+        have hfX_meas : Measurable (fun ω => f (X (0 + k.val + 1) ω)) :=
+          hf_meas.comp (hX_meas _)
+        exact (integrable_const M).mono' hfX_meas.aestronglyMeasurable
+          (ae_of_all _ (fun ω => hM _))
+
+      -- Integrability of |alpha - avg| and |avg - ∫fdν|
+      have h_int1 : Integrable (fun ω => |alpha ω - avg ω|) μ :=
+        ((hα_L1.integrable le_rfl).sub h_avg_int).abs
+      have h_int2 : Integrable (fun ω => |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|) μ :=
+        (h_avg_int.sub h_int_L1).abs
+
+      -- Combine via triangle inequality for integrals
+      calc ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ
+          ≤ ∫ ω, (|alpha ω - avg ω| + |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|) ∂μ := by
+            apply integral_mono_of_nonneg (ae_of_all _ (fun _ => abs_nonneg _))
+              (h_int1.add h_int2) (ae_of_all _ h_tri)
+        _ = ∫ ω, |alpha ω - avg ω| ∂μ + ∫ ω, |avg ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ :=
+            integral_add h_int1 h_int2
+        _ < ε + ε := add_lt_add h1' h2'
+        _ = 2 * ε := by ring
     -- But 3ε = ∫|α-∫fdν|, so 3ε < 2ε, contradiction for ε > 0
     have h_eq_3ε : ∫ ω, |alpha ω - ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ = 3 * ε := by
       simp only [hε_def]; ring
