@@ -3060,6 +3060,30 @@ lemma directing_measure_integral
     -- Technical implementation: ~80 lines using SimpleFunc.approxOn,
     -- weighted_sums_converge_L1_add/smul, and epsilon/3 arguments.
 
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Direct approximation proof (non-circular)
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- We prove L¹ convergence to ∫ f dν DIRECTLY, without using α = ∫ f dν.
+    -- This is essential because h_L1_conv is used to PROVE α = ∫ f dν (in h_diff_zero).
+    --
+    -- Strategy for bounded measurable f with |f| ≤ M:
+    -- 1. For ε/4, approximate f by step function s with ‖f - s‖_∞ < ε/4
+    -- 2. s = Σᵢ cᵢ · 1_{Ioc(aᵢ, bᵢ)} where 1_{Ioc(a,b)} = 1_{Iic b} - 1_{Iic a}
+    -- 3. By h_ind_L1_conv + linearity: avg(s) → ∫ s dν in L¹
+    -- 4. Triangle: ∫|avg(f) - ∫fdν| ≤ ∫|avg(f) - avg(s)| + ∫|avg(s) - ∫sdν| + ∫|∫sdν - ∫fdν|
+    --    Term 1: ≤ ‖f - s‖_∞ (pointwise bound on averages)
+    --    Term 2: < ε/4 for large m (by step 3)
+    --    Term 3: ≤ ‖f - s‖_∞ (bounded integrals)
+    --    Total: < 3 · ε/4 < ε
+
+    -- For bounded measurable f, the dyadic approximation gives step functions.
+    -- Each step function converges by linearity from h_ind_L1_conv.
+    -- The full implementation requires:
+    -- 1. Dyadic step function construction (SimpleFunc or manual)
+    -- 2. Proof that step function averages → ∫ step dν using linearity
+    -- 3. Triangle inequality bounds
+    --
+    -- This is ~60 lines of technical implementation. For now, we defer:
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
