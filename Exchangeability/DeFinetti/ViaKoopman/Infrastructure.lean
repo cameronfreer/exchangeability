@@ -1842,5 +1842,62 @@ lemma condexp_lag_constant_product_general
 
   exact condExp_ae_eq_of_setIntegral_diff_eq_zero hF_int hG_int h_diff_zero
 
-end Exchangeability.DeFinetti.ViaKoopman
 
+/-! ### Conditional Expectation Helper Lemmas
+
+These lemmas support the L¹ Cesàro convergence framework. -/
+
+/-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
+    then `Z*Y` is integrable (finite measure suffices). -/
+lemma integrable_mul_of_ae_bdd_left
+    {μ : Measure (Ω[α])} [IsFiniteMeasure μ]
+    {Z Y : Ω[α] → ℝ}
+    (hZ : Measurable Z) (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
+    (hY : Integrable Y μ) :
+    Integrable (Z * Y) μ := by
+  obtain ⟨C, hC⟩ := hZ_bd
+  have hZ_norm : ∀ᵐ ω ∂μ, ‖Z ω‖ ≤ C := by
+    filter_upwards [hC] with ω hω
+    rwa [Real.norm_eq_abs]
+  exact Integrable.bdd_mul' hY hZ.aestronglyMeasurable hZ_norm
+
+/-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
+the L¹ distance. This is a standard property following from Jensen's inequality. -/
+lemma condExp_L1_lipschitz
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
+    ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
+      ≤ ∫ ω, |Z ω - W ω| ∂μ := by
+  have h_sub : μ[(Z - W) | shiftInvariantSigma]
+              =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
+    condExp_sub hZ hW shiftInvariantSigma
+  calc ∫ ω, |μ[Z | shiftInvariantSigma] ω - μ[W | shiftInvariantSigma] ω| ∂μ
+      = ∫ ω, |μ[(Z - W) | shiftInvariantSigma] ω| ∂μ := by
+          refine integral_congr_ae ?_
+          filter_upwards [h_sub] with ω hω
+          simp [hω]
+    _ ≤ ∫ ω, |Z ω - W ω| ∂μ := integral_abs_condExp_le (Z - W)
+
+/-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
+then CE[Z·Y | mSI] = Z·CE[Y | mSI] a.e. This is the standard "taking out what is known". -/
+lemma condExp_mul_pullout
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    {Z Y : Ω[α] → ℝ}
+    (hZ_meas : Measurable[shiftInvariantSigma (α := α)] Z)
+    (hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C)
+    (hY : Integrable Y μ) :
+    μ[Z * Y | shiftInvariantSigma (α := α)] =ᵐ[μ] Z * μ[Y | shiftInvariantSigma (α := α)] := by
+  have hZ_aesm : AEStronglyMeasurable[shiftInvariantSigma (α := α)] Z μ :=
+    hZ_meas.aestronglyMeasurable
+  have hZY_int : Integrable (Z * Y) μ := by
+    have hZ_meas_ambient : Measurable Z := by
+      apply Measurable.mono hZ_meas
+      · exact shiftInvariantSigma_le (α := α)
+      · exact le_rfl
+    exact integrable_mul_of_ae_bdd_left hZ_meas_ambient hZ_bd hY
+  exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left
+    (μ := μ) (m := shiftInvariantSigma (α := α)) hZ_aesm hZY_int hY
+
+
+
+end Exchangeability.DeFinetti.ViaKoopman
