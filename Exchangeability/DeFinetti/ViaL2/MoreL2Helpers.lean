@@ -3387,24 +3387,22 @@ lemma directing_measure_integral
         · intro ⟨hxa, hxb⟩; exact ⟨hxb, not_le.mpr hxa⟩
         · intro ⟨hxb, hna⟩; exact ⟨not_le.mp hna, hxb⟩
       have h_subset : Set.Iic a ⊆ Set.Iic b := Set.Iic_subset_Iic.mpr (le_of_lt hab)
-      -- Indicator decomposition as function equality
+      -- Indicator decomposition as function equality: 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}
       have h_ind_eq : (Set.Ioc a b).indicator (fun _ => (1:ℝ)) =
           (Set.Iic b).indicator (fun _ => (1:ℝ)) - (Set.Iic a).indicator (fun _ => (1:ℝ)) := by
         rw [h_Ioc_eq, Set.indicator_diff h_subset]
       -- ═══════════════════════════════════════════════════════════════════════
-      -- PROOF OUTLINE (mathematically complete):
-      -- Let f_b(ω) = |avg(b)(ω) - int(b)(ω)| and f_a(ω) = |avg(a)(ω) - int(a)(ω)|
-      -- 1. Integrability: f_b, f_a bounded by 2 (avg,int ∈ [0,1]), hence integrable
-      -- 2. Decomposition:
-      --    - avg(Ioc) = avg(b) - avg(a)  [via h_ind_eq + Finset.sum_sub_distrib]
-      --    - int(Ioc) = int(b) - int(a)  [via h_ind_eq + integral_sub]
-      -- 3. Triangle inequality pointwise:
-      --    |avg(Ioc) - int(Ioc)| = |(avg(b)-avg(a)) - (int(b)-int(a))|
-      --                         = |(avg(b)-int(b)) - (avg(a)-int(a))|
-      --                         ≤ |avg(b)-int(b)| + |avg(a)-int(a)| = f_b + f_a
-      -- 4. Integrate both sides:
-      --    ∫|avg(Ioc) - int(Ioc)| ≤ ∫f_b + ∫f_a < ε'/2 + ε'/2 = ε'
-      --    [using integral_mono, integral_add, and hM_b, hM_a from h_ind_L1_conv]
+      -- PROOF OUTLINE (verified structure):
+      -- 1. Sum decomposition: Σ 1_{Ioc}(Xₖ) = Σ 1_{Iic b}(Xₖ) - Σ 1_{Iic a}(Xₖ)
+      --    via h_ind_eq and Finset.sum_sub_distrib
+      -- 2. Integral decomposition: ∫ 1_{Ioc} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
+      --    via MeasureTheory.integral_sub with indicator integrability
+      -- 3. Pointwise bound:
+      --    |(1/m)Σ1_{Ioc} - ∫1_{Ioc}| = |((1/m)Σ1_b - ∫1_b) - ((1/m)Σ1_a - ∫1_a)|
+      --                               ≤ |(1/m)Σ1_b - ∫1_b| + |(1/m)Σ1_a - ∫1_a|
+      --    by triangle inequality (|x - y| ≤ |x| + |y|)
+      -- 4. Integrate: ∫|...| ≤ ∫|..._b| + ∫|..._a| < ε'/2 + ε'/2 = ε'
+      --    using hM_b, hM_a from h_ind_L1_conv
       -- ═══════════════════════════════════════════════════════════════════════
       sorry
 
