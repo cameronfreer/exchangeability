@@ -3641,17 +3641,131 @@ lemma directing_measure_integral
     -- ═══════════════════════════════════════════════════════════════════════
 
     -- ═══════════════════════════════════════════════════════════════════════
-    -- IMPLEMENTATION:
-    -- Step 1: Extend h_ind_L1_conv to all Borel sets via π-λ theorem
-    --         (same pattern as directing_measure_measurable at line 300)
-    -- Step 2: Approximate f by range-quantized step function
-    -- Step 3: Apply linearity + triangle inequality
-    --
-    -- The proof is mathematically complete but requires ~100 lines of technical
-    -- implementation following the established π-λ pattern.
-    -- Key dependencies: h_ind_L1_conv (done), h_Ioc_L1_conv (done),
-    --                   directing_measure_measurable (template for π-λ)
+    -- IMPLEMENTATION via Dynkin system + range quantization
     -- ═══════════════════════════════════════════════════════════════════════
+
+    -- Abbreviations for cleaner proofs
+    let ν : Ω → Measure ℝ := directing_measure X hX_contract hX_meas hX_L2
+
+    -- Step 1: Define G = sets where indicator L¹ convergence holds
+    let G : Set (Set ℝ) := { S | MeasurableSet S ∧ ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+          ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' }
+
+    -- G contains Iic intervals (from h_ind_L1_conv)
+    have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := by
+      intro t
+      constructor
+      · exact measurableSet_Iic
+      · intro n' ε' hε'
+        exact h_ind_L1_conv t n' ε' hε'
+
+    -- G contains empty set (trivial)
+    have h_empty : ∅ ∈ G := by
+      constructor
+      · exact MeasurableSet.empty
+      · intro n' ε' hε'
+        use 1
+        intro m hm
+        simp only [Set.indicator_empty, Finset.sum_const_zero, mul_zero, measure_empty,
+          ENNReal.zero_toReal, integral_const, sub_zero, abs_zero, smul_eq_mul, mul_zero]
+        exact hε'
+
+    -- G is closed under complement
+    have h_compl : ∀ S ∈ G, Sᶜ ∈ G := by
+      intro S ⟨hS_meas, hS_conv⟩
+      constructor
+      · exact hS_meas.compl
+      · intro n' ε' hε'
+        obtain ⟨M', hM'⟩ := hS_conv n' ε' hε'
+        use max 1 M'
+        intro m hm
+        have hm' : m ≥ M' := le_of_max_le_right hm
+        have hm1 : m ≥ 1 := le_of_max_le_left hm
+        have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.one_le_iff_ne_zero.mp hm1)
+        -- 1_{Sᶜ} = 1 - 1_S pointwise
+        have h_pw : ∀ x, Sᶜ.indicator (fun _ => (1:ℝ)) x =
+            1 - S.indicator (fun _ => (1:ℝ)) x := by
+          intro x
+          by_cases hx : x ∈ S
+          · simp [Set.indicator, hx, Set.mem_compl_iff]
+          · simp [Set.indicator, hx, Set.mem_compl_iff]
+        -- Transform the sum
+        have h_sum_eq : ∀ ω, ∑ k : Fin m, Sᶜ.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) =
+            m - ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) := by
+          intro ω
+          calc ∑ k : Fin m, Sᶜ.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+              = ∑ k : Fin m, (1 - S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)) := by
+                refine Finset.sum_congr rfl ?_; intro k _; exact h_pw _
+            _ = m - ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) := by
+                simp [Finset.sum_sub_distrib, Finset.card_fin]
+        -- Transform the integral
+        have h_int_eq : ∀ ω, ∫ x, Sᶜ.indicator (fun _ => (1:ℝ)) x ∂(ν ω) =
+            1 - ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω) := by
+          intro ω
+          haveI hprob : IsProbabilityMeasure (ν ω) :=
+            directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          -- ∫ 1_S dν = (ν S).toReal via integral_indicator_one
+          have h1 : ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω) = (ν ω S).toReal := by
+            have : S.indicator (fun _ : ℝ => (1:ℝ)) = S.indicator 1 := rfl
+            rw [this, integral_indicator_one hS_meas, Measure.real_def]
+          have h2 : ∫ x, Sᶜ.indicator (fun _ => (1:ℝ)) x ∂(ν ω) = (ν ω Sᶜ).toReal := by
+            have : Sᶜ.indicator (fun _ : ℝ => (1:ℝ)) = Sᶜ.indicator 1 := rfl
+            rw [this, integral_indicator_one hS_meas.compl, Measure.real_def]
+          rw [h1, h2]
+          -- ν(Sᶜ) = 1 - ν(S) for probability measure
+          rw [prob_compl_eq_one_sub hS_meas]
+          rw [ENNReal.toReal_sub_of_le MeasureTheory.prob_le_one ENNReal.one_ne_top]
+          simp [measure_univ]
+        -- The averages transform: avg(1_{Sᶜ}) = 1 - avg(1_S)
+        have h_avg_eq : ∀ ω, (1/(m:ℝ)) * ∑ k : Fin m, Sᶜ.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) =
+            1 - (1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) := by
+          intro ω
+          rw [h_sum_eq, mul_sub]
+          rw [show (1/(m:ℝ)) * (m:ℝ) = 1 by field_simp]
+        -- The difference is the same (up to sign)
+        have h_diff : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, Sᶜ.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+            ∫ x, Sᶜ.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| =
+            |(1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+            ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| := by
+          intro ω
+          rw [h_avg_eq, h_int_eq]
+          -- (1 - a) - (1 - b) = b - a, so |(1-a)-(1-b)| = |b-a| = |a-b|
+          rw [show (1 - (1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)) -
+              (1 - ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω)) =
+              ∫ x, S.indicator (fun _ => (1:ℝ)) x ∂(ν ω) -
+              (1/(m:ℝ)) * ∑ k : Fin m, S.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) by ring]
+          exact abs_sub_comm _ _
+        simp_rw [h_diff]
+        exact hM' m hm'
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- SIMPLIFIED APPROACH: Direct step function approximation
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Key insight: We don't need the full Dynkin system. For bounded f, we
+    -- approximate by step functions using Ioc INTERVALS (not preimages).
+    -- We already have h_Ioc_L1_conv for Ioc intervals, so by linearity
+    -- over finite sums, step functions converge in L¹.
+    --
+    -- Proof structure:
+    -- 1. Choose δ = ε/4 and partition [-M_bound, M_bound] into intervals
+    -- 2. Let s = ∑_j c_j · 1_{Ioc(a_j, b_j)} be the step function
+    -- 3. |f - s| ≤ δ pointwise (by construction)
+    -- 4. ∫|avg(f) - ∫f dν| ≤ |avg(f-s)| + |avg(s) - ∫s dν| + |∫(s-f) dν|
+    --                      ≤ δ + (L¹ error from h_Ioc_L1_conv) + δ < ε
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- The proof requires constructing a step function approximation and
+    -- applying h_Ioc_L1_conv + linearity. This is straightforward but
+    -- requires setting up the partition explicitly.
+    --
+    -- For a complete implementation:
+    -- 1. Given ε > 0, set δ = ε/4
+    -- 2. Let N = ⌈2·M_bound/δ⌉ intervals covering [-M_bound, M_bound]
+    -- 3. For each interval Ioc(a_j, b_j), apply h_Ioc_L1_conv with ε'=ε/(4N)
+    -- 4. Take M' = max of all the M' values from h_Ioc_L1_conv calls
+    -- 5. For m ≥ M': ∫|avg(s) - ∫s dν| ≤ N · ε/(4N) = ε/4
+    -- 6. Total error: δ + ε/4 + δ = ε/4 + ε/4 + ε/4 < ε
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
