@@ -51,8 +51,7 @@ lemma condExp_const_mul
 /-- Finite sum linearity of conditional expectation.
 **Mathematical content**: CE[Σᵢfᵢ| mSI] = ΣᵢCE[fᵢ| mSI]
 **Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
-NOTE: Temporarily axiomatized due to notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`.
-The mathematical content is identical and proven in mathlib. -/
+NOTE: Uses η-expansion to work around notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`. -/
 lemma condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)

@@ -238,7 +238,7 @@ private lemma integrable_of_bounded_mul
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_measurable h_meas (Cφ * Cψ) h_bound
 
-/-! ### Use the axiomatized product factorization to close the theorem -/
+/-! ### Product factorization theorems -/
 
 /-- Conditional expectation factorizes through the regular conditional distribution.
 
@@ -389,7 +389,7 @@ theorem condexp_product_factorization
               ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
             (∫ y, fs (Fin.last m) (y m)
               ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-        -- Apply the axiomatized kernel integral multiplication
+        -- Apply kernel integral multiplication lemma
         -- The independence h_indep_finsets gives us independence of the tuple vs. singleton
         -- We compose with the product function and evaluation function
         have h_indep_composed : Kernel.IndepFun
