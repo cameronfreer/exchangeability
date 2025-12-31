@@ -3604,41 +3604,53 @@ lemma directing_measure_integral
       simpa [avg, I, indIoc, ν] using h_final
 
     -- ═══════════════════════════════════════════════════════════════════════
-    -- NON-CIRCULAR PROOF: Step function approximation
+    -- NON-CIRCULAR PROOF: Dynkin system + range quantization
     -- ═══════════════════════════════════════════════════════════════════════
     -- IMPORTANT: This proof MUST NOT use α or hα_conv (that would be circular,
     -- since h_diff_zero uses h_L1_conv to prove α = ∫ f dν a.e.)
     --
-    -- PROOF STRUCTURE:
-    -- 1. Approximate f by dyadic step function s with ‖f - s‖_∞ < ε/4:
-    --    - For bounded f with |f| ≤ M, partition [-M, M] into N intervals
-    --    - s = Σⱼ cⱼ · 1_{Ioc(aⱼ,bⱼ)} where cⱼ are midpoints
-    --    - N = ⌈8M/ε⌉ gives ‖f - s‖_∞ ≤ M/N < ε/4
+    -- CORRECTED PROOF STRUCTURE:
+    -- The previous approach (domain step functions) fails for non-continuous f.
+    -- The correct approach uses Dynkin system + range quantization:
     --
-    -- 2. Show avg(s) → ∫ s dν in L¹ via linearity:
-    --    - Each 1_{Ioc} = 1_{Iic b} - 1_{Iic a} by h_ind_eq
-    --    - Use h_ind_L1_conv (or h_Ioc_L1_conv) for each term
-    --    - By weighted_sums_converge_L1_add/smul, linear combinations converge
-    --    - Get M_s such that m ≥ M_s implies ∫|avg(s) - ∫s dν| < ε/2
+    -- STEP 1: Extend indicator convergence from Iic to all Borel sets via π-λ
+    --   Define G = {S : MeasurableSet S ∧ ∀ n' ε' > 0, ∃ M', ∀ m ≥ M',
+    --               ∫|avg(1_S) - ∫ 1_S dν| < ε'}
+    --   - G contains Iic intervals (h_ind_L1_conv)
+    --   - G contains ∅ (trivial)
+    --   - G closed under complement (1_{Sᶜ} = 1 - 1_S, linearity)
+    --   - G closed under disjoint union (countable additivity + linearity)
+    --   - By π-λ (MeasurableSpace.induction_on_inter): G = all Borel sets
     --
-    -- 3. Triangle inequality:
-    --    ∫|avg(f) - ∫f dν| ≤ ∫|avg(f) - avg(s)| + ∫|avg(s) - ∫s dν| + ∫|∫s dν - ∫f dν|
+    -- STEP 2: Approximate f by range-quantized step function
+    --   For bounded f with |f| ≤ M, partition [-M, M] into N intervals:
+    --   s = ∑ⱼ cⱼ · 1_{f⁻¹(Ioc uⱼ vⱼ)}  (NOT 1_{Ioc}, but 1_{f⁻¹(Ioc)})
+    --   The preimages f⁻¹(Ioc) are Borel sets (f is measurable)
+    --   By construction: |f - s| ≤ δ pointwise
     --
-    --    Term 1: ∫|avg(f) - avg(s)| ≤ ‖f - s‖_∞ < ε/4
-    --      (Cesàro averages preserve sup-norm bounds)
+    -- STEP 3: Apply linearity for indicator linear combinations
+    --   By STEP 1, indicator convergence holds for each f⁻¹(Ioc uⱼ vⱼ)
+    --   By linearity (add/smul): avg(s) → ∫ s dν in L¹
     --
-    --    Term 2: ∫|avg(s) - ∫s dν| < ε/2 for m ≥ M_s
-    --      (from step function L¹ convergence)
+    -- STEP 4: Triangle inequality
+    --   ∫|avg(f) - ∫f dν| ≤ ‖f - s‖∞ + ∫|avg(s) - ∫s dν| + ‖s - f‖∞
+    --                     < ε/4 + ε/2 + ε/4 = ε
     --
-    --    Term 3: ∫|∫s dν - ∫f dν| ≤ ‖s - f‖_∞ < ε/4
-    --      (integral monotonicity + directing measure is probability)
+    -- KEY INSIGHT: We quantize the RANGE of f (preimage sets are Borel),
+    -- not the domain (which would require f to be approximable by intervals).
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- IMPLEMENTATION:
+    -- Step 1: Extend h_ind_L1_conv to all Borel sets via π-λ theorem
+    --         (same pattern as directing_measure_measurable at line 300)
+    -- Step 2: Approximate f by range-quantized step function
+    -- Step 3: Apply linearity + triangle inequality
     --
-    --    Total: < ε/4 + ε/2 + ε/4 = ε
-    --
-    -- IMPLEMENTATION REQUIREMENTS:
-    -- - Need h_Ioc_L1_conv filled (currently sorry at line 3409)
-    -- - Need linearity lemmas for L¹ convergence of linear combinations
-    -- - Need step function construction (dyadic partition of bounded range)
+    -- The proof is mathematically complete but requires ~100 lines of technical
+    -- implementation following the established π-λ pattern.
+    -- Key dependencies: h_ind_L1_conv (done), h_Ioc_L1_conv (done),
+    --                   directing_measure_measurable (template for π-λ)
     -- ═══════════════════════════════════════════════════════════════════════
     sorry
 
