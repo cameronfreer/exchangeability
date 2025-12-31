@@ -3338,9 +3338,127 @@ lemma directing_measure_integral
     -- ≤ ‖f-s‖_∞ + (step function conv) + ‖s-f‖_∞
     -- ≤ ε/3 + ε/3 + ε/3 = ε for appropriate choices
 
-    -- Technical implementation placeholder:
-    -- The full proof requires handling Finset.sum for the step function terms
-    -- and applying h_ind_L1_conv to each Iic component.
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- IMPLEMENTATION: Dyadic step function approximation
+    -- ═══════════════════════════════════════════════════════════════════════
+
+    -- Choose precision K such that 2M/2^K < ε/4
+    -- Then the dyadic step function has sup-norm error < ε/4
+    have hε4 : ε/4 > 0 := by linarith
+    have hM_pos : 0 ≤ M_bound := by
+      obtain ⟨x⟩ : Nonempty ℝ := ⟨0⟩
+      exact le_trans (abs_nonneg _) (hM_bound x)
+
+    -- For Iic indicator L¹ convergence, we need to handle:
+    -- 1. Ioc(a,b) = Iic(b) \ Iic(a), so 1_{Ioc(a,b)} = 1_{Iic b} - 1_{Iic a}
+    -- 2. For step function s = Σᵢ cᵢ · 1_{Ioc(aᵢ,bᵢ)}, use linearity
+
+    -- Helper: L¹ convergence for Ioc indicators via Iic decomposition
+    have h_Ioc_L1_conv : ∀ a b : ℝ, a < b → ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+          ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε' := by
+      intro a b _hab n' ε' hε'
+      -- Decompose: 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}
+      -- Get M_a from h_ind_L1_conv for Iic a with ε'/2
+      -- Get M_b from h_ind_L1_conv for Iic b with ε'/2
+      have hε'2 : ε'/2 > 0 := by linarith
+      obtain ⟨M_a, hM_a⟩ := h_ind_L1_conv a n' (ε'/2) hε'2
+      obtain ⟨M_b, hM_b⟩ := h_ind_L1_conv b n' (ε'/2) hε'2
+      use max M_a M_b
+      intro m hm
+      -- Triangle inequality for the difference
+      have hm_a : m ≥ M_a := le_trans (le_max_left _ _) hm
+      have hm_b : m ≥ M_b := le_trans (le_max_right _ _) hm
+      specialize hM_a m hm_a
+      specialize hM_b m hm_b
+
+      -- ═══════════════════════════════════════════════════════════════════════
+      -- PROOF OUTLINE (documented for implementation):
+      -- ═══════════════════════════════════════════════════════════════════════
+      -- 1. Key identity: 1_{Ioc a b}(x) = 1_{Iic b}(x) - 1_{Iic a}(x)
+      --    (Ioc a b = Iic b ∩ (Iic a)ᶜ, so indicator decomposes)
+      --
+      -- 2. Linearity: avg(1_{Ioc}) = avg(1_{Iic b}) - avg(1_{Iic a})
+      --              ∫ 1_{Ioc} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
+      --
+      -- 3. Algebraic identity:
+      --    avg(1_{Ioc}) - ∫ 1_{Ioc} dν = (avg(1_{Iic b}) - ∫ 1_{Iic b} dν)
+      --                                - (avg(1_{Iic a}) - ∫ 1_{Iic a} dν)
+      --
+      -- 4. Pointwise triangle inequality: |x - y| ≤ |x| + |y|
+      --
+      -- 5. Integral of sum: ∫(|A| + |B|) = ∫|A| + ∫|B| (integrability from boundedness by 1)
+      --
+      -- 6. Apply hM_a, hM_b to get < ε'/2 + ε'/2 = ε'
+      --
+      -- Technical requirements:
+      -- - Integrability of ω ↦ ∫ 1_{Iic t} dν(ω) (bounded by 1 over probability measure)
+      -- - Measurability of same (from directing_measure_measurable)
+      -- ═══════════════════════════════════════════════════════════════════════
+      calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ
+        _ ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Iic b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+                   ∫ x, (Set.Iic b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ +
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Iic a).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+                   ∫ x, (Set.Iic a).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ := by
+          sorry -- Ioc = Iic b - Iic a decomposition, triangle inequality, integral_add
+        _ < ε'/2 + ε'/2 := by linarith [hM_b, hM_a]
+        _ = ε' := by ring
+
+    -- For general bounded f, use triangle inequality with step function approximation.
+    -- The step function implementation requires careful handling.
+    -- For now, use the bound from h_Ioc_L1_conv and note that f can be approximated
+    -- by step functions built from Ioc intervals.
+
+    -- Direct proof using hα_conv + limit uniqueness structure:
+    -- Since the full step function machinery requires significant implementation,
+    -- we use the convergence structure from hα_conv and note that the limit
+    -- is determined uniquely by the Iic base case.
+
+    -- Get M from hα_conv (avg → α in L¹)
+    obtain ⟨M₁, hM₁⟩ := hα_conv n (ε/2) (by linarith)
+
+    -- Use L1_transfer: since we've shown h_ind_L1_conv for indicators,
+    -- and α agrees with ∫ f dν on indicators (by base + π-λ),
+    -- the limits agree for all bounded measurable f.
+
+    use M₁
+    intro m hm
+    specialize hM₁ m hm
+
+    -- The key: α =ᵐ ∫ f dν by uniqueness of L¹ limits
+    -- This follows from: for indicators, avg → ∫ 1 dν (by h_ind_L1_conv)
+    -- and avg → α (by hα_conv), so α =ᵐ ∫ 1 dν on indicators.
+    -- By π-λ theorem, this extends to all bounded measurable functions.
+
+    -- For the actual bound, we need to show ∫|avg - ∫fdν| < ε.
+    -- By triangle: ∫|avg - ∫fdν| ≤ ∫|avg - α| + ∫|α - ∫fdν|
+    -- First term < ε/2 (from hM₁)
+    -- Second term = 0 a.e. (by h_diff_zero which uses this h_L1_conv)
+
+    -- This creates a mutual recursion that is resolved by:
+    -- h_diff_zero proves ∫|α - ∫fdν| = 0 using h_L1_conv
+    -- h_L1_conv uses the fact that α =ᵐ ∫fdν (proved in h_diff_zero)
+
+    -- The non-circular resolution is that both facts follow from
+    -- the indicator base case + approximation arguments.
+
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- NON-CIRCULAR PROOF STRUCTURE (to be implemented):
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- 1. For step function s ≈ f with ‖f - s‖_∞ < ε/4:
+    --    - Approximate f by dyadic step function s = Σ cⱼ · 1_{Ioc(aⱼ,bⱼ)}
+    --    - Each Ioc = Iic b - Iic a, so use h_ind_L1_conv for each term
+    --    - By linearity (weighted_sums_converge_L1_add/smul), avg(s) → ∫ s dν
+    --
+    -- 2. Triangle inequality for ∫|avg(f) - ∫ f dν|:
+    --    ∫|avg(f) - ∫ f dν| ≤ ∫|avg(f) - avg(s)| + ∫|avg(s) - ∫ s dν| + ∫|∫ s dν - ∫ f dν|
+    --                      ≤ ‖f - s‖_∞ + (step conv) + ‖s - f‖_∞
+    --                      < ε/4 + ε/2 + ε/4 = ε
+    --
+    -- Note: This does NOT use α or hα_conv (that would be circular).
+    -- It builds directly from h_ind_L1_conv + step function approximation.
+    -- ═══════════════════════════════════════════════════════════════════════
     sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
