@@ -2659,7 +2659,28 @@ lemma directing_measure_integral
     -- For simple functions: linear combination of the above.
     -- For general f: approximate by simple functions.
 
-    -- The full proof requires ~40 lines. We defer for now:
+    -- Direct approach: Show the integral is a pointwise limit of measurable functions.
+    -- Use SimpleFunc.approxOn to get simple functions s_k → f pointwise.
+    -- Each ∫ s_k dν(·) is measurable (finite sum of indicator integrals).
+    -- By DCT: ∫ s_k dν(ω) → ∫ f dν(ω) for each ω.
+    -- By Measurable.of_tendsto: the limit is measurable.
+
+    -- For a simpler approach: note that the integral of a bounded measurable function
+    -- against a family of measures is measurable if measure evaluation is measurable.
+    -- We have directing_measure_measurable for all Borel sets.
+
+    -- Key lemma: For bounded measurable f, approximate by simple functions
+    -- s_k = Σⱼ cⱼ · 1_{Sⱼ} where Sⱼ are Borel sets.
+    -- ∫ s_k dν(ω) = Σⱼ cⱼ · (ν(ω)(Sⱼ)).toReal
+    -- Each term is measurable by directing_measure_measurable.
+
+    -- Proof outline (defer implementation for now):
+    -- 1. Build s_n via SimpleFunc.approxOn f hf_meas (range f ∪ {0}) 0 _
+    -- 2. For each s_n (finite sum of c_j · 1_{S_j}):
+    --    ∫ s_n dν(ω) = Σⱼ c_j · (ν(ω)(S_j)).toReal
+    --    Each term measurable by (directing_measure_measurable _ hS_j).ennreal_toReal.const_mul
+    -- 3. By DCT: ∫ s_n dν(ω) → ∫ f dν(ω) for each ω
+    -- 4. By measurable_of_tendsto_metrizable: limit is measurable
     sorry
 
   -- Step B: Integrability of ∫ f dν(·)
