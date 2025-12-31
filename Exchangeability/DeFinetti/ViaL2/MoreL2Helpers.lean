@@ -3408,59 +3408,42 @@ lemma directing_measure_integral
       -- ═══════════════════════════════════════════════════════════════════════
       sorry
 
-    -- For general bounded f, use triangle inequality with step function approximation.
-    -- The step function implementation requires careful handling.
-    -- For now, use the bound from h_Ioc_L1_conv and note that f can be approximated
-    -- by step functions built from Ioc intervals.
-
-    -- Direct proof using hα_conv + limit uniqueness structure:
-    -- Since the full step function machinery requires significant implementation,
-    -- we use the convergence structure from hα_conv and note that the limit
-    -- is determined uniquely by the Iic base case.
-
-    -- Get M from hα_conv (avg → α in L¹)
-    obtain ⟨M₁, hM₁⟩ := hα_conv n (ε/2) (by linarith)
-
-    -- Use L1_transfer: since we've shown h_ind_L1_conv for indicators,
-    -- and α agrees with ∫ f dν on indicators (by base + π-λ),
-    -- the limits agree for all bounded measurable f.
-
-    use M₁
-    intro m hm
-    specialize hM₁ m hm
-
-    -- The key: α =ᵐ ∫ f dν by uniqueness of L¹ limits
-    -- This follows from: for indicators, avg → ∫ 1 dν (by h_ind_L1_conv)
-    -- and avg → α (by hα_conv), so α =ᵐ ∫ 1 dν on indicators.
-    -- By π-λ theorem, this extends to all bounded measurable functions.
-
-    -- For the actual bound, we need to show ∫|avg - ∫fdν| < ε.
-    -- By triangle: ∫|avg - ∫fdν| ≤ ∫|avg - α| + ∫|α - ∫fdν|
-    -- First term < ε/2 (from hM₁)
-    -- Second term = 0 a.e. (by h_diff_zero which uses this h_L1_conv)
-
-    -- This creates a mutual recursion that is resolved by:
-    -- h_diff_zero proves ∫|α - ∫fdν| = 0 using h_L1_conv
-    -- h_L1_conv uses the fact that α =ᵐ ∫fdν (proved in h_diff_zero)
-
-    -- The non-circular resolution is that both facts follow from
-    -- the indicator base case + approximation arguments.
-
     -- ═══════════════════════════════════════════════════════════════════════
-    -- NON-CIRCULAR PROOF STRUCTURE (to be implemented):
+    -- NON-CIRCULAR PROOF: Step function approximation
     -- ═══════════════════════════════════════════════════════════════════════
-    -- 1. For step function s ≈ f with ‖f - s‖_∞ < ε/4:
-    --    - Approximate f by dyadic step function s = Σ cⱼ · 1_{Ioc(aⱼ,bⱼ)}
-    --    - Each Ioc = Iic b - Iic a, so use h_ind_L1_conv for each term
-    --    - By linearity (weighted_sums_converge_L1_add/smul), avg(s) → ∫ s dν
+    -- IMPORTANT: This proof MUST NOT use α or hα_conv (that would be circular,
+    -- since h_diff_zero uses h_L1_conv to prove α = ∫ f dν a.e.)
     --
-    -- 2. Triangle inequality for ∫|avg(f) - ∫ f dν|:
-    --    ∫|avg(f) - ∫ f dν| ≤ ∫|avg(f) - avg(s)| + ∫|avg(s) - ∫ s dν| + ∫|∫ s dν - ∫ f dν|
-    --                      ≤ ‖f - s‖_∞ + (step conv) + ‖s - f‖_∞
-    --                      < ε/4 + ε/2 + ε/4 = ε
+    -- PROOF STRUCTURE:
+    -- 1. Approximate f by dyadic step function s with ‖f - s‖_∞ < ε/4:
+    --    - For bounded f with |f| ≤ M, partition [-M, M] into N intervals
+    --    - s = Σⱼ cⱼ · 1_{Ioc(aⱼ,bⱼ)} where cⱼ are midpoints
+    --    - N = ⌈8M/ε⌉ gives ‖f - s‖_∞ ≤ M/N < ε/4
     --
-    -- Note: This does NOT use α or hα_conv (that would be circular).
-    -- It builds directly from h_ind_L1_conv + step function approximation.
+    -- 2. Show avg(s) → ∫ s dν in L¹ via linearity:
+    --    - Each 1_{Ioc} = 1_{Iic b} - 1_{Iic a} by h_ind_eq
+    --    - Use h_ind_L1_conv (or h_Ioc_L1_conv) for each term
+    --    - By weighted_sums_converge_L1_add/smul, linear combinations converge
+    --    - Get M_s such that m ≥ M_s implies ∫|avg(s) - ∫s dν| < ε/2
+    --
+    -- 3. Triangle inequality:
+    --    ∫|avg(f) - ∫f dν| ≤ ∫|avg(f) - avg(s)| + ∫|avg(s) - ∫s dν| + ∫|∫s dν - ∫f dν|
+    --
+    --    Term 1: ∫|avg(f) - avg(s)| ≤ ‖f - s‖_∞ < ε/4
+    --      (Cesàro averages preserve sup-norm bounds)
+    --
+    --    Term 2: ∫|avg(s) - ∫s dν| < ε/2 for m ≥ M_s
+    --      (from step function L¹ convergence)
+    --
+    --    Term 3: ∫|∫s dν - ∫f dν| ≤ ‖s - f‖_∞ < ε/4
+    --      (integral monotonicity + directing measure is probability)
+    --
+    --    Total: < ε/4 + ε/2 + ε/4 = ε
+    --
+    -- IMPLEMENTATION REQUIREMENTS:
+    -- - Need h_Ioc_L1_conv filled (currently sorry at line 3409)
+    -- - Need linearity lemmas for L¹ convergence of linear combinations
+    -- - Need step function construction (dyadic partition of bounded range)
     -- ═══════════════════════════════════════════════════════════════════════
     sorry
 
