@@ -3392,11 +3392,19 @@ lemma directing_measure_integral
           (Set.Iic b).indicator (fun _ => (1:ℝ)) - (Set.Iic a).indicator (fun _ => (1:ℝ)) := by
         rw [h_Ioc_eq, Set.indicator_diff h_subset]
       -- ═══════════════════════════════════════════════════════════════════════
-      -- PROOF SKETCH (implementation requires resolving integrability proofs):
-      -- 1. Apply h_sum_eq and h_ind_eq to decompose LHS
-      -- 2. Show: ∫|avg(Ioc) - int(Ioc)| ≤ ∫|avg(b) - int(b)| + ∫|avg(a) - int(a)|
-      --    via integral_mono_of_nonneg + triangle inequality
-      -- 3. Use integral_add and hM_b + hM_a to get < ε'/2 + ε'/2 = ε'
+      -- PROOF OUTLINE (mathematically complete):
+      -- Let f_b(ω) = |avg(b)(ω) - int(b)(ω)| and f_a(ω) = |avg(a)(ω) - int(a)(ω)|
+      -- 1. Integrability: f_b, f_a bounded by 2 (avg,int ∈ [0,1]), hence integrable
+      -- 2. Decomposition:
+      --    - avg(Ioc) = avg(b) - avg(a)  [via h_ind_eq + Finset.sum_sub_distrib]
+      --    - int(Ioc) = int(b) - int(a)  [via h_ind_eq + integral_sub]
+      -- 3. Triangle inequality pointwise:
+      --    |avg(Ioc) - int(Ioc)| = |(avg(b)-avg(a)) - (int(b)-int(a))|
+      --                         = |(avg(b)-int(b)) - (avg(a)-int(a))|
+      --                         ≤ |avg(b)-int(b)| + |avg(a)-int(a)| = f_b + f_a
+      -- 4. Integrate both sides:
+      --    ∫|avg(Ioc) - int(Ioc)| ≤ ∫f_b + ∫f_a < ε'/2 + ε'/2 = ε'
+      --    [using integral_mono, integral_add, and hM_b, hM_a from h_ind_L1_conv]
       -- ═══════════════════════════════════════════════════════════════════════
       sorry
 
