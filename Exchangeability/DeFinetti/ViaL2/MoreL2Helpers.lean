@@ -2930,8 +2930,57 @@ lemma directing_measure_integral
           -- 3. Show ∫_{α<0}(-α) + ∫_{α>1}(α-1) > 0 from h_bad_pos
           -- 4. Use h_L1_conv to get ε-bound, derive contradiction
 
-          -- Deferred: ~30 lines of technical bookkeeping
-          sorry
+          -- Use Helpers.subseq_ae_of_L1 to get a.e. convergent subsequence
+          -- Then IsClosed.mem_of_tendsto with isClosed_Icc
+
+          -- Define the sequence of averages
+          let A_seq : ℕ → Ω → ℝ := fun m ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, ind_t (X (0 + k.val + 1) ω)
+
+          -- Measurability of A_seq
+          have hA_meas : ∀ n, Measurable (A_seq n) := by
+            intro n
+            apply Measurable.const_mul
+            apply Finset.measurable_sum
+            intro k _
+            -- ind_t = Set.indicator (Set.Iic t) 1, composed with X
+            -- Need to show X^{-1}(Iic t) is measurable
+            exact measurable_const.indicator (measurableSet_Iic.preimage (hX_meas _))
+
+          -- Measurability of α
+          have hα_meas : Measurable α := h_raw.choose_spec.1
+
+          -- Integrability of A_seq - α
+          have h_int : ∀ n, Integrable (fun ω => A_seq n ω - α ω) μ := by
+            intro n
+            have h_A_bdd : ∀ ω, |A_seq n ω| ≤ 1 := fun ω => by
+              have ⟨h0, h1⟩ := hA_in_01 n ω
+              exact abs_le.mpr ⟨by linarith, h1⟩
+            have hA_int : Integrable (A_seq n) μ :=
+              (integrable_const 1).mono' (hA_meas n).aestronglyMeasurable
+                (ae_of_all _ (fun ω => h_A_bdd ω))
+            exact hA_int.sub (h_raw.choose_spec.2.1.integrable le_rfl)
+
+          -- L¹ convergence from h_raw.choose_spec.2.2
+          have h_L1 : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |A_seq n ω - α ω| ∂μ < ε := by
+            intro ε hε
+            obtain ⟨M, hM⟩ := h_raw.choose_spec.2.2 0 ε hε
+            refine ⟨M, fun n hn => ?_⟩
+            -- A_seq n and the expression in hM are definitionally equal (modulo zero_add)
+            simp only [A_seq, α, zero_add] at hM ⊢
+            exact hM n hn
+
+          -- Apply Helpers.subseq_ae_of_L1 to get a.e. convergent subsequence
+          obtain ⟨φ, hφ_mono, hφ_ae⟩ := Helpers.subseq_ae_of_L1 A_seq α hA_meas hα_meas h_int h_L1
+
+          -- For a.e. ω where φ-subsequence converges, use closedness of [0,1]
+          filter_upwards [hφ_ae] with ω hω
+          -- hω : Tendsto (fun k => A_seq (φ k) ω) atTop (𝓝 (α ω))
+          -- All A_seq (φ k) ω ∈ [0,1], so α ω ∈ [0,1] by closedness
+          have h_all_in_Icc : ∀ k, A_seq (φ k) ω ∈ Set.Icc (0:ℝ) 1 := by
+            intro k
+            exact hA_in_01 (φ k) ω
+          exact isClosed_Icc.mem_of_tendsto hω (Filter.Eventually.of_forall h_all_in_Icc)
 
         -- Step 2: Clipping is a.e. identity on [0,1]
         have h_clip_id : ∀ᵐ ω ∂μ, max 0 (min 1 (h_raw.choose ω)) = h_raw.choose ω := by
