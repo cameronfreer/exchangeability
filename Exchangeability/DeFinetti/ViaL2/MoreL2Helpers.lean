@@ -3395,15 +3395,14 @@ lemma directing_measure_integral
       -- - Integrability of ω ↦ ∫ 1_{Iic t} dν(ω) (bounded by 1 over probability measure)
       -- - Measurability of same (from directing_measure_measurable)
       -- ═══════════════════════════════════════════════════════════════════════
-      calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-              ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ
-        _ ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Iic b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-                   ∫ x, (Set.Iic b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ +
-            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Iic a).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-                   ∫ x, (Set.Iic a).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ := by
-          sorry -- Ioc = Iic b - Iic a decomposition, triangle inequality, integral_add
-        _ < ε'/2 + ε'/2 := by linarith [hM_b, hM_a]
-        _ = ε' := by ring
+      -- PROOF STRATEGY (documented for implementation):
+      -- 1. Key identity: 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}
+      -- 2. Linearity: avg(Ioc) = avg(Iic b) - avg(Iic a)
+      --              ∫ Ioc dν = ∫ Iic b dν - ∫ Iic a dν
+      -- 3. Triangle: |avg - ∫| ≤ |avg_b - ∫_b| + |avg_a - ∫_a| < ε'/2 + ε'/2
+      -- Technical: Use hM_a, hM_b for the ε'/2 bounds
+      -- ═══════════════════════════════════════════════════════════════════════
+      sorry
 
     -- For general bounded f, use triangle inequality with step function approximation.
     -- The step function implementation requires careful handling.
