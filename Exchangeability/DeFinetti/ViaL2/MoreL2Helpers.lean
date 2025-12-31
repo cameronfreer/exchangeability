@@ -3369,7 +3369,7 @@ lemma directing_measure_integral
     have h_Ioc_L1_conv : ∀ a b : ℝ, a < b → ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
         ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
           ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| ∂μ < ε' := by
-      intro a b _hab n' ε' hε'
+      intro a b hab n' ε' hε'
       have hε'2 : ε'/2 > 0 := by linarith
       obtain ⟨M_a, hM_a⟩ := h_ind_L1_conv a n' (ε'/2) hε'2
       obtain ⟨M_b, hM_b⟩ := h_ind_L1_conv b n' (ε'/2) hε'2
@@ -3379,8 +3379,25 @@ lemma directing_measure_integral
       have hm_b : m ≥ M_b := le_trans (le_max_right _ _) hm
       specialize hM_a m hm_a
       specialize hM_b m hm_b
-      -- The bound follows from: ∫|avg_Ioc - int_Ioc| ≤ ∫|avg_b - int_b| + ∫|avg_a - int_a|
-      -- < ε'/2 + ε'/2 = ε' (by hM_b, hM_a and indicator decomposition)
+      -- Key: Ioc a b = Iic b \ Iic a, so indicator decomposes
+      have h_Ioc_eq : Set.Ioc a b = Set.Iic b \ Set.Iic a := by
+        ext x
+        simp only [Set.mem_Ioc, Set.mem_diff, Set.mem_Iic]
+        constructor
+        · intro ⟨hxa, hxb⟩; exact ⟨hxb, not_le.mpr hxa⟩
+        · intro ⟨hxb, hna⟩; exact ⟨not_le.mp hna, hxb⟩
+      have h_subset : Set.Iic a ⊆ Set.Iic b := Set.Iic_subset_Iic.mpr (le_of_lt hab)
+      -- Indicator decomposition as function equality
+      have h_ind_eq : (Set.Ioc a b).indicator (fun _ => (1:ℝ)) =
+          (Set.Iic b).indicator (fun _ => (1:ℝ)) - (Set.Iic a).indicator (fun _ => (1:ℝ)) := by
+        rw [h_Ioc_eq, Set.indicator_diff h_subset]
+      -- ═══════════════════════════════════════════════════════════════════════
+      -- PROOF SKETCH (implementation requires resolving integrability proofs):
+      -- 1. Apply h_sum_eq and h_ind_eq to decompose LHS
+      -- 2. Show: ∫|avg(Ioc) - int(Ioc)| ≤ ∫|avg(b) - int(b)| + ∫|avg(a) - int(a)|
+      --    via integral_mono_of_nonneg + triangle inequality
+      -- 3. Use integral_add and hM_b + hM_a to get < ε'/2 + ε'/2 = ε'
+      -- ═══════════════════════════════════════════════════════════════════════
       sorry
 
     -- For general bounded f, use triangle inequality with step function approximation.
