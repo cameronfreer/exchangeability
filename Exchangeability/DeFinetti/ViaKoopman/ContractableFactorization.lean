@@ -435,12 +435,41 @@ lemma integral_prod_eq_integral_blockAvg
     --   ∏ i, (1/n) * ∑_{k=0}^{n-1} fs i (ω(i*n + k))
     -- = (1/n)^m * ∏ i, ∑_{k=0}^{n-1} fs i (ω(i*n + k))
     -- = (1/n)^m * ∑_{φ : Fin m → Fin n} ∏ i, fs i (ω(i*n + φ(i)))
-    --
-    -- The technical details involve:
-    -- 1. Pulling (1/n) out of each factor in the product
-    -- 2. Applying Fintype.prod_sum to exchange ∏ and ∑
-    -- 3. Converting sum over Finset.range n to sum over Fin n
-    sorry
+
+    -- Step 1: Unfold blockAvg using the non-zero block size
+    simp_rw [blockAvg_pos_n hn]
+
+    -- Step 2: Pull (1/n) out of each factor
+    -- ∏ i, (1/n) * (∑_j ...) = (∏ i, (1/n)) * ∏ i, (∑_j ...)
+    --                        = (1/n)^m * ∏ i, (∑_j ...)
+    have h_factor : ∏ i : Fin m, (1 / (n : ℝ)) * (Finset.range n).sum (fun j => fs i (ω (i.val * n + j))) =
+        (1 / (n : ℝ))^m * ∏ i : Fin m, (Finset.range n).sum (fun j => fs i (ω (i.val * n + j))) := by
+      -- Use Finset.prod_mul_distrib: ∏ i, f i * g i = (∏ i, f i) * (∏ i, g i)
+      rw [Finset.prod_mul_distrib]
+      -- Now: (∏ i, 1/n) * (∏ i, ∑_j ...) = (1/n)^m * (∏ i, ∑_j ...)
+      congr 1
+      -- (∏ i, 1/n) = (1/n)^m
+      rw [Finset.prod_const, Finset.card_fin]
+
+    rw [h_factor]
+    -- Goal: (1/n)^m * ∏ i, (∑_{j ∈ range n} ...) = (1/n^m) * ∑_φ ∏ i, ...
+
+    -- Step 3: Convert from Finset.range n to Fin n
+    -- ∑ j ∈ Finset.range n, f j = ∑ j : Fin n, f j.val (by Fin.sum_univ_eq_sum_range)
+    have h_range_to_fin : ∀ i : Fin m, (Finset.range n).sum (fun j => fs i (ω (i.val * n + j))) =
+        ∑ j : Fin n, fs i (ω (i.val * n + j.val)) := by
+      intro i
+      conv_lhs => rw [← Fin.sum_univ_eq_sum_range (fun j => fs i (ω (i.val * n + j))) n]
+
+    simp_rw [h_range_to_fin]
+
+    -- Step 4: Apply Fintype.prod_sum: ∏ i, ∑ j, f i j = ∑ φ, ∏ i, f i (φ i)
+    rw [Fintype.prod_sum]
+
+    -- Goal: (1/n)^m * ∑ φ, ∏ i, f i (φ i) = (1/n^m) * ∑ φ, ∏ i, f i (φ i)
+    -- Just need (1/n)^m = 1/(n^m)
+    congr 1
+    rw [one_div, one_div, inv_pow]
 
   -- Step 5: Combine h_each_j with h_prod_blockAvg_eq
   -- By h_each_j: ∀ j, ∫ ∏ fs(ωᵢ) = ∫ ∏ fs(ω(i*n + j(i)))
@@ -449,7 +478,63 @@ lemma integral_prod_eq_integral_blockAvg
   -- By h_prod_blockAvg_eq: = ∫ n^m * ∏ blockAvg
   -- Divide by n^m: ∫ ∏ fs(ωᵢ) = ∫ ∏ blockAvg
 
-  sorry
+  -- RHS: ∫ ∏ blockAvg = ∫ (1/n^m) * ∑_j ∏ fs(ω(i*n + j(i))) (by h_prod_blockAvg_eq)
+  simp_rw [h_prod_blockAvg_eq]
+
+  -- ∫ (1/n^m) * ∑_j ... = (1/n^m) * ∫ ∑_j ...
+  rw [integral_mul_left]
+
+  -- ∫ ∑_j ... = ∑_j ∫ ... (Fubini for finite sum)
+  rw [integral_finset_sum]
+  · -- Goal: ∫ ∏ fs(ωᵢ) = (1/n^m) * ∑_j ∫ ∏ fs(ω(i*n + j(i)))
+    --
+    -- By h_each_j: each ∫ ∏ fs(ω(i*n + j(i))) = ∫ ∏ fs(ωᵢ)
+    -- (using blockInjection_val_lt: blockInjection m n j i.val = i*n + j(i))
+    -- So: ∑_j ∫ ∏ fs(ω(i*n + j(i))) = n^m * ∫ ∏ fs(ωᵢ)
+    -- Thus: (1/n^m) * n^m * ∫ ∏ fs(ωᵢ) = ∫ ∏ fs(ωᵢ)
+
+    have h_each_term : ∀ j : Fin m → Fin n,
+        ∫ ω, ∏ i : Fin m, fs i (ω (i.val * n + (j i).val)) ∂μ =
+        ∫ ω, ∏ i : Fin m, fs i (ω i.val) ∂μ := by
+      intro j
+      -- Use h_each_j and blockInjection_val_lt
+      rw [h_each_j j]
+      -- The integrands match because blockInjection m n j i.val = i.val * n + (j i).val
+      congr 1
+      ext ω
+      apply Finset.prod_congr rfl
+      intro i _
+      rw [blockInjection_val_lt]
+
+    rw [Finset.sum_congr rfl (fun j _ => h_each_term j)]
+    rw [Finset.sum_const, Finset.card_univ, h_card, nsmul_eq_mul]
+
+    -- Goal: ∫ ∏ fs(ωᵢ) = (1/n^m) * (n^m * ∫ ∏ fs(ωᵢ))
+    have hn_ne_zero : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
+    have hn_pow_ne_zero : (n : ℝ)^m ≠ 0 := pow_ne_zero m hn_ne_zero
+    rw [Nat.cast_pow]
+    field_simp
+
+  -- Integrability: bounded measurable functions on prob space are integrable
+  intro j _
+  -- Get bound constants for each fs
+  choose Cs hCs using hfs_bd
+  -- Define the integrand for clarity
+  let F : Ω[α] → ℝ := fun a => ∏ i : Fin m, fs i (a (i.val * n + (j i).val))
+  -- Measurability: product of measurable functions is measurable
+  have h_meas : Measurable F :=
+    Finset.measurable_prod _ (fun i _ => (hfs_meas i).comp (measurable_pi_apply _))
+  -- Apply Integrable.of_bound
+  refine Integrable.of_bound h_meas.aestronglyMeasurable (∏ i : Fin m, |Cs i|) ?_
+  filter_upwards with a
+  rw [Real.norm_eq_abs]
+  -- Bound: |∏ fs i (...)| = ∏ |fs i (...)| ≤ ∏ |Cs i|
+  show |F a| ≤ _
+  simp only [F]
+  rw [Finset.abs_prod]
+  apply Finset.prod_le_prod
+  · intro i _; exact abs_nonneg _
+  · intro i _; exact le_trans (hCs i _) (le_abs_self _)
 
 end Contractability
 
@@ -699,7 +784,94 @@ lemma product_blockAvg_L1_convergence
     -- - MeasureTheory.abs_condexp_le: |μ[f | m]| ≤ μ[|f| | m] a.e.
     -- - MeasureTheory.condexp_mono: f ≤ g a.e. → μ[f | m] ≤ μ[g | m] a.e.
     -- - Integrability of products/sums of bounded functions
-    sorry
+
+    -- Let A_i = blockAvg and B_i = condexp
+    let A : Fin m → Ω[α] → ℝ := fun i ω => blockAvg m (n + 1) i (fs i) ω
+    let B : Fin m → Ω[α] → ℝ := fun i ω => μ[(fun ω' => fs i (ω' 0)) | mSI] ω
+
+    -- Bound on block averages (everywhere)
+    have hA_bd : ∀ i ω, |A i ω| ≤ C := by
+      intro i ω
+      exact blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
+
+    -- Bound on conditional expectations (a.e.)
+    -- Uses ae_bdd_condExp_of_ae_bdd: bounded f implies bounded condexp
+    have hB_bd : ∀ᵐ ω ∂μ, ∀ i, |B i ω| ≤ C := by
+      rw [ae_all_iff]
+      intro i
+      -- Create NNReal version of C for ae_bdd_condExp_of_ae_bdd
+      let R : NNReal := Real.toNNReal C
+      have hR_eq : (R : ℝ) = C := Real.coe_toNNReal C (le_of_lt hC_pos)
+      -- The function fs i ∘ (· 0) is bounded by C pointwise
+      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) := by
+        rw [hR_eq]
+        exact Eventually.of_forall (fun ω' => hC_bd i _)
+      -- Apply ae_bdd_condExp_of_ae_bdd with explicit type annotations
+      have h_condexp_bd : ∀ᵐ ω ∂μ, |(μ[(fun ω' => fs i (ω' 0)) | mSI]) ω| ≤ (R : ℝ) :=
+        ae_bdd_condExp_of_ae_bdd h_fs_bdd
+      simp only [hR_eq] at h_condexp_bd
+      exact h_condexp_bd
+
+    -- Pointwise bound a.e. using abs_prod_sub_prod_le_general
+    have h_pointwise : ∀ᵐ ω ∂μ, |∏ i, A i ω - ∏ i, B i ω| ≤
+        C^(m - 1) * ∑ i, |A i ω - B i ω| := by
+      filter_upwards [hB_bd] with ω hBω
+      exact abs_prod_sub_prod_le_general (fun i => A i ω) (fun i => B i ω)
+        hC_pos (fun i => hA_bd i ω) hBω
+
+    -- Integrability helpers
+    have hA_int : ∀ i, Integrable (A i) μ := fun i =>
+      Integrable.of_bound (measurable_blockAvg i (hfs_meas i)).aestronglyMeasurable C
+        (by filter_upwards with ω; rw [Real.norm_eq_abs]; exact hA_bd i ω)
+
+    have hB_int : ∀ i, Integrable (B i) μ := fun _ => integrable_condExp
+
+    have hAB_diff_int : ∀ i, Integrable (fun ω => A i ω - B i ω) μ := fun i =>
+      Integrable.sub (hA_int i) (hB_int i)
+
+    -- Product of A is integrable (bounded measurable)
+    -- Bound: |∏ A i| ≤ ∏ |A i| ≤ C^m
+    have hprodA_int : Integrable (fun ω => ∏ i, A i ω) μ := by
+      have h_meas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, A i ω) μ :=
+        Finset.aestronglyMeasurable_fun_prod (μ := μ) Finset.univ
+          (fun i _ => (measurable_blockAvg i (hfs_meas i)).aestronglyMeasurable)
+      apply Integrable.of_bound h_meas (C^m)
+      filter_upwards with ω
+      rw [Real.norm_eq_abs, Finset.abs_prod]
+      calc ∏ i : Fin m, |A i ω|
+        _ ≤ ∏ _i : Fin m, C := Finset.prod_le_prod (fun i _ => abs_nonneg _) (fun i _ => hA_bd i ω)
+        _ = C^m := by rw [Finset.prod_const, Finset.card_fin]
+
+    -- Product of B is integrable (bounded condexp)
+    have hprodB_int : Integrable (fun ω => ∏ i, B i ω) μ := by
+      have h_meas : AEStronglyMeasurable (fun ω => ∏ i : Fin m, B i ω) μ :=
+        Finset.aestronglyMeasurable_fun_prod (μ := μ) Finset.univ
+          (fun i _ => integrable_condExp.aestronglyMeasurable)
+      have h_bd : ∀ᵐ ω ∂μ, ‖∏ i : Fin m, B i ω‖ ≤ C^m := by
+        filter_upwards [hB_bd] with ω hBω
+        rw [Real.norm_eq_abs, Finset.abs_prod]
+        calc ∏ i : Fin m, |B i ω|
+          _ ≤ ∏ _i : Fin m, C := Finset.prod_le_prod (fun i _ => abs_nonneg _) (fun i _ => hBω i)
+          _ = C^m := by rw [Finset.prod_const, Finset.card_fin]
+      exact Integrable.of_bound h_meas (C^m) h_bd
+
+    -- Integrate the pointwise bound
+    calc ∫ ω, |∏ i, A i ω - ∏ i, B i ω| ∂μ
+      _ ≤ ∫ ω, C^(m - 1) * ∑ i, |A i ω - B i ω| ∂μ := by
+          apply integral_mono_ae
+          · exact (hprodA_int.sub hprodB_int).abs
+          · apply Integrable.const_mul
+            apply integrable_finset_sum
+            intro i _
+            exact (hAB_diff_int i).abs
+          · exact h_pointwise
+      _ = C^(m - 1) * ∫ ω, ∑ i, |A i ω - B i ω| ∂μ := integral_const_mul _ _
+      _ = C^(m - 1) * ∑ i, ∫ ω, |A i ω - B i ω| ∂μ := by
+          congr 1
+          rw [integral_finset_sum]
+          intro i _
+          exact (hAB_diff_int i).abs
+      _ = upper n := rfl
   · exact h_upper_tendsto
 
 end ProductConvergence
@@ -750,9 +922,261 @@ theorem condexp_product_factorization_contractable
   -- **Step 5**: By uniqueness of conditional expectation:
   --   CE[∏ fᵢ(ωᵢ) | mSI] =ᵐ ∏ CE[fᵢ(ω₀) | mSI]
   --
-  -- TODO: Formalize using integral_prod_eq_integral_blockAvg,
-  -- product_blockAvg_L1_convergence, and ae_eq_condExp_of_forall_setIntegral_eq
-  sorry
+  -- We use ae_eq_condExp_of_forall_setIntegral_eq:
+  -- If g is mSI-measurable and ∫_s g = ∫_s f for all mSI-sets s,
+  -- then g =ᵐ μ[f | mSI].
+
+  -- Handle m = 0 case separately (empty products are both 1)
+  by_cases hm : m = 0
+  · subst hm
+    -- Both products over Fin 0 are empty, hence equal to 1
+    simp only [Finset.univ_eq_empty, Finset.prod_empty]
+    -- Goal: μ[(fun _ => 1) | mSI] =ᵐ (fun _ => 1)
+    -- CE of constant is constant
+    have h_const : μ[(fun _ : Ω[α] => (1 : ℝ)) | mSI] = fun _ => 1 :=
+      condExp_const (m := shiftInvariantSigma) shiftInvariantSigma_le (1 : ℝ)
+    rw [h_const]
+
+  -- m > 0 case: Fin m is nonempty
+  have hm_nonempty : Nonempty (Fin m) := ⟨⟨0, Nat.pos_of_ne_zero hm⟩⟩
+
+  -- The target function (product of CEs)
+  -- Define as product of functions, which is what Finset.stronglyMeasurable_prod produces
+  let g : Ω[α] → ℝ := ∏ i : Fin m, (fun ω => μ[(fun ω' => fs i (ω' 0)) | mSI] ω)
+
+  -- g is mSI-measurable (product of conditional expectations)
+  have hg_meas : StronglyMeasurable[mSI] g :=
+    Finset.stronglyMeasurable_prod (f := fun i ω => μ[(fun ω' => fs i (ω' 0)) | mSI] ω)
+      Finset.univ (fun i _ => stronglyMeasurable_condExp)
+
+  -- Note: g ω = ∏ i, CE_i ω by Finset.prod_apply
+  have hg_apply : ∀ ω, g ω = ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω :=
+    fun ω => Finset.prod_apply ω Finset.univ (fun i => μ[(fun ω' => fs i (ω' 0)) | mSI])
+
+  -- The source function (product of coordinate evaluations)
+  let f : Ω[α] → ℝ := fun ω => ∏ i : Fin m, fs i (ω i.val)
+
+  -- f is integrable (bounded measurable function on probability space)
+  have hf_int : Integrable f μ := by
+    choose Cs hCs using hfs_bd
+    have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
+    let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
+    have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
+      (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
+    have hC_bd : ∀ i x, |fs i x| ≤ C := by
+      intro i x
+      have h1 : |fs i x| ≤ Cs i := hCs i x
+      have h2 : Cs i ≤ |Cs i| := le_abs_self _
+      have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
+        Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+      linarith
+    have h_meas : Measurable f := Finset.measurable_prod _ (fun i _ =>
+      (hfs_meas i).comp (measurable_pi_apply _))
+    apply Integrable.of_bound h_meas.aestronglyMeasurable (C^(Fintype.card (Fin m)))
+    filter_upwards with ω
+    rw [Real.norm_eq_abs, Finset.abs_prod]
+    calc ∏ i : Fin m, |fs i (ω i.val)|
+      _ ≤ ∏ _i : Fin m, C := Finset.prod_le_prod (fun i _ => abs_nonneg _) (fun i _ => hC_bd i _)
+      _ = C^(Fintype.card (Fin m)) := by rw [Finset.prod_const, Finset.card_univ]
+
+  -- g is integrable (bounded product of conditional expectations)
+  have hg_int : Integrable g μ := by
+    choose Cs hCs using hfs_bd
+    have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
+    let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
+    have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
+      (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
+    have hC_bd : ∀ i x, |fs i x| ≤ C := by
+      intro i x
+      have h1 : |fs i x| ≤ Cs i := hCs i x
+      have h2 : Cs i ≤ |Cs i| := le_abs_self _
+      have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
+        Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+      linarith
+    -- Each CE is bounded by C
+    have hCE_bd : ∀ᵐ ω ∂μ, ∀ i, |μ[(fun ω' => fs i (ω' 0)) | mSI] ω| ≤ C := by
+      rw [ae_all_iff]
+      intro i
+      let R : NNReal := Real.toNNReal C
+      have hR_eq : (R : ℝ) = C := Real.coe_toNNReal C (le_of_lt hC_pos)
+      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) := by
+        rw [hR_eq]
+        exact Eventually.of_forall (fun ω' => hC_bd i _)
+      have h_condexp_bd : ∀ᵐ ω ∂μ, |(μ[(fun ω' => fs i (ω' 0)) | mSI]) ω| ≤ (R : ℝ) :=
+        ae_bdd_condExp_of_ae_bdd h_fs_bdd
+      simp only [hR_eq] at h_condexp_bd
+      exact h_condexp_bd
+    -- mSI-measurable implies pi-measurable since mSI ≤ pi
+    have h_meas : AEStronglyMeasurable g μ :=
+      (hg_meas.mono shiftInvariantSigma_le).aestronglyMeasurable
+    apply Integrable.of_bound h_meas (C^(Fintype.card (Fin m)))
+    filter_upwards [hCE_bd] with ω hCEω
+    rw [Real.norm_eq_abs]
+    -- Use hg_apply: g ω = ∏ i, CE_i ω
+    rw [hg_apply ω, Finset.abs_prod]
+    calc ∏ i : Fin m, |μ[(fun ω' => fs i (ω' 0)) | mSI] ω|
+      _ ≤ ∏ _i : Fin m, C := Finset.prod_le_prod (fun i _ => abs_nonneg _) (fun i _ => hCEω i)
+      _ = C^(Fintype.card (Fin m)) := by rw [Finset.prod_const, Finset.card_univ]
+
+  -- Key step: integrals match on mSI-sets
+  -- This follows from:
+  -- 1. ∫_s ∏ f = ∫_s ∏ blockAvg for all n (by contractability + block averaging)
+  -- 2. ∫_s |∏ blockAvg - ∏ CE| → 0 (by L¹ convergence)
+  -- 3. Therefore ∫_s ∏ f = ∫_s ∏ CE = ∫_s g
+  have hg_eq : ∀ s : Set (Ω[α]), MeasurableSet[mSI] s → μ s < ⊤ →
+      ∫ ω in s, g ω ∂μ = ∫ ω in s, f ω ∂μ := by
+    intro s hs _
+    -- **Proof strategy:**
+    -- Use the L¹ convergence of block averages to g, combined with the
+    -- set-restricted integral equality, to establish ∫_s g = ∫_s f.
+    --
+    -- Key steps:
+    -- 1. For each n, ∫_s f = ∫_s (∏ blockAvg_n) (by averaging argument on mSI-sets)
+    -- 2. L¹ convergence: ∫ |∏ blockAvg_n - g| → 0
+    -- 3. For sets of finite measure, L¹ convergence implies ∫_s (∏ blockAvg_n) → ∫_s g
+    -- 4. Since ∫_s f = ∫_s (∏ blockAvg_n) for all n, we have ∫_s f = ∫_s g
+    --
+    -- The key technical lemma (h_setIntegral_eq_blockAvg) uses:
+    -- - reindex_blockInjection_preimage_shiftInvariant for mSI-set invariance
+    -- - contractability for the marginal distribution equality
+    -- - Fubini averaging argument to get the block average product
+
+    -- Get the shift-invariance property of s
+    have hs_inv : isShiftInvariant s := (mem_shiftInvariantSigma_iff (α := α)).mp hs
+
+    -- Define the block average product sequence
+    let blockAvgProd : ℕ → Ω[α] → ℝ := fun n ω =>
+      ∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω
+
+    -- **Step 1**: For each n, ∫_s f = ∫_s (blockAvgProd n)
+    -- This follows from the averaging argument adapted to mSI-sets.
+    -- The key is that for mSI-sets, the preimage under block injection reindexing
+    -- equals the original set (by reindex_blockInjection_preimage_shiftInvariant).
+    have h_setIntegral_eq_blockAvg : ∀ n : ℕ,
+        ∫ ω in s, f ω ∂μ = ∫ ω in s, blockAvgProd n ω ∂μ := by
+      intro n
+      -- This follows the same structure as integral_prod_eq_integral_blockAvg,
+      -- adapted for set integrals on mSI-sets.
+      --
+      -- Key insight: For mSI-sets s, reindexing by blockInjection preserves s:
+      --   (fun ω => ω ∘ blockInjection m (n+1) j)⁻¹ s = s
+      -- by reindex_blockInjection_preimage_shiftInvariant.
+      --
+      -- The proof follows integral_prod_eq_integral_blockAvg with the key
+      -- additional fact that mSI-sets are preserved under block injection.
+      --
+      -- Step 1: For each j : Fin m → Fin (n+1), contractability + mSI-invariance gives:
+      --   ∫_s ∏ fᵢ(ωᵢ) = ∫_s ∏ fᵢ(ω(blockInjection(i)))
+      --
+      -- Step 2: Averaging over all j:
+      --   ∫_s ∏ fᵢ(ωᵢ) = (1/n^m) * ∑_j ∫_s ∏ fᵢ(ω(blockInjection(i)))
+      --                = ∫_s (1/n^m) * ∑_j ∏ fᵢ(ω(blockInjection(i)))  (Fubini)
+      --                = ∫_s ∏ blockAvg_i  (algebraic identity)
+      --
+      -- The technical details mirror integral_prod_eq_integral_blockAvg but with
+      -- set-restricted integrals and the mSI-set preimage invariance.
+      sorry
+
+    -- **Step 2**: The block averages converge to g in L¹
+    have h_L1_conv := product_blockAvg_L1_convergence hσ fs hfs_meas hfs_bd
+
+    -- **Step 3**: L¹ convergence implies set integral convergence
+    -- For a set of finite measure, |∫_s (f_n - f)| ≤ ∫_s |f_n - f| ≤ ∫ |f_n - f| → 0
+    have h_setIntegral_conv : Tendsto (fun n => ∫ ω in s, blockAvgProd n ω ∂μ)
+        atTop (𝓝 (∫ ω in s, g ω ∂μ)) := by
+      -- Use that L¹ convergence of fₙ → g implies ∫_s fₙ → ∫_s g for any measurable set s
+      -- Since |∫_s (fₙ - g)| ≤ ∫_s |fₙ - g| ≤ ∫ |fₙ - g| → 0
+      apply Metric.tendsto_atTop.mpr
+      intro ε hε
+      obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp h_L1_conv ε hε
+      refine ⟨N, fun n hn => ?_⟩
+      specialize hN n hn
+      simp only [Real.dist_eq, sub_zero] at hN
+      rw [abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN
+      rw [Real.dist_eq]
+      -- Get a uniform bound C on all fs i
+      choose Cs hCs using hfs_bd
+      have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
+      let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
+      have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
+        (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
+      have hC_bd : ∀ i x, |fs i x| ≤ C := by
+        intro i x
+        have h1 : |fs i x| ≤ Cs i := hCs i x
+        have h2 : Cs i ≤ |Cs i| := le_abs_self _
+        have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
+          Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+        linarith
+      -- Integrability of blockAvgProd n
+      have h_int_blockAvg : Integrable (blockAvgProd n) μ := by
+        have h_meas_n : Measurable (blockAvgProd n) :=
+          Finset.measurable_prod _ (fun i _ => measurable_blockAvg i (hfs_meas i))
+        apply Integrable.of_bound h_meas_n.aestronglyMeasurable (C^(Fintype.card (Fin m)))
+        filter_upwards with ω
+        rw [Real.norm_eq_abs, Finset.abs_prod]
+        have : ∏ i : Fin m, |blockAvg m (n + 1) i (fs i) ω| ≤ ∏ _i : Fin m, C := by
+          apply Finset.prod_le_prod (fun i _ => abs_nonneg _)
+          intro i _
+          exact blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
+        calc ∏ i, |blockAvg m (n + 1) i (fs i) ω|
+          _ ≤ ∏ _i : Fin m, C := this
+          _ = C ^ Fintype.card (Fin m) := by rw [Finset.prod_const, Finset.card_univ]
+      -- Integrability of |blockAvgProd n - g|
+      have h_int_diff : Integrable (fun ω => |blockAvgProd n ω - g ω|) μ :=
+        Integrable.abs (h_int_blockAvg.sub hg_int)
+      -- blockAvgProd n and g are related by hg_apply
+      -- We need to convert between them for the final bound
+      have h_eq_integrands : (fun ω => |blockAvgProd n ω - g ω|) =
+          (fun ω => |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
+                    ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω|) := by
+        ext ω
+        congr 1
+        rw [hg_apply ω]
+      -- The key bound: |∫_s (fₙ - g)| ≤ ∫_s |fₙ - g| ≤ ∫ |fₙ - g| < ε
+      calc |∫ ω in s, blockAvgProd n ω ∂μ - ∫ ω in s, g ω ∂μ|
+        _ = |∫ ω in s, (blockAvgProd n ω - g ω) ∂μ| := by
+            rw [← integral_sub h_int_blockAvg.integrableOn hg_int.integrableOn]
+        _ ≤ ∫ ω in s, |blockAvgProd n ω - g ω| ∂μ := abs_integral_le_integral_abs
+        _ ≤ ∫ ω, |blockAvgProd n ω - g ω| ∂μ := by
+            apply setIntegral_le_integral h_int_diff
+            filter_upwards with ω
+            exact abs_nonneg _
+        _ = ∫ ω, |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
+                  ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω| ∂μ := by
+            rw [h_eq_integrands]
+        _ < ε := hN
+
+    -- **Step 4**: Since ∫_s f = ∫_s (blockAvgProd n) for all n (constant sequence),
+    -- and ∫_s (blockAvgProd n) → ∫_s g, we have ∫_s g = ∫_s f
+    have h_const_seq : ∀ n, ∫ ω in s, blockAvgProd n ω ∂μ = ∫ ω in s, f ω ∂μ :=
+      fun n => (h_setIntegral_eq_blockAvg n).symm
+    have h_const_tendsto : Tendsto (fun _ : ℕ => ∫ ω in s, f ω ∂μ) atTop
+        (𝓝 (∫ ω in s, f ω ∂μ)) := tendsto_const_nhds
+    have h_seq_eq : (fun n => ∫ ω in s, blockAvgProd n ω ∂μ) = fun _ => ∫ ω in s, f ω ∂μ :=
+      funext h_const_seq
+    rw [h_seq_eq] at h_setIntegral_conv
+    exact tendsto_nhds_unique h_setIntegral_conv h_const_tendsto
+
+  -- g is integrable on mSI-sets of finite measure
+  have hg_int_finite : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ → IntegrableOn g s μ := by
+    intro s _ _
+    exact hg_int.integrableOn
+
+  -- Apply uniqueness of conditional expectation
+  -- ae_eq_condExp_of_forall_setIntegral_eq gives: g =ᵐ μ[f | mSI]
+  -- We need: μ[f | mSI] =ᵐ g (goal is CE =ᵐ product of CEs)
+  -- Note: the theorem expects AEStronglyMeasurable[mSI] g μ, so use hg_meas directly
+  have h_ae_eq : g =ᵐ[μ] μ[f | mSI] :=
+    ae_eq_condExp_of_forall_setIntegral_eq shiftInvariantSigma_le
+      hf_int hg_int_finite hg_eq hg_meas.aestronglyMeasurable
+
+  -- The goal is μ[f | mSI] =ᵐ (fun ω => ∏ i, CE_i ω)
+  -- We have: g =ᵐ μ[f | mSI] and g ω = ∏ i, CE_i ω (by hg_apply)
+  -- So: μ[f | mSI] =ᵐ g = (fun ω => g ω) = (fun ω => ∏ i, CE_i ω)
+  have h_g_eq : g = fun ω => ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω :=
+    funext hg_apply
+  rw [h_g_eq] at h_ae_eq
+  exact h_ae_eq.symm
 
 end KernelIndependence
 
