@@ -4151,33 +4151,35 @@ lemma directing_measure_integral
         -- Case 4: Countable disjoint union closure
         case h_union =>
           intro g hdisj hgm hg
-          -- For countable disjoint g_i with convergence for each,
-          -- we use a simpler approach: since indicators are bounded by 1,
-          -- both the average and integral are bounded, and we can use
-          -- a direct ε/3 argument.
-          --
-          -- Key properties:
-          -- 1. For disjoint sets: 1_{⋃ g_i} = Σ 1_{g_i} pointwise
-          -- 2. Both avg and ∫1_{g_i}dν are in [0,1] (probability measure)
-          -- 3. Finite unions: avg(1_{A∪B}) = avg(1_A) + avg(1_B) for disjoint A,B
-          --
-          -- For the countable case, we use:
-          -- - Finite prefix: ⋃_{i<N} g_i has controlled error
-          -- - Tail: ⋃_{i≥N} g_i contributes at most 2·ν(tail) to the error
-          --
-          -- The key observation is that for bounded functions (0 ≤ f ≤ 1):
-          -- |avg(f) - ∫f dν| ≤ 2 (since both terms are in [0,1])
-          -- So the error from the tail is bounded by 2·ν(tail), which vanishes.
-          --
-          -- Technical note: The full proof requires showing that
-          -- ν(⋃_{i≥N} g_i) → 0 as N → ∞ uniformly in ω (or a.e.).
-          -- This follows from measure continuity and the disjointness.
-          --
-          -- For now, we use a simpler bound acknowledging this is incomplete:
-          use 1
-          intro m _hm
-          -- Bound: indicators are in [0,1], so L¹ norm is bounded
-          -- The detailed proof requires finite approximation + dominated convergence
+          /-
+          PROOF STRUCTURE for countable disjoint union ⋃_i g_i:
+
+          Split U = U_N ∪ T_N where U_N = ⋃_{i<N} g_i, T_N = ⋃_{i≥N} g_i.
+          By disjointness: 1_U = 1_{U_N} + 1_{T_N}.
+
+          KEY INSIGHT (tail bound uniform in m):
+          • For disjoint sets: ∑_i avg(1_{g_i})(ω) ≤ 1 for all ω (at most one g_i hit)
+          • By Tonelli: ∑_i ∫ avg(1_{g_i}) dμ ≤ 1, uniformly in m
+          • So tail ∑_{i≥N} ∫ avg(1_{g_i}) dμ → 0 as N → ∞
+          • Similarly ∑_i ∫ ν(g_i) dμ ≤ 1, tail → 0
+
+          TAIL BOUND: |avg(1_{T_N}) - ν(T_N)| ≤ avg(1_{T_N}) + ν(T_N)
+          Integrating: ∫|avg - ν| dμ ≤ ∫avg dμ + ∫ν dμ → 0 as N → ∞
+
+          FINITE PREFIX (U_N = ⋃_{i<N} g_i):
+          • By disjointness: avg(1_{U_N}) = ∑_{i<N} avg(1_{g_i})
+          • Error ≤ ∑_{i<N} |avg(1_{g_i}) - ν(g_i)|
+          • From hg with tolerance ε'/(2N), take M = max_{i<N} M_i
+          • For m ≥ M: finite sum error < ε'/2
+
+          ASSEMBLY: Choose N for tail < ε'/2, then M for prefix < ε'/2.
+          Total error < ε'/2 + ε'/2 = ε'
+
+          KEY LEMMAS:
+          • measure_iUnion: ν(⋃g_i) = ∑_i ν(g_i) (disjoint)
+          • integral_tsum: ∫(∑f_i) = ∑(∫f_i) for non-negative summable families
+          • Tail of bounded series: if ∑a_i ≤ C then ∑_{i≥N} a_i → 0
+          -/
           sorry
 
       -- Step 2: Define preimage step function for range quantization
