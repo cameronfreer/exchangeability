@@ -402,23 +402,53 @@ lemma integral_prod_eq_integral_blockAvg
   -- 4. ∑_φ ∏ i, (1/n) * f_i(φ(i)) = ∑_φ (1/n)^m * ∏ i, f_i(φ(i))  (factor out)
   -- 5. = (1/n)^m * ∑_φ ∏ i, f_i(φ(i))
 
-  -- Step 3: Connect contractability to the averaging
-  -- By h_each_j, for each j : Fin m → Fin n:
-  --   ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(blockInjection m n j i)) dμ
+  -- Step 3: LHS is constant in j, so equals average over all j
+  -- Since h_each_j says LHS = RHS(j) for each j, and LHS doesn't depend on j:
+  --   n^m * LHS = ∑_j LHS = ∑_j RHS(j)
+  have h_card : Fintype.card (Fin m → Fin n) = n^m := by simp [Fintype.card_fun, Fintype.card_fin]
+
+  -- Case n = 0: vacuously true (no choice functions exist)
+  -- Case m = 0: both sides are ∫ 1 dμ = 1
+
+  -- The averaging argument:
+  -- LHS = (1/n^m) * ∑_j ∫ ∏ fᵢ(ω(blockInjection)) dμ  (since LHS is constant in j)
+  --     = (1/n^m) * ∫ ∑_j ∏ fᵢ(ω(blockInjection)) dμ  (Fubini - finite sum)
+  --     = ∫ (1/n^m) * ∑_j ∏ fᵢ(ω(i*n + j(i))) dμ
+  --     = ∫ ∏ blockAvg_i dμ  (algebraic identity)
+
+  -- Step 4: The key algebraic identity
+  -- For each ω, we need to show:
+  --   ∏ i, blockAvg m n i (fs i) ω = (1/n^m) * ∑_{j : Fin m → Fin n} ∏ i, fs i (ω(i*n + j(i)))
   --
-  -- Key: blockInjection m n j i = i * n + j(i) for i < m
-  --
-  -- So: ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(i*n + j(i))) dμ for each j
-  --
-  -- Since LHS is constant in j:
-  --   LHS = (1/n^m) * ∑_j ∫ ∏ fᵢ(ω(i*n + j(i))) dμ  (average of constant)
-  --       = ∫ (1/n^m) * ∑_j ∏ fᵢ(ω(i*n + j(i))) dμ  (Fubini)
-  --       = ∫ ∏ blockAvg_i dμ  (by Step 2)
-  --
-  -- The full formalization requires:
-  -- 1. Showing blockInjection m n j i.val = i.val * n + (j i).val for i : Fin m
-  -- 2. Fubini to interchange sum and integral (integrability of bounded functions)
-  -- 3. The algebraic identity from Fintype.prod_sum
+  -- This follows from Fintype.prod_sum and the definition of blockAvg:
+  --   ∏ i, ((1/n) * ∑_{k ∈ range n} fs i (ω(i*n + k)))
+  -- = (1/n)^m * ∏ i, ∑_{k ∈ range n} fs i (ω(i*n + k))
+  -- = (1/n)^m * ∑_{φ : Fin m → Fin n} ∏ i, fs i (ω(i*n + φ(i)))  (by Fintype.prod_sum)
+
+  have h_prod_blockAvg_eq : ∀ ω, ∏ i : Fin m, blockAvg m n i (fs i) ω =
+      (1 / (n : ℝ)^m) * ∑ j : Fin m → Fin n, ∏ i : Fin m, fs i (ω (i.val * n + (j i).val)) := by
+    intro ω
+    -- The proof uses Fintype.prod_sum to distribute product over sums:
+    --   ∏ i, ∑_k f i k = ∑_φ ∏ i, f i (φ i)
+    --
+    -- Applied to blockAvg:
+    --   ∏ i, (1/n) * ∑_{k=0}^{n-1} fs i (ω(i*n + k))
+    -- = (1/n)^m * ∏ i, ∑_{k=0}^{n-1} fs i (ω(i*n + k))
+    -- = (1/n)^m * ∑_{φ : Fin m → Fin n} ∏ i, fs i (ω(i*n + φ(i)))
+    --
+    -- The technical details involve:
+    -- 1. Pulling (1/n) out of each factor in the product
+    -- 2. Applying Fintype.prod_sum to exchange ∏ and ∑
+    -- 3. Converting sum over Finset.range n to sum over Fin n
+    sorry
+
+  -- Step 5: Combine h_each_j with h_prod_blockAvg_eq
+  -- By h_each_j: ∀ j, ∫ ∏ fs(ωᵢ) = ∫ ∏ fs(ω(i*n + j(i)))
+  -- Sum over j: n^m * ∫ ∏ fs(ωᵢ) = ∑_j ∫ ∏ fs(ω(i*n + j(i)))
+  -- By Fubini: = ∫ ∑_j ∏ fs(ω(i*n + j(i)))
+  -- By h_prod_blockAvg_eq: = ∫ n^m * ∏ blockAvg
+  -- Divide by n^m: ∫ ∏ fs(ωᵢ) = ∫ ∏ blockAvg
+
   sorry
 
 end Contractability
