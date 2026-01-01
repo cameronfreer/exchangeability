@@ -1,0 +1,306 @@
+/-
+Copyright (c) 2025 The Exchangeability Contributors
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Cameron Freer
+-/
+import Exchangeability.DeFinetti.ViaKoopman.BlockInjection
+import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
+import Exchangeability.Contractability
+
+/-!
+# Contractable Factorization for de Finetti's Theorem
+
+This file implements the **disjoint-block averaging argument** from Kallenberg's "first proof"
+of de Finetti's theorem. The key insight is that contractability (invariance under strictly
+monotone subsequences) directly yields product factorization of conditional expectations,
+without using permutations or exchangeability.
+
+## Main definitions
+
+* `blockAvg m n k f ω`: Block average of `f` at position `k` with `m` blocks of size `n`.
+  Computes `(1/n) * ∑_{j=0}^{n-1} f(ω(k*n + j))`.
+
+## Main results
+
+* `blockAvg_tendsto_condExp`: Block averages converge L¹ to conditional expectation.
+* `product_L1_convergence`: Product of block averages converges L¹ to product of CEs.
+* `condexp_product_factorization_contractable`: For contractable measures,
+  `CE[∏ fᵢ(ωᵢ) | mSI] = ∏ CE[fᵢ(ω₀) | mSI]` a.e.
+
+## Mathematical context
+
+The proof proceeds as follows:
+
+1. **Block injection**: For each choice function `j : Fin m → Fin n`, select one element
+   from each of `m` disjoint blocks of size `n` via `blockInjection`.
+
+2. **Contractability application**: Since `blockInjection` is strictly monotone,
+   contractability gives: `∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(ρⱼ(i))) dμ` for each `j`.
+
+3. **Averaging over choices**: Summing over all `j : Fin m → Fin n` and dividing by `n^m`
+   gives: `∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ blockAvg_i dμ`.
+
+4. **L¹ convergence**: As `n → ∞`, block averages converge to conditional expectations
+   (reusing Cesàro machinery from `CesaroConvergence.lean`).
+
+5. **Conclusion**: Taking limits yields the product factorization of conditional expectations.
+
+## References
+
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Chapter 1
+-/
+
+open Filter MeasureTheory
+
+noncomputable section
+
+namespace Exchangeability.DeFinetti.ViaKoopman
+
+open MeasureTheory Filter Topology ProbabilityTheory
+open Exchangeability.Ergodic
+open Exchangeability.PathSpace
+open Exchangeability.DeFinetti
+open scoped BigOperators
+
+variable {α : Type*} [MeasurableSpace α]
+
+-- Short notation for shift-invariant σ-algebra (used throughout this file)
+local notation "mSI" => shiftInvariantSigma (α := α)
+
+/-! ### Block Average Definition -/
+
+/-- Block average of function `f` at position `k` with `m` blocks of size `n`.
+
+For coordinate `k < m`, computes the average of `f(ω(k*n + j))` over `j ∈ {0, ..., n-1}`.
+This is the Cesàro average of `f` starting at coordinate `k*n`. -/
+def blockAvg (m n : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) : ℝ :=
+  if hn : n = 0 then 0
+  else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j)))
+
+@[simp]
+lemma blockAvg_zero_n (m : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
+    blockAvg m 0 k f ω = 0 := by
+  simp [blockAvg]
+
+lemma blockAvg_pos_n {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
+    blockAvg m n k f ω = (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j))) := by
+  simp [blockAvg, Nat.pos_iff_ne_zero.mp hn]
+
+/-! ### Block Average and Shifted Cesàro Averages -/
+
+/-- Block average at position k equals Cesàro average starting at k*n.
+
+This connects block averages to the existing Cesàro convergence machinery. -/
+lemma blockAvg_eq_cesaro_shifted {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
+    blockAvg m n k f ω =
+      (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f ((shift^[k.val * n] ω) j)) := by
+  rw [blockAvg_pos_n hn]
+  congr 1
+  apply Finset.sum_congr rfl
+  intro j _
+  rw [shift_iterate_apply]
+  congr 1
+  -- j + k.val * n = k.val * n + j
+  ring
+
+/-! ### Measurability of Block Averages -/
+
+lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measurable f) :
+    Measurable (blockAvg (α := α) m n k f) := by
+  unfold blockAvg
+  by_cases hn : n = 0
+  · simp only [hn, ↓reduceDIte, measurable_const]
+  · simp only [hn, ↓reduceDIte]
+    apply Measurable.const_mul
+    apply Finset.measurable_sum
+    intro j _
+    exact hf.comp (measurable_pi_apply _)
+
+/-! ### Block Average L¹ Convergence
+
+The key observation is that block average at position k is a Cesàro average starting at k*n.
+By `condexp_precomp_iterate_eq`, the conditional expectation of `f(ω(k*n))` equals CE[f(ω₀) | mSI].
+The existing Cesàro convergence machinery then gives L¹ convergence. -/
+
+section BlockAvgConvergence
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+
+/-- Block averages converge in L¹ to conditional expectation.
+
+For each fixed k, as n → ∞:
+`∫ |blockAvg m n k f ω - μ[f(ω₀) | mSI] ω| dμ → 0`
+
+This follows from the Cesàro convergence theorem since blockAvg at position k
+is a Cesàro average starting at coordinate k*n, and by `condexp_precomp_iterate_eq`,
+the target CE is the same regardless of the starting position. -/
+lemma blockAvg_tendsto_condExp
+    (hσ : MeasurePreserving shift μ μ) (m : ℕ) (k : Fin m)
+    {f : α → ℝ} (hf : Measurable f) (hf_bd : ∃ C, ∀ x, |f x| ≤ C) :
+    Tendsto (fun n =>
+      ∫ ω, |blockAvg m (n + 1) k f ω - μ[(fun ω => f (ω 0)) | mSI] ω| ∂μ)
+      atTop (𝓝 0) := by
+  -- The proof uses the existing L1_cesaro_convergence_bounded machinery
+  -- Block average at position k is Cesàro average starting at k*(n+1)
+  -- Key insight: By condexp_precomp_iterate_eq, CE[f(ω(k*(n+1)))] = CE[f(ω₀)]
+  sorry -- TODO: Connect to L1_cesaro_convergence_bounded via shift_iterate
+
+end BlockAvgConvergence
+
+/-! ### Contractability and Block Average Factorization
+
+The core of Kallenberg's first proof: contractability gives integral factorization
+via averaging over all choice functions. -/
+
+section Contractability
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+
+/-- For contractable μ, integral of product equals integral of product with reindexed coordinates.
+
+Given strict monotone k : Fin m → ℕ, contractability says:
+`∫ ∏ᵢ fᵢ(ωᵢ) dμ = ∫ ∏ᵢ fᵢ(ω(k(i))) dμ`
+
+This is the fundamental identity that lets us swap between original and reindexed coordinates. -/
+lemma integral_prod_reindex_of_contractable
+    (hContract : ∀ (m' : ℕ) (k : Fin m' → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m') => ω i.val) μ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    {k : Fin m → ℕ} (hk : StrictMono k) :
+    ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+    ∫ ω, (∏ i : Fin m, fs i (ω (k i))) ∂μ := by
+  -- Use contractability: μ ∘ (ω ↦ (ω(k(0)), ..., ω(k(m-1)))) = μ ∘ (ω ↦ (ω₀, ..., ω_{m-1}))
+  have h_map := hContract m k hk
+  -- The measurable function for mapping to Fin m → α
+  have h_meas_orig : Measurable (fun ω (i : Fin m) => ω i.val : Ω[α] → (Fin m → α)) := by
+    rw [measurable_pi_iff]; intro i; exact measurable_pi_apply _
+  have h_meas_reindex : Measurable (fun ω i => ω (k i) : Ω[α] → (Fin m → α)) := by
+    rw [measurable_pi_iff]; intro i; exact measurable_pi_apply _
+  -- The integrand on Fin m → α
+  let F : (Fin m → α) → ℝ := fun ω' => ∏ i, fs i (ω' i)
+  have hF_meas_base : Measurable F := by
+    apply Finset.measurable_prod
+    intro i _
+    exact (hfs_meas i).comp (measurable_pi_apply i)
+  have hF_meas : AEStronglyMeasurable F (Measure.map (fun ω (i : Fin m) => ω i.val) μ) :=
+    hF_meas_base.aestronglyMeasurable
+  -- Rewrite both sides using integral_map
+  have hF_meas' : AEStronglyMeasurable F (Measure.map (fun ω i => ω (k i)) μ) :=
+    hF_meas_base.aestronglyMeasurable
+  calc ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ
+    _ = ∫ ω', F ω' ∂(Measure.map (fun ω (i : Fin m) => ω i.val) μ) := by
+        rw [integral_map h_meas_orig.aemeasurable hF_meas]
+    _ = ∫ ω', F ω' ∂(Measure.map (fun ω i => ω (k i)) μ) := by rw [h_map]
+    _ = ∫ ω, (∏ i : Fin m, fs i (ω (k i))) ∂μ := by
+        rw [integral_map h_meas_reindex.aemeasurable hF_meas']
+
+/-- Averaging over all choice functions yields product of block averages.
+
+For any bounded measurable fs : Fin m → α → ℝ:
+`∫ ∏ᵢ fᵢ(ωᵢ) dμ = ∫ ∏ᵢ blockAvg m n i fᵢ ω dμ`
+
+This is proved by:
+1. For each j : Fin m → Fin n, contractability gives ∫ ∏ fᵢ(ωᵢ) = ∫ ∏ fᵢ(ω(ρⱼ(i)))
+2. Sum over all j and divide by n^m to get block averages
+-/
+lemma integral_prod_eq_integral_blockAvg
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m' : ℕ) (k : Fin m' → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m') => ω i.val) μ)
+    {m n : ℕ} (hn : 0 < n)
+    (fs : Fin m → α → ℝ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
+    ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+    ∫ ω, (∏ i : Fin m, blockAvg m n i (fs i) ω) ∂μ := by
+  -- Step 1: For each j : Fin m → Fin n, apply contractability with blockInjection
+  -- Step 2: Average over all j to get block averages
+  -- Step 3: Use linearity of integration
+  sorry -- TODO: Implement averaging argument
+
+end Contractability
+
+/-! ### Product L¹ Convergence via Telescoping -/
+
+section ProductConvergence
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+
+/-- Telescoping bound for product differences.
+
+|∏ Aᵢ - ∏ Bᵢ| ≤ m * C^{m-1} * max |Aᵢ - Bᵢ|
+
+when |Aᵢ|, |Bᵢ| ≤ C for all i.
+
+Note: When m = 0, both products are 1, so the LHS is 0 and the RHS is 0.
+For m > 0, we use Finset.univ.sup' with nonemptiness. -/
+lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
+    (hA : ∀ i, |A i| ≤ C) (hB : ∀ i, |B i| ≤ C) :
+    |∏ i, A i - ∏ i, B i| ≤
+      if h : 0 < m then m * C^(m - 1) * (Finset.univ.sup' ⟨⟨0, h⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|))
+      else 0 := by
+  -- When m = 0, both products are 1, LHS = |1 - 1| = 0
+  by_cases hm : 0 < m
+  · simp only [hm, ↓reduceDIte]
+    -- Standard telescoping argument for m > 0
+    sorry
+  · simp only [hm, ↓reduceDIte]
+    -- m = 0, so both products over Fin 0 are empty, hence equal to 1
+    have hm0 : m = 0 := Nat.eq_zero_of_not_pos hm
+    subst hm0
+    simp only [Finset.univ_eq_empty, Finset.prod_empty, sub_self, abs_zero, le_refl]
+
+/-- Product of block averages converges L¹ to product of conditional expectations.
+
+`∫ |∏ blockAvg_i - ∏ CE[fᵢ(ω₀) | mSI]| dμ → 0` as n → ∞
+
+Proof uses telescoping bound and individual L¹ convergence of each blockAvg_i. -/
+lemma product_blockAvg_L1_convergence
+    (hσ : MeasurePreserving shift μ μ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
+    Tendsto (fun n =>
+      ∫ ω, |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
+           ∏ i : Fin m, μ[(fun ω => fs i (ω 0)) | mSI] ω| ∂μ)
+      atTop (𝓝 0) := by
+  sorry -- Use telescoping bound and individual blockAvg_tendsto_condExp
+
+end ProductConvergence
+
+/-! ### Kernel Independence from Contractability
+
+The main result: for contractable measures, the product factorization of conditional expectations
+holds almost surely, giving kernel independence. -/
+
+section KernelIndependence
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+
+/-- For contractable measures, product of CEs equals CE of product.
+
+`CE[∏ fᵢ(ωᵢ) | mSI] = ∏ CE[fᵢ(ω₀) | mSI]` a.e.
+
+This is the key factorization that yields conditional i.i.d. -/
+theorem condexp_product_factorization_contractable
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
+    {m : ℕ} (fs : Fin m → α → ℝ)
+    (hfs_meas : ∀ i, Measurable (fs i))
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
+    μ[(fun ω => ∏ i : Fin m, fs i (ω i.val)) | mSI] =ᵐ[μ]
+    (fun ω => ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω) := by
+  -- Step 1: By integral_prod_eq_integral_blockAvg (using contractability)
+  -- ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ blockAvg_i dμ for all n
+  -- Step 2: By product_blockAvg_L1_convergence
+  -- ∫ |∏ blockAvg_i - ∏ CE[fᵢ(ω₀)]| → 0
+  -- Step 3: Combine: ∫ ∏ fᵢ(ωᵢ) dμ = lim ∫ ∏ blockAvg_i = ∫ ∏ CE[fᵢ(ω₀)]
+  -- Step 4: By uniqueness of conditional expectation
+  sorry
+
+end KernelIndependence
+
+end Exchangeability.DeFinetti.ViaKoopman
