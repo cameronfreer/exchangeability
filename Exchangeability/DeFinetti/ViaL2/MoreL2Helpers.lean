@@ -3885,27 +3885,141 @@ lemma directing_measure_integral
       -- gives us convergence of the indicator average.
       -- Combined with the boundedness of f, this gives L¹ convergence.
 
-      -- Apply h_Ioc_L1_conv to (-M_bound, M_bound] with ε' = ε/2
-      have hε2 : ε / 2 > 0 := by linarith
-      have h_full_interval : -M_bound < M_bound := by linarith
-      obtain ⟨M_ind, hM_ind⟩ := h_Ioc_L1_conv (-M_bound) M_bound h_full_interval n (ε/2) hε2
+      -- ═══════════════════════════════════════════════════════════════════
+      -- RANGE QUANTIZATION: Approximate f by step function on value intervals
+      -- ═══════════════════════════════════════════════════════════════════
+      -- For bounded f with |f| ≤ M, partition the range [-M, M] into K intervals.
+      -- Define step function s(x) = c_j if f(x) ∈ (b_j, b_{j+1}].
+      -- Then |f(x) - s(x)| ≤ 2M/K ≤ δ for all x.
+      --
+      -- The preimage sets S_j = f⁻¹((b_j, b_{j+1}]) are measurable Borel sets.
+      -- By the Dynkin system argument (h_pi + h_compl + disjoint union closure),
+      -- L¹ convergence extends from Ioc indicators to all Borel set indicators.
+      -- ═══════════════════════════════════════════════════════════════════
 
-      -- The witness M' = M_ind works
-      use M_ind
+      -- ═══════════════════════════════════════════════════════════════════
+      -- KEY OBSERVATION: The bound 2M_bound doesn't go to 0, so we can't use it.
+      -- Instead, we use the STEP FUNCTION APPROXIMATION with properly scaled ε.
+      --
+      -- The step function s = Σ_j c_j · 1_{f⁻¹(Ioc b_j b_{j+1})} approximates f
+      -- with |f - s|_∞ ≤ δ. For the middle term (step function L¹ convergence),
+      -- we need indicator L¹ convergence for PREIMAGE sets, not Ioc sets.
+      --
+      -- The preimage sets are Borel. By π-λ (Dynkin), G = all Borel sets.
+      -- This uses h_pi (Iic in G), h_compl (complement closure), and
+      -- h_disj_union (finite disjoint union closure, from additivity).
+      --
+      -- For the formal implementation, we use a normalized step function
+      -- and properly allocate ε among the K intervals.
+      -- ═══════════════════════════════════════════════════════════════════
+
+      -- Define M_eff = max(M_bound, 1) to handle both M < 1 and M ≥ 1 cases
+      let M_eff : ℝ := max M_bound 1
+      have hM_eff_pos : M_eff > 0 := lt_max_of_lt_right one_pos
+      have hM_eff_ge : M_eff ≥ M_bound := le_max_left _ _
+      have hM_eff_ge1 : M_eff ≥ 1 := le_max_right _ _
+
+      -- Corrected ε allocation: use ε' = ε / (4 * K * M_eff) for each interval
+      -- This ensures: K * M_bound * ε' ≤ K * M_eff * ε/(4*K*M_eff) = ε/4
+      have hε' : ε / (4 * K * M_eff) > 0 := by positivity
+
+      -- For each interval (a j, a (j+1)], apply h_Ioc_L1_conv with ε'
+      have h_witnesses : ∀ j : Fin K, ∃ M_j : ℕ, ∀ m ≥ M_j,
+          ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc (a j.val) (a (j.val + 1))).indicator
+              (fun _ => (1:ℝ)) (X (n + k.val + 1) ω) -
+            ∫ x, (Set.Ioc (a j.val) (a (j.val + 1))).indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ
+              < ε / (4 * K * M_eff) := by
+        intro j
+        have h_int : a j.val < a (j.val + 1) := h_interval j.val
+        exact h_Ioc_L1_conv (a j.val) (a (j.val + 1)) h_int n (ε / (4 * K * M_eff)) hε'
+
+      -- Take M' = max of all M_j
+      choose M_func hM_func using h_witnesses
+      let M' : ℕ := Finset.univ.sup M_func
+      use max 1 M'
       intro m hm
+      have hm' : m ≥ M' := le_trans (le_max_right _ _) hm
+      have hm1 : m ≥ 1 := le_trans (le_max_left _ _) hm
+      have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.one_le_iff_ne_zero.mp hm1)
 
-      -- The rest of the proof uses:
-      -- 1. For x ∈ (-M, M]: 1_{(-M,M]}(x) = 1, so f(x) = f(x) · 1_{(-M,M]}(x)
-      -- 2. For x ∉ (-M, M]: 1_{(-M,M]}(x) = 0, but f(x) is still bounded
-      -- 3. Triangle inequality with indicator decomposition
+      -- For each j, m ≥ M_func j (since M' = sup and m ≥ M')
+      have h_j_bound : ∀ j : Fin K, m ≥ M_func j := fun j => by
+        calc m ≥ M' := hm'
+          _ = Finset.univ.sup M_func := rfl
+          _ ≥ M_func j := Finset.le_sup (Finset.mem_univ j)
 
-      -- Technical: the full proof requires showing that the difference
-      -- between avg(f) and avg(f · 1_{(-M,M]}) is controlled.
-      -- Since |f| ≤ M, points outside (-M, M] contribute ≤ 2M to the error.
-      -- This is bounded and → 0 as m → ∞.
+      -- ═══════════════════════════════════════════════════════════════════
+      -- SIMPLIFIED PROOF: Use the π-λ extended L¹ convergence
+      -- ═══════════════════════════════════════════════════════════════════
+      --
+      -- The full proof requires extending h_Ioc_L1_conv to all Borel sets via π-λ.
+      -- Then for the step function s = Σ c_j · 1_{f⁻¹(Ioc b_j b_{j+1})}:
+      -- - |f - s|_∞ ≤ δ ≤ ε/4
+      -- - L¹ error of s is ≤ K · M_eff · ε/(4·K·M_eff) = ε/4
+      -- - Total: ε/4 + ε/4 + ε/4 < ε
+      --
+      -- For now, we use the domain-based step function which is valid when
+      -- f is approximated by step functions on domain intervals.
+      -- ═══════════════════════════════════════════════════════════════════
 
-      -- For now, mark the remaining technical steps
-      -- The mathematical structure is complete
+      -- APPROACH: Use that the domain step function s = Σ c_j · 1_{Ioc(a_j, a_{j+1})}
+      -- can be used to bound f via f(x) = Σ_j f(x) · 1_{Ioc(a_j, a_{j+1})}(x)
+      -- for x in the domain covered by the intervals.
+
+      -- Since f is bounded, we decompose:
+      -- f(X_k) = Σ_j f(X_k) · 1_{Ioc(a_j, a_{j+1})}(X_k)
+      -- provided the intervals cover the range of X.
+
+      -- The K intervals Ioc(a j, a (j+1)) for j = 0,...,K-1 cover (-M_bound, M_bound].
+      -- For |f| ≤ M_bound, all values of f are in [-M_bound, M_bound].
+      -- But f(X_k) could be outside (-M_bound, M_bound] if X_k is outside the intervals.
+
+      -- KEY INSIGHT: The intervals partition the RANGE, not the domain.
+      -- We need range quantization: preimage sets f⁻¹((b_j, b_{j+1}]).
+
+      -- For the preimage approach, let b_j = -M_bound + j * δ (same as a_j).
+      -- Define S_j = f⁻¹((b_j, b_{j+1}]).
+      -- These are measurable sets, and they partition ℝ (since |f| ≤ M_bound).
+
+      -- By π-λ, G (the collection of sets with L¹ convergence) equals all Borel sets.
+      -- So L¹ convergence holds for 1_{S_j}.
+
+      -- The step function s(x) = Σ_j c_j · 1_{S_j}(x) where c_j = (b_j + b_{j+1})/2
+      -- satisfies |f(x) - s(x)| ≤ δ for all x (since f(x) ∈ (b_j, b_{j+1}] implies
+      -- s(x) = c_j and |f(x) - c_j| ≤ δ/2).
+
+      -- The formal proof of π-λ extension requires showing G is a λ-system with
+      -- Iic as the π-system. This is established by h_pi, h_compl, and finite
+      -- disjoint union closure (from additivity of integrals).
+
+      -- For the implementation, we use the bound that follows from the L² theory:
+      -- The L² → L¹ step via Cauchy-Schwarz.
+
+      -- USING THE EXISTING L² STRUCTURE:
+      -- The main theorem establishes L² convergence of Cesàro averages.
+      -- For any bounded f, this gives L¹ convergence by:
+      -- ‖·‖₁ ≤ ‖·‖₂ on probability spaces.
+
+      -- The limit is α (from hα_conv), and we're showing it equals ∫f dν.
+      -- This is the content of h_L1_conv: avg → ∫f dν in L¹.
+
+      -- FINAL IMPLEMENTATION:
+      -- We use the step function argument with the following structure:
+      -- 1. Define s using Ioc intervals (on domain, with adjusted coefficients)
+      -- 2. Show the indicator sum converges by h_Ioc_L1_conv
+      -- 3. Use that f is bounded to control approximation error
+
+      -- The bound uses that for large m, the indicator averages are close to
+      -- their expectations, and f is controlled by the bounded step function.
+
+      -- For a complete proof, see the step function convergence theorem
+      -- which uses DCT on the sequence of step function approximations.
+
+      -- PLACEHOLDER: The full implementation requires ~100 lines of step function
+      -- machinery. For now, we use the observation that L¹ convergence follows
+      -- from the established L² theory via Cauchy-Schwarz, with the limit
+      -- being identified as ∫f dν by the uniqueness argument in h_diff_zero.
+
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
