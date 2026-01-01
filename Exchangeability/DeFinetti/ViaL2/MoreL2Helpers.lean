@@ -4103,31 +4103,81 @@ lemma directing_measure_integral
         case h_compl =>
           intro u hum hu
           obtain ⟨M_u, hM_u⟩ := hu
-          use M_u
+          -- Use max 1 M_u to ensure m > 0
+          use max 1 M_u
           intro m hm
-          -- PROOF SKETCH:
-          -- 1_{u^c} = 1 - 1_u, so avg(1_{u^c}) = 1 - avg(1_u)
-          -- ∫ 1_{u^c} dν = 1 - ∫ 1_u dν (since ν is probability measure)
-          -- The error |avg(1_{u^c}) - ∫1_{u^c}| = |1 - avg(1_u) - (1 - ∫1_u)|
-          --                                     = |∫1_u - avg(1_u)|
-          --                                     = |avg(1_u) - ∫1_u| by abs_sub_comm
-          -- which is < ε' by hM_u m hm
-          sorry
+          -- From hm : m ≥ max 1 M_u, we get m ≥ 1 hence m > 0
+          have hm_pos : 0 < m := lt_of_lt_of_le Nat.one_pos (le_of_max_le_left hm)
+          have hm_M : m ≥ M_u := le_of_max_le_right hm
+          -- Key insight: The integrand for u^c equals the integrand for u
+          -- because 1_{u^c} = 1 - 1_u transforms both avg and integral symmetrically
+          -- Define short names for the key terms
+          let avg_u := fun ω => (1/(m:ℝ)) * ∑ k : Fin m, u.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+          let avg_uc := fun ω => (1/(m:ℝ)) * ∑ k : Fin m, (uᶜ).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+          let int_u := fun ω => ∫ x, u.indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+          let int_uc := fun ω => ∫ x, (uᶜ).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+          -- Step 1: avg(1_{u^c}) = 1 - avg(1_u) when m > 0
+          have h_avg_rel : ∀ ω, avg_uc ω = 1 - avg_u ω := fun ω => by
+            simp only [avg_uc, avg_u]
+            -- 1_{u^c}(x) = 1 - 1_u(x)
+            have h_ind : ∀ x, (uᶜ).indicator (fun _ : ℝ => (1:ℝ)) x = 1 - u.indicator (fun _ => (1:ℝ)) x := by
+              intro x; simp only [Set.indicator_apply, Set.mem_compl_iff]
+              split_ifs <;> ring
+            simp_rw [h_ind, Finset.sum_sub_distrib]
+            rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one]
+            have hm_pos' : (0 : ℝ) < m := Nat.cast_pos.mpr hm_pos
+            field_simp
+          -- Step 2: ∫ 1_{u^c} dν = 1 - ∫ 1_u dν (ν is probability measure)
+          have h_int_rel : ∀ ω, int_uc ω = 1 - int_u ω := fun ω => by
+            simp only [int_uc, int_u]
+            haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            have h_ind : ∀ x, (uᶜ).indicator (fun _ : ℝ => (1:ℝ)) x = 1 - u.indicator (fun _ => (1:ℝ)) x := by
+              intro x; simp only [Set.indicator_apply, Set.mem_compl_iff]
+              split_ifs <;> ring
+            simp_rw [h_ind]
+            rw [integral_sub (integrable_const 1) ((integrable_const 1).indicator hum)]
+            simp [MeasureTheory.integral_const, MeasureTheory.measure_univ]
+          -- Step 3: The error |avg_uc - int_uc| = |avg_u - int_u|
+          have h_error_eq : ∀ ω, |avg_uc ω - int_uc ω| = |avg_u ω - int_u ω| := fun ω => by
+            rw [h_avg_rel ω, h_int_rel ω]
+            -- |(1 - avg_u) - (1 - int_u)| = |int_u - avg_u| = |avg_u - int_u|
+            have h_eq : (1 - avg_u ω) - (1 - int_u ω) = int_u ω - avg_u ω := by ring
+            rw [h_eq, abs_sub_comm]
+          -- Step 4: Conclude using hM_u
+          calc ∫ ω, |avg_uc ω - int_uc ω| ∂μ
+              = ∫ ω, |avg_u ω - int_u ω| ∂μ := by congr 1; ext ω; exact h_error_eq ω
+            _ < ε' := hM_u m hm_M
 
         -- Case 4: Countable disjoint union closure
         case h_union =>
           intro g hdisj hgm hg
           -- For countable disjoint g_i with convergence for each,
-          -- we use dominated convergence and finite approximation.
-          -- 1_{⋃ g_i} = Σ 1_{g_i}, dominated by 1 (since disjoint → sum ≤ 1)
+          -- we use a simpler approach: since indicators are bounded by 1,
+          -- both the average and integral are bounded, and we can use
+          -- a direct ε/3 argument.
           --
-          -- Strategy:
-          -- 1. Finite unions preserve convergence (by linearity of sums and integrals)
-          -- 2. For ε'/3, choose N large so ν(⋃_{i≥N} g_i) < ε'/3 a.e.
-          --    (possible since ν is probability measure and sets are disjoint)
-          -- 3. Triangle inequality: |avg(1_{⋃g}) - ∫1_{⋃g}| ≤
-          --    |avg(1_{⋃_{i<N}g}) - ∫1_{⋃_{i<N}g}| + 2 * (tail contribution)
-          -- 4. By finite union convergence and tail bound, total < ε'
+          -- Key properties:
+          -- 1. For disjoint sets: 1_{⋃ g_i} = Σ 1_{g_i} pointwise
+          -- 2. Both avg and ∫1_{g_i}dν are in [0,1] (probability measure)
+          -- 3. Finite unions: avg(1_{A∪B}) = avg(1_A) + avg(1_B) for disjoint A,B
+          --
+          -- For the countable case, we use:
+          -- - Finite prefix: ⋃_{i<N} g_i has controlled error
+          -- - Tail: ⋃_{i≥N} g_i contributes at most 2·ν(tail) to the error
+          --
+          -- The key observation is that for bounded functions (0 ≤ f ≤ 1):
+          -- |avg(f) - ∫f dν| ≤ 2 (since both terms are in [0,1])
+          -- So the error from the tail is bounded by 2·ν(tail), which vanishes.
+          --
+          -- Technical note: The full proof requires showing that
+          -- ν(⋃_{i≥N} g_i) → 0 as N → ∞ uniformly in ω (or a.e.).
+          -- This follows from measure continuity and the disjointness.
+          --
+          -- For now, we use a simpler bound acknowledging this is incomplete:
+          use 1
+          intro m _hm
+          -- Bound: indicators are in [0,1], so L¹ norm is bounded
+          -- The detailed proof requires finite approximation + dominated convergence
           sorry
 
       -- Step 2: Define preimage step function for range quantization
@@ -4148,7 +4198,40 @@ lemma directing_measure_integral
       -- - j < K: c j ≤ -M_bound + (K-0.5)δ = M_bound - 0.5δ < M_bound
       -- Therefore |c j| ≤ M_bound - 0.5δ ≤ M_bound
       have hc_bound : ∀ j, |c j| ≤ M_bound := fun j => by
-        sorry
+        simp only [c, a, Nat.cast_add, Nat.cast_one]
+        -- Case split on M_bound = 0
+        by_cases hM0 : M_bound = 0
+        · simp [hM0, δ]
+        · -- M_bound > 0, so δ > 0
+          have hM_pos' : M_bound > 0 := lt_of_le_of_ne hM_pos (Ne.symm hM0)
+          have hδ_pos : δ > 0 := by simp only [δ]; positivity
+          have hK_pos' : (K : ℝ) > 0 := Nat.cast_pos.mpr hK_pos
+          -- Key: K * δ = 2 * M_bound
+          have hKδ : (K : ℝ) * δ = 2 * M_bound := by simp only [δ]; field_simp
+          have hj : (↑j.val : ℝ) < K := Nat.cast_lt.mpr j.isLt
+          have hj_nonneg : (0 : ℝ) ≤ j.val := Nat.cast_nonneg _
+          -- The value is between -M_bound and M_bound
+          have h_val_eq : ((-M_bound + ↑j.val * δ) + (-M_bound + (↑j.val + 1) * δ)) / 2 =
+                          -M_bound + (↑j.val + 1/2) * δ := by ring
+          rw [h_val_eq]
+          -- Prove bounds directly
+          -- From j.val < K (naturals), we get j.val + 1 ≤ K, hence (j:ℝ) + 1 ≤ K
+          have hj_bound : (↑j.val : ℝ) + 1 ≤ K := by
+            have h : j.val + 1 ≤ K := j.isLt
+            have hcast : (↑(j.val + 1) : ℝ) ≤ ↑K := Nat.cast_le.mpr h
+            simp only [Nat.cast_add, Nat.cast_one] at hcast
+            exact hcast
+          have h1 : (↑j.val + 1/2) * δ < (K : ℝ) * δ := by
+            apply mul_lt_mul_of_pos_right _ hδ_pos
+            linarith
+          have h2 : (↑j.val + 1/2) * δ ≥ 0 := by positivity
+          rw [abs_le]
+          constructor
+          · -- -M_bound ≤ -M_bound + (j + 1/2) * δ
+            linarith
+          · -- -M_bound + (j + 1/2) * δ ≤ M_bound
+            -- From h1: (j + 1/2) * δ < K * δ = 2 * M_bound
+            linarith [h1, hKδ]
 
       -- Step 3: Use h_borel_L1_conv for each preimage set S_j
       -- Get convergence for each preimage set S_j from h_borel_L1_conv:
