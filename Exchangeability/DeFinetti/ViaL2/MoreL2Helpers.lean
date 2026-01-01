@@ -4049,13 +4049,19 @@ lemma directing_measure_integral
       -- ═══════════════════════════════════════════════════════════════════
 
       -- Step 1: Extend h_ind_L1_conv to ALL Borel sets via π-λ theorem
-      -- Property C(B) := "avg(1_B ∘ X) → ∫ 1_B dν in L¹"
-      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
-          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+      -- Use STRONG property: L¹ convergence (∀ δ > 0, ∃ M, ...) for proper composition
+      --
+      -- KEY INSIGHT: The property "∃ M, ∀ m ≥ M, error < ε'" doesn't compose for countable
+      -- unions (summing N terms gives N*ε'). Instead, we prove L¹ convergence first,
+      -- then extract the fixed-ε' statement.
+
+      -- First prove L¹ convergence for all Borel sets
+      have h_borel_L1_conv_strong : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ δ > 0, ∃ M' : ℕ, ∀ m ≥ M',
             ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < δ := by
         -- Use MeasurableSpace.induction_on_inter with Iic as generating π-system
-        intro B hB n' ε' hε'
+        intro B hB n'
 
         -- The generating set S = {Iic t | t ∈ ℝ}
         let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
@@ -4072,12 +4078,11 @@ lemma directing_measure_integral
           use min s t
           exact Set.Iic_inter_Iic.symm
 
-        -- Define the property we want to prove via induction
-        -- C(B, hB) := convergence holds for 1_B
+        -- STRONG property: L¹ convergence (works for any tolerance)
         let C : (B : Set ℝ) → MeasurableSet B → Prop := fun B _ =>
-          ∃ M' : ℕ, ∀ m ≥ M',
+          ∀ δ > 0, ∃ M' : ℕ, ∀ m ≥ M',
             ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε'
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < δ
 
         -- Apply induction_on_inter
         suffices h : C B hB by exact h
@@ -4086,23 +4091,26 @@ lemma directing_measure_integral
 
         -- Case 1: Empty set
         case h_empty =>
+          intro δ hδ
           use 1
           intro m hm
           simp only [Set.indicator_empty, Finset.sum_const_zero, mul_zero,
             MeasureTheory.integral_zero, sub_zero, abs_zero, MeasureTheory.integral_const,
             MeasureTheory.measure_univ, one_smul, ENNReal.toReal_one]
-          exact hε'
+          exact hδ
 
         -- Case 2: Basic sets (Iic t)
         case h_basic =>
           intro u ⟨t, ht⟩
           subst ht
-          exact h_ind_L1_conv t n' ε' hε'
+          intro δ hδ
+          exact h_ind_L1_conv t n' δ hδ
 
         -- Case 3: Complement closure
         case h_compl =>
           intro u hum hu
-          obtain ⟨M_u, hM_u⟩ := hu
+          intro δ hδ
+          obtain ⟨M_u, hM_u⟩ := hu δ hδ
           -- Use max 1 M_u to ensure m > 0
           use max 1 M_u
           intro m hm
@@ -4146,45 +4154,84 @@ lemma directing_measure_integral
           -- Step 4: Conclude using hM_u
           calc ∫ ω, |avg_uc ω - int_uc ω| ∂μ
               = ∫ ω, |avg_u ω - int_u ω| ∂μ := by congr 1; ext ω; exact h_error_eq ω
-            _ < ε' := hM_u m hm_M
+            _ < δ := hM_u m hm_M
 
         -- Case 4: Countable disjoint union closure
         case h_union =>
           intro g hdisj hgm hg
+          intro δ hδ
           /-
           PROOF STRUCTURE for countable disjoint union ⋃_i g_i:
 
-          Goal: ∃ M', ∀ m ≥ M', ∫|avg(1_U) - ν(U)| dμ < ε'
+          Now hg : ∀ i, ∀ δ' > 0, ∃ M, ∀ m ≥ M, error(g i) < δ'
+          This means we CAN use hg with tolerance δ/(4N) for the finite prefix!
 
           STEP 1: Key bounds (uniform in m)
-          • ∑_i (ν ω)(g_i).toReal ≤ 1 for all ω (probability measure, disjoint union)
           • ∑_i avg(1_{g_i})(ω) ≤ 1 for all ω (disjoint indicators sum ≤ 1)
-          • By Tonelli: ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 and ∑_i ∫ ν(g_i) dμ ≤ 1
+          • ∑_i (ν ω)(g_i) ≤ 1 for all ω (probability measure)
+          • The series ∑_i ∫ avg(1_{g_i}) dμ and ∑_i ∫ ν(g_i) dμ converge to values ≤ 1
 
-          STEP 2: Tail bound (N-independent of m)
-          • Since ∑_i ∫ avg(1_{g_i}) dμ ≤ 1, tail ∑_{i≥N} → 0 as N → ∞
-          • Choose N such that: ∑_{i≥N} ∫ avg(1_{g_i}) dμ < ε'/4
-          • Similarly: ∑_{i≥N} ∫ ν(g_i) dμ < ε'/4
-          • Then: ∫|avg(1_{T_N}) - ν(T_N)| dμ ≤ ∫(avg + ν) dμ < ε'/2
+          STEP 2: Tail bound (choose N such that tails < δ/4 each)
+          • Since series converge, tails → 0 as N → ∞
+          • Choose N: tail avg sum < δ/4 and tail ν sum < δ/4
 
-          STEP 3: Finite prefix (from hg)
-          • For each i < N, use hg i with tolerance ε'/(4N)
-          • Get M_i such that for m ≥ M_i: ∫|avg(1_{g_i}) - ν(g_i)| dμ < ε'/(4N)
-          • Take M = max_{i<N} M_i
-          • For m ≥ M: ∑_{i<N} ∫|avg - ν| dμ < N · ε'/(4N) = ε'/4
+          STEP 3: Finite prefix (from hg with scaled tolerance)
+          • For each i < N, use hg i with tolerance δ/(4N) to get M_i
+          • Take M = max M_i
 
-          STEP 4: Assembly via triangle inequality
-          • 1_U = 1_{U_N} + 1_{T_N} (disjoint decomposition)
-          • |avg(1_U) - ν(U)| ≤ |avg(1_{U_N}) - ν(U_N)| + |avg(1_{T_N}) - ν(T_N)|
-          • ∫|avg - ν| dμ ≤ ε'/4 + ε'/2 < ε'
-
-          KEY MATHLIB LEMMAS:
-          • measure_iUnion: ν(⋃_i g_i) = ∑_i ν(g_i) (disjoint, measurable)
-          • integral_tsum: ∫(∑_i f_i) = ∑_i (∫ f_i) (summable, non-negative)
-          • tsum_eq_single: ∑_i 1_{g_i}(x) = 1_{g_j}(x) when x ∈ g_j (disjoint)
-          • Tail of bounded series: if ∑ a_i ≤ C then ∑_{i≥N} a_i → 0
+          STEP 4: Assembly: total error < δ/4 + δ/4 + δ/4 < δ
           -/
+
+          -- Abbreviations
+          let U := ⋃ i, g i
+          let avg_gi := fun (i : ℕ) (ω : Ω) (m : ℕ) => (1/(m:ℝ)) * ∑ k : Fin m,
+              (g i).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+          let int_gi := fun (i : ℕ) (ω : Ω) => ∫ x, (g i).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+
+          /-
+          PROOF APPROACH:
+          With the strong property (L¹ convergence), we can use hg with any tolerance.
+          For countable disjoint union U = ⋃_i g_i:
+
+          1. TAIL BOUND: For any ε > 0, there exists N such that ∑_{i≥N} contributes < ε/2
+             - ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 (disjoint indicators, uniform in m)
+             - ∑_i ∫ ν(g_i) dμ ≤ 1 (probability measure)
+             - Tail of bounded series → 0
+
+          2. PREFIX BOUND: For i < N, use hg with tolerance δ/(4N)
+             - N terms, each < δ/(4N), sum < δ/4
+
+          3. COMBINE: prefix error + tail error < δ/4 + δ/2 < δ
+
+          For the full proof, we need dominated convergence on the tails.
+          -/
+
+          -- For a complete proof, we would:
+          -- 1. Use classical.choose to select N with small tail
+          -- 2. Use hg for i < N with scaled tolerance
+          -- 3. Combine with triangle inequality
+
+          -- The key mathematical insight is already captured: with L¹ convergence
+          -- for each g_i, we can allocate tolerance ε/(2N) to each of N sets,
+          -- and the tail vanishes because the series converges.
+
+          -- Technical implementation uses dominated convergence on the following:
+          -- - For avg: ∑_i avg(1_{g_i}) = avg(∑_i 1_{g_i}) = avg(1_U) ≤ 1
+          -- - For ν: ∑_i ν(g_i) = ν(U) ≤ 1
+
+          -- We use sorry here as the full implementation requires:
+          -- - Tonelli for interchange of tsum and integral
+          -- - Dominated convergence for tail bounds
+          -- - Careful handling of measurability for countable sums
           sorry
+
+      -- Bridge: Extract the fixed-ε' statement from L¹ convergence
+      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+        intro B hB n' ε' hε'
+        exact h_borel_L1_conv_strong B hB n' ε' hε'
 
       -- Step 2: Define preimage step function for range quantization
       -- b_j = a j = -M_bound + j * δ
@@ -4242,7 +4289,7 @@ lemma directing_measure_integral
       -- Step 3: Use h_borel_L1_conv for each preimage set S_j
       -- Get convergence for each preimage set S_j from h_borel_L1_conv:
       --   ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ∫1_{S_j} dν| < ε/(4KM_eff)
-      -- Take M'' = max of all M_j, then for m ≥ M'':
+      -- Note: We already have m fixed from the earlier `use max 1 M'` and `intro m hm`.
       --
       -- Step 4: Triangle inequality bound
       -- |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
@@ -4252,7 +4299,18 @@ lemma directing_measure_integral
       -- - |avg(f) - avg(s)| ≤ δ/2 (since |f - s| ≤ δ/2 pointwise on covered domain)
       -- - |avg(s) - ∫s dν| ≤ Σ |c_j| · error_j ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
       -- - |∫s - ∫f dν| ≤ δ/2 (since |s - f| ≤ δ/2 and ν is probability measure)
-      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ)
+      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ ≤ ε/4)
+      --
+      -- KEY INSIGHT: The step function argument uses:
+      -- 1. h_borel_L1_conv for each S_j (preimage sets)
+      -- 2. Linearity: avg(s) = Σ c_j · avg(1_{S_j}) and ∫s dν = Σ c_j · ν(S_j)
+      -- 3. Triangle inequality to combine the bounds
+      --
+      -- The technical implementation requires:
+      -- - Defining the step function s = Σ_j c_j · 1_{S_j}
+      -- - Showing |f(x) - s(x)| ≤ δ/2 (midpoint approximation)
+      -- - Using h_borel_L1_conv with tolerance ε/(4KM_eff) for each S_j
+      -- - Combining: error ≤ δ/2 + K·M_bound·ε/(4KM_eff) + δ/2 < ε
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
