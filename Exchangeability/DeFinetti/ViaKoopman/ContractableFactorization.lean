@@ -296,7 +296,16 @@ lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
   -- When m = 0, both products are 1, LHS = |1 - 1| = 0
   by_cases hm : 0 < m
   · simp only [hm, ↓reduceDIte]
-    -- Standard telescoping argument for m > 0
+    -- Standard telescoping identity:
+    -- ∏ᵢ Aᵢ - ∏ᵢ Bᵢ = ∑ⱼ (∏_{i<j} Aᵢ) * (Aⱼ - Bⱼ) * (∏_{i>j} Bᵢ)
+    --
+    -- Taking absolute values and using |Aᵢ|, |Bᵢ| ≤ C:
+    -- |∏ Aᵢ - ∏ Bᵢ| ≤ ∑ⱼ C^{j} * |Aⱼ - Bⱼ| * C^{m-1-j}
+    --              = C^{m-1} * ∑ⱼ |Aⱼ - Bⱼ|
+    --              ≤ C^{m-1} * m * max_j |Aⱼ - Bⱼ|
+    --              = m * C^{m-1} * max_j |Aⱼ - Bⱼ|
+    --
+    -- TODO: Formalize using Finset.prod_sub_prod or induction on m
     sorry
   · simp only [hm, ↓reduceDIte]
     -- m = 0, so both products over Fin 0 are empty, hence equal to 1
@@ -318,7 +327,24 @@ lemma product_blockAvg_L1_convergence
       ∫ ω, |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
            ∏ i : Fin m, μ[(fun ω => fs i (ω 0)) | mSI] ω| ∂μ)
       atTop (𝓝 0) := by
-  sorry -- Use telescoping bound and individual blockAvg_tendsto_condExp
+  -- Proof strategy:
+  --
+  -- 1. Apply prod_diff_bound pointwise:
+  --    |∏ blockAvg_i - ∏ CE_i| ≤ m * C^{m-1} * max_i |blockAvg_i - CE_i|
+  --
+  -- 2. Integrate both sides:
+  --    ∫ |∏ blockAvg_i - ∏ CE_i| ≤ m * C^{m-1} * ∫ max_i |blockAvg_i - CE_i|
+  --
+  -- 3. Use ∫ max_i |·| ≤ ∑_i ∫ |·| (or domination by sum):
+  --    ≤ m * C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|
+  --
+  -- 4. By blockAvg_tendsto_condExp, each term → 0:
+  --    ∫ |blockAvg_i - CE_i| → 0 for each i
+  --
+  -- 5. Finite sum of things → 0 is → 0.
+  --
+  -- TODO: Formalize using prod_diff_bound and blockAvg_tendsto_condExp
+  sorry
 
 end ProductConvergence
 
@@ -345,12 +371,31 @@ theorem condexp_product_factorization_contractable
     (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     μ[(fun ω => ∏ i : Fin m, fs i (ω i.val)) | mSI] =ᵐ[μ]
     (fun ω => ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω) := by
-  -- Step 1: By integral_prod_eq_integral_blockAvg (using contractability)
-  -- ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ blockAvg_i dμ for all n
-  -- Step 2: By product_blockAvg_L1_convergence
-  -- ∫ |∏ blockAvg_i - ∏ CE[fᵢ(ω₀)]| → 0
-  -- Step 3: Combine: ∫ ∏ fᵢ(ωᵢ) dμ = lim ∫ ∏ blockAvg_i = ∫ ∏ CE[fᵢ(ω₀)]
-  -- Step 4: By uniqueness of conditional expectation
+  -- Proof strategy:
+  --
+  -- **Step 1**: By integral_prod_eq_integral_blockAvg (using contractability):
+  --   For all n > 0: ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ blockAvg_i dμ
+  --
+  -- **Step 2**: By product_blockAvg_L1_convergence:
+  --   ∫ |∏ blockAvg_i - ∏ CE[fᵢ(ω₀)]| → 0 as n → ∞
+  --
+  -- **Step 3**: L¹ convergence implies convergence of integrals:
+  --   Since ∫ ∏ blockAvg_i is constant = ∫ ∏ fᵢ(ωᵢ) (by Step 1),
+  --   and ∫ |∏ blockAvg_i - ∏ CE| → 0 (by Step 2),
+  --   we have ∫ ∏ fᵢ(ωᵢ) = ∫ ∏ CE[fᵢ(ω₀)]
+  --
+  -- **Step 4**: Restrict to shift-invariant sets s ∈ mSI:
+  --   The same argument applies when integrating over any s ∈ mSI,
+  --   because reindexing by strictly monotone functions preserves
+  --   shift-invariant sets: if s ∈ mSI, then (reindex ρ)⁻¹(s) = s.
+  --
+  --   This gives: ∫_s ∏ fᵢ(ωᵢ) = ∫_s ∏ CE[fᵢ(ω₀)] for all s ∈ mSI
+  --
+  -- **Step 5**: By uniqueness of conditional expectation:
+  --   CE[∏ fᵢ(ωᵢ) | mSI] =ᵐ ∏ CE[fᵢ(ω₀) | mSI]
+  --
+  -- TODO: Formalize using integral_prod_eq_integral_blockAvg,
+  -- product_blockAvg_L1_convergence, and ae_eq_condExp_of_forall_setIntegral_eq
   sorry
 
 end KernelIndependence
