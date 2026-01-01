@@ -114,10 +114,31 @@ theorem deFinetti_viaKoopman_contractable
         (∀ i, ∃ C, ∀ x, |fs i x| ≤ C) →
         ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
           ∫ ω, (∫ x, (∏ i : Fin m, fs i x) ∂(ν ω)) ∂μ) := by
-  -- Step 1: Use condexp_product_factorization_contractable to get product factorization
-  -- Step 2: Define ν from the conditional distribution at coordinate 0
-  -- Step 3: Show the integral factorization follows from the CE factorization
-  sorry -- TODO: Complete by combining ContractableFactorization with KernelIndependence
+  -- Proof strategy:
+  --
+  -- **Step 1**: Get product factorization of conditional expectations
+  --   Use condexp_product_factorization_contractable to obtain:
+  --   μ[(∏ fᵢ(ωᵢ)) | mSI] =ᵐ ∏ μ[fᵢ(ω₀) | mSI]
+  --
+  -- **Step 2**: Define the directing measure ν
+  --   Define ν(ω)(s) := μ[1_s(ω₀) | mSI](ω) for measurable s ⊆ α.
+  --   This is the conditional distribution of X₀ given mSI.
+  --   By RCond/disintegration, this gives a probability kernel a.e.
+  --
+  -- **Step 3**: Extend from indicators to bounded measurable functions
+  --   For indicators 1_s, the product factorization gives:
+  --   CE[∏ 1_{sᵢ}(ωᵢ) | mSI] =ᵐ ∏ ν(·)(sᵢ)
+  --   Extend to simple functions by linearity, then to bounded measurable
+  --   by monotone class / approximation.
+  --
+  -- **Step 4**: Integrate out and obtain the main statement
+  --   ∫ (∏ fᵢ(ωᵢ)) dμ = ∫ CE[∏ fᵢ(ωᵢ) | mSI] dμ  (tower property)
+  --                    = ∫ (∏ CE[fᵢ(ω₀) | mSI]) dμ  (by Step 1)
+  --                    = ∫ (∫ (∏ fᵢ) dν(ω)) dμ  (by Step 3)
+  --
+  -- TODO: Implement using condexp_product_factorization_contractable and
+  -- kernel construction from KernelIndependence.lean
+  sorry
 
 /-- Contractability implies conditional i.i.d. (Kallenberg's first proof).
 
@@ -139,7 +160,25 @@ theorem conditionallyIID_of_contractable
         (∀ i, MeasurableSet (sets i)) →
         μ[(fun ω' => Set.indicator (⋂ (i : Fin m), (fun ω'' => ω'' i.val) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI]
           =ᵐ[μ] fun ω =>
-            ∏ i : Fin m, μ[(fun ω' => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI] ω) :=
-  sorry -- TODO: Derive from deFinetti_viaKoopman_contractable
+            ∏ i : Fin m, μ[(fun ω' => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI] ω) := by
+  -- Proof strategy:
+  --
+  -- This theorem unpacks the conclusion of deFinetti_viaKoopman_contractable into
+  -- the standard "conditionally i.i.d." format with explicit conditional independence.
+  --
+  -- **Step 1**: Get the directing measure ν from deFinetti_viaKoopman_contractable
+  --
+  -- **Step 2**: The identical distribution property follows from the definition
+  --   of ν as the conditional distribution at coordinate 0.
+  --
+  -- **Step 3**: Conditional independence is exactly the product factorization
+  --   from condexp_product_factorization_contractable applied to indicator functions.
+  --   For sets s_0, ..., s_{m-1}:
+  --   CE[1_{∩(ωᵢ ∈ sᵢ)} | mSI] = CE[∏ 1_{sᵢ}(ωᵢ) | mSI]
+  --                            = ∏ CE[1_{sᵢ}(ω₀) | mSI]  (by product factorization)
+  --                            = ∏ ν(·)(sᵢ)
+  --
+  -- TODO: Derive from deFinetti_viaKoopman_contractable by unpacking the conclusion
+  sorry
 
 end Exchangeability.DeFinetti
