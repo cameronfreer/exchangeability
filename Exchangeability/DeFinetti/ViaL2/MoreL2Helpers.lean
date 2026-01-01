@@ -4142,10 +4142,11 @@ lemma directing_measure_integral
       let c : Fin K → ℝ := fun j => (a j.val + a (j.val + 1)) / 2
 
       -- Bound: |c_j| ≤ M_bound for all j (since a j ∈ [-M_bound, M_bound])
-      -- c_j = (a_j + a_{j+1})/2 where a_k = -M_bound + k*δ
-      -- Since 0 ≤ j < K and δ = 2*M_bound/K, we have:
-      -- a_j ∈ [-M_bound, M_bound] for all j ≤ K
-      -- So |c_j| = |(a_j + a_{j+1})/2| ≤ (|a_j| + |a_{j+1}|)/2 ≤ M_bound
+      -- PROOF SKETCH: c_j = (a_j + a_{j+1})/2 = -M_bound + (j + 0.5) * δ
+      -- For j ∈ [0, K-1], using K * δ = 2 * M_bound:
+      -- - j ≥ 0: c j ≥ -M_bound + 0.5δ > -M_bound
+      -- - j < K: c j ≤ -M_bound + (K-0.5)δ = M_bound - 0.5δ < M_bound
+      -- Therefore |c j| ≤ M_bound - 0.5δ ≤ M_bound
       have hc_bound : ∀ j, |c j| ≤ M_bound := fun j => by
         sorry
 
