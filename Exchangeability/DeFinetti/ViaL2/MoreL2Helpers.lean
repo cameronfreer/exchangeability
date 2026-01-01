@@ -6071,7 +6071,97 @@ lemma directing_measure_bridge
             --                         ≤ √(Cf/N) + o(1) → 0
             -- where the first term uses l2_bound_two_windows_uniform.
             -- ══════════════════════════════════════════════════════════════════════
-            sorry
+
+            -- HELPER LEMMAS
+            -- abs_le_one_of_avg: average of [0,1]-valued functions has |·| ≤ 1
+            have abs_le_one_of_avg : ∀ {m : ℕ} (hm : 0 < m) {F : Fin m → ℝ}
+                (hF : ∀ k, F k ∈ Set.Icc 0 1),
+                |1 / (m : ℝ) * ∑ k : Fin m, F k| ≤ 1 := by
+              intro m hm F hF
+              have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr hm
+              have hm_ne : (m : ℝ) ≠ 0 := ne_of_gt hm_pos
+              have h_sum_nonneg : 0 ≤ ∑ k : Fin m, F k := Finset.sum_nonneg (fun k _ => (hF k).1)
+              have h_sum_le : ∑ k : Fin m, F k ≤ m := by
+                calc ∑ k : Fin m, F k ≤ ∑ _k : Fin m, (1 : ℝ) := Finset.sum_le_sum (fun k _ => (hF k).2)
+                  _ = m := by simp [Finset.sum_const]
+              have h_avg_nonneg : 0 ≤ 1 / m * ∑ k : Fin m, F k := by
+                apply mul_nonneg (by positivity) h_sum_nonneg
+              have h_avg_le_one : 1 / m * ∑ k : Fin m, F k ≤ 1 := by
+                calc 1 / m * ∑ k : Fin m, F k ≤ 1 / m * m := by
+                      apply mul_le_mul_of_nonneg_left h_sum_le (by positivity)
+                  _ = 1 := by field_simp
+              rw [abs_of_nonneg h_avg_nonneg]
+              exact h_avg_le_one
+
+            -- Indicator values are in [0, 1]
+            have indicator_in_Icc : ∀ (s : Set ℝ) (x : ℝ), s.indicator (fun _ => (1:ℝ)) x ∈ Set.Icc 0 1 :=
+              fun s x => by simp only [Set.indicator]; split_ifs <;> norm_num
+
+            -- integrable_of_bounded_of_prob: bounded measurable functions are integrable on prob spaces
+            have integrable_of_bounded_of_prob : ∀ {f : Ω → ℝ} (hf_meas : AEStronglyMeasurable f μ)
+                (hf_bdd : ∀ ω, |f ω| ≤ 2), Integrable f μ := by
+              intro f hf_meas hf_bdd
+              have h_bound : ∀ ω, f ω ∈ Set.Icc (-2) 2 := fun ω => by
+                rw [Set.mem_Icc]
+                have h := hf_bdd ω
+                rw [abs_le] at h
+                exact h
+              exact memLp_one_iff_integrable.mp
+                (memLp_of_bounded (Filter.Eventually.of_forall h_bound) hf_meas 1)
+
+            -- abs_r_le_one: |r_funcs i ω| ≤ 1
+            have abs_r_le_one : ∀ i ω, |r_funcs i ω| ≤ 1 := fun i ω => by
+              rw [abs_of_nonneg (r_nonneg i ω)]
+              exact r_le_one i ω
+
+            -- STEP 1: Show p_block N i → r_funcs i in L¹ for each i
+            -- Using triangle inequality with offset-0 reference and L² bound on window differences
+
+            -- For each i, we need L¹ convergence of p_block N i to r_funcs i
+            have h_pblock_L1 : ∀ i : Fin (n + 1), Tendsto
+                (fun N => ∫ ω, |p_block N i ω - r_funcs i ω| ∂μ) atTop (𝓝 0) := by
+              intro i
+              -- This proof uses:
+              -- 1. directing_measure_integral: averages at offset 0 → r_funcs i in L¹
+              -- 2. l2_bound_two_windows_uniform: |avg_offset - avg_0|² ≤ Cf/N
+              -- 3. Cauchy-Schwarz: L² → L¹ for the offset difference
+              -- 4. Triangle inequality to combine
+
+              -- Technical details involve extracting the right convergence witness
+              -- from directing_measure_integral and combining with L² bounds.
+              -- The proof is ~150 lines when fully expanded.
+              sorry
+
+            -- STEP 2: Apply prod_tendsto_L1_of_L1_tendsto
+            -- First, verify the boundedness conditions
+            have hp_abs_le_one : ∀ N i ω, |p_block N i ω| ≤ 1 := by
+              intro N i ω
+              simp only [p_block]
+              split_ifs with hN
+              · simp
+              · exact abs_le_one_of_avg (Nat.pos_of_ne_zero hN) (fun k => indicator_in_Icc _ _)
+
+            have hr_abs_le_one : ∀ i ω, |r_funcs i ω| ≤ 1 := abs_r_le_one
+
+            have hp_meas : ∀ N i, Measurable (p_block N i) := by
+              intro N i
+              simp only [p_block]
+              split_ifs with hN
+              · exact measurable_const
+              · apply Measurable.mul measurable_const
+                apply Finset.measurable_sum
+                intro k _
+                exact (measurable_const.indicator (hB (σ i))).comp (hX_meas _)
+
+            have hr_meas : ∀ i, Measurable (r_funcs i) := fun i =>
+              (directing_measure_measurable X hX_contract hX_meas hX_L2 (B' i) (hB (σ i))).ennreal_toReal
+
+            -- Apply the product convergence lemma
+            exact prod_tendsto_L1_of_L1_tendsto (fun N i => p_block N i) r_funcs
+              hp_abs_le_one hr_abs_le_one
+              (fun N i => (hp_meas N i).aestronglyMeasurable)
+              (fun i => (hr_meas i).aestronglyMeasurable)
+              h_pblock_L1
 
           -- Conclude by uniqueness of limits
           -- E_prod = lim E[q_block N] = E[lim q_block N] = E[∏ r_funcs]
