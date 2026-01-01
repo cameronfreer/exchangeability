@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Exchangeability.DeFinetti.ViaKoopman.BlockInjection
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
 import Exchangeability.Contractability
+import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 
 /-!
 # Contractable Factorization for de Finetti's Theorem
@@ -227,16 +228,27 @@ lemma blockAvg_tendsto_condExp
       -- 1. Use integral_map_of_stronglyMeasurable to relate ∫ F dν and ∫ (F ∘ T) dμ
       -- 2. Use h_pres.map_eq to get ν = μ
       have h_smeas : StronglyMeasurable (fun ω : Ω[α] => |A n ω - Y ω|) := by
-        -- Show measurability of |A n - Y| = |Cesàro average - conditional expectation|
-        -- This is measurable because:
-        -- 1. A n is measurable (finite sum of measurable functions times constant)
-        -- 2. Y = μ[f(ω₀) | mSI] is strongly measurable (conditional expectation property)
-        -- 3. Sub and abs preserve measurability
-        --
-        -- Note: Direct proof would use stronglyMeasurable_condExp, but the
-        -- type inference for mSI-measurability requires careful handling.
-        -- The result is standard measure theory.
-        sorry
+        -- A n is measurable (Cesàro average = const * finite sum of measurable functions)
+        have hA_meas : Measurable (A n) := by
+          simp only [A]
+          apply Measurable.const_mul
+          apply Finset.measurable_sum
+          intro j _
+          exact hf.comp (measurable_pi_apply j)
+        -- Y is the conditional expectation, which is mSI-strongly measurable
+        -- Use the same pattern as line 179 in this file
+        have hY_meas_mSI : Measurable[mSI] Y := stronglyMeasurable_condExp.measurable
+        -- Convert mSI-measurable to full measurable via shiftInvariantSigma_le
+        have hY_meas : Measurable Y :=
+          hY_meas_mSI.mono (shiftInvariantSigma_le (α := α)) le_rfl
+        -- The difference is measurable
+        have hDiff_meas : Measurable (fun ω => A n ω - Y ω) := hA_meas.sub hY_meas
+        -- The absolute value of a measurable real function is measurable
+        -- Use continuous_abs.measurable.comp pattern
+        have hAbs_meas : Measurable (fun ω => |A n ω - Y ω|) :=
+          continuous_abs.measurable.comp hDiff_meas
+        -- Convert Measurable to StronglyMeasurable (for real-valued functions on standard Borel)
+        exact hAbs_meas.stronglyMeasurable
       -- Rewrite using integral_map_of_stronglyMeasurable
       rw [← integral_map_of_stronglyMeasurable h_pres.measurable h_smeas, h_pres.map_eq]
     rw [h1, h2, h3]
@@ -349,19 +361,36 @@ lemma integral_prod_eq_integral_blockAvg
     -- Apply contractability
     exact integral_prod_reindex_of_contractable hContract fs hfs_meas hfs_bd hk_mono
 
-  -- Step 2: Since all integrals are equal, we can average over j
-  -- Let S = (Fin m → Fin n), the set of all choice functions
-  -- LHS = (1/|S|) * ∑_{j ∈ S} ∫ ∏ fᵢ(ωᵢ) = LHS (constant)
-  -- RHS = ∫ (1/|S|) * ∑_{j ∈ S} ∏ fᵢ(ω(ρⱼ(i))) = ∫ ∏ blockAvg_i
-
-  -- Step 3: Show that the averaged sum equals product of block averages
-  -- This is the key algebraic identity
-  -- TODO: Formalize the averaging argument showing
-  -- (1/n^m) * ∑_{j : Fin m → Fin n} ∏_i f_i(ω(i*n + j(i))) = ∏_i blockAvg m n i f_i ω
+  -- Step 2: Key algebraic identity - product of block averages equals averaged sum
+  -- Using Fintype.prod_sum: ∏ i, ∑ k, f i k = ∑ φ, ∏ i, f i (φ i)
   --
-  -- The proof uses independence of coordinates in the sum:
-  -- For each i, j(i) ranges over Fin n independently of other j(i').
-  -- So the sum factorizes as a product of sums.
+  -- The identity is:
+  -- ∏ i, blockAvg m n i (fs i) ω = (1/n)^m * ∑_{j : Fin m → Fin n} ∏ i, fs i (ω(i*n + j(i)))
+  --
+  -- Proof:
+  -- 1. blockAvg m n i (fs i) ω = (1/n) * ∑_{k=0}^{n-1} fs i (ω(i*n + k))
+  -- 2. ∏ i, (1/n) * ∑_k f_i(k) = ∏ i, ∑_k (1/n) * f_i(k)  (pull scalar into sum)
+  -- 3. ∏ i, ∑_k g_i(k) = ∑_φ ∏ i, g_i(φ(i))  (Fintype.prod_sum)
+  -- 4. ∑_φ ∏ i, (1/n) * f_i(φ(i)) = ∑_φ (1/n)^m * ∏ i, f_i(φ(i))  (factor out)
+  -- 5. = (1/n)^m * ∑_φ ∏ i, f_i(φ(i))
+
+  -- Step 3: Connect contractability to the averaging
+  -- By h_each_j, for each j : Fin m → Fin n:
+  --   ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(blockInjection m n j i)) dμ
+  --
+  -- Key: blockInjection m n j i = i * n + j(i) for i < m
+  --
+  -- So: ∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(i*n + j(i))) dμ for each j
+  --
+  -- Since LHS is constant in j:
+  --   LHS = (1/n^m) * ∑_j ∫ ∏ fᵢ(ω(i*n + j(i))) dμ  (average of constant)
+  --       = ∫ (1/n^m) * ∑_j ∏ fᵢ(ω(i*n + j(i))) dμ  (Fubini)
+  --       = ∫ ∏ blockAvg_i dμ  (by Step 2)
+  --
+  -- The full formalization requires:
+  -- 1. Showing blockInjection m n j i.val = i.val * n + (j i).val for i : Fin m
+  -- 2. Fubini to interchange sum and integral (integrability of bounded functions)
+  -- 3. The algebraic identity from Fintype.prod_sum
   sorry
 
 end Contractability
@@ -419,23 +448,31 @@ lemma product_blockAvg_L1_convergence
       ∫ ω, |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
            ∏ i : Fin m, μ[(fun ω => fs i (ω 0)) | mSI] ω| ∂μ)
       atTop (𝓝 0) := by
-  -- Proof strategy:
+  -- Proof strategy using prod_tendsto_L1_of_L1_tendsto from MoreL2Helpers.lean:
   --
-  -- 1. Apply prod_diff_bound pointwise:
-  --    |∏ blockAvg_i - ∏ CE_i| ≤ m * C^{m-1} * max_i |blockAvg_i - CE_i|
+  -- The lemma prod_tendsto_L1_of_L1_tendsto (line 4670) has signature:
+  --   (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
+  --   (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
+  --   (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
+  --   (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0))
+  --   → Tendsto (fun n => ∫ ω, |∏ f n i - ∏ g i| ∂μ) atTop (𝓝 0)
   --
-  -- 2. Integrate both sides:
-  --    ∫ |∏ blockAvg_i - ∏ CE_i| ≤ m * C^{m-1} * ∫ max_i |blockAvg_i - CE_i|
+  -- To apply it:
+  -- 1. Choose C = max over i of the bound for fs i (using hfs_bd)
+  -- 2. Define f_normalized n i ω := blockAvg m (n+1) i (fs i) ω / C
+  -- 3. Define g_normalized i ω := μ[(fun ω => fs i (ω 0)) | mSI] ω / C
+  -- 4. Show |f_normalized|, |g_normalized| ≤ 1 (blockAvg and CE preserve bounds)
+  -- 5. Show L¹ convergence of f_normalized to g_normalized via blockAvg_tendsto_condExp
+  -- 6. Apply prod_tendsto_L1_of_L1_tendsto
+  -- 7. Rescale back by C^m
   --
-  -- 3. Use ∫ max_i |·| ≤ ∑_i ∫ |·| (or domination by sum):
-  --    ≤ m * C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|
+  -- Alternative: Use abs_prod_sub_prod_le (line 4624) directly:
+  --   |∏ f - ∏ g| ≤ ∑ |f i - g i| for functions bounded by 1
+  -- Then integrate and use Fubini to get ∫ ≤ ∑ ∫.
   --
-  -- 4. By blockAvg_tendsto_condExp, each term → 0:
-  --    ∫ |blockAvg_i - CE_i| → 0 for each i
-  --
-  -- 5. Finite sum of things → 0 is → 0.
-  --
-  -- TODO: Formalize using prod_diff_bound and blockAvg_tendsto_condExp
+  -- The key ingredient is blockAvg_tendsto_condExp which gives:
+  --   ∫ |blockAvg m (n+1) i (fs i) - μ[(fs i ∘ coord_0) | mSI]| → 0
+  -- for each i. Finite sum of things → 0 is → 0.
   sorry
 
 end ProductConvergence
