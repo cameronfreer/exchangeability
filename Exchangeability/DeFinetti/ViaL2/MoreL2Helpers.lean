@@ -6121,15 +6121,21 @@ lemma directing_measure_bridge
             have h_pblock_L1 : ∀ i : Fin (n + 1), Tendsto
                 (fun N => ∫ ω, |p_block N i ω - r_funcs i ω| ∂μ) atTop (𝓝 0) := by
               intro i
-              -- This proof uses:
-              -- 1. directing_measure_integral: averages at offset 0 → r_funcs i in L¹
-              -- 2. l2_bound_two_windows_uniform: |avg_offset - avg_0|² ≤ Cf/N
-              -- 3. Cauchy-Schwarz: L² → L¹ for the offset difference
-              -- 4. Triangle inequality to combine
-
-              -- Technical details involve extracting the right convergence witness
-              -- from directing_measure_integral and combining with L² bounds.
-              -- The proof is ~150 lines when fully expanded.
+              -- Proof structure:
+              -- p_block N i uses avg over indices {i*N, ..., i*N + N-1}
+              -- r_funcs i = (ν(B' i)).toReal = ∫ 1_{B'_i} dν
+              --
+              -- Key lemmas:
+              -- 1. weighted_sums_converge_L1 gives α s.t. avg at offset n → α in L¹ (for all n)
+              -- 2. α = r_funcs i a.e. (by directing_measure_integral a.e. identification)
+              -- 3. l2_bound_two_windows_uniform: |avg_n - avg_m|² ≤ Cf/k
+              --
+              -- Strategy: Triangle inequality |p_block - r_funcs| ≤ |p_block - avg_ref| + |avg_ref - r_funcs|
+              -- - First term: O(√(Cf/N)) by Cauchy-Schwarz + l2_bound_two_windows_uniform
+              -- - Second term: → 0 by weighted_sums_converge_L1 + a.e. equality
+              --
+              -- Technical detail: Index shift between {i*N,...} and {i*N+1,...} is O(1/N) in L∞
+              -- (difference of one indicator value divided by N)
               sorry
 
             -- STEP 2: Apply prod_tendsto_L1_of_L1_tendsto
