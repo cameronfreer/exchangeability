@@ -805,12 +805,14 @@ private theorem optionB_L1_convergence_bounded
 
   -- Step 4c: Triangle inequality: |A_n - Y| ≤ |A_n - B_n| + |B_n - Y|
   exact optionB_Step4c_triangle g hg_meas ⟨Cg, hCg_bd⟩ A B Y G rfl rfl hG_int hY_int hB_L1_conv hA_B_close
-/-- **Option B bounded case**: Cesàro averages converge in L¹ for bounded functions.
+/-- **L¹ Cesàro convergence for bounded functions**.
 
-For a bounded measurable function g on the product space, the Cesàro averages
-of g along shifts converge in L¹ to CE[g(ω₀) | mSI]. This uses cylinder density
-and avoids MET/sub-σ-algebra issues. -/
-private lemma L1_cesaro_convergence_bounded
+For a bounded measurable function g : α → ℝ, the Cesàro averages
+`A_n(ω) = (1/(n+1)) ∑_{j=0}^n g(ω_j)` converge in L¹ to the conditional
+expectation `μ[g(ω₀) | mSI]`.
+
+This is a key ingredient for de Finetti's theorem via contractability. -/
+lemma L1_cesaro_convergence_bounded
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
     (g : α → ℝ)

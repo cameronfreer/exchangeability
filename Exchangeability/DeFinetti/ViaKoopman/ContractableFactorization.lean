@@ -142,17 +142,109 @@ lemma blockAvg_tendsto_condExp
       atTop (𝓝 0) := by
   -- Key insight: blockAvg m (n+1) k f ω = (A n) (shift^[k*(n+1)] ω)
   -- where A n is the standard Cesàro average.
-  --
-  -- Proof strategy:
-  -- 1. blockAvg = A ∘ shift^[offset] (by blockAvg_eq_cesaro_shifted)
-  -- 2. CE is shift-invariant: Y = Y ∘ shift^[p] a.e. (for shift-invariant σ-algebra)
-  -- 3. By measure-preserving substitution: ∫ |blockAvg - Y| = ∫ |A - Y|
-  -- 4. Apply L¹ Cesàro convergence (from CesaroConvergence.lean)
-  --
-  -- The L¹ Cesàro convergence lemma (L1_cesaro_convergence_bounded) is private in
-  -- CesaroConvergence.lean, so this proof is marked sorry pending refactoring to
-  -- export that result publicly.
-  sorry
+
+  -- Define the standard Cesàro average and conditional expectation target
+  let A := fun n : ℕ => fun ω : Ω[α] =>
+    (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω j))
+  let Y := fun ω : Ω[α] => μ[(fun ω' => f (ω' 0)) | mSI] ω
+
+  -- The offset depends on n: offset_n = k.val * (n + 1)
+  let offset := fun n : ℕ => k.val * (n + 1)
+
+  -- Key fact 1: blockAvg = A ∘ shift^[offset]
+  have h_blockAvg_eq : ∀ n, ∀ ω, blockAvg m (n + 1) k f ω = A n (shift^[offset n] ω) := by
+    intro n ω
+    -- blockAvg m (n+1) k f ω = (1/(n+1)) * ∑_{j ∈ range(n+1)} f(ω(k.val*(n+1) + j))
+    --                       = (1/(n+1)) * ∑_{j ∈ range(n+1)} f((shift^[k.val*(n+1)] ω) j)
+    --                       = A n (shift^[offset n] ω)
+    -- Use blockAvg_eq_cesaro_shifted which establishes this connection
+    rw [blockAvg_eq_cesaro_shifted (Nat.succ_pos n)]
+    -- Align coercions: ↑n.succ = ↑n + 1 as reals, and n.succ = n + 1 as naturals
+    simp only [Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one]
+    -- Now definitionally equal since offset n = k.val * (n + 1)
+    rfl
+
+  -- Key fact 2: Y is shift-invariant (CE w.r.t. mSI is constant on shift orbits)
+  have hf_int : Integrable (fun ω : Ω[α] => f (ω 0)) μ := by
+    obtain ⟨C, hC⟩ := hf_bd
+    exact integrable_of_bounded_measurable (hf.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+
+  have h_Y_shift_inv : ∀ p : ℕ, (fun ω => Y (shift^[p] ω)) =ᵐ[μ] Y := by
+    intro p
+    -- CE[f(ω₀) | mSI] is mSI-measurable, and for mSI-measurable functions,
+    -- f ∘ shift^[p] = f pointwise (by shiftInvariantSigma_measurable_shift_eq)
+    --
+    -- Step 1: Y is mSI-measurable
+    have hY_meas : Measurable[mSI] Y := stronglyMeasurable_condExp.measurable
+    -- Step 2: By induction on p, Y ∘ shift^[p] = Y pointwise
+    have h_eq : ∀ p : ℕ, (fun ω => Y (shift^[p] ω)) = Y := by
+      intro p
+      induction p with
+      | zero =>
+        -- shift^[0] = id, so (fun ω => Y (id ω)) = Y
+        rfl
+      | succ p ih =>
+        ext ω
+        -- shift^[p+1] = shift ∘ shift^[p]
+        simp only [Function.iterate_succ', Function.comp_apply]
+        -- Y (shift (shift^[p] ω)) = Y ω
+        -- First use ih: Y (shift^[p] ω') = Y ω' for all ω'
+        -- So we need: Y (shift (shift^[p] ω)) = Y (shift^[p] ω) = Y ω
+        have h := shiftInvariantSigma_measurable_shift_eq Y hY_meas
+        -- h : (fun ω => Y (shift ω)) = Y
+        -- So Y (shift ω') = Y ω' for all ω'
+        calc Y (shift (shift^[p] ω))
+          _ = Y (shift^[p] ω) := congrFun h (shift^[p] ω)
+          _ = Y ω := congrFun ih ω
+    -- Step 3: Pointwise equality implies a.e. equality
+    exact EventuallyEq.of_eq (h_eq p)
+
+  -- Reduce to standard Cesàro convergence via measure-preserving substitution
+  have h_eq : ∀ n, ∫ ω, |blockAvg m (n + 1) k f ω - Y ω| ∂μ = ∫ ω, |A n ω - Y ω| ∂μ := by
+    intro n
+    -- Step 1: Substitute blockAvg = A ∘ shift^[offset]
+    have h1 : ∫ ω, |blockAvg m (n + 1) k f ω - Y ω| ∂μ =
+              ∫ ω, |A n (shift^[offset n] ω) - Y ω| ∂μ := by
+      congr 1; ext ω; rw [h_blockAvg_eq]
+    -- Step 2: Use Y shift-invariance: Y ω = Y (shift^[offset n] ω) a.e.
+    have h2 : ∫ ω, |A n (shift^[offset n] ω) - Y ω| ∂μ =
+              ∫ ω, |A n (shift^[offset n] ω) - Y (shift^[offset n] ω)| ∂μ := by
+      apply integral_congr_ae
+      filter_upwards [h_Y_shift_inv (offset n)] with ω hω
+      rw [hω]
+    -- Step 3: Apply measure-preserving substitution
+    have h_pres := hσ.iterate (offset n)
+    have h3 : ∫ ω, |A n (shift^[offset n] ω) - Y (shift^[offset n] ω)| ∂μ =
+              ∫ ω, |A n ω - Y ω| ∂μ := by
+      -- Use integral substitution under measure-preserving map
+      -- ∫ F(T ω) dμ = ∫ F dμ when T is measure-preserving
+      --
+      -- Define F := fun ω => |A n ω - Y ω|
+      -- Then LHS = ∫ (F ∘ shift^[offset n]) dμ = ∫ F d(μ.map shift^[offset n]) = ∫ F dμ
+      -- The last step uses h_pres.map_eq : μ.map shift^[offset n] = μ
+      --
+      -- Strategy from CesaroConvergence.lean:
+      -- 1. Use integral_map_of_stronglyMeasurable to relate ∫ F dν and ∫ (F ∘ T) dμ
+      -- 2. Use h_pres.map_eq to get ν = μ
+      have h_smeas : StronglyMeasurable (fun ω : Ω[α] => |A n ω - Y ω|) := by
+        -- Show measurability of |A n - Y| = |Cesàro average - conditional expectation|
+        -- This is measurable because:
+        -- 1. A n is measurable (finite sum of measurable functions times constant)
+        -- 2. Y = μ[f(ω₀) | mSI] is strongly measurable (conditional expectation property)
+        -- 3. Sub and abs preserve measurability
+        --
+        -- Note: Direct proof would use stronglyMeasurable_condExp, but the
+        -- type inference for mSI-measurability requires careful handling.
+        -- The result is standard measure theory.
+        sorry
+      -- Rewrite using integral_map_of_stronglyMeasurable
+      rw [← integral_map_of_stronglyMeasurable h_pres.measurable h_smeas, h_pres.map_eq]
+    rw [h1, h2, h3]
+
+  -- Apply L1_cesaro_convergence_bounded
+  rw [show (fun n => ∫ ω, |blockAvg m (n + 1) k f ω - Y ω| ∂μ) =
+          (fun n => ∫ ω, |A n ω - Y ω| ∂μ) from funext h_eq]
+  exact L1_cesaro_convergence_bounded hσ f hf hf_bd
 
 end BlockAvgConvergence
 
