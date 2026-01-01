@@ -4044,22 +4044,125 @@ lemma directing_measure_integral
       --                 ≤ δ/2 + (Borel convergence) + δ/2 < ε
       -- ═══════════════════════════════════════════════════════════════════
 
-      -- The π-λ extension requires defining the Dynkin property and verifying
-      -- closure under complements and countable disjoint unions. The formal
-      -- implementation uses MeasurableSpace.induction_on_inter with:
-      -- - h_gen : borel_eq_generateFrom_Iic
-      -- - h_pi_S : Iic sets form a π-system
-      -- - h_empty : ∅ trivially satisfies convergence
-      -- - h_basic : h_ind_L1_conv for Iic t
-      -- - h_compl : 1_{B^c} = 1 - 1_B closure
-      -- - h_iUnion : dominated convergence for disjoint sums
+      -- ═══════════════════════════════════════════════════════════════════
+      -- IMPLEMENTATION: π-λ extension to all Borel sets
+      -- ═══════════════════════════════════════════════════════════════════
 
-      -- The step function approximation then uses K preimage sets, each with
-      -- L¹ convergence from the Borel extension, and linearity of expectations.
+      -- Step 1: Extend h_ind_L1_conv to ALL Borel sets via π-λ theorem
+      -- Property C(B) := "avg(1_B ∘ X) → ∫ 1_B dν in L¹"
+      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+        -- Use MeasurableSpace.induction_on_inter with Iic as generating π-system
+        intro B hB n' ε' hε'
 
-      -- IMPLEMENTATION STATUS: The π-λ extension adds ~80 lines of verification.
-      -- For now, we mark this as sorry with the mathematical argument complete.
+        -- The generating set S = {Iic t | t ∈ ℝ}
+        let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
 
+        -- Iic generates the Borel σ-algebra
+        have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
+          @borel_eq_generateFrom_Iic ℝ _ _ _ _
+
+        -- Iic is a π-system
+        have h_pi_S : IsPiSystem S := by
+          intro u hu v hv _
+          obtain ⟨s, rfl⟩ := hu
+          obtain ⟨t, rfl⟩ := hv
+          use min s t
+          exact Set.Iic_inter_Iic.symm
+
+        -- Define the property we want to prove via induction
+        -- C(B, hB) := convergence holds for 1_B
+        let C : (B : Set ℝ) → MeasurableSet B → Prop := fun B _ =>
+          ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε'
+
+        -- Apply induction_on_inter
+        suffices h : C B hB by exact h
+
+        refine MeasurableSpace.induction_on_inter h_gen h_pi_S ?h_empty ?h_basic ?h_compl ?h_union B hB
+
+        -- Case 1: Empty set
+        case h_empty =>
+          use 1
+          intro m hm
+          simp only [Set.indicator_empty, Finset.sum_const_zero, mul_zero,
+            MeasureTheory.integral_zero, sub_zero, abs_zero, MeasureTheory.integral_const,
+            MeasureTheory.measure_univ, one_smul, ENNReal.toReal_one]
+          exact hε'
+
+        -- Case 2: Basic sets (Iic t)
+        case h_basic =>
+          intro u ⟨t, ht⟩
+          subst ht
+          exact h_ind_L1_conv t n' ε' hε'
+
+        -- Case 3: Complement closure
+        case h_compl =>
+          intro u hum hu
+          obtain ⟨M_u, hM_u⟩ := hu
+          use M_u
+          intro m hm
+          -- PROOF SKETCH:
+          -- 1_{u^c} = 1 - 1_u, so avg(1_{u^c}) = 1 - avg(1_u)
+          -- ∫ 1_{u^c} dν = 1 - ∫ 1_u dν (since ν is probability measure)
+          -- The error |avg(1_{u^c}) - ∫1_{u^c}| = |1 - avg(1_u) - (1 - ∫1_u)|
+          --                                     = |∫1_u - avg(1_u)|
+          --                                     = |avg(1_u) - ∫1_u| by abs_sub_comm
+          -- which is < ε' by hM_u m hm
+          sorry
+
+        -- Case 4: Countable disjoint union closure
+        case h_union =>
+          intro g hdisj hgm hg
+          -- For countable disjoint g_i with convergence for each,
+          -- we use dominated convergence and finite approximation.
+          -- 1_{⋃ g_i} = Σ 1_{g_i}, dominated by 1 (since disjoint → sum ≤ 1)
+          --
+          -- Strategy:
+          -- 1. Finite unions preserve convergence (by linearity of sums and integrals)
+          -- 2. For ε'/3, choose N large so ν(⋃_{i≥N} g_i) < ε'/3 a.e.
+          --    (possible since ν is probability measure and sets are disjoint)
+          -- 3. Triangle inequality: |avg(1_{⋃g}) - ∫1_{⋃g}| ≤
+          --    |avg(1_{⋃_{i<N}g}) - ∫1_{⋃_{i<N}g}| + 2 * (tail contribution)
+          -- 4. By finite union convergence and tail bound, total < ε'
+          sorry
+
+      -- Step 2: Define preimage step function for range quantization
+      -- b_j = a j = -M_bound + j * δ
+      -- S_j = f⁻¹((b_j, b_{j+1}]) are Borel sets
+      let S : Fin K → Set ℝ := fun j => f ⁻¹' (Set.Ioc (a j.val) (a (j.val + 1)))
+
+      have hS_meas : ∀ j, MeasurableSet (S j) := fun j =>
+        hf_meas measurableSet_Ioc
+
+      -- Midpoint coefficients: c_j = (a j + a (j+1)) / 2
+      let c : Fin K → ℝ := fun j => (a j.val + a (j.val + 1)) / 2
+
+      -- Bound: |c_j| ≤ M_bound for all j (since a j ∈ [-M_bound, M_bound])
+      -- c_j = (a_j + a_{j+1})/2 where a_k = -M_bound + k*δ
+      -- Since 0 ≤ j < K and δ = 2*M_bound/K, we have:
+      -- a_j ∈ [-M_bound, M_bound] for all j ≤ K
+      -- So |c_j| = |(a_j + a_{j+1})/2| ≤ (|a_j| + |a_{j+1}|)/2 ≤ M_bound
+      have hc_bound : ∀ j, |c j| ≤ M_bound := fun j => by
+        sorry
+
+      -- Step 3: Use h_borel_L1_conv for each preimage set S_j
+      -- Get convergence for each preimage set S_j from h_borel_L1_conv:
+      --   ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ∫1_{S_j} dν| < ε/(4KM_eff)
+      -- Take M'' = max of all M_j, then for m ≥ M'':
+      --
+      -- Step 4: Triangle inequality bound
+      -- |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
+      -- where s(x) = Σ_j c_j · 1_{S_j}(x) is the step function
+      --
+      -- For the final bound, we use:
+      -- - |avg(f) - avg(s)| ≤ δ/2 (since |f - s| ≤ δ/2 pointwise on covered domain)
+      -- - |avg(s) - ∫s dν| ≤ Σ |c_j| · error_j ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
+      -- - |∫s - ∫f dν| ≤ δ/2 (since |s - f| ≤ δ/2 and ν is probability measure)
+      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ)
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
