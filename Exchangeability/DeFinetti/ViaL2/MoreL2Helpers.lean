@@ -6121,21 +6121,32 @@ lemma directing_measure_bridge
             have h_pblock_L1 : ∀ i : Fin (n + 1), Tendsto
                 (fun N => ∫ ω, |p_block N i ω - r_funcs i ω| ∂μ) atTop (𝓝 0) := by
               intro i
-              -- Proof structure:
-              -- p_block N i uses avg over indices {i*N, ..., i*N + N-1}
-              -- r_funcs i = (ν(B' i)).toReal = ∫ 1_{B'_i} dν
+              -- ══════════════════════════════════════════════════════════════════════
+              -- PROOF STRUCTURE (block averages L¹ convergence):
+              --
+              -- The proof uses triangle inequality with a reference average at offset 0:
+              -- |p_block N i - r_funcs i| ≤ |p_block - A_block| + |A_block - A_ref|
+              --                           + |A_ref - alpha| + |alpha - r_funcs|
+              --
+              -- where:
+              -- - p_block N i: block average at offset i*N (indices {i*N, ..., i*N+N-1})
+              -- - A_block N: same indices but shifted +1 (for l2_bound_two_windows_uniform)
+              -- - A_ref N: reference average at offset 0 (indices {1, ..., N})
+              -- - alpha: L¹ limit from directing_measure_integral
+              -- - r_funcs i: ν(B' i).toReal = ∫ 1_{B'_i} dν
+              --
+              -- Term bounds:
+              -- 1. |p_block - A_block| ≤ 2/N (index shift is O(1/N) in L∞)
+              -- 2. |A_block - A_ref| ≤ √(Cf/N) (L² bound via Cauchy-Schwarz)
+              -- 3. |A_ref - alpha| < ε/3 for large N (from directing_measure_integral)
+              -- 4. |alpha - r_funcs| = 0 a.e. (by indicator identity: ∫ 1_S dν = ν(S).toReal)
               --
               -- Key lemmas:
-              -- 1. weighted_sums_converge_L1 gives α s.t. avg at offset n → α in L¹ (for all n)
-              -- 2. α = r_funcs i a.e. (by directing_measure_integral a.e. identification)
-              -- 3. l2_bound_two_windows_uniform: |avg_n - avg_m|² ≤ Cf/k
-              --
-              -- Strategy: Triangle inequality |p_block - r_funcs| ≤ |p_block - avg_ref| + |avg_ref - r_funcs|
-              -- - First term: O(√(Cf/N)) by Cauchy-Schwarz + l2_bound_two_windows_uniform
-              -- - Second term: → 0 by weighted_sums_converge_L1 + a.e. equality
-              --
-              -- Technical detail: Index shift between {i*N,...} and {i*N+1,...} is O(1/N) in L∞
-              -- (difference of one indicator value divided by N)
+              -- - get_covariance_constant: covariance structure for l2_bound_two_windows_uniform
+              -- - l2_bound_two_windows_uniform: ∫(A_n - A_m)² ≤ Cf/k (uniform over offsets n, m)
+              -- - directing_measure_integral: L¹ convergence + a.e. identification alpha = ∫f dν
+              -- - integral_indicator_one: ∫ 1_S dμ = μ(S).toReal
+              -- ══════════════════════════════════════════════════════════════════════
               sorry
 
             -- STEP 2: Apply prod_tendsto_L1_of_L1_tendsto
