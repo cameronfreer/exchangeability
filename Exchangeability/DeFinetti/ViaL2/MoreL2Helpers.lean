@@ -4154,31 +4154,35 @@ lemma directing_measure_integral
           /-
           PROOF STRUCTURE for countable disjoint union ⋃_i g_i:
 
-          Split U = U_N ∪ T_N where U_N = ⋃_{i<N} g_i, T_N = ⋃_{i≥N} g_i.
-          By disjointness: 1_U = 1_{U_N} + 1_{T_N}.
+          Goal: ∃ M', ∀ m ≥ M', ∫|avg(1_U) - ν(U)| dμ < ε'
 
-          KEY INSIGHT (tail bound uniform in m):
-          • For disjoint sets: ∑_i avg(1_{g_i})(ω) ≤ 1 for all ω (at most one g_i hit)
-          • By Tonelli: ∑_i ∫ avg(1_{g_i}) dμ ≤ 1, uniformly in m
-          • So tail ∑_{i≥N} ∫ avg(1_{g_i}) dμ → 0 as N → ∞
-          • Similarly ∑_i ∫ ν(g_i) dμ ≤ 1, tail → 0
+          STEP 1: Key bounds (uniform in m)
+          • ∑_i (ν ω)(g_i).toReal ≤ 1 for all ω (probability measure, disjoint union)
+          • ∑_i avg(1_{g_i})(ω) ≤ 1 for all ω (disjoint indicators sum ≤ 1)
+          • By Tonelli: ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 and ∑_i ∫ ν(g_i) dμ ≤ 1
 
-          TAIL BOUND: |avg(1_{T_N}) - ν(T_N)| ≤ avg(1_{T_N}) + ν(T_N)
-          Integrating: ∫|avg - ν| dμ ≤ ∫avg dμ + ∫ν dμ → 0 as N → ∞
+          STEP 2: Tail bound (N-independent of m)
+          • Since ∑_i ∫ avg(1_{g_i}) dμ ≤ 1, tail ∑_{i≥N} → 0 as N → ∞
+          • Choose N such that: ∑_{i≥N} ∫ avg(1_{g_i}) dμ < ε'/4
+          • Similarly: ∑_{i≥N} ∫ ν(g_i) dμ < ε'/4
+          • Then: ∫|avg(1_{T_N}) - ν(T_N)| dμ ≤ ∫(avg + ν) dμ < ε'/2
 
-          FINITE PREFIX (U_N = ⋃_{i<N} g_i):
-          • By disjointness: avg(1_{U_N}) = ∑_{i<N} avg(1_{g_i})
-          • Error ≤ ∑_{i<N} |avg(1_{g_i}) - ν(g_i)|
-          • From hg with tolerance ε'/(2N), take M = max_{i<N} M_i
-          • For m ≥ M: finite sum error < ε'/2
+          STEP 3: Finite prefix (from hg)
+          • For each i < N, use hg i with tolerance ε'/(4N)
+          • Get M_i such that for m ≥ M_i: ∫|avg(1_{g_i}) - ν(g_i)| dμ < ε'/(4N)
+          • Take M = max_{i<N} M_i
+          • For m ≥ M: ∑_{i<N} ∫|avg - ν| dμ < N · ε'/(4N) = ε'/4
 
-          ASSEMBLY: Choose N for tail < ε'/2, then M for prefix < ε'/2.
-          Total error < ε'/2 + ε'/2 = ε'
+          STEP 4: Assembly via triangle inequality
+          • 1_U = 1_{U_N} + 1_{T_N} (disjoint decomposition)
+          • |avg(1_U) - ν(U)| ≤ |avg(1_{U_N}) - ν(U_N)| + |avg(1_{T_N}) - ν(T_N)|
+          • ∫|avg - ν| dμ ≤ ε'/4 + ε'/2 < ε'
 
-          KEY LEMMAS:
-          • measure_iUnion: ν(⋃g_i) = ∑_i ν(g_i) (disjoint)
-          • integral_tsum: ∫(∑f_i) = ∑(∫f_i) for non-negative summable families
-          • Tail of bounded series: if ∑a_i ≤ C then ∑_{i≥N} a_i → 0
+          KEY MATHLIB LEMMAS:
+          • measure_iUnion: ν(⋃_i g_i) = ∑_i ν(g_i) (disjoint, measurable)
+          • integral_tsum: ∫(∑_i f_i) = ∑_i (∫ f_i) (summable, non-negative)
+          • tsum_eq_single: ∑_i 1_{g_i}(x) = 1_{g_j}(x) when x ∈ g_j (disjoint)
+          • Tail of bounded series: if ∑ a_i ≤ C then ∑_{i≥N} a_i → 0
           -/
           sorry
 
