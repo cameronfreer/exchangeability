@@ -448,31 +448,35 @@ lemma product_blockAvg_L1_convergence
       ∫ ω, |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
            ∏ i : Fin m, μ[(fun ω => fs i (ω 0)) | mSI] ω| ∂μ)
       atTop (𝓝 0) := by
-  -- Proof strategy using prod_tendsto_L1_of_L1_tendsto from MoreL2Helpers.lean:
+  -- **Proof Strategy using abs_prod_sub_prod_le and blockAvg_tendsto_condExp**
   --
-  -- The lemma prod_tendsto_L1_of_L1_tendsto (line 4670) has signature:
-  --   (f : ℕ → Fin m → Ω → ℝ) (g : Fin m → Ω → ℝ)
-  --   (hf_bdd : ∀ n i ω, |f n i ω| ≤ 1)
-  --   (hg_bdd : ∀ i ω, |g i ω| ≤ 1)
-  --   (h_conv : ∀ i, Tendsto (fun n => ∫ ω, |f n i ω - g i ω| ∂μ) atTop (𝓝 0))
-  --   → Tendsto (fun n => ∫ ω, |∏ f n i - ∏ g i| ∂μ) atTop (𝓝 0)
+  -- Case m = 0: Both products are 1, so the difference is 0 and ∫ 0 dμ = 0 → 0.
   --
-  -- To apply it:
-  -- 1. Choose C = max over i of the bound for fs i (using hfs_bd)
-  -- 2. Define f_normalized n i ω := blockAvg m (n+1) i (fs i) ω / C
-  -- 3. Define g_normalized i ω := μ[(fun ω => fs i (ω 0)) | mSI] ω / C
-  -- 4. Show |f_normalized|, |g_normalized| ≤ 1 (blockAvg and CE preserve bounds)
-  -- 5. Show L¹ convergence of f_normalized to g_normalized via blockAvg_tendsto_condExp
-  -- 6. Apply prod_tendsto_L1_of_L1_tendsto
-  -- 7. Rescale back by C^m
+  -- Case m > 0: Use the telescoping bound from abs_prod_sub_prod_le.
   --
-  -- Alternative: Use abs_prod_sub_prod_le (line 4624) directly:
-  --   |∏ f - ∏ g| ≤ ∑ |f i - g i| for functions bounded by 1
-  -- Then integrate and use Fubini to get ∫ ≤ ∑ ∫.
+  -- **Step 1**: Get uniform bound C for all fs i.
+  --   Using hfs_bd : ∀ i, ∃ C_i, ∀ x, |fs i x| ≤ C_i
+  --   Define C := max_i C_i + 1, so |fs i x| ≤ C for all i, x.
   --
-  -- The key ingredient is blockAvg_tendsto_condExp which gives:
-  --   ∫ |blockAvg m (n+1) i (fs i) - μ[(fs i ∘ coord_0) | mSI]| → 0
-  -- for each i. Finite sum of things → 0 is → 0.
+  -- **Step 2**: Show that block averages and CEs are bounded by C.
+  --   - Block average is a convex combination, so inherits the bound.
+  --   - CE of bounded function is bounded (by ae_bdd_condExp_of_ae_bdd).
+  --
+  -- **Step 3**: Use abs_prod_sub_prod_le with normalization.
+  --   Define f'_i := blockAvg / C and g'_i := CE / C, so |f'|, |g'| ≤ 1.
+  --   By abs_prod_sub_prod_le: |∏ f'_i - ∏ g'_i| ≤ ∑ |f'_i - g'_i|.
+  --   Rescaling: |∏ blockAvg - ∏ CE| ≤ C^{m-1} ∑ |blockAvg_i - CE_i|.
+  --
+  -- **Step 4**: Integrate and use Fubini.
+  --   ∫ |∏ blockAvg - ∏ CE| ≤ C^{m-1} ∑_i ∫ |blockAvg_i - CE_i|.
+  --
+  -- **Step 5**: Apply blockAvg_tendsto_condExp for each i.
+  --   Each term ∫ |blockAvg_i - CE_i| → 0 by blockAvg_tendsto_condExp.
+  --   Finite sum of things → 0 is → 0 (by tendsto_finset_sum).
+  --
+  -- **Key ingredients from MoreL2Helpers.lean**:
+  --   - abs_prod_sub_prod_le (line 4624): |∏ f - ∏ g| ≤ ∑ |f_i - g_i| for |f|, |g| ≤ 1
+  --   - prod_tendsto_L1_of_L1_tendsto (line 4670): Alternative direct approach
   sorry
 
 end ProductConvergence
