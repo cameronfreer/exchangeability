@@ -3885,27 +3885,368 @@ lemma directing_measure_integral
       -- gives us convergence of the indicator average.
       -- Combined with the boundedness of f, this gives L¹ convergence.
 
-      -- Apply h_Ioc_L1_conv to (-M_bound, M_bound] with ε' = ε/2
-      have hε2 : ε / 2 > 0 := by linarith
-      have h_full_interval : -M_bound < M_bound := by linarith
-      obtain ⟨M_ind, hM_ind⟩ := h_Ioc_L1_conv (-M_bound) M_bound h_full_interval n (ε/2) hε2
+      -- ═══════════════════════════════════════════════════════════════════
+      -- RANGE QUANTIZATION: Approximate f by step function on value intervals
+      -- ═══════════════════════════════════════════════════════════════════
+      -- For bounded f with |f| ≤ M, partition the range [-M, M] into K intervals.
+      -- Define step function s(x) = c_j if f(x) ∈ (b_j, b_{j+1}].
+      -- Then |f(x) - s(x)| ≤ 2M/K ≤ δ for all x.
+      --
+      -- The preimage sets S_j = f⁻¹((b_j, b_{j+1}]) are measurable Borel sets.
+      -- By the Dynkin system argument (h_pi + h_compl + disjoint union closure),
+      -- L¹ convergence extends from Ioc indicators to all Borel set indicators.
+      -- ═══════════════════════════════════════════════════════════════════
 
-      -- The witness M' = M_ind works
-      use M_ind
+      -- ═══════════════════════════════════════════════════════════════════
+      -- KEY OBSERVATION: The bound 2M_bound doesn't go to 0, so we can't use it.
+      -- Instead, we use the STEP FUNCTION APPROXIMATION with properly scaled ε.
+      --
+      -- The step function s = Σ_j c_j · 1_{f⁻¹(Ioc b_j b_{j+1})} approximates f
+      -- with |f - s|_∞ ≤ δ. For the middle term (step function L¹ convergence),
+      -- we need indicator L¹ convergence for PREIMAGE sets, not Ioc sets.
+      --
+      -- The preimage sets are Borel. By π-λ (Dynkin), G = all Borel sets.
+      -- This uses h_pi (Iic in G), h_compl (complement closure), and
+      -- h_disj_union (finite disjoint union closure, from additivity).
+      --
+      -- For the formal implementation, we use a normalized step function
+      -- and properly allocate ε among the K intervals.
+      -- ═══════════════════════════════════════════════════════════════════
+
+      -- Define M_eff = max(M_bound, 1) to handle both M < 1 and M ≥ 1 cases
+      let M_eff : ℝ := max M_bound 1
+      have hM_eff_pos : M_eff > 0 := lt_max_of_lt_right one_pos
+      have hM_eff_ge : M_eff ≥ M_bound := le_max_left _ _
+      have hM_eff_ge1 : M_eff ≥ 1 := le_max_right _ _
+
+      -- Corrected ε allocation: use ε' = ε / (4 * K * M_eff) for each interval
+      -- This ensures: K * M_bound * ε' ≤ K * M_eff * ε/(4*K*M_eff) = ε/4
+      have hε' : ε / (4 * K * M_eff) > 0 := by positivity
+
+      -- For each interval (a j, a (j+1)], apply h_Ioc_L1_conv with ε'
+      have h_witnesses : ∀ j : Fin K, ∃ M_j : ℕ, ∀ m ≥ M_j,
+          ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, (Set.Ioc (a j.val) (a (j.val + 1))).indicator
+              (fun _ => (1:ℝ)) (X (n + k.val + 1) ω) -
+            ∫ x, (Set.Ioc (a j.val) (a (j.val + 1))).indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ
+              < ε / (4 * K * M_eff) := by
+        intro j
+        have h_int : a j.val < a (j.val + 1) := h_interval j.val
+        exact h_Ioc_L1_conv (a j.val) (a (j.val + 1)) h_int n (ε / (4 * K * M_eff)) hε'
+
+      -- Take M' = max of all M_j
+      choose M_func hM_func using h_witnesses
+      let M' : ℕ := Finset.univ.sup M_func
+      use max 1 M'
       intro m hm
+      have hm' : m ≥ M' := le_trans (le_max_right _ _) hm
+      have hm1 : m ≥ 1 := le_trans (le_max_left _ _) hm
+      have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.one_le_iff_ne_zero.mp hm1)
 
-      -- The rest of the proof uses:
-      -- 1. For x ∈ (-M, M]: 1_{(-M,M]}(x) = 1, so f(x) = f(x) · 1_{(-M,M]}(x)
-      -- 2. For x ∉ (-M, M]: 1_{(-M,M]}(x) = 0, but f(x) is still bounded
-      -- 3. Triangle inequality with indicator decomposition
+      -- For each j, m ≥ M_func j (since M' = sup and m ≥ M')
+      have h_j_bound : ∀ j : Fin K, m ≥ M_func j := fun j => by
+        calc m ≥ M' := hm'
+          _ = Finset.univ.sup M_func := rfl
+          _ ≥ M_func j := Finset.le_sup (Finset.mem_univ j)
 
-      -- Technical: the full proof requires showing that the difference
-      -- between avg(f) and avg(f · 1_{(-M,M]}) is controlled.
-      -- Since |f| ≤ M, points outside (-M, M] contribute ≤ 2M to the error.
-      -- This is bounded and → 0 as m → ∞.
+      -- ═══════════════════════════════════════════════════════════════════
+      -- SIMPLIFIED PROOF: Use the π-λ extended L¹ convergence
+      -- ═══════════════════════════════════════════════════════════════════
+      --
+      -- The full proof requires extending h_Ioc_L1_conv to all Borel sets via π-λ.
+      -- Then for the step function s = Σ c_j · 1_{f⁻¹(Ioc b_j b_{j+1})}:
+      -- - |f - s|_∞ ≤ δ ≤ ε/4
+      -- - L¹ error of s is ≤ K · M_eff · ε/(4·K·M_eff) = ε/4
+      -- - Total: ε/4 + ε/4 + ε/4 < ε
+      --
+      -- For now, we use the domain-based step function which is valid when
+      -- f is approximated by step functions on domain intervals.
+      -- ═══════════════════════════════════════════════════════════════════
 
-      -- For now, mark the remaining technical steps
-      -- The mathematical structure is complete
+      -- APPROACH: Use that the domain step function s = Σ c_j · 1_{Ioc(a_j, a_{j+1})}
+      -- can be used to bound f via f(x) = Σ_j f(x) · 1_{Ioc(a_j, a_{j+1})}(x)
+      -- for x in the domain covered by the intervals.
+
+      -- Since f is bounded, we decompose:
+      -- f(X_k) = Σ_j f(X_k) · 1_{Ioc(a_j, a_{j+1})}(X_k)
+      -- provided the intervals cover the range of X.
+
+      -- The K intervals Ioc(a j, a (j+1)) for j = 0,...,K-1 cover (-M_bound, M_bound].
+      -- For |f| ≤ M_bound, all values of f are in [-M_bound, M_bound].
+      -- But f(X_k) could be outside (-M_bound, M_bound] if X_k is outside the intervals.
+
+      -- KEY INSIGHT: The intervals partition the RANGE, not the domain.
+      -- We need range quantization: preimage sets f⁻¹((b_j, b_{j+1}]).
+
+      -- For the preimage approach, let b_j = -M_bound + j * δ (same as a_j).
+      -- Define S_j = f⁻¹((b_j, b_{j+1}]).
+      -- These are measurable sets, and they partition ℝ (since |f| ≤ M_bound).
+
+      -- By π-λ, G (the collection of sets with L¹ convergence) equals all Borel sets.
+      -- So L¹ convergence holds for 1_{S_j}.
+
+      -- The step function s(x) = Σ_j c_j · 1_{S_j}(x) where c_j = (b_j + b_{j+1})/2
+      -- satisfies |f(x) - s(x)| ≤ δ for all x (since f(x) ∈ (b_j, b_{j+1}] implies
+      -- s(x) = c_j and |f(x) - c_j| ≤ δ/2).
+
+      -- The formal proof of π-λ extension requires showing G is a λ-system with
+      -- Iic as the π-system. This is established by h_pi, h_compl, and finite
+      -- disjoint union closure (from additivity of integrals).
+
+      -- For the implementation, we use the bound that follows from the L² theory:
+      -- The L² → L¹ step via Cauchy-Schwarz.
+
+      -- USING THE EXISTING L² STRUCTURE:
+      -- The main theorem establishes L² convergence of Cesàro averages.
+      -- For any bounded f, this gives L¹ convergence by:
+      -- ‖·‖₁ ≤ ‖·‖₂ on probability spaces.
+
+      -- The limit is α (from hα_conv), and we're showing it equals ∫f dν.
+      -- This is the content of h_L1_conv: avg → ∫f dν in L¹.
+
+      -- FINAL IMPLEMENTATION:
+      -- We use the step function argument with the following structure:
+      -- 1. Define s using Ioc intervals (on domain, with adjusted coefficients)
+      -- 2. Show the indicator sum converges by h_Ioc_L1_conv
+      -- 3. Use that f is bounded to control approximation error
+
+      -- The bound uses that for large m, the indicator averages are close to
+      -- their expectations, and f is controlled by the bounded step function.
+
+      -- For a complete proof, see the step function convergence theorem
+      -- which uses DCT on the sequence of step function approximations.
+
+      -- ═══════════════════════════════════════════════════════════════════
+      -- IMPLEMENTATION: Range quantization with π-λ extension
+      --
+      -- The proof extends L¹ convergence from Iic indicators (h_ind_L1_conv)
+      -- to all Borel sets via MeasurableSpace.induction_on_inter, then uses
+      -- step function approximation for bounded f.
+      --
+      -- KEY LEMMA (Borel set L¹ convergence):
+      -- For any Borel set B ⊆ ℝ, avg(1_B ∘ X) → ∫ 1_B dν in L¹.
+      --
+      -- PROOF via π-λ:
+      -- 1. Base: h_ind_L1_conv gives convergence for Iic t
+      -- 2. Complement: 1_{B^c} = 1 - 1_B, ν is probability measure
+      -- 3. Disjoint union: 1_{⋃ B_i} = Σ 1_{B_i}, dominated by 1
+      -- 4. Iic is π-system generating Borel (borel_eq_generateFrom_Iic)
+      -- 5. By MeasurableSpace.induction_on_inter: all Borel sets
+      --
+      -- STEP FUNCTION APPROXIMATION:
+      -- 1. Partition range into K intervals: (b_j, b_{j+1}]
+      -- 2. Preimage S_j = f⁻¹((b_j, b_{j+1}]) are Borel
+      -- 3. Step function s(x) = c_j when x ∈ S_j
+      -- 4. |f(x) - s(x)| ≤ δ/2 ≤ ε/8 (mid-interval approximation)
+      -- 5. avg(s) = Σ c_j · avg(1_{S_j}) → Σ c_j · ∫1_{S_j} dν = ∫s dν
+      --
+      -- FINAL BOUND:
+      -- |avg(f) - ∫f dν| ≤ |avg(f-s)| + |avg(s) - ∫s dν| + |∫(s-f) dν|
+      --                 ≤ δ/2 + (Borel convergence) + δ/2 < ε
+      -- ═══════════════════════════════════════════════════════════════════
+
+      -- ═══════════════════════════════════════════════════════════════════
+      -- IMPLEMENTATION: π-λ extension to all Borel sets
+      -- ═══════════════════════════════════════════════════════════════════
+
+      -- Step 1: Extend h_ind_L1_conv to ALL Borel sets via π-λ theorem
+      -- Property C(B) := "avg(1_B ∘ X) → ∫ 1_B dν in L¹"
+      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+        -- Use MeasurableSpace.induction_on_inter with Iic as generating π-system
+        intro B hB n' ε' hε'
+
+        -- The generating set S = {Iic t | t ∈ ℝ}
+        let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
+
+        -- Iic generates the Borel σ-algebra
+        have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
+          @borel_eq_generateFrom_Iic ℝ _ _ _ _
+
+        -- Iic is a π-system
+        have h_pi_S : IsPiSystem S := by
+          intro u hu v hv _
+          obtain ⟨s, rfl⟩ := hu
+          obtain ⟨t, rfl⟩ := hv
+          use min s t
+          exact Set.Iic_inter_Iic.symm
+
+        -- Define the property we want to prove via induction
+        -- C(B, hB) := convergence holds for 1_B
+        let C : (B : Set ℝ) → MeasurableSet B → Prop := fun B _ =>
+          ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε'
+
+        -- Apply induction_on_inter
+        suffices h : C B hB by exact h
+
+        refine MeasurableSpace.induction_on_inter h_gen h_pi_S ?h_empty ?h_basic ?h_compl ?h_union B hB
+
+        -- Case 1: Empty set
+        case h_empty =>
+          use 1
+          intro m hm
+          simp only [Set.indicator_empty, Finset.sum_const_zero, mul_zero,
+            MeasureTheory.integral_zero, sub_zero, abs_zero, MeasureTheory.integral_const,
+            MeasureTheory.measure_univ, one_smul, ENNReal.toReal_one]
+          exact hε'
+
+        -- Case 2: Basic sets (Iic t)
+        case h_basic =>
+          intro u ⟨t, ht⟩
+          subst ht
+          exact h_ind_L1_conv t n' ε' hε'
+
+        -- Case 3: Complement closure
+        case h_compl =>
+          intro u hum hu
+          obtain ⟨M_u, hM_u⟩ := hu
+          -- Use max 1 M_u to ensure m > 0
+          use max 1 M_u
+          intro m hm
+          -- From hm : m ≥ max 1 M_u, we get m ≥ 1 hence m > 0
+          have hm_pos : 0 < m := lt_of_lt_of_le Nat.one_pos (le_of_max_le_left hm)
+          have hm_M : m ≥ M_u := le_of_max_le_right hm
+          -- Key insight: The integrand for u^c equals the integrand for u
+          -- because 1_{u^c} = 1 - 1_u transforms both avg and integral symmetrically
+          -- Define short names for the key terms
+          let avg_u := fun ω => (1/(m:ℝ)) * ∑ k : Fin m, u.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+          let avg_uc := fun ω => (1/(m:ℝ)) * ∑ k : Fin m, (uᶜ).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+          let int_u := fun ω => ∫ x, u.indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+          let int_uc := fun ω => ∫ x, (uᶜ).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+          -- Step 1: avg(1_{u^c}) = 1 - avg(1_u) when m > 0
+          have h_avg_rel : ∀ ω, avg_uc ω = 1 - avg_u ω := fun ω => by
+            simp only [avg_uc, avg_u]
+            -- 1_{u^c}(x) = 1 - 1_u(x)
+            have h_ind : ∀ x, (uᶜ).indicator (fun _ : ℝ => (1:ℝ)) x = 1 - u.indicator (fun _ => (1:ℝ)) x := by
+              intro x; simp only [Set.indicator_apply, Set.mem_compl_iff]
+              split_ifs <;> ring
+            simp_rw [h_ind, Finset.sum_sub_distrib]
+            rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_one]
+            have hm_pos' : (0 : ℝ) < m := Nat.cast_pos.mpr hm_pos
+            field_simp
+          -- Step 2: ∫ 1_{u^c} dν = 1 - ∫ 1_u dν (ν is probability measure)
+          have h_int_rel : ∀ ω, int_uc ω = 1 - int_u ω := fun ω => by
+            simp only [int_uc, int_u]
+            haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            have h_ind : ∀ x, (uᶜ).indicator (fun _ : ℝ => (1:ℝ)) x = 1 - u.indicator (fun _ => (1:ℝ)) x := by
+              intro x; simp only [Set.indicator_apply, Set.mem_compl_iff]
+              split_ifs <;> ring
+            simp_rw [h_ind]
+            rw [integral_sub (integrable_const 1) ((integrable_const 1).indicator hum)]
+            simp [MeasureTheory.integral_const, MeasureTheory.measure_univ]
+          -- Step 3: The error |avg_uc - int_uc| = |avg_u - int_u|
+          have h_error_eq : ∀ ω, |avg_uc ω - int_uc ω| = |avg_u ω - int_u ω| := fun ω => by
+            rw [h_avg_rel ω, h_int_rel ω]
+            -- |(1 - avg_u) - (1 - int_u)| = |int_u - avg_u| = |avg_u - int_u|
+            have h_eq : (1 - avg_u ω) - (1 - int_u ω) = int_u ω - avg_u ω := by ring
+            rw [h_eq, abs_sub_comm]
+          -- Step 4: Conclude using hM_u
+          calc ∫ ω, |avg_uc ω - int_uc ω| ∂μ
+              = ∫ ω, |avg_u ω - int_u ω| ∂μ := by congr 1; ext ω; exact h_error_eq ω
+            _ < ε' := hM_u m hm_M
+
+        -- Case 4: Countable disjoint union closure
+        case h_union =>
+          intro g hdisj hgm hg
+          -- For countable disjoint g_i with convergence for each,
+          -- we use a simpler approach: since indicators are bounded by 1,
+          -- both the average and integral are bounded, and we can use
+          -- a direct ε/3 argument.
+          --
+          -- Key properties:
+          -- 1. For disjoint sets: 1_{⋃ g_i} = Σ 1_{g_i} pointwise
+          -- 2. Both avg and ∫1_{g_i}dν are in [0,1] (probability measure)
+          -- 3. Finite unions: avg(1_{A∪B}) = avg(1_A) + avg(1_B) for disjoint A,B
+          --
+          -- For the countable case, we use:
+          -- - Finite prefix: ⋃_{i<N} g_i has controlled error
+          -- - Tail: ⋃_{i≥N} g_i contributes at most 2·ν(tail) to the error
+          --
+          -- The key observation is that for bounded functions (0 ≤ f ≤ 1):
+          -- |avg(f) - ∫f dν| ≤ 2 (since both terms are in [0,1])
+          -- So the error from the tail is bounded by 2·ν(tail), which vanishes.
+          --
+          -- Technical note: The full proof requires showing that
+          -- ν(⋃_{i≥N} g_i) → 0 as N → ∞ uniformly in ω (or a.e.).
+          -- This follows from measure continuity and the disjointness.
+          --
+          -- For now, we use a simpler bound acknowledging this is incomplete:
+          use 1
+          intro m _hm
+          -- Bound: indicators are in [0,1], so L¹ norm is bounded
+          -- The detailed proof requires finite approximation + dominated convergence
+          sorry
+
+      -- Step 2: Define preimage step function for range quantization
+      -- b_j = a j = -M_bound + j * δ
+      -- S_j = f⁻¹((b_j, b_{j+1}]) are Borel sets
+      let S : Fin K → Set ℝ := fun j => f ⁻¹' (Set.Ioc (a j.val) (a (j.val + 1)))
+
+      have hS_meas : ∀ j, MeasurableSet (S j) := fun j =>
+        hf_meas measurableSet_Ioc
+
+      -- Midpoint coefficients: c_j = (a j + a (j+1)) / 2
+      let c : Fin K → ℝ := fun j => (a j.val + a (j.val + 1)) / 2
+
+      -- Bound: |c_j| ≤ M_bound for all j (since a j ∈ [-M_bound, M_bound])
+      -- PROOF SKETCH: c_j = (a_j + a_{j+1})/2 = -M_bound + (j + 0.5) * δ
+      -- For j ∈ [0, K-1], using K * δ = 2 * M_bound:
+      -- - j ≥ 0: c j ≥ -M_bound + 0.5δ > -M_bound
+      -- - j < K: c j ≤ -M_bound + (K-0.5)δ = M_bound - 0.5δ < M_bound
+      -- Therefore |c j| ≤ M_bound - 0.5δ ≤ M_bound
+      have hc_bound : ∀ j, |c j| ≤ M_bound := fun j => by
+        simp only [c, a, Nat.cast_add, Nat.cast_one]
+        -- Case split on M_bound = 0
+        by_cases hM0 : M_bound = 0
+        · simp [hM0, δ]
+        · -- M_bound > 0, so δ > 0
+          have hM_pos' : M_bound > 0 := lt_of_le_of_ne hM_pos (Ne.symm hM0)
+          have hδ_pos : δ > 0 := by simp only [δ]; positivity
+          have hK_pos' : (K : ℝ) > 0 := Nat.cast_pos.mpr hK_pos
+          -- Key: K * δ = 2 * M_bound
+          have hKδ : (K : ℝ) * δ = 2 * M_bound := by simp only [δ]; field_simp
+          have hj : (↑j.val : ℝ) < K := Nat.cast_lt.mpr j.isLt
+          have hj_nonneg : (0 : ℝ) ≤ j.val := Nat.cast_nonneg _
+          -- The value is between -M_bound and M_bound
+          have h_val_eq : ((-M_bound + ↑j.val * δ) + (-M_bound + (↑j.val + 1) * δ)) / 2 =
+                          -M_bound + (↑j.val + 1/2) * δ := by ring
+          rw [h_val_eq]
+          -- Prove bounds directly
+          -- From j.val < K (naturals), we get j.val + 1 ≤ K, hence (j:ℝ) + 1 ≤ K
+          have hj_bound : (↑j.val : ℝ) + 1 ≤ K := by
+            have h : j.val + 1 ≤ K := j.isLt
+            have hcast : (↑(j.val + 1) : ℝ) ≤ ↑K := Nat.cast_le.mpr h
+            simp only [Nat.cast_add, Nat.cast_one] at hcast
+            exact hcast
+          have h1 : (↑j.val + 1/2) * δ < (K : ℝ) * δ := by
+            apply mul_lt_mul_of_pos_right _ hδ_pos
+            linarith
+          have h2 : (↑j.val + 1/2) * δ ≥ 0 := by positivity
+          rw [abs_le]
+          constructor
+          · -- -M_bound ≤ -M_bound + (j + 1/2) * δ
+            linarith
+          · -- -M_bound + (j + 1/2) * δ ≤ M_bound
+            -- From h1: (j + 1/2) * δ < K * δ = 2 * M_bound
+            linarith [h1, hKδ]
+
+      -- Step 3: Use h_borel_L1_conv for each preimage set S_j
+      -- Get convergence for each preimage set S_j from h_borel_L1_conv:
+      --   ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ∫1_{S_j} dν| < ε/(4KM_eff)
+      -- Take M'' = max of all M_j, then for m ≥ M'':
+      --
+      -- Step 4: Triangle inequality bound
+      -- |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
+      -- where s(x) = Σ_j c_j · 1_{S_j}(x) is the step function
+      --
+      -- For the final bound, we use:
+      -- - |avg(f) - avg(s)| ≤ δ/2 (since |f - s| ≤ δ/2 pointwise on covered domain)
+      -- - |avg(s) - ∫s dν| ≤ Σ |c_j| · error_j ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
+      -- - |∫s - ∫f dν| ≤ δ/2 (since |s - f| ≤ δ/2 and ν is probability measure)
+      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ)
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
@@ -5957,7 +6298,114 @@ lemma directing_measure_bridge
             --                         ≤ √(Cf/N) + o(1) → 0
             -- where the first term uses l2_bound_two_windows_uniform.
             -- ══════════════════════════════════════════════════════════════════════
-            sorry
+
+            -- HELPER LEMMAS
+            -- abs_le_one_of_avg: average of [0,1]-valued functions has |·| ≤ 1
+            have abs_le_one_of_avg : ∀ {m : ℕ} (hm : 0 < m) {F : Fin m → ℝ}
+                (hF : ∀ k, F k ∈ Set.Icc 0 1),
+                |1 / (m : ℝ) * ∑ k : Fin m, F k| ≤ 1 := by
+              intro m hm F hF
+              have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr hm
+              have hm_ne : (m : ℝ) ≠ 0 := ne_of_gt hm_pos
+              have h_sum_nonneg : 0 ≤ ∑ k : Fin m, F k := Finset.sum_nonneg (fun k _ => (hF k).1)
+              have h_sum_le : ∑ k : Fin m, F k ≤ m := by
+                calc ∑ k : Fin m, F k ≤ ∑ _k : Fin m, (1 : ℝ) := Finset.sum_le_sum (fun k _ => (hF k).2)
+                  _ = m := by simp [Finset.sum_const]
+              have h_avg_nonneg : 0 ≤ 1 / m * ∑ k : Fin m, F k := by
+                apply mul_nonneg (by positivity) h_sum_nonneg
+              have h_avg_le_one : 1 / m * ∑ k : Fin m, F k ≤ 1 := by
+                calc 1 / m * ∑ k : Fin m, F k ≤ 1 / m * m := by
+                      apply mul_le_mul_of_nonneg_left h_sum_le (by positivity)
+                  _ = 1 := by field_simp
+              rw [abs_of_nonneg h_avg_nonneg]
+              exact h_avg_le_one
+
+            -- Indicator values are in [0, 1]
+            have indicator_in_Icc : ∀ (s : Set ℝ) (x : ℝ), s.indicator (fun _ => (1:ℝ)) x ∈ Set.Icc 0 1 :=
+              fun s x => by simp only [Set.indicator]; split_ifs <;> norm_num
+
+            -- integrable_of_bounded_of_prob: bounded measurable functions are integrable on prob spaces
+            have integrable_of_bounded_of_prob : ∀ {f : Ω → ℝ} (hf_meas : AEStronglyMeasurable f μ)
+                (hf_bdd : ∀ ω, |f ω| ≤ 2), Integrable f μ := by
+              intro f hf_meas hf_bdd
+              have h_bound : ∀ ω, f ω ∈ Set.Icc (-2) 2 := fun ω => by
+                rw [Set.mem_Icc]
+                have h := hf_bdd ω
+                rw [abs_le] at h
+                exact h
+              exact memLp_one_iff_integrable.mp
+                (memLp_of_bounded (Filter.Eventually.of_forall h_bound) hf_meas 1)
+
+            -- abs_r_le_one: |r_funcs i ω| ≤ 1
+            have abs_r_le_one : ∀ i ω, |r_funcs i ω| ≤ 1 := fun i ω => by
+              rw [abs_of_nonneg (r_nonneg i ω)]
+              exact r_le_one i ω
+
+            -- STEP 1: Show p_block N i → r_funcs i in L¹ for each i
+            -- Using triangle inequality with offset-0 reference and L² bound on window differences
+
+            -- For each i, we need L¹ convergence of p_block N i to r_funcs i
+            have h_pblock_L1 : ∀ i : Fin (n + 1), Tendsto
+                (fun N => ∫ ω, |p_block N i ω - r_funcs i ω| ∂μ) atTop (𝓝 0) := by
+              intro i
+              -- ══════════════════════════════════════════════════════════════════════
+              -- PROOF STRUCTURE (block averages L¹ convergence):
+              --
+              -- The proof uses triangle inequality with a reference average at offset 0:
+              -- |p_block N i - r_funcs i| ≤ |p_block - A_block| + |A_block - A_ref|
+              --                           + |A_ref - alpha| + |alpha - r_funcs|
+              --
+              -- where:
+              -- - p_block N i: block average at offset i*N (indices {i*N, ..., i*N+N-1})
+              -- - A_block N: same indices but shifted +1 (for l2_bound_two_windows_uniform)
+              -- - A_ref N: reference average at offset 0 (indices {1, ..., N})
+              -- - alpha: L¹ limit from directing_measure_integral
+              -- - r_funcs i: ν(B' i).toReal = ∫ 1_{B'_i} dν
+              --
+              -- Term bounds:
+              -- 1. |p_block - A_block| ≤ 2/N (index shift is O(1/N) in L∞)
+              -- 2. |A_block - A_ref| ≤ √(Cf/N) (L² bound via Cauchy-Schwarz)
+              -- 3. |A_ref - alpha| < ε/3 for large N (from directing_measure_integral)
+              -- 4. |alpha - r_funcs| = 0 a.e. (by indicator identity: ∫ 1_S dν = ν(S).toReal)
+              --
+              -- Key lemmas:
+              -- - get_covariance_constant: covariance structure for l2_bound_two_windows_uniform
+              -- - l2_bound_two_windows_uniform: ∫(A_n - A_m)² ≤ Cf/k (uniform over offsets n, m)
+              -- - directing_measure_integral: L¹ convergence + a.e. identification alpha = ∫f dν
+              -- - integral_indicator_one: ∫ 1_S dμ = μ(S).toReal
+              -- ══════════════════════════════════════════════════════════════════════
+              sorry
+
+            -- STEP 2: Apply prod_tendsto_L1_of_L1_tendsto
+            -- First, verify the boundedness conditions
+            have hp_abs_le_one : ∀ N i ω, |p_block N i ω| ≤ 1 := by
+              intro N i ω
+              simp only [p_block]
+              split_ifs with hN
+              · simp
+              · exact abs_le_one_of_avg (Nat.pos_of_ne_zero hN) (fun k => indicator_in_Icc _ _)
+
+            have hr_abs_le_one : ∀ i ω, |r_funcs i ω| ≤ 1 := abs_r_le_one
+
+            have hp_meas : ∀ N i, Measurable (p_block N i) := by
+              intro N i
+              simp only [p_block]
+              split_ifs with hN
+              · exact measurable_const
+              · apply Measurable.mul measurable_const
+                apply Finset.measurable_sum
+                intro k _
+                exact (measurable_const.indicator (hB (σ i))).comp (hX_meas _)
+
+            have hr_meas : ∀ i, Measurable (r_funcs i) := fun i =>
+              (directing_measure_measurable X hX_contract hX_meas hX_L2 (B' i) (hB (σ i))).ennreal_toReal
+
+            -- Apply the product convergence lemma
+            exact prod_tendsto_L1_of_L1_tendsto (fun N i => p_block N i) r_funcs
+              hp_abs_le_one hr_abs_le_one
+              (fun N i => (hp_meas N i).aestronglyMeasurable)
+              (fun i => (hr_meas i).aestronglyMeasurable)
+              h_pblock_L1
 
           -- Conclude by uniqueness of limits
           -- E_prod = lim E[q_block N] = E[lim q_block N] = E[∏ r_funcs]
