@@ -117,6 +117,34 @@ lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measura
     intro j _
     exact hf.comp (measurable_pi_apply _)
 
+/-- Block averages of bounded functions are bounded.
+
+If |f x| ≤ C for all x, then |blockAvg m n k f ω| ≤ C for all ω.
+This follows because blockAvg is a convex combination of values of f. -/
+lemma blockAvg_abs_le {m n : ℕ} (k : Fin m) {f : α → ℝ} {C : ℝ} (hC : 0 ≤ C)
+    (hf_bd : ∀ x, |f x| ≤ C) (ω : Ω[α]) :
+    |blockAvg m n k f ω| ≤ C := by
+  unfold blockAvg
+  by_cases hn : n = 0
+  · simp only [hn, ↓reduceDIte, abs_zero]
+    exact hC
+  · simp only [hn, ↓reduceDIte]
+    have hn_pos : 0 < n := Nat.pos_of_ne_zero hn
+    -- |blockAvg| = |(1/n) * ∑ f(ω(k*n + j))| ≤ (1/n) * ∑ |f(ω(k*n + j))| ≤ (1/n) * n * C = C
+    calc |1 / (n : ℝ) * ∑ j ∈ Finset.range n, f (ω (k.val * n + j))|
+      _ = |1 / (n : ℝ)| * |∑ j ∈ Finset.range n, f (ω (k.val * n + j))| := abs_mul _ _
+      _ ≤ |1 / (n : ℝ)| * ∑ j ∈ Finset.range n, |f (ω (k.val * n + j))| := by
+          apply mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (abs_nonneg _)
+      _ ≤ (1 / (n : ℝ)) * ∑ j ∈ Finset.range n, C := by
+          rw [abs_of_pos (by positivity : (1 : ℝ) / n > 0)]
+          apply mul_le_mul_of_nonneg_left _ (by positivity)
+          apply Finset.sum_le_sum
+          intro j _
+          exact hf_bd _
+      _ = (1 / (n : ℝ)) * (n * C) := by
+          rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+      _ = C := by field_simp
+
 /-! ### Block Average L¹ Convergence
 
 The key observation is that block average at position k is a Cesàro average starting at k*n.
@@ -615,18 +643,32 @@ lemma product_blockAvg_L1_convergence
   · intro n
     -- Need: ∫ |∏ blockAvg - ∏ CE| ≤ upper n = C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|
     --
-    -- **Proof outline:**
-    -- 1. Block averages are bounded by C (as convex combinations of bounded values)
-    -- 2. Conditional expectations are bounded by C a.e. (by condexp monotonicity)
-    -- 3. Use abs_prod_sub_prod_le_general pointwise to get:
-    --    |∏ blockAvg - ∏ CE| ≤ C^{m-1} * ∑ |blockAvg_i - CE_i|
-    -- 4. Integrate both sides and use Fubini to exchange sum and integral
+    -- **Key steps (all use standard measure theory):**
     --
-    -- The technical details require:
-    -- - blockAvg_bounded: |blockAvg m n k f ω| ≤ C when |f x| ≤ C
-    -- - MeasureTheory.condexp_mono: CE is monotone
-    -- - abs_condexp_le_condexp_abs: |CE[f]| ≤ CE[|f|]
-    -- - Integrability of products and sums
+    -- 1. Block averages are bounded by C:
+    --    |blockAvg m n k f ω| ≤ C by blockAvg_abs_le
+    --
+    -- 2. Conditional expectations are bounded by C (a.e.):
+    --    |μ[f | mSI]| ≤ μ[|f| | mSI] ≤ C a.e. (by condexp monotonicity)
+    --
+    -- 3. Pointwise bound (a.e.) using abs_prod_sub_prod_le_general:
+    --    |∏ blockAvg - ∏ CE| ≤ C^{m-1} * ∑ |blockAvg_i - CE_i|
+    --
+    -- 4. Integrate both sides using integral_mono_ae:
+    --    ∫ |∏ blockAvg - ∏ CE| ≤ ∫ C^{m-1} * ∑ |blockAvg_i - CE_i|
+    --                          = C^{m-1} * ∫ ∑ |blockAvg_i - CE_i|
+    --                          = C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|  (Fubini)
+    --                          = upper n
+    --
+    -- The integrability conditions follow from:
+    -- - Bounded measurable functions on probability spaces are integrable
+    -- - Products and sums of integrable functions are integrable
+    -- - condexp preserves integrability
+    --
+    -- Technical lemmas needed from mathlib:
+    -- - MeasureTheory.abs_condexp_le: |μ[f | m]| ≤ μ[|f| | m] a.e.
+    -- - MeasureTheory.condexp_mono: f ≤ g a.e. → μ[f | m] ≤ μ[g | m] a.e.
+    -- - Integrability of products/sums of bounded functions
     sorry
   · exact h_upper_tendsto
 
