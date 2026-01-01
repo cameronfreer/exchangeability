@@ -401,6 +401,68 @@ section ProductConvergence
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
 
+/-- Telescoping bound for product differences with general bound C.
+
+Extends `abs_prod_sub_prod_le` (which requires bound 1) to general bounds via normalization.
+For functions bounded by C > 0:
+  |∏ A - ∏ B| ≤ C^{m-1} * ∑ |A_i - B_i|
+
+This is derived from abs_prod_sub_prod_le by dividing by C. -/
+lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC : 0 < C)
+    (hA : ∀ i, |A i| ≤ C) (hB : ∀ i, |B i| ≤ C) :
+    |∏ i, A i - ∏ i, B i| ≤ C^(m - 1) * ∑ i, |A i - B i| := by
+  by_cases hm : m = 0
+  · subst hm
+    simp only [Finset.univ_eq_empty, Finset.prod_empty, Finset.sum_empty,
+      sub_self, abs_zero, mul_zero, le_refl]
+  -- m > 0: normalize by C and apply abs_prod_sub_prod_le
+  have hm_pos : 0 < m := Nat.pos_of_ne_zero hm
+  -- Define normalized functions
+  let A' : Fin m → ℝ := fun i => A i / C
+  let B' : Fin m → ℝ := fun i => B i / C
+  -- Show normalized functions are bounded by 1
+  have hA' : ∀ i, |A' i| ≤ 1 := fun i => by
+    simp only [A', abs_div, abs_of_pos hC]
+    exact div_le_one_of_le₀ (hA i) (le_of_lt hC)
+  have hB' : ∀ i, |B' i| ≤ 1 := fun i => by
+    simp only [B', abs_div, abs_of_pos hC]
+    exact div_le_one_of_le₀ (hB i) (le_of_lt hC)
+  -- Apply abs_prod_sub_prod_le to normalized functions
+  have h_norm := Exchangeability.DeFinetti.ViaL2.abs_prod_sub_prod_le A' B' hA' hB'
+  -- Relate normalized products to original products
+  have h_prod_A : ∏ i, A' i = (∏ i, A i) / C^m := by
+    simp only [A', Finset.prod_div_distrib, Finset.prod_const, Finset.card_fin]
+  have h_prod_B : ∏ i, B' i = (∏ i, B i) / C^m := by
+    simp only [B', Finset.prod_div_distrib, Finset.prod_const, Finset.card_fin]
+  have h_sum : ∑ i, |A' i - B' i| = (∑ i, |A i - B i|) / C := by
+    simp only [A', B']
+    -- Transform each term: |A x / C - B x / C| = |A x - B x| / C
+    have h_term : ∀ x, |A x / C - B x / C| = |A x - B x| / C := fun x => by
+      have : A x / C - B x / C = (A x - B x) / C := by field_simp
+      rw [this, abs_div, abs_of_pos hC]
+    simp only [h_term]
+    -- Now apply Finset.sum_div
+    rw [Finset.sum_div]
+  -- Main calculation
+  have hCm_pos : 0 < C^m := pow_pos hC m
+  calc |∏ i, A i - ∏ i, B i|
+    _ = |C^m * (∏ i, A' i) - C^m * (∏ i, B' i)| := by
+        rw [h_prod_A, h_prod_B]
+        simp only [mul_div_cancel₀ _ (ne_of_gt hCm_pos)]
+    _ = |C^m * ((∏ i, A' i) - (∏ i, B' i))| := by ring_nf
+    _ = C^m * |∏ i, A' i - ∏ i, B' i| := by
+        rw [abs_mul, abs_of_pos hCm_pos]
+    _ ≤ C^m * ∑ i, |A' i - B' i| := by
+        apply mul_le_mul_of_nonneg_left h_norm (le_of_lt hCm_pos)
+    _ = C^m * ((∑ i, |A i - B i|) / C) := by rw [h_sum]
+    _ = C^(m - 1) * ∑ i, |A i - B i| := by
+        cases m with
+        | zero => simp at hm
+        | succ n =>
+          simp only [Nat.succ_sub_one]
+          field_simp
+          ring
+
 /-- Telescoping bound for product differences.
 
 |∏ Aᵢ - ∏ Bᵢ| ≤ m * C^{m-1} * max |Aᵢ - Bᵢ|
@@ -417,17 +479,43 @@ lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
   -- When m = 0, both products are 1, LHS = |1 - 1| = 0
   by_cases hm : 0 < m
   · simp only [hm, ↓reduceDIte]
-    -- Standard telescoping identity:
-    -- ∏ᵢ Aᵢ - ∏ᵢ Bᵢ = ∑ⱼ (∏_{i<j} Aᵢ) * (Aⱼ - Bⱼ) * (∏_{i>j} Bᵢ)
-    --
-    -- Taking absolute values and using |Aᵢ|, |Bᵢ| ≤ C:
-    -- |∏ Aᵢ - ∏ Bᵢ| ≤ ∑ⱼ C^{j} * |Aⱼ - Bⱼ| * C^{m-1-j}
-    --              = C^{m-1} * ∑ⱼ |Aⱼ - Bⱼ|
-    --              ≤ C^{m-1} * m * max_j |Aⱼ - Bⱼ|
-    --              = m * C^{m-1} * max_j |Aⱼ - Bⱼ|
-    --
-    -- TODO: Formalize using Finset.prod_sub_prod or induction on m
-    sorry
+    -- Case C = 0: All |A i|, |B i| ≤ 0, so A = B = 0, so LHS = 0
+    by_cases hC' : C = 0
+    · have hA0 : ∀ i, A i = 0 := fun i => abs_eq_zero.mp (le_antisymm (hC' ▸ hA i) (abs_nonneg _))
+      have hB0 : ∀ i, B i = 0 := fun i => abs_eq_zero.mp (le_antisymm (hC' ▸ hB i) (abs_nonneg _))
+      -- Both products are 0, so LHS = |0 - 0| = 0 ≤ RHS
+      simp only [hA0, hB0, sub_self, abs_zero, Finset.prod_const, Finset.card_fin, zero_pow hm.ne']
+      -- Goal: 0 ≤ m * C^(m-1) * sup'(...)(fun _ => 0)
+      -- The sup' of the constant function 0 is 0
+      have h_sup_zero : Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun _ : Fin m => (0 : ℝ)) = 0 := by
+        apply le_antisymm
+        · apply Finset.sup'_le
+          intro i _
+          exact le_refl 0
+        · exact Finset.le_sup'_of_le (fun _ => (0 : ℝ)) (Finset.mem_univ ⟨0, hm⟩) (le_refl 0)
+      simp only [h_sup_zero, mul_zero, le_refl]
+    -- Case C > 0: Use abs_prod_sub_prod_le_general
+    have hC_pos : 0 < C := lt_of_le_of_ne hC (Ne.symm hC')
+    have h_gen := abs_prod_sub_prod_le_general A B hC_pos hA hB
+    -- Now bound sum by m * max
+    have h_sum_le_m_max : ∑ i : Fin m, |A i - B i| ≤
+        m * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
+      calc ∑ i : Fin m, |A i - B i|
+        _ ≤ ∑ _i : Fin m, Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
+            apply Finset.sum_le_sum
+            intro i hi
+            exact Finset.le_sup' (fun i => |A i - B i|) hi
+        _ = Finset.card (Finset.univ : Finset (Fin m)) •
+              Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
+            rw [Finset.sum_const]
+        _ = (m : ℝ) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
+            rw [Finset.card_fin, nsmul_eq_mul]
+    calc |∏ i, A i - ∏ i, B i|
+      _ ≤ C^(m - 1) * ∑ i, |A i - B i| := h_gen
+      _ ≤ C^(m - 1) * ((m : ℝ) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|)) := by
+          apply mul_le_mul_of_nonneg_left h_sum_le_m_max
+          exact pow_nonneg hC _
+      _ = ↑m * C^(m - 1) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by ring
   · simp only [hm, ↓reduceDIte]
     -- m = 0, so both products over Fin 0 are empty, hence equal to 1
     have hm0 : m = 0 := Nat.eq_zero_of_not_pos hm
@@ -477,7 +565,70 @@ lemma product_blockAvg_L1_convergence
   -- **Key ingredients from MoreL2Helpers.lean**:
   --   - abs_prod_sub_prod_le (line 4624): |∏ f - ∏ g| ≤ ∑ |f_i - g_i| for |f|, |g| ≤ 1
   --   - prod_tendsto_L1_of_L1_tendsto (line 4670): Alternative direct approach
-  sorry
+
+  -- Handle m = 0 case first
+  by_cases hm : m = 0
+  · subst hm
+    simp only [Finset.univ_eq_empty, Finset.prod_empty, sub_self, abs_zero, integral_zero]
+    exact tendsto_const_nhds
+  -- m > 0 case
+  have hm_pos : 0 < m := Nat.pos_of_ne_zero hm
+
+  -- Step 1: Get uniform bound C > 0 for all fs i
+  have hC_exists : ∃ C > 0, ∀ i, ∀ x, |fs i x| ≤ C := by
+    choose Cs hCs using hfs_bd
+    -- Use max of bounds + 1 to ensure positivity
+    use (Finset.univ.sup' ⟨⟨0, hm_pos⟩, Finset.mem_univ _⟩ (fun i => |Cs i|)) + 1
+    constructor
+    · -- maxC > 0 since we add 1
+      exact add_pos_of_nonneg_of_pos (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, hm_pos⟩)
+        (abs_nonneg _)) one_pos
+    intro i x
+    have h1 : |fs i x| ≤ Cs i := hCs i x
+    have h2 : Cs i ≤ |Cs i| := le_abs_self _
+    have h3 : |Cs i| ≤ Finset.univ.sup' ⟨⟨0, hm_pos⟩, Finset.mem_univ _⟩ (fun i => |Cs i|) :=
+      Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+    linarith
+  obtain ⟨C, hC_pos, hC_bd⟩ := hC_exists
+
+  -- Step 2: Upper bound using telescoping
+  -- Define the upper bound sequence
+  let upper := fun n => C^(m - 1) * ∑ i : Fin m,
+    ∫ ω, |blockAvg m (n + 1) i (fs i) ω - μ[(fun ω => fs i (ω 0)) | mSI] ω| ∂μ
+
+  -- Show the upper bound tends to 0
+  have h_upper_tendsto : Tendsto upper atTop (𝓝 0) := by
+    simp only [upper]
+    rw [← mul_zero (C^(m - 1))]
+    apply Tendsto.const_mul
+    -- Sum of limits = limit of sums
+    have h_sum_zero : (∑ _ : Fin m, (0 : ℝ)) = 0 := Finset.sum_const_zero
+    rw [← h_sum_zero]
+    apply tendsto_finset_sum
+    intro i _
+    exact blockAvg_tendsto_condExp hσ m i (hfs_meas i) ⟨C, fun x => hC_bd i x⟩
+
+  -- Apply squeeze theorem
+  apply squeeze_zero
+  · intro n
+    exact integral_nonneg (fun _ => abs_nonneg _)
+  · intro n
+    -- Need: ∫ |∏ blockAvg - ∏ CE| ≤ upper n = C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|
+    --
+    -- **Proof outline:**
+    -- 1. Block averages are bounded by C (as convex combinations of bounded values)
+    -- 2. Conditional expectations are bounded by C a.e. (by condexp monotonicity)
+    -- 3. Use abs_prod_sub_prod_le_general pointwise to get:
+    --    |∏ blockAvg - ∏ CE| ≤ C^{m-1} * ∑ |blockAvg_i - CE_i|
+    -- 4. Integrate both sides and use Fubini to exchange sum and integral
+    --
+    -- The technical details require:
+    -- - blockAvg_bounded: |blockAvg m n k f ω| ≤ C when |f x| ≤ C
+    -- - MeasureTheory.condexp_mono: CE is monotone
+    -- - abs_condexp_le_condexp_abs: |CE[f]| ≤ CE[|f|]
+    -- - Integrability of products and sums
+    sorry
+  · exact h_upper_tendsto
 
 end ProductConvergence
 
