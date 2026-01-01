@@ -140,10 +140,19 @@ lemma blockAvg_tendsto_condExp
     Tendsto (fun n =>
       ∫ ω, |blockAvg m (n + 1) k f ω - μ[(fun ω => f (ω 0)) | mSI] ω| ∂μ)
       atTop (𝓝 0) := by
-  -- The proof uses the existing L1_cesaro_convergence_bounded machinery
-  -- Block average at position k is Cesàro average starting at k*(n+1)
-  -- Key insight: By condexp_precomp_iterate_eq, CE[f(ω(k*(n+1)))] = CE[f(ω₀)]
-  sorry -- TODO: Connect to L1_cesaro_convergence_bounded via shift_iterate
+  -- Key insight: blockAvg m (n+1) k f ω = (A n) (shift^[k*(n+1)] ω)
+  -- where A n is the standard Cesàro average.
+  --
+  -- Proof strategy:
+  -- 1. blockAvg = A ∘ shift^[offset] (by blockAvg_eq_cesaro_shifted)
+  -- 2. CE is shift-invariant: Y = Y ∘ shift^[p] a.e. (for shift-invariant σ-algebra)
+  -- 3. By measure-preserving substitution: ∫ |blockAvg - Y| = ∫ |A - Y|
+  -- 4. Apply L¹ Cesàro convergence (from CesaroConvergence.lean)
+  --
+  -- The L¹ Cesàro convergence lemma (L1_cesaro_convergence_bounded) is private in
+  -- CesaroConvergence.lean, so this proof is marked sorry pending refactoring to
+  -- export that result publicly.
+  sorry
 
 end BlockAvgConvergence
 
@@ -215,10 +224,53 @@ lemma integral_prod_eq_integral_blockAvg
     (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
     ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
     ∫ ω, (∏ i : Fin m, blockAvg m n i (fs i) ω) ∂μ := by
-  -- Step 1: For each j : Fin m → Fin n, apply contractability with blockInjection
-  -- Step 2: Average over all j to get block averages
-  -- Step 3: Use linearity of integration
-  sorry -- TODO: Implement averaging argument
+  -- The proof uses averaging over all choice functions j : Fin m → Fin n.
+  --
+  -- Key steps:
+  -- 1. For each j, blockInjection m n j is strictly monotone
+  -- 2. By contractability, ∫ ∏ fᵢ(ωᵢ) = ∫ ∏ fᵢ(ω(ρⱼ(i))) for each j
+  -- 3. The integral is independent of j, so we can average over all j
+  -- 4. (1/n^m) * ∑_j ∏ fᵢ(ω(ρⱼ(i))) = ∏ blockAvg_i
+  --
+  -- The key observation is that for fixed ω and i:
+  -- (1/n^m) * ∑_{j : Fin m → Fin n} f_i(ω(i*n + j(i)))
+  -- = (1/n^m) * n^{m-1} * ∑_{l=0}^{n-1} f_i(ω(i*n + l))
+  -- = (1/n) * ∑_{l=0}^{n-1} f_i(ω(i*n + l))
+  -- = blockAvg m n i (f_i) ω
+  --
+  -- The product distributes because each f_i depends only on j(i), and the
+  -- coordinates j(i) for different i are independent in the sum.
+
+  -- Step 1: For each j : Fin m → Fin n, contractability gives equal integrals
+  have h_each_j : ∀ j : Fin m → Fin n,
+      ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+      ∫ ω, (∏ i : Fin m, fs i (ω (blockInjection m n j i.val))) ∂μ := by
+    intro j
+    -- blockInjection is strictly monotone
+    have h_mono : StrictMono (blockInjection m n j) := blockInjection_strictMono m n hn j
+    -- Define k(i) = blockInjection m n j i for i : Fin m
+    let k : Fin m → ℕ := fun i => blockInjection m n j i.val
+    -- k is strictly monotone (restriction of strictly monotone function to Fin m)
+    have hk_mono : StrictMono k := by
+      intro i i' hii'
+      exact h_mono hii'
+    -- Apply contractability
+    exact integral_prod_reindex_of_contractable hContract fs hfs_meas hfs_bd hk_mono
+
+  -- Step 2: Since all integrals are equal, we can average over j
+  -- Let S = (Fin m → Fin n), the set of all choice functions
+  -- LHS = (1/|S|) * ∑_{j ∈ S} ∫ ∏ fᵢ(ωᵢ) = LHS (constant)
+  -- RHS = ∫ (1/|S|) * ∑_{j ∈ S} ∏ fᵢ(ω(ρⱼ(i))) = ∫ ∏ blockAvg_i
+
+  -- Step 3: Show that the averaged sum equals product of block averages
+  -- This is the key algebraic identity
+  -- TODO: Formalize the averaging argument showing
+  -- (1/n^m) * ∑_{j : Fin m → Fin n} ∏_i f_i(ω(i*n + j(i))) = ∏_i blockAvg m n i f_i ω
+  --
+  -- The proof uses independence of coordinates in the sum:
+  -- For each i, j(i) ranges over Fin n independently of other j(i').
+  -- So the sum factorizes as a product of sums.
+  sorry
 
 end Contractability
 
