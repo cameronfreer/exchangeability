@@ -24,7 +24,7 @@ import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure
-import Exchangeability.DeFinetti.ViaMartingale.CommonVersion
+-- import Exchangeability.DeFinetti.ViaMartingale.CommonVersion  -- Unused; lemmas not referenced
 import Exchangeability.DeFinetti.ViaMartingale.PairLawEquality
 import Exchangeability.DeFinetti.ViaMartingale.ShiftOperations
 import Exchangeability.DeFinetti.ViaMartingale.RevFiltration
@@ -34,7 +34,7 @@ import Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders
 import Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence
 import Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure
 import Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra
-import Exchangeability.DeFinetti.ViaMartingale.DropInfo
+-- import Exchangeability.DeFinetti.ViaMartingale.DropInfo  -- Unused; lemmas not referenced in code
 import Exchangeability.DeFinetti.ViaMartingale.Factorization
 import Exchangeability.DeFinetti.ViaMartingale.FiniteProduct
 import Exchangeability.Probability.MeasureKernels
