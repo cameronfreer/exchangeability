@@ -201,4 +201,114 @@ lemma blockInjection_disjoint_blocks (m n : ℕ) (j : Fin m → Fin n)
       _ ≤ k₁.val * n + (j k₁).val := h3
     omega
 
+/-! ### Shift-Invariance of Reindexing
+
+For mSI-sets, reindexing by blockInjection preserves membership because:
+1. For i ≥ m: blockInjection(i) = i + (m*n - m) (constant shift)
+2. mSI-sets are determined by the tail (coordinates ≥ any M)
+3. Therefore membership is preserved -/
+
+omit [MeasurableSpace α] in
+/-- Helper: shift^[k] ω at position n equals ω at position n + k. -/
+private lemma shift_iterate_apply' (k n : ℕ) (ω : Ω[α]) :
+    (shift^[k] ω) n = ω (n + k) := by
+  induction k generalizing n with
+  | zero => simp
+  | succ k ih =>
+    rw [Function.iterate_succ_apply', shift_apply, ih]
+    ring_nf
+
+omit [MeasurableSpace α] in
+/-- Helper: shift^[C] preimage of shift-invariant set is the set itself. -/
+private lemma shift_iterate_preimage_of_shiftInvariant (C : ℕ) (s : Set (Ω[α]))
+    (hs_shift : shift ⁻¹' s = s) :
+    shift^[C] ⁻¹' s = s := by
+  induction C with
+  | zero => simp
+  | succ k ih => rw [Function.iterate_succ', Set.preimage_comp, hs_shift, ih]
+
+/-- Reindexing by blockInjection preserves membership in shift-invariant sets.
+
+The key insight is that blockInjection is eventually a constant shift:
+for i ≥ m, blockInjection(i) = i + (m*n - m).
+
+For shift-invariant sets s (where shift⁻¹(s) = s), membership is determined by
+the eventual behavior of the sequence. Since blockInjection only permutes
+finitely many coordinates and then shifts, it preserves membership in s. -/
+lemma reindex_blockInjection_preimage_shiftInvariant {m n : ℕ} (hn : 0 < n)
+    (j : Fin m → Fin n) (s : Set (Ω[α]))
+    (hs : isShiftInvariant s) :
+    (fun ω => ω ∘ blockInjection m n j) ⁻¹' s = s := by
+  -- hs gives: MeasurableSet s and shift ⁻¹' s = s
+  obtain ⟨hs_meas, hs_shift⟩ := hs
+  ext ω
+  simp only [Set.mem_preimage]
+  -- Need: ω ∈ s ↔ (ω ∘ blockInjection m n j) ∈ s
+  --
+  -- Key observation: for i ≥ m, blockInjection(i) = i + (m*n - m)
+  -- So (ω ∘ blockInjection) agrees with shift^{m*n-m}(ω) on coordinates ≥ m.
+  -- By shift-invariance, ω ∈ s iff shift^{m*n-m}(ω) ∈ s.
+  -- By "tail property" of shift-invariant sets, agreeing on coordinates ≥ m suffices.
+  --
+  -- Let C = m * n - m (the shift amount for i ≥ m).
+  let C := m * n - m
+  -- Let ρ = blockInjection m n j
+  let ρ := blockInjection m n j
+  -- For i ≥ m: ρ(i) = i + C
+  have h_tail : ∀ i, m ≤ i → ρ i = i + C := fun i hi => blockInjection_apply_ge hi
+  -- By shift-invariance: ω ∈ s iff shift^C(ω) ∈ s
+  have h_shift_C : shift^[C] ⁻¹' s = s := shift_iterate_preimage_of_shiftInvariant C s hs_shift
+  have h_shift_iff : ω ∈ s ↔ shift^[C] ω ∈ s := by
+    rw [← Set.mem_preimage, h_shift_C]
+  -- By tail property: shift^C(ω) ∈ s iff (ω ∘ ρ) ∈ s
+  -- For this, we use that membership in shift-invariant sets is determined by
+  -- coordinates ≥ m (via applying shift^m and using shift-invariance).
+  --
+  -- Specifically: if two sequences agree on coordinates ≥ M, then applying shift^M
+  -- to both gives the same sequence starting from coordinate 0.
+  have h_tail_prop : shift^[C] ω ∈ s ↔ (ω ∘ ρ) ∈ s := by
+    -- Both shift^C(ω) and (ω ∘ ρ) when shifted by m give sequences that
+    -- eventually agree (in fact, agree everywhere starting from some point).
+    --
+    -- More directly: shift^m(shift^C(ω)) and shift^m(ω ∘ ρ) are the same sequence.
+    -- shift^m(shift^C(ω)) = shift^{m+C}(ω) has coordinate i equal to ω(i + m + C).
+    -- shift^m(ω ∘ ρ) has coordinate i equal to (ω ∘ ρ)(i + m) = ω(ρ(i + m)).
+    -- For i + m ≥ m (always true), ρ(i + m) = (i + m) + C = i + m + C.
+    -- So these are equal!
+    have h_shift_m_eq : shift^[m] (shift^[C] ω) = shift^[m] (ω ∘ ρ) := by
+      ext i
+      simp only [shift_iterate_apply', Function.comp_apply]
+      rw [h_tail (i + m) (Nat.le_add_left m i)]
+    -- By shift-invariance: x ∈ s iff shift^m(x) ∈ s
+    have h_shift_m_inv : shift^[m] ⁻¹' s = s := shift_iterate_preimage_of_shiftInvariant m s hs_shift
+    -- shift^C(ω) ∈ s iff shift^m(shift^C(ω)) ∈ s (by shift-invariance)
+    -- (ω ∘ ρ) ∈ s iff shift^m(ω ∘ ρ) ∈ s (by shift-invariance)
+    -- shift^m(shift^C(ω)) = shift^m(ω ∘ ρ) (proved above)
+    -- Therefore: shift^C(ω) ∈ s iff (ω ∘ ρ) ∈ s
+    constructor
+    · intro h
+      -- h : shift^[C] ω ∈ s
+      -- We want: ω ∘ ρ ∈ s
+      -- By h_shift_m_inv: shift^[m] (shift^[C] ω) ∈ s
+      have h1 : shift^[m] (shift^[C] ω) ∈ s := by
+        rw [← Set.mem_preimage, h_shift_m_inv]; exact h
+      -- By h_shift_m_eq: shift^[m] (ω ∘ ρ) ∈ s
+      have h2 : shift^[m] (ω ∘ ρ) ∈ s := h_shift_m_eq ▸ h1
+      -- By h_shift_m_inv: ω ∘ ρ ∈ s
+      rw [← Set.mem_preimage, h_shift_m_inv] at h2
+      exact h2
+    · intro h
+      -- h : ω ∘ ρ ∈ s
+      -- We want: shift^[C] ω ∈ s
+      -- By h_shift_m_inv: shift^[m] (ω ∘ ρ) ∈ s
+      have h1 : shift^[m] (ω ∘ ρ) ∈ s := by
+        rw [← Set.mem_preimage, h_shift_m_inv]; exact h
+      -- By h_shift_m_eq.symm: shift^[m] (shift^[C] ω) ∈ s
+      have h2 : shift^[m] (shift^[C] ω) ∈ s := h_shift_m_eq.symm ▸ h1
+      -- By h_shift_m_inv: shift^[C] ω ∈ s
+      rw [← Set.mem_preimage, h_shift_m_inv] at h2
+      exact h2
+  -- Combine: ω ∈ s ↔ shift^C(ω) ∈ s ↔ (ω ∘ ρ) ∈ s
+  rw [h_shift_iff, h_tail_prop]
+
 end Exchangeability.DeFinetti
