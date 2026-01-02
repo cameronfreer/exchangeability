@@ -4231,13 +4231,127 @@ lemma directing_measure_integral
           Total: < δ
           -/
 
-          -- Get M from hg 0 as witness (full proof would use Finset.sup over prefix)
-          obtain ⟨M0, hM0⟩ := hg 0 δ hδ
+          -- STEP A: Establish probability measure instance
+          haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
+
+          -- STEP B: Key uniform bounds
+          -- For disjoint sets g_i, at any point x at most one indicator is 1.
+          -- This gives summability bounds that are UNIFORM in m:
+          -- • ∑_i avg(1_{g_i})(ω) ≤ 1 (disjoint indicators)
+          -- • ∑_i ν_ω(g_i) ≤ 1 (probability measure)
+          -- • ∑_i ∫ |avg_i - ν_i| dμ ≤ 2 (triangle inequality)
+
+          -- The uniform bound allows choosing N BEFORE M
+          -- Since ∑_i ∫ (avg_i + ν_i) dμ ≤ 2 (uniform in m),
+          -- the tail ∑_{i≥N} ∫ (avg_i + ν_i) dμ → 0 as N → ∞, uniformly in m
+
+          -- STEP C: Choose N for tail bound, then M for prefix
+          -- For the general proof with N sets:
+          -- 1. Choose N such that ∑_{i≥N} ∫ (avg_i + ν_i) dμ < δ/2
+          -- 2. For i < N, use hg i with tolerance δ/(2N) → get M_i
+          -- 3. Take M = max(M_0, ..., M_{N-1})
+
+          -- Simplified: use N = 1 (first set only controls error)
+          have hδ2 : δ / 2 > 0 := by linarith
+          obtain ⟨M0, hM0⟩ := hg 0 (δ / 2) hδ2
+
           use M0
           intro m hm
 
-          -- Complete implementation requires formalizing the 5 steps above
-          -- Key mathlib lemmas: measure_iUnion, norm_tsum_le_tsum_norm, integral_tsum
+          -- STEP D: Decomposition via disjoint indicators
+          -- Key lemma: indicator_iUnion_tsum_of_pairwise_disjoint gives
+          --   1_{⋃g_i}(x) = ∑' i, 1_{g_i}(x)
+          --
+          -- For averages (linearity):
+          --   avg(1_{⋃g_i})(ω) = (1/m) ∑_k 1_{⋃g_i}(X_k ω)
+          --                    = (1/m) ∑_k ∑' i, 1_{g_i}(X_k ω)
+          --                    = ∑' i, (1/m) ∑_k 1_{g_i}(X_k ω)
+          --                    = ∑' i, avg(1_{g_i})(ω)
+          --
+          -- For measure (countable additivity):
+          --   ν_ω(⋃g_i) = ∑' i, ν_ω(g_i)
+
+          -- STEP E: Error bound via triangle inequality for tsum
+          -- |avg(1_U) - ν(U)| = |∑' (avg_i - ν_i)| ≤ ∑' |avg_i - ν_i|
+          -- (by norm_tsum_le_tsum_norm, given summability)
+
+          -- STEP F: Integrate and split into prefix + tail
+          -- ∫ |avg(1_U) - ν(U)| dμ ≤ ∫ ∑' |avg_i - ν_i| dμ
+          --                        = ∑' ∫ |avg_i - ν_i| dμ  (by integral_tsum)
+          --                        = ∑_{i<N} ∫ |err_i| + ∑_{i≥N} ∫ |err_i|
+          -- Prefix: < N · δ/(2N) = δ/2 (by hg with scaled tolerance)
+          -- Tail: ≤ ∑_{i≥N} ∫ (avg_i + ν_i) < δ/2 (by choice of N)
+          -- Total: < δ
+
+          -- IMPLEMENTATION: Define key quantities
+          -- U = ⋃ i, g i (the countable disjoint union)
+          let U := ⋃ i, g i
+
+          -- avg_U = average of indicator of U
+          let avg_U : Ω → ℝ := fun ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, U.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+
+          -- int_U = integral of indicator of U against ν
+          let int_U : Ω → ℝ := fun ω =>
+            ∫ x, U.indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+
+          -- avg_i = average of indicator of g i
+          let avg_g : ℕ → Ω → ℝ := fun i ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, (g i).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+
+          -- int_i = integral of indicator of g i against ν
+          let int_g : ℕ → Ω → ℝ := fun i ω =>
+            ∫ x, (g i).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+
+          -- Key decomposition: indicator of union = tsum of indicators (disjoint)
+          have h_ind_decomp : ∀ x, U.indicator (fun _ => (1:ℝ)) x = ∑' i, (g i).indicator (fun _ => (1:ℝ)) x := by
+            intro x
+            exact congrFun (Exchangeability.Probability.indicator_iUnion_tsum_of_pairwise_disjoint g hdisj) x
+
+          -- Measure decomposition: ν(U) = ∑' ν(g i)
+          have h_meas_decomp : ∀ ω, (ν ω) U = ∑' i, (ν ω) (g i) :=
+            fun ω => measure_iUnion (fun i j hij => hdisj hij) hgm
+
+          -- The goal simplifies to showing ∫ |avg_U - int_U| dμ < δ
+          -- This uses: avg_U = ∑' avg_g i and int_U = ∑' int_g i
+
+          -- TAIL TRUNCATION STRATEGY:
+          -- 1. Show ∑_i ∫ (avg_g i + int_g i) dμ ≤ 2 (uniform in m)
+          --    - avg bounds: ∑_i avg_g i ω ≤ 1 (disjoint indicators)
+          --    - int bounds: ∑_i int_g i ω = ν(U) ≤ 1 (prob measure)
+          -- 2. Choose N such that tail ∑_{i≥N} ∫ (avg_g i + int_g i) dμ < δ/2
+          -- 3. Use hg for prefix with δ/(2N) to get M_i, take M = max
+          -- 4. Combine via triangle inequality
+
+          /-
+          REMAINING PROOF STEPS (all technical, following the sketch above):
+
+          STEP 1: Uniform bound on averages (∀ ω, ∑' i, avg_g i ω ≤ 1)
+          - At each point x, at most one indicator is 1 (disjoint sets)
+          - avg_g i ω = (1/m) ∑_k 1_{g i}(X_k ω)
+          - ∑_i avg_g i ω = (1/m) ∑_k ∑_i 1_{g i}(X_k ω) ≤ (1/m) ∑_k 1 = 1
+
+          STEP 2: Uniform bound on integrals (∀ ω, ∑' i, int_g i ω ≤ 1)
+          - int_g i ω = ∫ 1_{g i} dν = (ν(g i)).toReal
+          - ∑' int_g i ω = (∑' ν(g i)).toReal = ν(U).toReal ≤ 1
+          - Uses: measure_iUnion, IsProbabilityMeasure
+
+          STEP 3: Error decomposition using triangle inequality for tsum
+          - |avg_U ω - int_U ω| = |∑'_i (avg_g i ω - int_g i ω)|
+          - ≤ ∑'_i |avg_g i ω - int_g i ω|  (by norm_tsum_le_tsum_norm)
+          - Summability follows from bounds in steps 1-2
+
+          STEP 4: Split into prefix + tail
+          - Choose N: tail ∑_{i≥N} ∫(avg_i + int_i) dμ < δ/2 (uniform in m)
+          - For i < N, use hg i with tolerance δ/(2N) → get M_i
+          - Take M = max(M_0, ..., M_{N-1})
+          - Prefix: ∑_{i<N} ∫|err_i| dμ < N · δ/(2N) = δ/2
+          - Tail: ∑_{i≥N} |err_i| ≤ ∑_{i≥N} (avg_i + int_i) < δ/2
+          - Total: < δ
+
+          Key lemmas: indicator_iUnion_tsum_of_pairwise_disjoint, measure_iUnion,
+          norm_tsum_le_tsum_norm, integral_tsum, Summable.sum_add_tsum_nat_add
+          -/
           sorry
 
       -- Bridge: Extract the fixed-ε' statement from L¹ convergence
