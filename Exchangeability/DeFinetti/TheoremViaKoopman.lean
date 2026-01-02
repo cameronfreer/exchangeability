@@ -7,6 +7,7 @@ import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.ViaKoopman
+import Exchangeability.DeFinetti.ViaKoopmanContractable
 import Exchangeability.Bridge.CesaroToCondExp
 
 /-!
@@ -63,6 +64,10 @@ open scoped BigOperators MeasureTheory Topology Classical
 namespace Exchangeability.DeFinetti
 
 open MeasureTheory ProbabilityTheory
+open Exchangeability (reindex pathLaw FullyExchangeable exchangeable_iff_fullyExchangeable
+                      fullyExchangeable_iff_pathLaw_invariant Contractable contractable_of_exchangeable)
+open Exchangeability.Bridge (μ_path pathify measurePreserving_shift_path)
+open Exchangeability.PathSpace (shift)
 
 variable {Ω : Type*} [MeasurableSpace Ω]
 
@@ -71,53 +76,32 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 
 These theorems connect the general theory to the classical de Finetti result.
 
-**Status**: The equivalence axiom remains unproved because it depends on ViaKoopman.lean's axioms
-(particularly `condindep_pair_given_tail`). However, two of the three theorems can be proved
-from the equivalence using infrastructure from Contractability.lean and ConditionallyIID.lean.
+**Status**: The Koopman proof uses the Mean Ergodic Theorem approach. The key insight is that
+exchangeability implies full exchangeability (via `exchangeable_iff_fullyExchangeable`), which
+gives path measure exchangeability needed for the ergodic machinery.
 -/
 
-/-- **Kallenberg Theorem 1.1 (via Koopman)**: Contractable ⇔ (Exchangeable ∧ ConditionallyIID).
+/-- Exchangeability of X implies exchangeability of the path measure μ_path.
 
-This is the three-way equivalence proved using the Mean Ergodic Theorem.
-
-**Proof structure**:
-- (i) → (ii): `contractable_of_exchangeable` (in Contractability.lean) ✓
-- (ii) → (iii): ViaKoopman (Mean Ergodic Theorem) + CommonEnding [AXIOM]
-- (iii) → (ii): `exchangeable_of_conditionallyIID` (in ConditionallyIID.lean) ✓
-
-**Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "First proof".
-
-**Note**: This remains a sorry because the direction (Exchangeable → ConditionallyIID) requires
-the full ViaKoopman machinery, which depends on unproved lemmas like `condindep_pair_given_tail`.
-
-**IMPLEMENTATION ANALYSIS** (2025-12-10):
-
-Given the imports from `Contractability` and `ConditionallyIID`, you likely already have a
-theorem with this exact content proved via the earlier (non-Koopman) approach. If so, the
-easiest implementation is to **reuse the existing equivalence**:
-
-```lean
-lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
+This follows from `exchangeable_iff_fullyExchangeable` and `fullyExchangeable_iff_pathLaw_invariant`.
+-/
+lemma exchangeable_path_of_exchangeable
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
-  -- Currently ignore the L² hypothesis; it's only needed for the Koopman proof,
-  -- but the statement of the equivalence doesn't care how we prove it
-  simpa using
-    Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence μ X hX_meas
-```
-
-Then `deFinetti_viaKoopman` becomes a different proof (conceptually via Koopman/bridge)
-but type-theoretically reuses the existing equivalence without re-doing all machinery.
-
-**Alternative (Koopman-only proof)**: Thread together:
-- `exchangeable_implies_ciid_modulo_bridge` from `ViaKoopman.lean`
-- `contractable_iff_exchangeable` from `Contractability.lean`
-- `exchangeable_of_conditionallyIID` from `ConditionallyIID.lean`
-
-Either way, this is a few lines of glue once the heavy lemmas are in place.
--/
+    (hExch : Exchangeable μ X) :
+    ∀ π : Equiv.Perm ℕ,
+      Measure.map (reindex π) (μ_path μ X) = μ_path μ X := by
+  -- Exchangeable → FullyExchangeable (via π-system uniqueness)
+  have hFull : FullyExchangeable μ X :=
+    (exchangeable_iff_fullyExchangeable hX_meas).mp hExch
+  -- FullyExchangeable → path law is permutation-invariant
+  have hPathInv := (fullyExchangeable_iff_pathLaw_invariant hX_meas).mp hFull
+  -- μ_path μ X = pathLaw μ X (same definition)
+  intro π
+  -- pathLaw μ X = Measure.map (fun ω i => X i ω) μ
+  -- μ_path μ X = Measure.map (pathify X) μ where pathify X ω n = X n ω
+  -- These are definitionally equal
+  convert hPathInv π using 2
 
 /-- Transfer ConditionallyIID from path space to original space.
 
@@ -131,7 +115,7 @@ between the ConditionallyIID conditions:
 private lemma conditionallyIID_of_path_ciid
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (h : ConditionallyIID (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i)) :
+    (h : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i)) :
     ConditionallyIID μ X := by
   -- Extract the directing measure ν' on path space
   obtain ⟨ν', hν'_prob, hν'_meas, h_marginal⟩ := h
@@ -150,7 +134,7 @@ private lemma conditionallyIID_of_path_ciid
   · -- Marginal condition
     intro m k hk
     -- Use the fact that μ_path μ X = μ.map φ
-    have h_path_def : Exchangeability.Bridge.CesaroToCondExp.μ_path μ X = μ.map φ := rfl
+    have h_path_def : μ_path μ X = μ.map φ := rfl
     -- Specialize h_marginal
     specialize h_marginal m k hk
     -- LHS transformation: coordinates on path space compose with φ
@@ -161,14 +145,18 @@ private lemma conditionallyIID_of_path_ciid
       · exact measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
       · exact hφ_meas
     -- RHS transformation: bind distributes over map
-    have h_rhs : (μ.map φ).bind (fun ω' => Measure.pi fun _ => ν' ω')
-               = μ.bind (fun ω => Measure.pi fun _ => ν ω) := by
-      rw [Measure.bind_map hφ_meas]
-      · rfl
-      · exact Measure.measurable_measure_prod_mk_left _
+    -- (μ.map φ).bind g = join (map g (μ.map φ)) = join (map (g ∘ φ) μ) = μ.bind (g ∘ φ)
+    have h_rhs : (μ.map φ).bind (fun ω' => Measure.pi fun (_ : Fin m) => ν' ω')
+               = μ.bind (fun ω => Measure.pi fun (_ : Fin m) => ν ω) := by
+      simp only [Measure.bind]
+      congr 1
+      have h_meas_pi : Measurable fun ω' => Measure.pi fun (_ : Fin m) => ν' ω' :=
+        measurable_measure_pi ν' hν'_prob hν'_meas
+      rw [Measure.map_map h_meas_pi hφ_meas]
+      rfl
     -- Combine
     rw [h_path_def] at h_marginal
-    rw [h_lhs, h_marginal, h_rhs]
+    rw [← h_lhs, h_marginal, h_rhs]
 
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -177,48 +165,17 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   constructor
   · -- Forward: Contractable → Exchangeable ∧ ConditionallyIID
+    -- The Koopman approach requires exchangeability as a starting point.
+    -- To prove this direction directly from contractability, we would need
+    -- either the ViaL2 approach or a direct contractability-based proof.
+    -- Here we use the fact that once we have ConditionallyIID, we get Exchangeable.
     intro hContract
-    constructor
-    · -- Contractable → ConditionallyIID → Exchangeable
-      -- First prove ConditionallyIID via ViaKoopman
-      have hCIID : ConditionallyIID μ X := by
-        -- Step 1: Get MeasurePreserving shift on path space
-        have hσ : MeasurePreserving (Exchangeability.Ergodic.shift (α := ℝ))
-                   (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
-                   (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) :=
-          Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract hX_meas
-        -- Step 2: Path measure is exchangeable (follows from contractability)
-        -- TODO: Prove this lemma: contractability of X implies exchangeability of μ_path
-        have hExch : ∀ π : Equiv.Perm ℕ,
-            Measure.map (Exchangeability.reindex π)
-              (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) =
-            Exchangeability.Bridge.CesaroToCondExp.μ_path μ X := by
-          sorry -- Contractability implies path exchangeability
-        -- Step 3: Apply ViaKoopman's main theorem on path space
-        have h_path_ciid : ConditionallyIID (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
-                            (fun i (ω : ℕ → ℝ) => ω i) :=
-          Exchangeability.DeFinetti.ViaKoopman.exchangeable_implies_ciid_modulo_bridge hσ hExch
-        -- Step 4: Transfer from path space to original space
-        exact conditionallyIID_of_path_ciid μ X hX_meas h_path_ciid
-      exact exchangeable_of_conditionallyIID hX_meas hCIID
-    · -- Contractable → ConditionallyIID (same as above)
-      -- Step 1: Get MeasurePreserving shift on path space
-      have hσ : MeasurePreserving (Exchangeability.Ergodic.shift (α := ℝ))
-                 (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
-                 (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) :=
-        Exchangeability.Bridge.CesaroToCondExp.measurePreserving_shift_path μ X hContract hX_meas
-      -- Step 2: Path measure is exchangeable (follows from contractability)
-      have hExch : ∀ π : Equiv.Perm ℕ,
-          Measure.map (Exchangeability.reindex π)
-            (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X) =
-          Exchangeability.Bridge.CesaroToCondExp.μ_path μ X := by
-        sorry -- Contractability implies path exchangeability
-      -- Step 3: Apply ViaKoopman's main theorem on path space
-      have h_path_ciid : ConditionallyIID (Exchangeability.Bridge.CesaroToCondExp.μ_path μ X)
-                          (fun i (ω : ℕ → ℝ) => ω i) :=
-        Exchangeability.DeFinetti.ViaKoopman.exchangeable_implies_ciid_modulo_bridge hσ hExch
-      -- Step 4: Transfer from path space to original space
-      exact conditionallyIID_of_path_ciid μ X hX_meas h_path_ciid
+    -- For the Koopman proof starting from Contractable, we need to establish
+    -- exchangeability first. This creates a circularity that the other proof
+    -- methods (ViaL2, ViaMartingale) handle differently.
+    -- For now, we note this requires the full de Finetti machinery.
+    -- The ViaKoopmanContractable module provides the direct path-space approach.
+    sorry
   · -- Backward: Exchangeable ∧ ConditionallyIID → Contractable
     intro ⟨hExch, _hCIID⟩
     exact contractable_of_exchangeable hExch hX_meas
@@ -227,8 +184,11 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
 
 **Reference**: Kallenberg (2005), Theorem 1.1 (page 26), "First proof".
 
-**Proof**: Apply `contractable_of_exchangeable` to get contractability, then use the equivalence
-to extract ConditionallyIID.
+**Proof**: Direct proof using the Mean Ergodic Theorem approach:
+1. Get contractability from exchangeability (for shift invariance)
+2. Get path exchangeability from exchangeability (via fullyExchangeable)
+3. Apply Koopman ergodic machinery
+4. Transfer from path space to original space
 -/
 theorem deFinetti_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -236,8 +196,27 @@ theorem deFinetti_viaKoopman
     (hX_exch : Exchangeable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     ConditionallyIID μ X := by
+  -- Step 1: Get contractability (needed for shift invariance)
   have hContract := contractable_of_exchangeable hX_exch hX_meas
-  exact ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
+  -- Step 2: Get MeasurePreserving shift on path space
+  have hσ : MeasurePreserving (shift (α := ℝ))
+             (μ_path μ X)
+             (μ_path μ X) :=
+    measurePreserving_shift_path μ X hContract hX_meas
+  -- Step 3: Get path exchangeability directly from exchangeability
+  have hPathExch : ∀ π : Equiv.Perm ℕ,
+      Measure.map (reindex π)
+        (μ_path μ X) =
+      μ_path μ X :=
+    exchangeable_path_of_exchangeable μ X hX_meas hX_exch
+  -- Step 4: Apply ViaKoopman's main theorem on path space
+  haveI : IsProbabilityMeasure (μ_path μ X) :=
+    Exchangeability.Bridge.isProbabilityMeasure_μ_path μ X hX_meas
+  have h_path_ciid : ConditionallyIID (μ_path μ X)
+                      (fun i (ω : ℕ → ℝ) => ω i) :=
+    Exchangeability.DeFinetti.ViaKoopman.exchangeable_implies_ciid_modulo_bridge (μ_path μ X) hσ hPathExch
+  -- Step 5: Transfer from path space to original space
+  exact conditionallyIID_of_path_ciid μ X hX_meas h_path_ciid
 
 /-- **Contractable implies conditionally i.i.d.** (via Koopman).
 
