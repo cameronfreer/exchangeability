@@ -4201,18 +4201,43 @@ lemma directing_measure_integral
           so we can choose N before choosing M.
           -/
 
-          -- The full proof uses tail truncation:
-          -- 1. ∑_i ∫ ν_i dμ ≤ 1 (uniform in m, by countable additivity + prob measure)
-          -- 2. Choose N such that tail < δ/2
-          -- 3. Use hg for finite prefix with scaled tolerance
-          -- 4. Combine bounds
+          /-
+          DETAILED PROOF SKETCH:
 
-          -- For now, we keep the sorry with the documented approach.
-          -- The key technical lemmas needed:
-          -- - integral_tsum for swapping ∫ and ∑'
-          -- - measure_iUnion for countable additivity
-          -- - Finset.sup for max of finite M_i
+          Step 1: Rewrite indicators
+          For pairwise disjoint g_i, at each point x, at most one 1_{g_i}(x) = 1.
+          Thus 1_{⋃ g_i}(x) = ∑' i, 1_{g_i}(x) (HasSum follows from at-most-one-nonzero).
 
+          Step 2: Rewrite averages and measures
+          avg(1_U)(ω) = (1/m) ∑_k 1_U(X_k(ω))
+                      = (1/m) ∑_k ∑'_i 1_{g_i}(X_k(ω))
+                      = ∑'_i (1/m) ∑_k 1_{g_i}(X_k(ω))  [finite sum commutes with tsum]
+                      = ∑'_i avg(1_{g_i})(ω)
+
+          ν_ω(U) = ∑'_i ν_ω(g_i)  [measure_iUnion for disjoint sets]
+
+          Step 3: Triangle inequality for tsum
+          |avg(1_U) - ν(U)| = |∑'_i (avg(1_{g_i}) - ν(g_i))|
+                            ≤ ∑'_i |avg(1_{g_i}) - ν(g_i)|  [norm_tsum_le_tsum_norm]
+
+          Step 4: Integrate and use integral_tsum
+          ∫|avg(1_U) - ν(U)|dμ ≤ ∫ ∑'_i |avg_i - ν_i| dμ
+                               = ∑'_i ∫|avg_i - ν_i| dμ  [integral_tsum, needs summability]
+
+          Step 5: Tail truncation
+          ∑'_i ∫|avg_i - ν_i| = ∑_{i<N} ∫|avg_i - ν_i| + ∑_{i≥N} ∫|avg_i - ν_i|
+          Tail: ≤ ∑_{i≥N} ∫(avg_i + ν_i) → 0 as N → ∞ (uniform in m)
+          Prefix: < N · δ/(2N) = δ/2 (using hg with scaled tolerance)
+          Total: < δ
+          -/
+
+          -- Get M from hg 0 as witness (full proof would use Finset.sup over prefix)
+          obtain ⟨M0, hM0⟩ := hg 0 δ hδ
+          use M0
+          intro m hm
+
+          -- Complete implementation requires formalizing the 5 steps above
+          -- Key mathlib lemmas: measure_iUnion, norm_tsum_le_tsum_norm, integral_tsum
           sorry
 
       -- Bridge: Extract the fixed-ε' statement from L¹ convergence
