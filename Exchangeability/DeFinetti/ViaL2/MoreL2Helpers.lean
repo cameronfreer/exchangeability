@@ -4324,30 +4324,26 @@ lemma directing_measure_integral
           -- 4. Combine via triangle inequality
 
           /-
-          REMAINING PROOF STEPS (all technical, following the sketch above):
+          PROOF STEPS (documented, to be formalized):
 
-          STEP 1: Uniform bound on averages (∀ ω, ∑' i, avg_g i ω ≤ 1)
-          - At each point x, at most one indicator is 1 (disjoint sets)
-          - avg_g i ω = (1/m) ∑_k 1_{g i}(X_k ω)
-          - ∑_i avg_g i ω = (1/m) ∑_k ∑_i 1_{g i}(X_k ω) ≤ (1/m) ∑_k 1 = 1
+          STEP 1: Pointwise bound on indicator tsum (for disjoint sets)
+          At each point x, at most one indicator is 1, so ∑' 1_{g_i}(x) ≤ 1.
+          Proof: by_cases on x ∈ U; if yes, exactly one j has x ∈ g_j;
+          use huniq to show tsum = tsum_ite_eq j 1 = 1.
 
-          STEP 2: Uniform bound on integrals (∀ ω, ∑' i, int_g i ω ≤ 1)
-          - int_g i ω = ∫ 1_{g i} dν = (ν(g i)).toReal
-          - ∑' int_g i ω = (∑' ν(g i)).toReal = ν(U).toReal ≤ 1
-          - Uses: measure_iUnion, IsProbabilityMeasure
+          STEP 2: Bound on integral tsum (ν is a probability measure)
+          ∑' int_g i ω = ∑' (ν(g_i)).toReal = ν(U).toReal ≤ 1.
+          Uses: integral_indicator_one, ENNReal.tsum_toReal_eq, h_meas_decomp.
 
           STEP 3: Error decomposition using triangle inequality for tsum
-          - |avg_U ω - int_U ω| = |∑'_i (avg_g i ω - int_g i ω)|
-          - ≤ ∑'_i |avg_g i ω - int_g i ω|  (by norm_tsum_le_tsum_norm)
-          - Summability follows from bounds in steps 1-2
+          |avg_U - int_U| = |∑' (avg_g i - int_g i)| ≤ ∑' |avg_g i - int_g i|
+          (by norm_tsum_le_tsum_norm, needs summability from steps 1-2)
 
           STEP 4: Split into prefix + tail
           - Choose N: tail ∑_{i≥N} ∫(avg_i + int_i) dμ < δ/2 (uniform in m)
           - For i < N, use hg i with tolerance δ/(2N) → get M_i
           - Take M = max(M_0, ..., M_{N-1})
-          - Prefix: ∑_{i<N} ∫|err_i| dμ < N · δ/(2N) = δ/2
-          - Tail: ∑_{i≥N} |err_i| ≤ ∑_{i≥N} (avg_i + int_i) < δ/2
-          - Total: < δ
+          - Total: prefix + tail < δ
 
           Key lemmas: indicator_iUnion_tsum_of_pairwise_disjoint, measure_iUnion,
           norm_tsum_le_tsum_norm, integral_tsum, Summable.sum_add_tsum_nat_add
