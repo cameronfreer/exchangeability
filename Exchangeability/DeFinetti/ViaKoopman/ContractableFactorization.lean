@@ -876,6 +876,91 @@ lemma product_blockAvg_L1_convergence
 
 end ProductConvergence
 
+/-! ### Path-Space Measure Invariance from Contractability
+
+The key insight (Kallenberg's first proof): finite-dimensional contractability upgrades to
+full path-space measure invariance via the π-λ theorem. This avoids the need for
+"conditional contractability" or disintegration. -/
+
+section MeasureInvariance
+
+variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+
+/-- Finite-dimensional contractability upgrades to path-space measure invariance.
+
+Given contractability (finite marginals on `{k(0), ..., k(m-1)}` equal marginals on `{0, ..., m-1}`),
+we show that the pushforward under reindexing by any strictly monotone ρ equals the original
+measure. This is the π-λ argument: finite marginal equality → full measure equality. -/
+lemma measure_map_reindexBlock_eq_of_contractable
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
+    {m n : ℕ} (hn : 0 < n) (j : Fin m → Fin n) :
+    Measure.map (reindexBlock m n j) μ = μ := by
+  -- Use measure_eq_of_fin_marginals_eq_prob: two probability measures are equal
+  -- if all finite marginals agree
+  have hReindex_meas : Measurable (reindexBlock (α := α) m n j) := measurable_reindexBlock m n j
+
+  -- The pushforward is still a probability measure
+  haveI : IsProbabilityMeasure (Measure.map (reindexBlock m n j) μ) :=
+    Measure.isProbabilityMeasure_map hReindex_meas.aemeasurable
+
+  apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α)
+
+  -- For each N, show finite marginals agree
+  intro N S _hS
+
+  -- Compute finite marginals via Measure.map_map
+  rw [Measure.map_map (measurable_prefixProj (α := α)) hReindex_meas]
+
+  -- prefixProj N ∘ reindexBlock m n j = fun ω i => ω (blockInjection m n j i.val)
+  have h_comp : prefixProj (α := α) N ∘ reindexBlock m n j =
+      fun ω (i : Fin N) => ω (blockInjection m n j i.val) := by
+    ext ω i
+    simp only [Function.comp_apply, prefixProj_apply, reindexBlock_apply]
+
+  rw [h_comp]
+
+  -- The key: use contractability with k := fun i : Fin N => blockInjection m n j i.val
+  -- This k is strictly monotone since blockInjection is strictly monotone
+  have hk_mono : StrictMono (fun i : Fin N => blockInjection m n j i.val) := by
+    intro i₁ i₂ hi
+    exact blockInjection_strictMono m n hn j hi
+
+  -- Apply contractability
+  have hMarg := hContract N (fun i : Fin N => blockInjection m n j i.val) hk_mono
+
+  -- hMarg says: map (fun ω i => ω (blockInjection m n j i.val)) μ = map (fun ω i => ω i.val) μ
+  -- The RHS is exactly map (prefixProj N) μ, so we're done
+  calc Measure.map (fun ω (i : Fin N) => ω (blockInjection m n j i.val)) μ S
+    _ = Measure.map (fun ω (i : Fin N) => ω i.val) μ S := by rw [hMarg]
+    _ = Measure.map (prefixProj (α := α) N) μ S := rfl
+
+/-- Set integral equality from measure invariance and set invariance.
+
+If the measure is invariant under reindexing (μ = μ ∘ reindexBlock⁻¹) and the set is invariant
+under reindexing (s = reindexBlock⁻¹(s)), then ∫_s f ∘ reindexBlock = ∫_s f.
+
+This is the key lemma that replaces "conditional contractability". -/
+lemma setIntegral_comp_reindexBlock_eq
+    (hμ : Measure.map (reindexBlock (α := α) m n j) μ = μ)
+    {s : Set (Ω[α])} (hs_meas : MeasurableSet s)
+    (hs_inv : reindexBlock m n j ⁻¹' s = s)
+    {f : Ω[α] → ℝ} (hf_meas : AEMeasurable f μ) :
+    ∫ ω in s, f (reindexBlock m n j ω) ∂μ = ∫ ω in s, f ω ∂μ := by
+  -- Key idea:
+  -- ∫_s f ∘ T dμ = ∫_{T⁻¹(s)} f ∘ T dμ   (since T⁻¹(s) = s)
+  --              = ∫_s f d(μ ∘ T⁻¹)      (change of variables via setIntegral_map_preimage)
+  --              = ∫_s f dμ              (since μ ∘ T⁻¹ = μ)
+
+  have hT_meas : Measurable (reindexBlock (α := α) m n j) := measurable_reindexBlock m n j
+
+  -- Use set invariance and apply setIntegral_map_preimage
+  calc ∫ ω in s, f (reindexBlock m n j ω) ∂μ
+    _ = ∫ ω in reindexBlock m n j ⁻¹' s, f (reindexBlock m n j ω) ∂μ := by rw [hs_inv]
+    _ = ∫ ω in s, f ω ∂μ := setIntegral_map_preimage (reindexBlock m n j) hT_meas hμ f s hs_meas hf_meas
+
+end MeasureInvariance
+
 /-! ### Kernel Independence from Contractability
 
 The main result: for contractable measures, the product factorization of conditional expectations
@@ -1073,36 +1158,146 @@ theorem condexp_product_factorization_contractable
       --
       -- The full averaging argument then gives ∫_s f = ∫_s blockAvgProd n.
 
-      -- **Proof outline (admitted):**
+      -- **Proof using π-λ upgraded measure invariance (Kallenberg's first proof)**
       --
-      -- This requires "conditional contractability": for mSI-measurable s,
-      -- the set-restricted integrals are preserved under contractable reindexing.
-      --
-      -- The mathematical argument is:
-      -- 1. For each j : Fin m → Fin (n+1), we need: ∫_s f = ∫_s (f ∘ T_j)
-      --    where T_j(ω) = ω ∘ blockInjection m (n+1) j.
-      --
-      -- 2. Key facts:
-      --    (a) T_j⁻¹(s) = s for mSI s (by reindex_blockInjection_preimage_shiftInvariant)
-      --    (b) For full integrals: ∫ f = ∫ (f ∘ T_j) (by contractability)
-      --
-      -- 3. For set integrals, use conditional expectation:
-      --    ∫_s f = ∫_s CE[f | mSI]  (tower property)
-      --
-      -- 4. Conditional contractability: CE[f | mSI] = CE[f ∘ T_j | mSI] a.e.
-      --    This follows because:
-      --    - μ is contractable (finite marginals are equal)
-      --    - mSI is a "tail" σ-algebra (doesn't distinguish finite coordinates)
-      --    - By disintegration, conditional measures μ_ξ inherit contractability
-      --
-      -- 5. Therefore: ∫_s f = ∫_s CE[f | mSI] = ∫_s CE[f ∘ T_j | mSI] = ∫_s (f ∘ T_j)
-      --
-      -- 6. Averaging over all j gives: ∫_s f = ∫_s blockAvgProd n
-      --    (same algebraic argument as integral_prod_eq_integral_blockAvg)
-      --
-      -- The formalization requires conditional contractability (disintegration over mSI),
-      -- which is beyond current infrastructure.
-      sorry
+      -- The key insight: we don't need "conditional contractability".
+      -- Instead, we use:
+      -- 1. μ is invariant under reindexBlock (from measure_map_reindexBlock_eq_of_contractable)
+      -- 2. s is invariant under reindexBlock (from reindex_blockInjection_preimage_shiftInvariant)
+      -- 3. These combine via setIntegral_comp_reindexBlock_eq to give set integral equality
+
+      -- Step 1: For each j : Fin m → Fin (n+1), get the invariance properties
+      have hn1_pos : 0 < n + 1 := Nat.succ_pos n
+
+      have h_each_j_setIntegral : ∀ j : Fin m → Fin (n + 1),
+          ∫ ω in s, f ω ∂μ = ∫ ω in s, f (reindexBlock m (n + 1) j ω) ∂μ := by
+        intro j
+        -- Measure invariance from π-λ upgrade
+        have hμ_inv : Measure.map (reindexBlock m (n + 1) j) μ = μ :=
+          measure_map_reindexBlock_eq_of_contractable hContract hn1_pos j
+        -- Set invariance for mSI sets
+        -- Note: reindexBlock m n j = fun ω => ω ∘ blockInjection m n j
+        have h_preimage_eq : reindexBlock m (n + 1) j ⁻¹' s =
+            (fun ω => ω ∘ blockInjection m (n + 1) j) ⁻¹' s := rfl
+        have hs_reindex_inv : reindexBlock m (n + 1) j ⁻¹' s = s := by
+          rw [h_preimage_eq]
+          exact reindex_blockInjection_preimage_shiftInvariant hn1_pos j s hs_inv
+        -- f is measurable
+        have hf_meas : Measurable f := Finset.measurable_prod _ (fun i _ =>
+          (hfs_meas i).comp (measurable_pi_apply _))
+        -- Apply set integral equality
+        -- hs_inv : isShiftInvariant s, so hs_inv.1 : MeasurableSet s
+        exact (setIntegral_comp_reindexBlock_eq hμ_inv hs_inv.1
+          hs_reindex_inv hf_meas.aemeasurable).symm
+
+      -- Step 2: The algebraic identity (same as in integral_prod_eq_integral_blockAvg)
+      -- blockAvgProd n ω = (1/(n+1)^m) * ∑_j ∏_i fs_i(ω(i*(n+1) + j(i)))
+      have h_prod_blockAvg_eq : ∀ ω, blockAvgProd n ω =
+          (1 / ((n + 1) : ℝ)^m) * ∑ j : Fin m → Fin (n + 1),
+            ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) := by
+        intro ω
+        simp only [blockAvgProd]
+        simp_rw [blockAvg_pos_n hn1_pos]
+        -- Normalize ↑(n + 1) to ↑n + 1 for consistency
+        simp only [Nat.cast_add, Nat.cast_one]
+        have h_factor : ∏ i : Fin m, (1 / ((n : ℝ) + 1)) *
+            (Finset.range (n + 1)).sum (fun k => fs i (ω (i.val * (n + 1) + k))) =
+            (1 / ((n : ℝ) + 1))^m * ∏ i : Fin m,
+              (Finset.range (n + 1)).sum (fun k => fs i (ω (i.val * (n + 1) + k))) := by
+          rw [Finset.prod_mul_distrib]
+          congr 1
+          rw [Finset.prod_const, Finset.card_fin]
+        rw [h_factor]
+        have h_range_to_fin : ∀ i : Fin m,
+            (Finset.range (n + 1)).sum (fun k => fs i (ω (i.val * (n + 1) + k))) =
+            ∑ k : Fin (n + 1), fs i (ω (i.val * (n + 1) + k.val)) := by
+          intro i
+          conv_lhs => rw [← Fin.sum_univ_eq_sum_range (fun k => fs i (ω (i.val * (n + 1) + k))) (n + 1)]
+        simp_rw [h_range_to_fin]
+        rw [Fintype.prod_sum]
+        congr 1
+        rw [one_div, one_div, inv_pow]
+
+      -- Step 3: Combine using averaging argument
+      -- ∫_s f = ∫_s f ∘ T_j for each j (by h_each_j_setIntegral)
+      -- Sum over j and average: ∫_s f = (1/N) * ∑_j ∫_s (f ∘ T_j)
+      -- Swap sum and integral (finite sum): = ∫_s [(1/N) * ∑_j (f ∘ T_j)]
+      -- By algebraic identity: = ∫_s blockAvgProd n
+
+      simp_rw [h_prod_blockAvg_eq]
+
+      -- Get bound for integrability
+      choose Cs hCs using hfs_bd
+      have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
+      let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
+      have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
+        (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
+      have hC_bd : ∀ i x, |fs i x| ≤ C := by
+        intro i x
+        have h1 : |fs i x| ≤ Cs i := hCs i x
+        have h2 : Cs i ≤ |Cs i| := le_abs_self _
+        have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
+          Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+        linarith
+
+      -- The RHS simplifies to the same as LHS
+      -- ∫_s (1/(n+1)^m * ∑_j ...) = (1/(n+1)^m) * ∫_s (∑_j ...) = (1/(n+1)^m) * ∑_j ∫_s ...
+      -- Each ∫_s ... = ∫_s f by h_each_j_setIntegral
+      -- So RHS = (1/(n+1)^m) * (n+1)^m * ∫_s f = ∫_s f = LHS
+
+      -- Convert to simpler form
+      have h_rhs_eq : ∫ ω in s, (1 / ((n + 1) : ℝ)^m) * ∑ j : Fin m → Fin (n + 1),
+            ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) ∂μ =
+          (1 / ((n + 1) : ℝ)^m) * ∫ ω in s, ∑ j : Fin m → Fin (n + 1),
+            ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) ∂μ := by
+        rw [integral_mul_left]
+
+      rw [h_rhs_eq]
+
+      -- Swap finite sum and integral (integrability check below)
+      rw [integral_finset_sum Finset.univ]
+      · -- Now: ∫_s f = (1/(n+1)^m) * ∑_j ∫_s ∏_i fs_i(ω(i*(n+1) + j(i)))
+        -- Use h_each_j_setIntegral and blockInjection_val_lt
+        have h_each_term : ∀ j : Fin m → Fin (n + 1),
+            ∫ ω in s, ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) ∂μ =
+            ∫ ω in s, f ω ∂μ := by
+          intro j
+          rw [h_each_j_setIntegral j]
+          -- The integrands match because reindexBlock applies blockInjection
+          congr 1
+          ext ω
+          apply Finset.prod_congr rfl
+          intro i _
+          simp only [reindexBlock_apply, blockInjection_val_lt]
+
+        rw [Finset.sum_congr rfl (fun j _ => h_each_term j)]
+        rw [Finset.sum_const, Finset.card_univ]
+        have h_card : Fintype.card (Fin m → Fin (n + 1)) = (n + 1)^m := by
+          simp [Fintype.card_fun, Fintype.card_fin]
+        rw [h_card, nsmul_eq_mul]
+
+        -- Goal: ∫_s f = (1/(n+1)^m) * ((n+1)^m * ∫_s f)
+        have hn1_ne_zero : ((n : ℝ) + 1) ≠ 0 := by positivity
+        have hn1_pow_ne_zero : ((n : ℝ) + 1)^m ≠ 0 := pow_ne_zero m hn1_ne_zero
+        -- Normalize coercions
+        simp only [Nat.cast_add, Nat.cast_one, Nat.cast_pow]
+        field_simp
+
+      -- Integrability of each term in the sum
+      intro j _
+      let F : Ω[α] → ℝ := fun ω => ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val))
+      have h_meas : Measurable F :=
+        Finset.measurable_prod _ (fun i _ => (hfs_meas i).comp (measurable_pi_apply _))
+      apply Integrable.integrableOn
+      refine Integrable.of_bound h_meas.aestronglyMeasurable (C^(Fintype.card (Fin m))) ?_
+      filter_upwards with ω
+      rw [Real.norm_eq_abs]
+      show |F ω| ≤ _
+      simp only [F]
+      rw [Finset.abs_prod]
+      calc ∏ i : Fin m, |fs i (ω (i.val * (n + 1) + (j i).val))|
+        _ ≤ ∏ _i : Fin m, C := Finset.prod_le_prod (fun i _ => abs_nonneg _) (fun i _ => hC_bd i _)
+        _ = C^(Fintype.card (Fin m)) := by rw [Finset.prod_const, Finset.card_univ]
 
     -- **Step 2**: The block averages converge to g in L¹
     have h_L1_conv := product_blockAvg_L1_convergence hσ fs hfs_meas hfs_bd
