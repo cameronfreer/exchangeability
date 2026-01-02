@@ -1055,26 +1055,53 @@ theorem condexp_product_factorization_contractable
     have h_setIntegral_eq_blockAvg : ∀ n : ℕ,
         ∫ ω in s, f ω ∂μ = ∫ ω in s, blockAvgProd n ω ∂μ := by
       intro n
-      -- This follows the same structure as integral_prod_eq_integral_blockAvg,
+      -- The proof follows the same structure as integral_prod_eq_integral_blockAvg,
       -- adapted for set integrals on mSI-sets.
       --
-      -- Key insight: For mSI-sets s, reindexing by blockInjection preserves s:
-      --   (fun ω => ω ∘ blockInjection m (n+1) j)⁻¹ s = s
-      -- by reindex_blockInjection_preimage_shiftInvariant.
+      -- Key insight: For mSI-sets s, the conditional expectation CE[f | mSI] determines
+      -- the set integral: ∫_s f = ∫_s CE[f | mSI]. By conditional contractability
+      -- (contractability of conditional measures μ_ξ for a.e. ξ in mSI-space),
+      -- CE[f | mSI] = CE[f ∘ T_j | mSI] where T_j is reindexing by blockInjection.
       --
-      -- The proof follows integral_prod_eq_integral_blockAvg with the key
-      -- additional fact that mSI-sets are preserved under block injection.
+      -- The mathematical argument:
+      -- 1. For mSI s: T_j⁻¹(s) = s (by reindex_blockInjection_preimage_shiftInvariant)
+      -- 2. For mSI-measurable h: h ∘ T_j = h (pointwise, from step 1 for indicators)
+      -- 3. For mSI 1_s: 1_s ∘ T_j = 1_s, so ∫_s (f ∘ T_j) = ∫ 1_s · (f ∘ T_j)
+      --                = ∫ (1_s ∘ T_j) · (f ∘ T_j) = ∫ (1_s · f) ∘ T_j
+      -- 4. By conditional contractability: CE[f | mSI] = CE[f ∘ T_j | mSI] a.e.
+      -- 5. Therefore: ∫_s f = ∫_s CE[f | mSI] = ∫_s CE[f ∘ T_j | mSI] = ∫_s (f ∘ T_j)
       --
-      -- Step 1: For each j : Fin m → Fin (n+1), contractability + mSI-invariance gives:
-      --   ∫_s ∏ fᵢ(ωᵢ) = ∫_s ∏ fᵢ(ω(blockInjection(i)))
+      -- The full averaging argument then gives ∫_s f = ∫_s blockAvgProd n.
+
+      -- **Proof outline (admitted):**
       --
-      -- Step 2: Averaging over all j:
-      --   ∫_s ∏ fᵢ(ωᵢ) = (1/n^m) * ∑_j ∫_s ∏ fᵢ(ω(blockInjection(i)))
-      --                = ∫_s (1/n^m) * ∑_j ∏ fᵢ(ω(blockInjection(i)))  (Fubini)
-      --                = ∫_s ∏ blockAvg_i  (algebraic identity)
+      -- This requires "conditional contractability": for mSI-measurable s,
+      -- the set-restricted integrals are preserved under contractable reindexing.
       --
-      -- The technical details mirror integral_prod_eq_integral_blockAvg but with
-      -- set-restricted integrals and the mSI-set preimage invariance.
+      -- The mathematical argument is:
+      -- 1. For each j : Fin m → Fin (n+1), we need: ∫_s f = ∫_s (f ∘ T_j)
+      --    where T_j(ω) = ω ∘ blockInjection m (n+1) j.
+      --
+      -- 2. Key facts:
+      --    (a) T_j⁻¹(s) = s for mSI s (by reindex_blockInjection_preimage_shiftInvariant)
+      --    (b) For full integrals: ∫ f = ∫ (f ∘ T_j) (by contractability)
+      --
+      -- 3. For set integrals, use conditional expectation:
+      --    ∫_s f = ∫_s CE[f | mSI]  (tower property)
+      --
+      -- 4. Conditional contractability: CE[f | mSI] = CE[f ∘ T_j | mSI] a.e.
+      --    This follows because:
+      --    - μ is contractable (finite marginals are equal)
+      --    - mSI is a "tail" σ-algebra (doesn't distinguish finite coordinates)
+      --    - By disintegration, conditional measures μ_ξ inherit contractability
+      --
+      -- 5. Therefore: ∫_s f = ∫_s CE[f | mSI] = ∫_s CE[f ∘ T_j | mSI] = ∫_s (f ∘ T_j)
+      --
+      -- 6. Averaging over all j gives: ∫_s f = ∫_s blockAvgProd n
+      --    (same algebraic argument as integral_prod_eq_integral_blockAvg)
+      --
+      -- The formalization requires conditional contractability (disintegration over mSI),
+      -- which is beyond current infrastructure.
       sorry
 
     -- **Step 2**: The block averages converge to g in L¹
