@@ -8,6 +8,7 @@ import Exchangeability.Probability.CondExp
 import Exchangeability.DeFinetti.ViaMartingale.ShiftOperations
 import Exchangeability.DeFinetti.ViaMartingale.FutureFiltration
 import Exchangeability.DeFinetti.ViaMartingale.FutureRectangles
+import Exchangeability.DeFinetti.ViaMartingale.KallenbergChain
 
 /-!
 # Conditional Expectation Convergence from Contractability
@@ -68,7 +69,7 @@ lemma condexp_convergence
   -- Simplify: futureFiltration X m = MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance
   simpa [futureFiltration] using h
 
-/-- Conditional expectations of indicators are equal on the tail σ-algebra.
+/-- Conditional expectations of indicators are equal on the tail σ-algebra (tower proof).
 
 For any contractable process X and measurable set B,
 ```
@@ -76,8 +77,11 @@ P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]
 ```
 
 **Proof:** Uses `condexp_convergence` at level m, then applies tower property
-since tailSigma ≤ futureFiltration m. -/
-lemma extreme_members_equal_on_tail
+since tailSigma ≤ futureFiltration m.
+
+This is an alternative proof using the tower property. See `extreme_members_equal_on_tail`
+for the Kallenberg-style proof using reverse martingale convergence. -/
+lemma extreme_members_equal_on_tail_via_tower
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α}
     (hX : Contractable μ X)
@@ -110,6 +114,70 @@ lemma extreme_members_equal_on_tail
 
   -- assemble the equalities: μ[f_m|tail] = μ[μ[f_m|fut]|tail] = μ[μ[f_0|fut]|tail] = μ[f_0|tail]
   exact (h_tower f_m).symm.trans (h_cond_on_tail.trans (h_tower f_0))
+
+/-- Conditional expectations of indicators are equal on the tail σ-algebra.
+
+For any contractable process X and measurable set B,
+```
+P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]
+```
+
+**Proof (Kallenberg route):**
+1. By `condExp_indicator_revFiltration_eq_tail`, conditioning on `revFiltration X (m+1)`
+   equals conditioning on `tailSigma X` (via reverse martingale convergence).
+2. By `condexp_convergence`, both indicators have equal conditional expectation
+   given `futureFiltration X m = revFiltration X (m+1)`.
+3. Combine to get equality on the tail.
+
+This is the Kallenberg-style proof using the chain lemma and reverse martingale
+convergence. See `extreme_members_equal_on_tail_via_tower` for an alternative
+proof using the tower property. -/
+lemma extreme_members_equal_on_tail
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → α}
+    (hX : Contractable μ X)
+    (hX_meas : ∀ n, Measurable (X n))
+    (m : ℕ) (B : Set α) (hB : MeasurableSet B) :
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
+      =ᵐ[μ]
+    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
+  -- Use preimage formulation to match KallenbergChain API
+  have h_preimage_m : Set.indicator B (fun _ => (1 : ℝ)) ∘ X m =
+      Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) := by
+    ext ω
+    simp only [Function.comp_apply, Set.indicator]
+    congr 1
+  have h_preimage_0 : Set.indicator B (fun _ => (1 : ℝ)) ∘ X 0 =
+      Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) := by
+    ext ω
+    simp only [Function.comp_apply, Set.indicator]
+    congr 1
+
+  rw [h_preimage_m, h_preimage_0]
+
+  -- Step 1: CE(X_m | rev (m+1)) = CE(X_m | tail) by Kallenberg chain + convergence
+  -- condExp_indicator_revFiltration_eq_tail requires k < m', so use k=m, m'=m+1
+  have h_m_to_tail : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
+      =ᵐ[μ] μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | tailSigma X] :=
+    condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.lt_succ_self m) hB
+
+  -- Step 2: CE(X_0 | rev (m+1)) = CE(X_0 | tail) by Kallenberg chain + convergence
+  -- For this we need 0 < m+1, which is always true
+  have h_0_to_tail : μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
+      =ᵐ[μ] μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | tailSigma X] :=
+    condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.zero_lt_succ m) hB
+
+  -- Step 3: CE(X_m | rev (m+1)) = CE(X_0 | rev (m+1)) by contractability
+  -- Note: revFiltration X (m+1) = futureFiltration X m
+  have h_eq_at_fut : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
+      =ᵐ[μ] μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)] := by
+    -- Use condexp_convergence, noting futureFiltration X m = revFiltration X (m+1)
+    have h := condexp_convergence hX hX_meas 0 m (Nat.zero_le m) B hB
+    simp only [futureFiltration_eq_rev_succ] at h
+    convert h using 2
+
+  -- Combine: CE(X_m | tail) = CE(X_m | rev(m+1)) = CE(X_0 | rev(m+1)) = CE(X_0 | tail)
+  exact h_m_to_tail.symm.trans (h_eq_at_fut.trans h_0_to_tail)
 
 
 section reverse_martingale
