@@ -6,6 +6,7 @@ Authors: Cameron Freer
 import Exchangeability.Probability.CondExpBasic
 import Exchangeability.Probability.CondProb
 import Exchangeability.Probability.IntegrationHelpers
+import ForMathlib.MeasureTheory.Measure.TrimInstances
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional
 import Mathlib.Probability.Martingale.Basic
@@ -302,28 +303,13 @@ with sub-σ-algebras, working around Lean 4 typeclass inference issues. -/
 
 When working with conditional expectations on sub-σ-algebras, we need `SigmaFinite (μ.trim hm)`.
 For probability measures (or finite measures), this follows from showing the trimmed measure
-is still finite. -/
+is still finite.
 
-/-- Helper lemma: Trimmed measure is finite when the original measure is finite. -/
-lemma isFiniteMeasure_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
-    (μ : Measure Ω) [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
-    IsFiniteMeasure (μ.trim hm) := by
-  classical
-  -- univ is m-measurable, so trim agrees with μ on univ
-  have hU : (μ.trim hm) Set.univ = μ Set.univ := by
-    rw [trim_measurableSet_eq hm MeasurableSet.univ]
-  -- Now measure_univ_lt_top comes from [IsFiniteMeasure μ]
-  refine ⟨?_⟩
-  simp [hU, measure_lt_top]
+These lemmas are now in `ForMathlib.MeasureTheory.Measure.TrimInstances` and re-exported here
+for backward compatibility. -/
 
-/-- Helper lemma: Trimmed measure is sigma-finite when the original measure is finite. -/
-lemma sigmaFinite_trim {Ω : Type*} {m₀ : MeasurableSpace Ω}
-    (μ : Measure Ω) [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
-    SigmaFinite (μ.trim hm) := by
-  haveI := isFiniteMeasure_trim μ hm
-  infer_instance
+-- Re-export from ForMathlib for backward compatibility
+export MeasureTheory.Measure (isFiniteMeasure_trim sigmaFinite_trim)
 
 /-! ### Stable conditional expectation wrapper
 

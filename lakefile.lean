@@ -13,6 +13,9 @@ require mathlib from git
 -- require LeanDepViz from git
 --   "https://github.com/cameronfreer/LeanDepViz.git" @ "main"
 
+lean_lib «ForMathlib» where
+  -- Lemmas intended for upstream contribution to mathlib
+
 lean_lib «Exchangeability» where
   -- add library configuration options here
 
