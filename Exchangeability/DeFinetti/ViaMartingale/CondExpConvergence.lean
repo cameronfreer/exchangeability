@@ -141,43 +141,19 @@ lemma extreme_members_equal_on_tail
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X m) | tailSigma X]
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
-  -- Use preimage formulation to match KallenbergChain API
-  have h_preimage_m : Set.indicator B (fun _ => (1 : ℝ)) ∘ X m =
-      Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) := by
-    ext ω
-    simp only [Function.comp_apply, Set.indicator]
-    congr 1
-  have h_preimage_0 : Set.indicator B (fun _ => (1 : ℝ)) ∘ X 0 =
-      Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) := by
-    ext ω
-    simp only [Function.comp_apply, Set.indicator]
-    congr 1
-
-  rw [h_preimage_m, h_preimage_0]
-
-  -- Step 1: CE(X_m | rev (m+1)) = CE(X_m | tail) by Kallenberg chain + convergence
-  -- condExp_indicator_revFiltration_eq_tail requires k < m', so use k=m, m'=m+1
-  have h_m_to_tail : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
-      =ᵐ[μ] μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | tailSigma X] :=
-    condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.lt_succ_self m) hB
-
-  -- Step 2: CE(X_0 | rev (m+1)) = CE(X_0 | tail) by Kallenberg chain + convergence
-  -- For this we need 0 < m+1, which is always true
-  have h_0_to_tail : μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
-      =ᵐ[μ] μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | tailSigma X] :=
-    condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.zero_lt_succ m) hB
-
-  -- Step 3: CE(X_m | rev (m+1)) = CE(X_0 | rev (m+1)) by contractability
-  -- Note: revFiltration X (m+1) = futureFiltration X m
-  have h_eq_at_fut : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
+  -- Preimage formulation to match KallenbergChain API
+  have h_pre : ∀ n, Set.indicator B (fun _ => (1 : ℝ)) ∘ X n =
+      Set.indicator (X n ⁻¹' B) (fun _ => (1 : ℝ)) := fun n => by
+    ext ω; simp only [Function.comp_apply, Set.indicator]; congr 1
+  simp only [h_pre]
+  -- CE(X_k | rev (m+1)) = CE(X_k | tail) via Kallenberg chain + convergence
+  have h_m := condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.lt_succ_self m) hB
+  have h_0 := condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.zero_lt_succ m) hB
+  -- CE(X_m | rev (m+1)) = CE(X_0 | rev (m+1)) via contractability
+  have h_eq : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
       =ᵐ[μ] μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)] := by
-    -- Use condexp_convergence, noting futureFiltration X m = revFiltration X (m+1)
-    have h := condexp_convergence hX hX_meas 0 m (Nat.zero_le m) B hB
-    simp only [futureFiltration_eq_rev_succ] at h
-    convert h using 2
-
-  -- Combine: CE(X_m | tail) = CE(X_m | rev(m+1)) = CE(X_0 | rev(m+1)) = CE(X_0 | tail)
-  exact h_m_to_tail.symm.trans (h_eq_at_fut.trans h_0_to_tail)
+    convert condexp_convergence hX hX_meas 0 m (Nat.zero_le m) B hB using 2
+  exact h_m.symm.trans (h_eq.trans h_0)
 
 
 section reverse_martingale

@@ -324,57 +324,24 @@ lemma condExp_indicator_revFiltration_eq_tail
     μ[Set.indicator (X k ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X m]
       =ᵐ[μ]
     μ[Set.indicator (X k ⁻¹' B) (fun _ => (1 : ℝ)) | tailSigma X] := by
-  set φ : Ω → ℝ := Set.indicator (X k ⁻¹' B) (fun _ => (1 : ℝ)) with hφ_def
+  set φ : Ω → ℝ := Set.indicator (X k ⁻¹' B) (fun _ => (1 : ℝ))
   set f := fun n => μ[φ | revFiltration X n]
-
-  -- φ is integrable
-  have hφ_int : Integrable φ μ := Integrable.indicator (integrable_const 1) ((hX k) hB)
-
-  -- The filtration is antitone
-  have h_anti : Antitone (fun n => revFiltration X n) := revFiltration_antitone X
-  have h_le : ∀ n, revFiltration X n ≤ (inferInstance : MeasurableSpace Ω) := revFiltration_le X hX
-
-  -- By reverse martingale convergence: f n → μ[φ | ⨅ n, revFiltration X n] a.e.
-  have h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => f n ω) atTop (𝓝 (μ[φ | ⨅ n, revFiltration X n] ω)) :=
-    Exchangeability.Probability.condExp_tendsto_iInf h_anti h_le φ hφ_int
-
-  -- The infimum is tailSigma X
-  have h_iInf_eq : (⨅ n, revFiltration X n) = tailSigma X := rfl
-
-  -- Key: for n ≥ m, f n =ᵐ f m (the sequence is eventually constant)
+  have hφ_int : Integrable φ μ := .indicator (integrable_const 1) ((hX k) hB)
+  -- Reverse martingale convergence: f n → μ[φ | tailSigma X] a.e.
+  have h_conv := Exchangeability.Probability.condExp_tendsto_iInf
+    (revFiltration_antitone X) (revFiltration_le X hX) φ hφ_int
+  -- For n ≥ m, f n =ᵐ f m (chain is eventually constant)
   have h_const : ∀ n, m ≤ n → f n =ᵐ[μ] f m :=
     fun n hn => (condExp_indicator_revFiltration_eq_of_le hContr hX hkm hn hB).symm
-
-  -- Combine all the a.e. equalities: on a set of full measure, f n ω = f m ω for all n ≥ m
-  have h_ae_all_const : ∀ᵐ ω ∂μ, ∀ n, m ≤ n → f n ω = f m ω := by
-    rw [ae_all_iff]
-    intro n
+  -- Combine: pointwise constancy for n ≥ m
+  have h_ae_const : ∀ᵐ ω ∂μ, ∀ n ≥ m, f n ω = f m ω := by
+    rw [ae_all_iff]; intro n
     by_cases hn : m ≤ n
-    · filter_upwards [h_const n hn] with ω hω
-      intro _; exact hω
-    · filter_upwards with ω
-      intro hmn
-      exact (hn hmn).elim
-
-  -- Combine: on a set of full measure, the sequence is constant AND converges
-  rw [h_iInf_eq] at h_conv
-  filter_upwards [h_conv, h_ae_all_const] with ω h_tendsto h_all_const
-  -- h_tendsto : Tendsto (fun n => f n ω) atTop (𝓝 (μ[φ | tailSigma X] ω))
-  -- h_all_const : ∀ n, m ≤ n → f n ω = f m ω
-  -- Goal: f m ω = μ[φ | tailSigma X] ω
-
-  -- The sequence is eventually equal to f m ω
-  have h_event_const : ∀ᶠ n in atTop, f n ω = f m ω :=
-    eventually_atTop.mpr ⟨m, fun n hn => h_all_const n hn⟩
-
-  -- A sequence converging to L that is eventually equal to c has L = c
-  -- We need: f m ω = limit, i.e., f m ω = μ[φ | tailSigma X] ω
-  -- From h_tendsto: f n ω → μ[φ | tailSigma X] ω
-  -- From h_event_const: ∀ᶠ n, f n ω = f m ω
-  -- So the constant sequence (f m ω) converges to μ[φ | tailSigma X] ω
-  -- Therefore f m ω = μ[φ | tailSigma X] ω
-  have h_const_tends : Tendsto (fun _ : ℕ => f m ω) atTop (𝓝 (μ[φ | tailSigma X] ω)) :=
-    h_tendsto.congr' (h_event_const.mono fun _ h => h)
-  exact tendsto_const_nhds_iff.mp h_const_tends
+    · filter_upwards [h_const n hn] with ω hω _ using hω
+    · filter_upwards with _ hmn using (hn hmn).elim
+  -- Eventually constant sequence converges to its value
+  filter_upwards [h_conv, h_ae_const] with ω h_tendsto h_all_const
+  exact tendsto_const_nhds_iff.mp <|
+    h_tendsto.congr' (eventually_atTop.mpr ⟨m, fun n hn => h_all_const n hn⟩)
 
 end Exchangeability.DeFinetti.ViaMartingale
