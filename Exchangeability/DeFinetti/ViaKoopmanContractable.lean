@@ -128,29 +128,38 @@ theorem deFinetti_viaKoopman_contractable
     exact IsMarkovKernel.isProbabilityMeasure ω
   · -- Step 2: Product factorization for bounded measurable functions
     intro m fs hfs_meas hfs_bd
-    -- The proof uses condexp_product_factorization_contractable to get:
-    -- μ[(∏ fᵢ(ωᵢ)) | mSI] =ᵐ ∏ μ[fᵢ(ω₀) | mSI]
-    --
-    -- Then:
-    -- LHS = ∫ (∏ fᵢ(ωᵢ)) dμ
-    --     = ∫ CE[∏ fᵢ(ωᵢ) | mSI] dμ  (tower property)
-    --     = ∫ (∏ CE[fᵢ(ω₀) | mSI]) dμ  (by factorization)
-    --
-    -- For the RHS, we need:
-    -- ∫ fᵢ dν(ω) = CE[fᵢ(ω₀) | mSI](ω)  a.e.
-    --
-    -- This follows from the definition of ν = rcdKernel, where
-    -- rcdKernel is the pushforward of condExpKernel by π₀.
-    --
-    -- The technical proof requires:
-    -- 1. Connection between condExpKernel and ν via CE-to-kernel-integral lemmas
-    -- 2. Measurability and integrability infrastructure
-    -- 3. Fubini-type arguments for exchanging integrals
-    --
-    -- This relies on infrastructure in KernelIndependence.lean that has remaining sorries.
-    -- The mathematical argument is sound but full formalization awaits completion of
-    -- the conditional expectation kernel infrastructure.
-    sorry
+    -- Key step: for each i, ∫ fs_i d(ν ω) =ᵃᵉ μ[fs_i ∘ π0 | mSI](ω)
+    have h_ν_eq_ce : ∀ i, (fun ω => ∫ x, fs i x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+        μ[fun ω' => fs i (ω' 0) | mSI] := by
+      intro i
+      have hfi_int : Integrable (fun ω' => fs i (ω' 0)) μ := by
+        obtain ⟨C, hC⟩ := hfs_bd i
+        apply Integrable.of_bound
+          ((hfs_meas i).comp (measurable_pi_apply 0)).aestronglyMeasurable C
+        exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).trans_le (hC (ω 0)))
+      have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hfi_int
+      filter_upwards [h_ce] with ω hω
+      calc ∫ x, fs i x ∂(ν (μ := μ) ω)
+          = ∫ y, fs i (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω (hfs_meas i)
+        _ = μ[fun ω' => fs i (ω' 0) | mSI] ω := hω.symm
+    -- Product of a.e. equalities
+    have h_prod_ae : (fun ω => ∏ i : Fin m, ∫ x, fs i x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+        (fun ω => ∏ i : Fin m, μ[fun ω' => fs i (ω' 0) | mSI] ω) := by
+      have h_all := ae_all_iff.mpr h_ν_eq_ce
+      filter_upwards [h_all] with ω hω
+      exact Finset.prod_congr rfl (fun i _ => hω i)
+    -- Apply condexp_product_factorization_contractable
+    have h_fact := condexp_product_factorization_contractable hσ hContract fs hfs_meas hfs_bd
+    -- The factorization gives: μ[(∏ fᵢ(ωᵢ)) | mSI] =ᵐ ∏ μ[fᵢ(ω₀) | mSI]
+    -- Integrate both sides using tower property
+    have h_lhs_tower : ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+        ∫ ω, μ[(fun ω' => ∏ i : Fin m, fs i (ω' i.val)) | mSI] ω ∂μ := by
+      symm
+      apply integral_condExp (shiftInvariantSigma_le (α := α))
+    rw [h_lhs_tower]
+    apply integral_congr_ae
+    filter_upwards [h_fact, h_prod_ae] with ω h_fact_ω h_prod_ω
+    rw [h_fact_ω, ← h_prod_ω]
 
 /-- Contractability implies conditional i.i.d. (Kallenberg's first proof).
 
@@ -204,10 +213,23 @@ theorem conditionallyIID_of_contractable
     --
     -- The proof requires unwinding the definitions of ν, rcdKernel, and condExpKernel.
     intro s hs
-    -- The connection between ν and conditional expectation requires
-    -- the kernel-integral representation of conditional expectation.
-    -- This is standard but requires careful handling of measurability.
-    sorry
+    -- The integrand fun ω' => 1_s(ω' 0) is f ∘ π0 where f = Set.indicator s 1
+    let f : α → ℝ := Set.indicator s 1
+    have hf_meas : Measurable f := measurable_const.indicator hs
+    have hf_int : Integrable (f ∘ π0) μ := by
+      apply Integrable.indicator
+      · exact integrable_const 1
+      · exact (measurable_pi0 (α := α)) hs
+    -- By condExp_ae_eq_integral_condExpKernel:
+    -- μ[f ∘ π0 | mSI] =ᵃᵉ ∫ y, f (y 0) ∂(condExpKernel μ mSI ω)
+    have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hf_int
+    -- Combine all the identities
+    filter_upwards [h_ce] with ω hω
+    calc (ν (μ := μ) ω s).toReal
+        = (ν (μ := μ) ω).real s := by simp only [Measure.real]
+      _ = ∫ x, f x ∂(ν (μ := μ) ω) := (integral_indicator_one hs).symm
+      _ = ∫ y, f (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω hf_meas
+      _ = μ[(f ∘ π0) | mSI] ω := hω.symm
   · -- Part 3: Conditional independence - CE factors as product for indicator functions
     -- This is exactly condexp_product_factorization_contractable applied to indicators
     intro m sets hsets
