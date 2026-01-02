@@ -4450,6 +4450,28 @@ lemma directing_measure_integral
       -- 2. Show midpoint approximation: |f(x) - s(x)| ≤ δ/2
       -- 3. Bound avg(s) - ∫s dν using linearity and h_borel_L1_conv
       -- 4. Combine via triangle inequality
+
+      -- STEP 3: Get convergence for preimage sets S_j from h_borel_L1_conv
+      have h_S_witnesses : ∀ j : Fin K, ∃ M_S_j : ℕ, ∀ m' ≥ M_S_j,
+          ∫ ω, |(1/(m':ℝ)) * ∑ k : Fin m', (S j).indicator (fun _ => (1:ℝ)) (X (n + k.val + 1) ω) -
+            ∫ x, (S j).indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε / (4 * K * M_eff) := by
+        intro j
+        exact h_borel_L1_conv (S j) (hS_meas j) n (ε / (4 * K * M_eff)) hε'
+
+      -- STEP 4: We already have m ≥ M' from h_witnesses for Ioc intervals
+      -- For S_j = f⁻¹(Ioc ...), we need separate M_S bounds
+
+      -- For the step function s(x) = Σ_j c_j · 1_{S_j}(x):
+      -- The approximation bound |f(x) - s(x)| ≤ δ/2 holds for x ∈ ⋃_j S_j
+      -- since c_j is the midpoint of (a_j, a_{j+1}] and f(x) ∈ (a_j, a_{j+1}]
+
+      -- Triangle inequality decomposition:
+      -- |avg(f) - ∫f dν| ≤ |avg(f - s)| + |avg(s) - ∫s dν| + |∫(s - f) dν|
+      -- First term: ≤ δ/2 (uniform bound on |f - s|)
+      -- Second term: ≤ Σ_j |c_j| · |avg(1_{S_j}) - ∫1_{S_j} dν| ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
+      -- Third term: ≤ δ/2 (uniform bound on |f - s|)
+      -- Total: ≤ δ + ε/4 ≤ ε/4 + ε/4 = ε/2 < ε (by choice of δ ≤ ε/4)
+
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
