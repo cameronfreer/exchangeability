@@ -4049,13 +4049,19 @@ lemma directing_measure_integral
       -- ═══════════════════════════════════════════════════════════════════
 
       -- Step 1: Extend h_ind_L1_conv to ALL Borel sets via π-λ theorem
-      -- Property C(B) := "avg(1_B ∘ X) → ∫ 1_B dν in L¹"
-      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
-          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+      -- Use STRONG property: L¹ convergence (∀ δ > 0, ∃ M, ...) for proper composition
+      --
+      -- KEY INSIGHT: The property "∃ M, ∀ m ≥ M, error < ε'" doesn't compose for countable
+      -- unions (summing N terms gives N*ε'). Instead, we prove L¹ convergence first,
+      -- then extract the fixed-ε' statement.
+
+      -- First prove L¹ convergence for all Borel sets
+      have h_borel_L1_conv_strong : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ δ > 0, ∃ M' : ℕ, ∀ m ≥ M',
             ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < δ := by
         -- Use MeasurableSpace.induction_on_inter with Iic as generating π-system
-        intro B hB n' ε' hε'
+        intro B hB n'
 
         -- The generating set S = {Iic t | t ∈ ℝ}
         let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
@@ -4072,12 +4078,11 @@ lemma directing_measure_integral
           use min s t
           exact Set.Iic_inter_Iic.symm
 
-        -- Define the property we want to prove via induction
-        -- C(B, hB) := convergence holds for 1_B
+        -- STRONG property: L¹ convergence (works for any tolerance)
         let C : (B : Set ℝ) → MeasurableSet B → Prop := fun B _ =>
-          ∃ M' : ℕ, ∀ m ≥ M',
+          ∀ δ > 0, ∃ M' : ℕ, ∀ m ≥ M',
             ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
-              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε'
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < δ
 
         -- Apply induction_on_inter
         suffices h : C B hB by exact h
@@ -4086,23 +4091,26 @@ lemma directing_measure_integral
 
         -- Case 1: Empty set
         case h_empty =>
+          intro δ hδ
           use 1
           intro m hm
           simp only [Set.indicator_empty, Finset.sum_const_zero, mul_zero,
             MeasureTheory.integral_zero, sub_zero, abs_zero, MeasureTheory.integral_const,
             MeasureTheory.measure_univ, one_smul, ENNReal.toReal_one]
-          exact hε'
+          exact hδ
 
         -- Case 2: Basic sets (Iic t)
         case h_basic =>
           intro u ⟨t, ht⟩
           subst ht
-          exact h_ind_L1_conv t n' ε' hε'
+          intro δ hδ
+          exact h_ind_L1_conv t n' δ hδ
 
         -- Case 3: Complement closure
         case h_compl =>
           intro u hum hu
-          obtain ⟨M_u, hM_u⟩ := hu
+          intro δ hδ
+          obtain ⟨M_u, hM_u⟩ := hu δ hδ
           -- Use max 1 M_u to ensure m > 0
           use max 1 M_u
           intro m hm
@@ -4146,39 +4154,99 @@ lemma directing_measure_integral
           -- Step 4: Conclude using hM_u
           calc ∫ ω, |avg_uc ω - int_uc ω| ∂μ
               = ∫ ω, |avg_u ω - int_u ω| ∂μ := by congr 1; ext ω; exact h_error_eq ω
-            _ < ε' := hM_u m hm_M
+            _ < δ := hM_u m hm_M
 
         -- Case 4: Countable disjoint union closure
         case h_union =>
           intro g hdisj hgm hg
-          -- For countable disjoint g_i with convergence for each,
-          -- we use a simpler approach: since indicators are bounded by 1,
-          -- both the average and integral are bounded, and we can use
-          -- a direct ε/3 argument.
-          --
-          -- Key properties:
-          -- 1. For disjoint sets: 1_{⋃ g_i} = Σ 1_{g_i} pointwise
-          -- 2. Both avg and ∫1_{g_i}dν are in [0,1] (probability measure)
-          -- 3. Finite unions: avg(1_{A∪B}) = avg(1_A) + avg(1_B) for disjoint A,B
-          --
-          -- For the countable case, we use:
-          -- - Finite prefix: ⋃_{i<N} g_i has controlled error
-          -- - Tail: ⋃_{i≥N} g_i contributes at most 2·ν(tail) to the error
-          --
-          -- The key observation is that for bounded functions (0 ≤ f ≤ 1):
-          -- |avg(f) - ∫f dν| ≤ 2 (since both terms are in [0,1])
-          -- So the error from the tail is bounded by 2·ν(tail), which vanishes.
-          --
-          -- Technical note: The full proof requires showing that
-          -- ν(⋃_{i≥N} g_i) → 0 as N → ∞ uniformly in ω (or a.e.).
-          -- This follows from measure continuity and the disjointness.
-          --
-          -- For now, we use a simpler bound acknowledging this is incomplete:
-          use 1
-          intro m _hm
-          -- Bound: indicators are in [0,1], so L¹ norm is bounded
-          -- The detailed proof requires finite approximation + dominated convergence
+          intro δ hδ
+          /-
+          PROOF STRUCTURE for countable disjoint union ⋃_i g_i:
+
+          Now hg : ∀ i, ∀ δ' > 0, ∃ M, ∀ m ≥ M, error(g i) < δ'
+          This means we CAN use hg with tolerance δ/(4N) for the finite prefix!
+
+          STEP 1: Key bounds (uniform in m)
+          • ∑_i avg(1_{g_i})(ω) ≤ 1 for all ω (disjoint indicators sum ≤ 1)
+          • ∑_i (ν ω)(g_i) ≤ 1 for all ω (probability measure)
+          • The series ∑_i ∫ avg(1_{g_i}) dμ and ∑_i ∫ ν(g_i) dμ converge to values ≤ 1
+
+          STEP 2: Tail bound (choose N such that tails < δ/4 each)
+          • Since series converge, tails → 0 as N → ∞
+          • Choose N: tail avg sum < δ/4 and tail ν sum < δ/4
+
+          STEP 3: Finite prefix (from hg with scaled tolerance)
+          • For each i < N, use hg i with tolerance δ/(4N) to get M_i
+          • Take M = max M_i
+
+          STEP 4: Assembly: total error < δ/4 + δ/4 + δ/4 < δ
+          -/
+
+          /-
+          PROOF VIA TAIL TRUNCATION:
+
+          Key uniform bounds (for all m):
+          - ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 (Tonelli + disjoint indicators sum ≤ 1)
+          - ∑_i ∫ ν(g_i) dμ ≤ 1 (countable additivity + prob measure)
+
+          For any δ > 0:
+          1. Choose N: ∑_{i≥N} ∫(avg_i + ν_i)dμ < δ/2 (uniform in m, by partial sum convergence)
+          2. For i < N: use hg i with tolerance δ/(2N) → get M_i
+          3. Take M = max(M_0, ..., M_{N-1})
+          4. Finite prefix: ∑_{i<N} error_i < N · (δ/(2N)) = δ/2
+          5. Tail: ∑_{i≥N} |avg_i - ν_i| ≤ ∑_{i≥N} (avg_i + ν_i) < δ/2 (by step 1)
+          6. Total: ∑_i error_i < δ
+
+          The key is that step 1 gives a UNIFORM bound (independent of m),
+          so we can choose N before choosing M.
+          -/
+
+          /-
+          DETAILED PROOF SKETCH:
+
+          Step 1: Rewrite indicators
+          For pairwise disjoint g_i, at each point x, at most one 1_{g_i}(x) = 1.
+          Thus 1_{⋃ g_i}(x) = ∑' i, 1_{g_i}(x) (HasSum follows from at-most-one-nonzero).
+
+          Step 2: Rewrite averages and measures
+          avg(1_U)(ω) = (1/m) ∑_k 1_U(X_k(ω))
+                      = (1/m) ∑_k ∑'_i 1_{g_i}(X_k(ω))
+                      = ∑'_i (1/m) ∑_k 1_{g_i}(X_k(ω))  [finite sum commutes with tsum]
+                      = ∑'_i avg(1_{g_i})(ω)
+
+          ν_ω(U) = ∑'_i ν_ω(g_i)  [measure_iUnion for disjoint sets]
+
+          Step 3: Triangle inequality for tsum
+          |avg(1_U) - ν(U)| = |∑'_i (avg(1_{g_i}) - ν(g_i))|
+                            ≤ ∑'_i |avg(1_{g_i}) - ν(g_i)|  [norm_tsum_le_tsum_norm]
+
+          Step 4: Integrate and use integral_tsum
+          ∫|avg(1_U) - ν(U)|dμ ≤ ∫ ∑'_i |avg_i - ν_i| dμ
+                               = ∑'_i ∫|avg_i - ν_i| dμ  [integral_tsum, needs summability]
+
+          Step 5: Tail truncation
+          ∑'_i ∫|avg_i - ν_i| = ∑_{i<N} ∫|avg_i - ν_i| + ∑_{i≥N} ∫|avg_i - ν_i|
+          Tail: ≤ ∑_{i≥N} ∫(avg_i + ν_i) → 0 as N → ∞ (uniform in m)
+          Prefix: < N · δ/(2N) = δ/2 (using hg with scaled tolerance)
+          Total: < δ
+          -/
+
+          -- Get M from hg 0 as witness (full proof would use Finset.sup over prefix)
+          obtain ⟨M0, hM0⟩ := hg 0 δ hδ
+          use M0
+          intro m hm
+
+          -- Complete implementation requires formalizing the 5 steps above
+          -- Key mathlib lemmas: measure_iUnion, norm_tsum_le_tsum_norm, integral_tsum
           sorry
+
+      -- Bridge: Extract the fixed-ε' statement from L¹ convergence
+      have h_borel_L1_conv : ∀ (B : Set ℝ), MeasurableSet B →
+          ∀ n' : ℕ, ∀ ε' > 0, ∃ M' : ℕ, ∀ m ≥ M',
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, B.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) -
+              ∫ x, B.indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε' := by
+        intro B hB n' ε' hε'
+        exact h_borel_L1_conv_strong B hB n' ε' hε'
 
       -- Step 2: Define preimage step function for range quantization
       -- b_j = a j = -M_bound + j * δ
@@ -4233,20 +4301,41 @@ lemma directing_measure_integral
             -- From h1: (j + 1/2) * δ < K * δ = 2 * M_bound
             linarith [h1, hKδ]
 
-      -- Step 3: Use h_borel_L1_conv for each preimage set S_j
-      -- Get convergence for each preimage set S_j from h_borel_L1_conv:
-      --   ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ∫1_{S_j} dν| < ε/(4KM_eff)
-      -- Take M'' = max of all M_j, then for m ≥ M'':
-      --
-      -- Step 4: Triangle inequality bound
-      -- |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
-      -- where s(x) = Σ_j c_j · 1_{S_j}(x) is the step function
-      --
-      -- For the final bound, we use:
-      -- - |avg(f) - avg(s)| ≤ δ/2 (since |f - s| ≤ δ/2 pointwise on covered domain)
-      -- - |avg(s) - ∫s dν| ≤ Σ |c_j| · error_j ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
-      -- - |∫s - ∫f dν| ≤ δ/2 (since |s - f| ≤ δ/2 and ν is probability measure)
-      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ)
+      /-
+      STEP 3: Use h_borel_L1_conv for preimage sets S_j
+
+      Get convergence for each S_j from h_borel_L1_conv:
+        ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ν(S_j).toReal|dμ < ε/(4KM_eff)
+
+      Note: We already have m fixed from `use max 1 M'` and `intro m hm`.
+
+      STEP 4: Triangle inequality for step function approximation
+
+      Define s : ℝ → ℝ as the step function:
+        s(x) = c_j if x ∈ S_j (i.e., f(x) ∈ (a_j, a_{j+1}])
+             = 0 otherwise
+
+      Key bounds:
+      1. |f(x) - s(x)| ≤ δ/2 for x with |f(x)| ≤ M_bound
+         (midpoint approximation: c_j is midpoint of (a_j, a_{j+1}])
+      2. avg(s) = Σ_j c_j · avg(1_{S_j}) (linearity)
+      3. ∫s dν = Σ_j c_j · ν(S_j).toReal (linearity of integral)
+      4. |avg(s) - ∫s dν| ≤ Σ_j |c_j| · |avg(1_{S_j}) - ν(S_j).toReal|
+                          ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
+
+      Triangle inequality:
+        |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
+                        ≤ avg|f - s| + ε/4 + ∫|s - f| dν
+                        ≤ δ/2 + ε/4 + δ/2
+                        = δ + ε/4
+                        < ε  (by choice of δ ≤ ε/4)
+      -/
+
+      -- Implementation requires:
+      -- 1. Get M_j from h_borel_L1_conv for each S_j, take max
+      -- 2. Show midpoint approximation: |f(x) - s(x)| ≤ δ/2
+      -- 3. Bound avg(s) - ∫s dν using linearity and h_borel_L1_conv
+      -- 4. Combine via triangle inequality
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
