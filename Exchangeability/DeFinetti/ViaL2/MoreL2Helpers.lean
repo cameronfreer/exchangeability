@@ -4182,47 +4182,32 @@ lemma directing_measure_integral
           STEP 4: Assembly: total error < δ/4 + δ/4 + δ/4 < δ
           -/
 
-          -- Abbreviations
-          let U := ⋃ i, g i
-          let avg_gi := fun (i : ℕ) (ω : Ω) (m : ℕ) => (1/(m:ℝ)) * ∑ k : Fin m,
-              (g i).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
-          let int_gi := fun (i : ℕ) (ω : Ω) => ∫ x, (g i).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
-
           /-
-          PROOF APPROACH:
-          With the strong property (L¹ convergence), we can use hg with any tolerance.
-          For countable disjoint union U = ⋃_i g_i:
+          PROOF VIA DOMINATED CONVERGENCE FOR SERIES:
 
-          1. TAIL BOUND: For any ε > 0, there exists N such that ∑_{i≥N} contributes < ε/2
-             - ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 (disjoint indicators, uniform in m)
-             - ∑_i ∫ ν(g_i) dμ ≤ 1 (probability measure)
-             - Tail of bounded series → 0
+          Define e_i(m) = ∫|avg(1_{g_i}) - ν(g_i)|dμ (L¹ error for g_i at sample size m)
 
-          2. PREFIX BOUND: For i < N, use hg with tolerance δ/(4N)
-             - N terms, each < δ/(4N), sum < δ/4
+          STEP 1: e_i(m) → 0 as m → ∞ for each i (from hg: L¹ convergence property)
+          STEP 2: ∑_i e_i(m) ≤ 2 uniformly in m
+                  (since |a - b| ≤ |a| + |b| and avg ≤ 1, ν ≤ 1 for prob measures)
+          STEP 3: By dominated convergence for series:
+                  ∑_i e_i(m) → ∑_i lim_{m→∞} e_i(m) = 0 as m → ∞
+          STEP 4: Therefore ∃ M, ∀ m ≥ M, ∑_i e_i(m) < δ
 
-          3. COMBINE: prefix error + tail error < δ/4 + δ/2 < δ
+          The key technical lemma needed:
+          - For non-negative functions f_i(m) with f_i(m) → 0 as m → ∞ for each i,
+            and ∑_i f_i(m) ≤ C uniformly in m,
+            we have ∑_i f_i(m) → 0 as m → ∞.
 
-          For the full proof, we need dominated convergence on the tails.
+          This is a discrete version of dominated convergence.
           -/
 
-          -- For a complete proof, we would:
-          -- 1. Use classical.choose to select N with small tail
-          -- 2. Use hg for i < N with scaled tolerance
-          -- 3. Combine with triangle inequality
+          -- The full implementation requires:
+          -- 1. Showing ∫|avg(1_U) - ν(U)|dμ ≤ ∑_i ∫|avg(1_{g_i}) - ν(g_i)|dμ
+          --    (via indicator decomposition + triangle inequality + Tonelli)
+          -- 2. Applying the dominated convergence argument above
+          -- 3. Extracting the quantified statement for L¹ convergence
 
-          -- The key mathematical insight is already captured: with L¹ convergence
-          -- for each g_i, we can allocate tolerance ε/(2N) to each of N sets,
-          -- and the tail vanishes because the series converges.
-
-          -- Technical implementation uses dominated convergence on the following:
-          -- - For avg: ∑_i avg(1_{g_i}) = avg(∑_i 1_{g_i}) = avg(1_U) ≤ 1
-          -- - For ν: ∑_i ν(g_i) = ν(U) ≤ 1
-
-          -- We use sorry here as the full implementation requires:
-          -- - Tonelli for interchange of tsum and integral
-          -- - Dominated convergence for tail bounds
-          -- - Careful handling of measurability for countable sums
           sorry
 
       -- Bridge: Extract the fixed-ε' statement from L¹ convergence
