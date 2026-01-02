@@ -4183,30 +4183,35 @@ lemma directing_measure_integral
           -/
 
           /-
-          PROOF VIA DOMINATED CONVERGENCE FOR SERIES:
+          PROOF VIA TAIL TRUNCATION:
 
-          Define e_i(m) = ∫|avg(1_{g_i}) - ν(g_i)|dμ (L¹ error for g_i at sample size m)
+          Key uniform bounds (for all m):
+          - ∑_i ∫ avg(1_{g_i}) dμ ≤ 1 (Tonelli + disjoint indicators sum ≤ 1)
+          - ∑_i ∫ ν(g_i) dμ ≤ 1 (countable additivity + prob measure)
 
-          STEP 1: e_i(m) → 0 as m → ∞ for each i (from hg: L¹ convergence property)
-          STEP 2: ∑_i e_i(m) ≤ 2 uniformly in m
-                  (since |a - b| ≤ |a| + |b| and avg ≤ 1, ν ≤ 1 for prob measures)
-          STEP 3: By dominated convergence for series:
-                  ∑_i e_i(m) → ∑_i lim_{m→∞} e_i(m) = 0 as m → ∞
-          STEP 4: Therefore ∃ M, ∀ m ≥ M, ∑_i e_i(m) < δ
+          For any δ > 0:
+          1. Choose N: ∑_{i≥N} ∫(avg_i + ν_i)dμ < δ/2 (uniform in m, by partial sum convergence)
+          2. For i < N: use hg i with tolerance δ/(2N) → get M_i
+          3. Take M = max(M_0, ..., M_{N-1})
+          4. Finite prefix: ∑_{i<N} error_i < N · (δ/(2N)) = δ/2
+          5. Tail: ∑_{i≥N} |avg_i - ν_i| ≤ ∑_{i≥N} (avg_i + ν_i) < δ/2 (by step 1)
+          6. Total: ∑_i error_i < δ
 
-          The key technical lemma needed:
-          - For non-negative functions f_i(m) with f_i(m) → 0 as m → ∞ for each i,
-            and ∑_i f_i(m) ≤ C uniformly in m,
-            we have ∑_i f_i(m) → 0 as m → ∞.
-
-          This is a discrete version of dominated convergence.
+          The key is that step 1 gives a UNIFORM bound (independent of m),
+          so we can choose N before choosing M.
           -/
 
-          -- The full implementation requires:
-          -- 1. Showing ∫|avg(1_U) - ν(U)|dμ ≤ ∑_i ∫|avg(1_{g_i}) - ν(g_i)|dμ
-          --    (via indicator decomposition + triangle inequality + Tonelli)
-          -- 2. Applying the dominated convergence argument above
-          -- 3. Extracting the quantified statement for L¹ convergence
+          -- The full proof uses tail truncation:
+          -- 1. ∑_i ∫ ν_i dμ ≤ 1 (uniform in m, by countable additivity + prob measure)
+          -- 2. Choose N such that tail < δ/2
+          -- 3. Use hg for finite prefix with scaled tolerance
+          -- 4. Combine bounds
+
+          -- For now, we keep the sorry with the documented approach.
+          -- The key technical lemmas needed:
+          -- - integral_tsum for swapping ∫ and ∑'
+          -- - measure_iUnion for countable additivity
+          -- - Finset.sup for max of finite M_i
 
           sorry
 
