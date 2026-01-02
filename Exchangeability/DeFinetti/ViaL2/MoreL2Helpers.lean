@@ -4301,31 +4301,41 @@ lemma directing_measure_integral
             -- From h1: (j + 1/2) * δ < K * δ = 2 * M_bound
             linarith [h1, hKδ]
 
-      -- Step 3: Use h_borel_L1_conv for each preimage set S_j
-      -- Get convergence for each preimage set S_j from h_borel_L1_conv:
-      --   ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ∫1_{S_j} dν| < ε/(4KM_eff)
-      -- Note: We already have m fixed from the earlier `use max 1 M'` and `intro m hm`.
-      --
-      -- Step 4: Triangle inequality bound
-      -- |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
-      -- where s(x) = Σ_j c_j · 1_{S_j}(x) is the step function
-      --
-      -- For the final bound, we use:
-      -- - |avg(f) - avg(s)| ≤ δ/2 (since |f - s| ≤ δ/2 pointwise on covered domain)
-      -- - |avg(s) - ∫s dν| ≤ Σ |c_j| · error_j ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
-      -- - |∫s - ∫f dν| ≤ δ/2 (since |s - f| ≤ δ/2 and ν is probability measure)
-      -- Total: < δ/2 + ε/4 + δ/2 = δ + ε/4 < ε (by choice of δ ≤ ε/4)
-      --
-      -- KEY INSIGHT: The step function argument uses:
-      -- 1. h_borel_L1_conv for each S_j (preimage sets)
-      -- 2. Linearity: avg(s) = Σ c_j · avg(1_{S_j}) and ∫s dν = Σ c_j · ν(S_j)
-      -- 3. Triangle inequality to combine the bounds
-      --
-      -- The technical implementation requires:
-      -- - Defining the step function s = Σ_j c_j · 1_{S_j}
-      -- - Showing |f(x) - s(x)| ≤ δ/2 (midpoint approximation)
-      -- - Using h_borel_L1_conv with tolerance ε/(4KM_eff) for each S_j
-      -- - Combining: error ≤ δ/2 + K·M_bound·ε/(4KM_eff) + δ/2 < ε
+      /-
+      STEP 3: Use h_borel_L1_conv for preimage sets S_j
+
+      Get convergence for each S_j from h_borel_L1_conv:
+        ∀ j, ∃ M_j, ∀ m ≥ M_j, ∫|avg(1_{S_j}) - ν(S_j).toReal|dμ < ε/(4KM_eff)
+
+      Note: We already have m fixed from `use max 1 M'` and `intro m hm`.
+
+      STEP 4: Triangle inequality for step function approximation
+
+      Define s : ℝ → ℝ as the step function:
+        s(x) = c_j if x ∈ S_j (i.e., f(x) ∈ (a_j, a_{j+1}])
+             = 0 otherwise
+
+      Key bounds:
+      1. |f(x) - s(x)| ≤ δ/2 for x with |f(x)| ≤ M_bound
+         (midpoint approximation: c_j is midpoint of (a_j, a_{j+1}])
+      2. avg(s) = Σ_j c_j · avg(1_{S_j}) (linearity)
+      3. ∫s dν = Σ_j c_j · ν(S_j).toReal (linearity of integral)
+      4. |avg(s) - ∫s dν| ≤ Σ_j |c_j| · |avg(1_{S_j}) - ν(S_j).toReal|
+                          ≤ K · M_bound · ε/(4KM_eff) ≤ ε/4
+
+      Triangle inequality:
+        |avg(f) - ∫f dν| ≤ |avg(f) - avg(s)| + |avg(s) - ∫s dν| + |∫s - ∫f dν|
+                        ≤ avg|f - s| + ε/4 + ∫|s - f| dν
+                        ≤ δ/2 + ε/4 + δ/2
+                        = δ + ε/4
+                        < ε  (by choice of δ ≤ ε/4)
+      -/
+
+      -- Implementation requires:
+      -- 1. Get M_j from h_borel_L1_conv for each S_j, take max
+      -- 2. Show midpoint approximation: |f(x) - s(x)| ≤ δ/2
+      -- 3. Bound avg(s) - ∫s dν using linearity and h_borel_L1_conv
+      -- 4. Combine via triangle inequality
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
