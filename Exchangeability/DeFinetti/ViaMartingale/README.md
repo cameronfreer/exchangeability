@@ -14,7 +14,7 @@ where θ_m ξ = (ξ_m, ξ_{m+1}, ...) is the m-shifted sequence.
 
 ## Two Proof Routes for `extreme_members_equal_on_tail`
 
-The central lemma `P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]` has two proofs:
+The central lemma `P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]` has two proofs with very different infrastructure costs:
 
 ### 1. Tower Property Route (`extreme_members_equal_on_tail_via_tower`)
 
@@ -26,10 +26,7 @@ CE(CE(· | fut) | tail) = CE(· | tail)   [tower property]
 ⟹ CE(X_m | tail) = CE(X_0 | tail)
 ```
 
-**Characteristics:**
-- Shorter (~24 lines)
-- Uses `condExp_condExp_of_le` (tower property)
-- More direct, less infrastructure
+**Infrastructure cost:** ~0 lines (uses mathlib's `condExp_condExp_of_le` directly)
 
 ### 2. Kallenberg Route (`extreme_members_equal_on_tail`) — Default
 
@@ -48,11 +45,24 @@ CE(X_m | tail) = CE(X_m | rev(m+1))    [convergence lemma]
               = CE(X_0 | tail)          [convergence lemma]
 ```
 
-**Characteristics:**
-- Longer (~37 lines)
-- More faithful to Kallenberg's page-28 presentation
-- Explicitly uses reverse martingale convergence (`condExp_tendsto_iInf`)
-- Separates "chain is constant" from "limit equals value"
+**Infrastructure cost:** ~1600 lines
+
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `KallenbergChain.lean` | 380 | Chain lemma + convergence to tail |
+| `Martingale/Crossings.lean` | 963 | Upcrossing bounds, UI, limit identification |
+| `Martingale/Convergence.lean` | 125 | `condExp_tendsto_iInf` wrapper |
+| `Martingale/Reverse.lean` | 94 | Reverse filtration packaging |
+| `Martingale/OrderDual.lean` | 68 | OrderDual helpers |
+
+### Why Keep Both?
+
+The **tower route** is simpler and self-contained—it proves the same result with zero additional local infrastructure.
+
+The **Kallenberg route** is the default because:
+1. It's more faithful to Kallenberg's page-28 presentation
+2. It explicitly demonstrates reverse martingale convergence (Lévy's downward theorem)
+3. The martingale convergence machinery (`condExp_tendsto_iInf`) is mathematically interesting infrastructure that may be useful for other proofs
 
 ## Key Lemmas
 
@@ -64,7 +74,7 @@ CE(X_m | tail) = CE(X_m | rev(m+1))    [convergence lemma]
 | `condExp_indicator_revFiltration_eq_of_le` | CE constant along revFiltration chain |
 | `condExp_indicator_revFiltration_eq_tail` | CE on revFiltration equals CE on tail |
 
-### Supporting Infrastructure
+### Supporting Files
 
 | File | Purpose |
 |------|---------|
@@ -83,20 +93,37 @@ CE(X_m | tail) = CE(X_m | rev(m+1))    [convergence lemma]
 | `futureFiltration X m` | σ(θ_{m+1} ξ) |
 | `tailSigma X` | T_ξ = ⋂_m σ(θ_m ξ) |
 
-## Dependencies
+## Dependency Graph
 
 ```
-Martingale/Convergence.lean    ← condExp_tendsto_iInf (Lévy downward)
-    ↑
-KallenbergChain.lean           ← chain lemma + convergence to tail
-    ↑
-CondExpConvergence.lean        ← extreme_members_equal_on_tail
-    ↑
-DirectingMeasure.lean          ← directing measure construction
-    ↑
-FiniteProduct.lean             ← product formula
-    ↑
-ViaMartingale.lean             ← main theorem assembly
+                    mathlib
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+        ▼                             ▼
+  condExp_condExp_of_le      Martingale/Crossings.lean (963 lines)
+        │                             │
+        │                             ▼
+        │                  Martingale/Convergence.lean
+        │                             │
+        │                             ▼
+        │                    KallenbergChain.lean (380 lines)
+        │                             │
+        ▼                             ▼
+  _via_tower (24 lines)     Kallenberg route (37 lines)
+        │                             │
+        └──────────────┬──────────────┘
+                       ▼
+              extreme_members_equal_on_tail
+                       │
+                       ▼
+              DirectingMeasure.lean
+                       │
+                       ▼
+               FiniteProduct.lean
+                       │
+                       ▼
+                ViaMartingale.lean
 ```
 
 ## References
