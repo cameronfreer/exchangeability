@@ -324,6 +324,36 @@ lemma alphaIicCE_nonneg_le_one
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, h1⟩
 
+/-- **Right-continuity of alphaIicCE at any real t.**
+
+For any real t, the infimum over rationals greater than t is at most the value at t:
+`⨅ q > t (rational), alphaIicCE q ω ≤ alphaIicCE t ω` a.e.
+
+Combined with monotonicity (which gives the reverse inequality), this proves
+the infimum equals the value.
+
+**Proof strategy:**
+- Indicators 1_{Iic s} are right-continuous in s: as s ↓ t, 1_{Iic s} ↓ 1_{Iic t}
+- By dominated convergence for condExp, E[1_{Iic s}(X₀)|tail] → E[1_{Iic t}(X₀)|tail] in L¹
+- For monotone decreasing sequences, L¹ convergence + boundedness ⇒ a.e. convergence
+- Therefore ⨅ s > t, alphaIicCE s = alphaIicCE t a.e.
+
+TODO: Implement using dominated convergence for conditional expectations.
+The mathematical argument is standard: for CDFs built from conditional expectations,
+right-continuity follows from dominated convergence applied to decreasing indicators.
+-/
+lemma alphaIicCE_right_continuous_at
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    ∀ᵐ ω ∂μ, ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω
+             ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+  -- The full proof uses dominated convergence for conditional expectations.
+  -- For now, we mark this as sorry - it's a standard result for CDFs.
+  sorry
+
 /-- **Right-continuity of alphaIicCE at rationals.**
 
 For each rational q, the infimum from the right equals the value:
@@ -2170,10 +2200,11 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
       exact hω
     · exact ae_of_all μ (fun ω h_contra => absurd h_contra htq)
 
-  -- Filter on all necessary conditions
+  -- Filter on all necessary conditions (including right-continuity at t)
   filter_upwards [alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t,
-                  h_mono_ae, h_bot_ae, h_top_ae, h_ae_all_rationals, h_mono_t_rational]
-    with ω h_ae h_mono h_bot h_top h_ae_rat h_mono_t_rat
+                  h_mono_ae, h_bot_ae, h_top_ae, h_ae_all_rationals, h_mono_t_rational,
+                  alphaIicCE_right_continuous_at X hX_contract hX_meas hX_L2 t]
+    with ω h_ae h_mono h_bot h_top h_ae_rat h_mono_t_rat h_right_cont
   rw [h_integral_eq, h_meas_eq]
   -- Need: stieltjesOfMeasurableRat alphaIicRat ω t = alphaIicCE t ω
   -- By h_ae: alphaIic t ω = alphaIicCE t ω
@@ -2373,12 +2404,9 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
     -- so the infimum exists. The infimum equals the value at t by right-continuity
     -- of CDFs built from L¹ limits.
 
-    -- We mark this as sorry for now - a complete proof would require either:
-    -- 1. Proving right-continuity of alphaIicCE directly (via dominated convergence for condExp)
-    -- 2. Using the fact that stieltjesOfMeasurableRat is right-continuous by construction
-    -- Using calc chain with h_ae to get correct type
+    -- Use the right-continuity lemma (filtered on via h_right_cont)
     calc ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω
-        ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := sorry
+        ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := h_right_cont
       _ = alphaIic X hX_contract hX_meas hX_L2 t ω := h_ae.symm
 
   · -- alphaIic t ω ≤ ⨅ q > t, alphaIicCE q ω
