@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization
-import Exchangeability.DeFinetti.ViaKoopman.KernelIndependence
+import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
 
 /-!
 # de Finetti's Theorem via Contractability (Kallenberg's First Proof)

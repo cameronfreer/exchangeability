@@ -10,9 +10,29 @@ import Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
 import Exchangeability.DeFinetti.MartingaleHelpers
 
-/-! # Kernel Independence Framework
+/-! # Kernel Independence Framework (EXTRAS - Exchangeability Route)
 
-This file contains the kernel independence framework for the de Finetti proof.
+This file contains the **exchangeability-based** kernel independence framework for de Finetti's
+theorem. This is an alternative approach to the main contractability-based proof.
+
+**Status:** Contains sorries for the kernel independence π-λ extension (blocked on Kernel autoParam
+API issues). The main Koopman proof uses `ContractableFactorization.lean` instead, which is
+complete with no sorries.
+
+**Note:** The essential directing kernel definitions (`π0`, `rcdKernel`, `ν`,
+`integral_ν_eq_integral_condExpKernel`) are also available in `DirectingKernel.lean` for
+files that only need those definitions without the independence machinery.
+
+## Sorries in this file
+
+The following lemmas have sorries (documented proof strategies):
+
+1. `condexp_product_factorization_consecutive` (line ~905): π-λ extension for kernel independence
+2. `condexp_product_factorization_general` (line ~1159): permutation equivariance
+3. Related helper sorries at lines ~1241, ~1900
+
+These are blocked on Kernel autoParam API issues in mathlib. See `ContractableFactorization.lean`
+for the alternative sorry-free approach via contractability.
 -/
 
 open Filter MeasureTheory
