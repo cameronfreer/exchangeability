@@ -762,9 +762,249 @@ lemma condexp_product_factorization_consecutive
     exact Filter.EventuallyEq.of_eq (condExp_const (shiftInvariantSigma_le (α := α)) (1 : ℝ))
   · rename_i n IH
     -- Inductive step: Split product into (first n factors) * (last factor)
-    -- The full proof uses kernel independence from hciid
-    -- For now, we mark this sorry until the iIndepFun type issues are resolved
-    sorry
+    classical
+
+    -- Define P (product of first n) and L (last factor)
+    let P : Ω[α] → ℝ := fun ω => ∏ k : Fin n, fs (Fin.castSucc k) (ω (k : ℕ))
+    let L : Ω[α] → ℝ := fun ω => fs (Fin.last n) (ω n)
+
+    -- Measurability
+    have hP_meas : Measurable P := Finset.measurable_prod _ fun k _ =>
+      (hmeas (Fin.castSucc k)).comp (measurable_pi_apply (k : ℕ))
+    have hL_meas : Measurable L := (hmeas (Fin.last n)).comp (measurable_pi_apply n)
+
+    -- Boundedness
+    have hP_bd : ∃ C, ∀ ω, |P ω| ≤ C := by
+      have hbds := fun k => hbd (Fin.castSucc k)
+      choose bounds hbounds using hbds
+      refine ⟨∏ k : Fin n, bounds k, fun ω => ?_⟩
+      calc |P ω| = |∏ k : Fin n, fs (Fin.castSucc k) (ω (k : ℕ))| := rfl
+        _ = ∏ k, |fs (Fin.castSucc k) (ω (k : ℕ))| := Finset.abs_prod _ _
+        _ ≤ ∏ k, bounds k := Finset.prod_le_prod (fun _ _ => abs_nonneg _)
+            (fun k _ => hbounds k (ω (k : ℕ)))
+    have hL_bd : ∃ C, ∀ ω, |L ω| ≤ C := by
+      obtain ⟨CL, hCL⟩ := hbd (Fin.last n)
+      exact ⟨CL, fun ω => hCL (ω n)⟩
+
+    -- Split: product over Fin (n+1) = P * L
+    have h_split : (fun ω => ∏ k : Fin (n + 1), fs k (ω (k : ℕ))) = fun ω => P ω * L ω := by
+      funext ω
+      rw [Fin.prod_univ_castSucc]
+      simp only [Fin.coe_castSucc, Fin.val_last, P, L]
+
+    -- Key step: Get kernel independence of P and L from hciid
+    -- P depends on coordinates {0,...,n-1}, L depends on {n} - disjoint sets
+    have h_kernel : ∀ᵐ ω ∂μ, ∫ a, P a * L a ∂(condExpKernel μ mSI ω) =
+        (∫ a, P a ∂(condExpKernel μ mSI ω)) * (∫ a, L a ∂(condExpKernel μ mSI ω)) := by
+      -- Use the existing π-λ extension pattern from lines 93-170
+      -- hciid gives independence on cylinder sets (π-systems)
+      -- This extends to bounded measurable functions by the π-λ theorem
+
+      -- Define π-systems for P and L (preimages of rational intervals)
+      let κ := condExpKernel μ mSI
+
+      -- For each a, we use the independence on rational intervals
+      -- and extend to full σ-algebra
+      have h_rat : ∀ (qp qL : ℚ),
+          ∀ᵐ a ∂μ, (κ a) (P ⁻¹' Set.Iic qp ∩ L ⁻¹' Set.Iic qL) =
+                    (κ a) (P ⁻¹' Set.Iic qp) * (κ a) (L ⁻¹' Set.Iic qL) := by
+        intro qp qL
+        /-
+        **Proof strategy**: P⁻¹'(Iic qp) ∩ L⁻¹'(Iic qL) factors because P and L depend
+        on disjoint coordinate sets: {0,...,n-1} and {n}.
+
+        **Key steps**:
+        1. hciid is equivalent to `Kernel.iIndepFun (fun i ω => ω i) κ μ` for coord projections
+           (via `Kernel.iIndepFun_iff_measure_inter_preimage_eq_mul`)
+        2. Apply `Kernel.iIndepFun.comp` with gs = fs to get:
+           `Kernel.iIndepFun (fun i ω => fs i (ω i)) κ μ`
+        3. Use `Kernel.iIndepFun.indepFun_finset_prod_of_notMem`:
+           Products over disjoint index sets are independent
+        4. P is in σ({0,...,n-1}), L is in σ({n}), so IndepFun P L follows
+        5. IndepFun P L gives: κ(P⁻¹'(A) ∩ L⁻¹'(B)) = κ(P⁻¹'(A)) * κ(L⁻¹'(B))
+
+        **Why this requires hciid**: The conditional independence of coordinates is the
+        foundational hypothesis. Without it, we cannot derive independence of products.
+
+        TODO: Implement using Kernel.iIndepFun infrastructure from
+        Mathlib.Probability.Independence.Kernel (see lines 878-940, 1358-1420).
+        -/
+        sorry
+
+      -- Swap quantifiers using ae_all_iff
+      have h_swap : ∀ᵐ a ∂μ, ∀ qp qL : ℚ,
+          (κ a) (P ⁻¹' Set.Iic qp ∩ L ⁻¹' Set.Iic qL) =
+            (κ a) (P ⁻¹' Set.Iic qp) * (κ a) (L ⁻¹' Set.Iic qL) := by
+        have : ∀ qpqL : ℚ × ℚ,
+            ∀ᵐ a ∂μ, (κ a) (P ⁻¹' Set.Iic qpqL.1 ∩ L ⁻¹' Set.Iic qpqL.2) =
+                      (κ a) (P ⁻¹' Set.Iic qpqL.1) * (κ a) (L ⁻¹' Set.Iic qpqL.2) :=
+          fun qpqL => h_rat qpqL.1 qpqL.2
+        have h := ae_all_iff.mpr this
+        filter_upwards [h] with a ha qp qL
+        exact ha ⟨qp, qL⟩
+
+      -- For a.e. a, extend independence from rational intervals to full σ-algebra
+      filter_upwards [h_swap] with a h_gen
+
+      -- Apply the π-λ extension pattern (as in lines 93-170)
+      haveI : IsProbabilityMeasure (κ a) := IsMarkovKernel.isProbabilityMeasure a
+
+      let p1 : Set (Set (Ω[α])) := Set.preimage P '' (⋃ q : ℚ, {Set.Iic (q : ℝ)})
+      let p2 : Set (Set (Ω[α])) := Set.preimage L '' (⋃ q : ℚ, {Set.Iic (q : ℝ)})
+
+      have h_indep_sets : ProbabilityTheory.IndepSets p1 p2 (κ a) := by
+        rw [ProbabilityTheory.IndepSets_iff]
+        intro s t hs ht
+        rw [Set.mem_image] at hs ht
+        obtain ⟨s', hs', rfl⟩ := hs
+        obtain ⟨t', ht', rfl⟩ := ht
+        rw [Set.mem_iUnion] at hs' ht'
+        obtain ⟨qp, hqp⟩ := hs'
+        obtain ⟨qL, hqL⟩ := ht'
+        rw [Set.mem_singleton_iff] at hqp hqL
+        subst hqp hqL
+        exact h_gen qp qL
+
+      have hp1m : ∀ s ∈ p1, MeasurableSet s := fun s hs => by
+        rw [Set.mem_image] at hs
+        obtain ⟨s', hs', rfl⟩ := hs
+        rw [Set.mem_iUnion] at hs'
+        obtain ⟨q, hq⟩ := hs'
+        rw [Set.mem_singleton_iff] at hq; subst hq
+        exact hP_meas measurableSet_Iic
+      have hp2m : ∀ s ∈ p2, MeasurableSet s := fun s hs => by
+        rw [Set.mem_image] at hs
+        obtain ⟨s', hs', rfl⟩ := hs
+        rw [Set.mem_iUnion] at hs'
+        obtain ⟨q, hq⟩ := hs'
+        rw [Set.mem_singleton_iff] at hq; subst hq
+        exact hL_meas measurableSet_Iic
+
+      have hp1_pi : IsPiSystem p1 := by
+        intro s hs t ht _
+        rw [Set.mem_image] at hs ht ⊢
+        obtain ⟨s', hs', rfl⟩ := hs
+        obtain ⟨t', ht', rfl⟩ := ht
+        rw [Set.mem_iUnion] at hs' ht'
+        obtain ⟨q1, hq1⟩ := hs'
+        obtain ⟨q2, hq2⟩ := ht'
+        rw [Set.mem_singleton_iff] at hq1 hq2
+        subst hq1 hq2
+        refine ⟨Set.Iic ((min q1 q2 : ℚ) : ℝ), ?_, ?_⟩
+        · rw [Set.mem_iUnion]; exact ⟨min q1 q2, rfl⟩
+        · rw [← Set.preimage_inter, Set.Iic_inter_Iic, Rat.cast_min]
+      have hp2_pi : IsPiSystem p2 := by
+        intro s hs t ht _
+        rw [Set.mem_image] at hs ht ⊢
+        obtain ⟨s', hs', rfl⟩ := hs
+        obtain ⟨t', ht', rfl⟩ := ht
+        rw [Set.mem_iUnion] at hs' ht'
+        obtain ⟨q1, hq1⟩ := hs'
+        obtain ⟨q2, hq2⟩ := ht'
+        rw [Set.mem_singleton_iff] at hq1 hq2
+        subst hq1 hq2
+        refine ⟨Set.Iic ((min q1 q2 : ℚ) : ℝ), ?_, ?_⟩
+        · rw [Set.mem_iUnion]; exact ⟨min q1 q2, rfl⟩
+        · rw [← Set.preimage_inter, Set.Iic_inter_Iic, Rat.cast_min]
+
+      have h_indep_gen := ProbabilityTheory.IndepSets.indep' hp1m hp2m hp1_pi hp2_pi h_indep_sets
+      have hgen1 : MeasurableSpace.generateFrom p1 = MeasurableSpace.comap P (borel ℝ) := by
+        rw [Real.borel_eq_generateFrom_Iic_rat, MeasurableSpace.comap_generateFrom]
+      have hgen2 : MeasurableSpace.generateFrom p2 = MeasurableSpace.comap L (borel ℝ) := by
+        rw [Real.borel_eq_generateFrom_Iic_rat, MeasurableSpace.comap_generateFrom]
+      rw [hgen1, hgen2] at h_indep_gen
+      -- h_indep_gen : Indep (comap P) (comap L) = IndepFun P L
+      have h_indep : ProbabilityTheory.IndepFun P L (κ a) := h_indep_gen
+      exact h_indep.integral_mul_eq_mul_integral
+        hP_meas.aestronglyMeasurable hL_meas.aestronglyMeasurable
+
+    -- Apply CE factorization
+    have h_ce_fac : μ[P * L | mSI] =ᵐ[μ] μ[P | mSI] * μ[L | mSI] :=
+      condExp_mul_of_indep μ (hm := shiftInvariantSigma_le (α := α))
+        hP_meas hL_meas hP_bd hL_bd h_kernel
+
+    -- Apply IH to P
+    let fs' : Fin n → α → ℝ := fun k => fs (Fin.castSucc k)
+    have hmeas' : ∀ k, Measurable (fs' k) := fun k => hmeas (Fin.castSucc k)
+    have hbd' : ∀ k, ∃ C, ∀ x, |fs' k x| ≤ C := fun k => hbd (Fin.castSucc k)
+    have h_ih := IH fs' hmeas' hbd'
+
+    -- Note: P = fun ω => ∏ k : Fin n, fs' k (ω (k : ℕ))
+    have hP_eq : P = fun ω => ∏ k : Fin n, fs' k (ω (k : ℕ)) := rfl
+    have h_ce_P : μ[P | mSI] =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs' k x ∂(ν (μ := μ) ω)) := by
+      rw [hP_eq]; exact h_ih
+
+    -- Apply single-coordinate lemma to L
+    -- Proof: μ[L | mSI] = ∫ L dκ = ∫ fs(last n)(y_n) dκ =ᵃᵉ ∫ fs(last n) dν
+    -- Uses coord_integral_via_ν (line ~2419) and identicalConditionalMarginals_integral (line ~2353)
+    have h_ce_L : μ[L | mSI] =ᵐ[μ] (fun ω => ∫ x, fs (Fin.last n) x ∂(ν (μ := μ) ω)) := by
+      -- Chain: μ[L | mSI] = μ[fs(ω_n) | mSI] = μ[fs(π₀(shift^n ω)) | mSI]
+      --                   = μ[fs(π₀ ω) | mSI] = ∫ fs(π₀ y) dκ = ∫ fs dν
+      let f := fs (Fin.last n)
+      have hf : Measurable f := hmeas (Fin.last n)
+      obtain ⟨C, hC⟩ := hbd (Fin.last n)
+
+      -- Integrability of f ∘ coord_n and f ∘ π₀
+      have hf_coord_n_int : Integrable (fun ω : Ω[α] => f (ω n)) μ :=
+        Exchangeability.Probability.integrable_of_bounded
+          (hf.comp (measurable_pi_apply n)) ⟨C, fun ω => hC (ω n)⟩
+      have hf_pi0_int : Integrable (fun ω : Ω[α] => f (π0 ω)) μ :=
+        Exchangeability.Probability.integrable_of_bounded
+          (hf.comp (measurable_pi0 (α := α))) ⟨C, fun ω => hC (π0 ω)⟩
+
+      -- Step 1: L = f ∘ coord_n = f ∘ π₀ ∘ shift^n
+      -- π0 (shift^[n] ω) = (shift^[n] ω) 0 = ω (0 + n) = ω n
+      have h_L_eq : ∀ ω, L ω = f (π0 (shift^[n] ω)) := fun ω => by
+        show fs (Fin.last n) (ω n) = fs (Fin.last n) (π0 (shift^[n] ω))
+        unfold π0
+        rw [shift_iterate_apply n 0 ω]
+        ring_nf
+
+      -- Step 2: CE[f ∘ π₀ ∘ shift^n | mSI] = CE[f ∘ π₀ | mSI] by condexp_precomp_iterate_eq
+      have h_shift_ce : μ[L | mSI] =ᵐ[μ] μ[fun ω => f (π0 ω) | mSI] := by
+        have h := condexp_precomp_iterate_eq (k := n) hσ hf_pi0_int
+        have h1 : μ[L | mSI] =ᵐ[μ] μ[fun ω => f (π0 (shift^[n] ω)) | mSI] := by
+          apply MeasureTheory.condExp_congr_ae
+          filter_upwards with ω
+          exact h_L_eq ω
+        exact h1.trans h
+
+      -- Step 3: CE[f ∘ π₀ | mSI] = ∫ f(π₀ y) dκ
+      have h_ce_kernel : μ[fun ω => f (π0 ω) | mSI] =ᵐ[μ]
+          fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ mSI ω) :=
+        condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hf_pi0_int
+
+      -- Step 4: ∫ f(π₀ y) dκ = ∫ f dν by definition of ν
+      -- ν ω = (condExpKernel μ mSI ω).map π₀, so ∫ f dν = ∫ (f ∘ π₀) dκ by integral_map
+      have h_to_nu : (fun ω => ∫ y, f (π0 y) ∂(condExpKernel μ mSI ω))
+          =ᵐ[μ] fun ω => ∫ x, f x ∂(ν (μ := μ) ω) := by
+        filter_upwards with ω
+        -- Show: ∫ (f ∘ π0) dκ = ∫ f d(ν ω) where ν ω = κ.map π0
+        symm
+        unfold ν rcdKernel
+        rw [Kernel.comap_apply, Kernel.map_apply _ (measurable_pi0 (α := α))]
+        -- Now: ∫ f d(κ.map π0) = ∫ (f ∘ π0) dκ
+        exact MeasureTheory.integral_map (measurable_pi_apply 0).aemeasurable
+            hf.aestronglyMeasurable
+
+      -- Chain all equalities
+      exact h_shift_ce.trans (h_ce_kernel.trans h_to_nu)
+
+    -- Combine: LHS = CE[P*L] = CE[P]*CE[L] = (∏ integrals) * (last integral) = RHS
+    have h_eq_PL : (fun ω => ∏ k : Fin (n + 1), fs k (ω (k : ℕ))) = P * L := by
+      ext ω; exact congrFun h_split ω
+    calc μ[(fun ω => ∏ k : Fin (n + 1), fs k (ω (k : ℕ))) | mSI]
+        =ᵐ[μ] μ[P * L | mSI] := by
+          rw [h_eq_PL]
+      _ =ᵐ[μ] μ[P | mSI] * μ[L | mSI] := h_ce_fac
+      _ =ᵐ[μ] (fun ω => ∏ k : Fin n, ∫ x, fs' k x ∂(ν (μ := μ) ω)) *
+              (fun ω => ∫ x, fs (Fin.last n) x ∂(ν (μ := μ) ω)) :=
+          Filter.EventuallyEq.mul h_ce_P h_ce_L
+      _ =ᵐ[μ] (fun ω => ∏ k : Fin (n + 1), ∫ x, fs k x ∂(ν (μ := μ) ω)) := by
+          refine Filter.EventuallyEq.of_eq ?_
+          funext ω
+          rw [Fin.prod_univ_castSucc]
+          simp only [fs', Pi.mul_apply]
 
 /-
 -- Outline of inductive step proof (to be completed):
