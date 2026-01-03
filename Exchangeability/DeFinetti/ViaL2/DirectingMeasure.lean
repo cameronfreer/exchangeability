@@ -2026,16 +2026,54 @@ lemma directing_measure_integral_via_chain
   -- Note: cesaro_to_condexp_L2 requires |f x| ≤ 1, so we need to rescale if M > 1
   obtain ⟨M, hM⟩ := hf_bdd
   by_cases hM_zero : M = 0
-  · -- If M = 0, then f = 0 a.e. on range of X, so both α and ∫f dν are 0 a.e.
+  · -- If M = 0, then f = 0, so both α and ∫f dν are 0 a.e.
     have hf_zero : ∀ x, f x = 0 := fun x => by
       have := hM x
       rw [hM_zero] at this
       exact abs_nonpos_iff.mp this
-    apply ae_of_all
-    intro ω
-    simp only [hf_zero, integral_zero]
-    -- Need to show alpha ω = 0, which follows from L¹ convergence with f = 0
-    sorry  -- TODO: α = 0 when f = 0
+
+    -- Show ∫f dν = 0 for all ω (deterministic, not just a.e.)
+    have h_integral_zero : ∀ ω, ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) = 0 := by
+      intro ω
+      simp only [hf_zero, integral_zero]
+
+    -- Show alpha = 0 a.e. from L¹ convergence
+    -- When f = 0, Cesàro averages are 0, so ∫|0 - alpha| < ε for all ε > 0
+    -- This implies ∫|alpha| = 0, hence alpha = 0 a.e.
+    have h_alpha_zero_ae : alpha =ᵐ[μ] 0 := by
+      -- The Cesàro sum is 0 when f = 0
+      have h_cesaro_zero : ∀ (n : ℕ) (m : ℕ) ω,
+          (1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) = 0 := by
+        intro n m ω
+        simp only [hf_zero, Finset.sum_const_zero, mul_zero]
+      -- From hα_conv with n = 0, ε = 1/k: ∫|0 - alpha| < 1/k for large m
+      -- Taking limit: ∫|alpha| ≤ 0, so ∫|alpha| = 0
+      have h_int_abs_alpha_eq_zero : ∫ ω, |alpha ω| ∂μ = 0 := by
+        apply le_antisymm _ (integral_nonneg (fun _ => abs_nonneg _))
+        -- For any ε > 0, ∫|alpha| < ε (using hα_conv with cesaro = 0)
+        by_contra h_pos
+        push_neg at h_pos
+        have hε : (0 : ℝ) < ∫ ω, |alpha ω| ∂μ := h_pos
+        obtain ⟨M_idx, hM_idx⟩ := hα_conv 0 (∫ ω, |alpha ω| ∂μ) hε
+        specialize hM_idx M_idx (le_refl _)
+        have h_simp : ∀ ω', |(1 / (M_idx : ℝ)) * ∑ k : Fin M_idx, f (X (0 + k.val + 1) ω') - alpha ω'|
+            = |alpha ω'| := by
+          intro ω'
+          rw [h_cesaro_zero 0 M_idx ω', zero_sub, abs_neg]
+        simp_rw [h_simp] at hM_idx
+        linarith
+      -- ∫|alpha| = 0 implies alpha = 0 a.e.
+      -- Use: integral_eq_zero_iff_of_nonneg_ae
+      have h_abs_nonneg : (0 : Ω → ℝ) ≤ᵐ[μ] (fun ω => |alpha ω|) :=
+        ae_of_all μ (fun ω => abs_nonneg (alpha ω))
+      have h_abs_int : Integrable (fun ω => |alpha ω|) μ :=
+        (memLp_one_iff_integrable.mp hα_L1).norm
+      rw [integral_eq_zero_iff_of_nonneg_ae h_abs_nonneg h_abs_int] at h_int_abs_alpha_eq_zero
+      exact h_int_abs_alpha_eq_zero.mono (fun ω hω => abs_eq_zero.mp hω)
+
+    -- Combine: alpha = 0 = ∫f dν a.e.
+    filter_upwards [h_alpha_zero_ae] with ω hω
+    simp only [hω, h_integral_zero ω, Pi.zero_apply]
 
   · -- M > 0 case
     have hM_pos : 0 < M := lt_of_le_of_ne (abs_nonneg (f 0) |>.trans (hM 0)) (Ne.symm hM_zero)
