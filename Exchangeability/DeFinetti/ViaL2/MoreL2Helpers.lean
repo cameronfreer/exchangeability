@@ -4231,13 +4231,139 @@ lemma directing_measure_integral
           Total: < δ
           -/
 
-          -- Get M from hg 0 as witness (full proof would use Finset.sup over prefix)
-          obtain ⟨M0, hM0⟩ := hg 0 δ hδ
-          use M0
-          intro m hm
+          -- STEP A: Establish probability measure instance
+          haveI := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
 
-          -- Complete implementation requires formalizing the 5 steps above
-          -- Key mathlib lemmas: measure_iUnion, norm_tsum_le_tsum_norm, integral_tsum
+          -- STEP B: Key uniform bounds
+          -- For disjoint sets g_i, at any point x at most one indicator is 1.
+          -- This gives summability bounds that are UNIFORM in m:
+          -- • ∑_i avg(1_{g_i})(ω) ≤ 1 (disjoint indicators)
+          -- • ∑_i ν_ω(g_i) ≤ 1 (probability measure)
+          -- • ∑_i ∫ |avg_i - ν_i| dμ ≤ 2 (triangle inequality)
+
+          -- The uniform bound allows choosing N BEFORE M
+          -- Since ∑_i ∫ (avg_i + ν_i) dμ ≤ 2 (uniform in m),
+          -- the tail ∑_{i≥N} ∫ (avg_i + ν_i) dμ → 0 as N → ∞, uniformly in m
+
+          -- STEP C: Choose N for tail bound, then M for prefix
+          -- For the general proof with N sets:
+          -- 1. Choose N such that ∑_{i≥N} ∫ (avg_i + ν_i) dμ < δ/2
+          -- 2. For i < N, use hg i with tolerance δ/(2N) → get M_i
+          -- 3. Take M = max(M_0, ..., M_{N-1})
+
+          -- FULL PROOF: Tail truncation for countable disjoint union
+          -- Key insight: ∑_i error(g_i) converges with uniform bound ≤ 2
+          -- So we can split into prefix (controlled by hg) + tail (small by convergence)
+
+          -- STEP D: Decomposition via disjoint indicators
+          -- Key lemma: indicator_iUnion_tsum_of_pairwise_disjoint gives
+          --   1_{⋃g_i}(x) = ∑' i, 1_{g_i}(x)
+          --
+          -- For averages (linearity):
+          --   avg(1_{⋃g_i})(ω) = (1/m) ∑_k 1_{⋃g_i}(X_k ω)
+          --                    = (1/m) ∑_k ∑' i, 1_{g_i}(X_k ω)
+          --                    = ∑' i, (1/m) ∑_k 1_{g_i}(X_k ω)
+          --                    = ∑' i, avg(1_{g_i})(ω)
+          --
+          -- For measure (countable additivity):
+          --   ν_ω(⋃g_i) = ∑' i, ν_ω(g_i)
+
+          -- STEP E: Error bound via triangle inequality for tsum
+          -- |avg(1_U) - ν(U)| = |∑' (avg_i - ν_i)| ≤ ∑' |avg_i - ν_i|
+          -- (by norm_tsum_le_tsum_norm, given summability)
+
+          -- STEP F: Integrate and split into prefix + tail
+          -- ∫ |avg(1_U) - ν(U)| dμ ≤ ∫ ∑' |avg_i - ν_i| dμ
+          --                        = ∑' ∫ |avg_i - ν_i| dμ  (by integral_tsum)
+          --                        = ∑_{i<N} ∫ |err_i| + ∑_{i≥N} ∫ |err_i|
+          -- Prefix: < N · δ/(2N) = δ/2 (by hg with scaled tolerance)
+          -- Tail: ≤ ∑_{i≥N} ∫ (avg_i + ν_i) < δ/2 (by choice of N)
+          -- Total: < δ
+
+          -- IMPLEMENTATION: Define key quantities
+          -- U = ⋃ i, g i (the countable disjoint union)
+          let U := ⋃ i, g i
+
+          -- avg_U = average of indicator of U
+          let avg_U : Ω → ℝ := fun ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, U.indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+
+          -- int_U = integral of indicator of U against ν
+          let int_U : Ω → ℝ := fun ω =>
+            ∫ x, U.indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+
+          -- avg_i = average of indicator of g i
+          let avg_g : ℕ → Ω → ℝ := fun i ω =>
+            (1/(m:ℝ)) * ∑ k : Fin m, (g i).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω)
+
+          -- int_i = integral of indicator of g i against ν
+          let int_g : ℕ → Ω → ℝ := fun i ω =>
+            ∫ x, (g i).indicator (fun _ => (1:ℝ)) x ∂(ν ω)
+
+          -- Key decomposition: indicator of union = tsum of indicators (disjoint)
+          have h_ind_decomp : ∀ x, U.indicator (fun _ => (1:ℝ)) x = ∑' i, (g i).indicator (fun _ => (1:ℝ)) x := by
+            intro x
+            exact congrFun (Exchangeability.Probability.indicator_iUnion_tsum_of_pairwise_disjoint g hdisj) x
+
+          -- Measure decomposition: ν(U) = ∑' ν(g i)
+          have h_meas_decomp : ∀ ω, (ν ω) U = ∑' i, (ν ω) (g i) :=
+            fun ω => measure_iUnion (fun i j hij => hdisj hij) hgm
+
+          -- The goal simplifies to showing ∫ |avg_U - int_U| dμ < δ
+          -- This uses: avg_U = ∑' avg_g i and int_U = ∑' int_g i
+
+          -- TAIL TRUNCATION STRATEGY:
+          -- 1. Show ∑_i ∫ (avg_g i + int_g i) dμ ≤ 2 (uniform in m)
+          --    - avg bounds: ∑_i avg_g i ω ≤ 1 (disjoint indicators)
+          --    - int bounds: ∑_i int_g i ω = ν(U) ≤ 1 (prob measure)
+          -- 2. Choose N such that tail ∑_{i≥N} ∫ (avg_g i + int_g i) dμ < δ/2
+          -- 3. Use hg for prefix with δ/(2N) to get M_i, take M = max
+          -- 4. Combine via triangle inequality
+
+          /-
+          KEY UNIFORM BOUNDS (used in tail truncation):
+
+          STEP 1: Pointwise bound on indicator tsum (for disjoint sets)
+          At each point x, at most one indicator is 1, so ∑' 1_{g_i}(x) ≤ 1.
+          Proof: by_cases on x ∈ U; if yes, exactly one j has x ∈ g_j;
+          use huniq to show tsum = tsum_ite_eq j 1 = 1.
+
+          STEP 2: Bound on integral tsum (ν is a probability measure)
+          ∑' int_g i ω ≤ ν(U) ≤ 1 (since ν is probability measure)
+          Proof: Each int_g i ω = ∫ 1_{g_i} dν = ν(g_i).toReal
+                 Sum: ∑' ν(g_i).toReal = ν(U).toReal ≤ 1
+
+          STEP 3: Error decomposition
+          |avg_U - int_U| ≤ ∑' |avg_g i - int_g i| by norm_tsum_le_tsum_norm
+          ∫ |avg_U - int_U| ≤ ∑' ∫ |avg_g i - int_g i| by integral_tsum
+
+          STEP 4: Tail truncation
+          - Choose N such that ∑_{i≥N} ∫ (avg_i + int_i) < δ/2 (uniform in m)
+          - For i < N, use hg i with tolerance δ/(2N) → get M_i
+          - Take M = max(M_0, ..., M_{N-1})
+          - Total: prefix + tail < δ
+          -/
+
+          -- For the full proof, we need proper tail truncation.
+          -- Use hg 0 to get an M that works for at least g 0.
+          have hδ2 : δ / 2 > 0 := by linarith
+          obtain ⟨M0, hM0⟩ := hg 0 (δ / 2) hδ2
+
+          -- For the full proof, we would need proper tail truncation
+          -- Currently using simplified bound: error for g 0 dominates when g is finite-support
+          -- or we accept a weaker bound. For now, we use the induction hypothesis structure.
+          use max 1 M0
+          intro m hm
+          have hm_pos : 0 < m := lt_of_lt_of_le Nat.one_pos (le_of_max_le_left hm)
+          have hm_M0 : m ≥ M0 := le_of_max_le_right hm
+
+          -- The proof requires showing ∫ |avg_U - int_U| < δ
+          -- This needs the full decomposition and tail bound argument
+          -- Key insight: The series ∑_i ∫(avg_i + int_i) ≤ 2 converges uniformly in m
+          -- So for any ε, we can find N such that tail < ε/2, then use hg for prefix
+
+          -- For now, document the structure; full formalization requires
+          -- showing that the finite sum + tail decomposition works
           sorry
 
       -- Bridge: Extract the fixed-ε' statement from L¹ convergence
@@ -4336,6 +4462,32 @@ lemma directing_measure_integral
       -- 2. Show midpoint approximation: |f(x) - s(x)| ≤ δ/2
       -- 3. Bound avg(s) - ∫s dν using linearity and h_borel_L1_conv
       -- 4. Combine via triangle inequality
+
+      -- STEP 3: Get convergence for preimage sets S_j from h_borel_L1_conv
+      have h_S_witnesses : ∀ j : Fin K, ∃ M_S_j : ℕ, ∀ m' ≥ M_S_j,
+          ∫ ω, |(1/(m':ℝ)) * ∑ k : Fin m', (S j).indicator (fun _ => (1:ℝ)) (X (n + k.val + 1) ω) -
+            ∫ x, (S j).indicator (fun _ => (1:ℝ)) x ∂(ν ω)| ∂μ < ε / (4 * K * M_eff) := by
+        intro j
+        exact h_borel_L1_conv (S j) (hS_meas j) n (ε / (4 * K * M_eff)) hε'
+
+      /-
+      REMAINING STEPS:
+
+      STEP 4: Take max of M_S bounds
+      choose M_S_func hM_S_func using h_S_witnesses
+      let M_S := Finset.univ.sup M_S_func
+      NOTE: Adjust `use max 1 M'` (line ~3939) to `use max 1 (max M' M_S)`
+
+      STEP 5: Step function approximation
+      - s(x) = Σ_j c_j · 1_{S_j}(x)
+      - For x with |f(x)| ≤ M_bound, x ∈ S_j for exactly one j
+      - |f(x) - c_j| ≤ δ/2 (c_j is midpoint of interval containing f(x))
+
+      STEP 6: Triangle inequality
+      |avg(f) - ∫f dν| ≤ |avg(f - s)| + |avg(s) - ∫s dν| + |∫(s - f) dν|
+                      ≤ δ/2 + K · M_bound · ε/(4KM_eff) + δ/2
+                      ≤ ε/4 + ε/4 + ε/4 = 3ε/4 < ε
+      -/
       sorry
 
   -- Step D: Conclude by uniqueness of L¹ limits
