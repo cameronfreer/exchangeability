@@ -4362,13 +4362,6 @@ lemma directing_measure_integral
           have h_inner_le : ∀ k : Fin m, ∀ ω, ∑' i, (g i).indicator (fun _ => (1:ℝ)) (X (n' + k.val + 1) ω) ≤ 1 :=
             fun k ω => Exchangeability.Probability.indicator_tsum_le_one_of_pairwise_disjoint g hdisj _
 
-          -- STEP 2: Bound on int_g tsum (ν is probability measure)
-          -- ∑' i, ν(g i) = ν(U) ≤ 1 (by measure_iUnion and probability measure bound)
-          -- Note: Explicit proof causes elaboration timeout; uses:
-          --   calc ∑' i, (ν ω) (g i) = (ν ω) (⋃ i, g i)  -- by measure_iUnion
-          --     _ ≤ (ν ω) Set.univ := measure_mono      -- monotonicity
-          --     _ = 1 := measure_univ                   -- probability measure
-
           -- The proof requires showing ∫ |avg_U - int_U| < δ
           -- This needs the full decomposition and tail bound argument
           -- Key insight: The series ∑_i ∫(avg_i + int_i) ≤ 2 converges uniformly in m

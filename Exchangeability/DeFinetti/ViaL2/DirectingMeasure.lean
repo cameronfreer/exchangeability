@@ -1888,4 +1888,188 @@ lemma directing_measure_isProbabilityMeasure
   ProbabilityTheory.instIsProbabilityMeasure_stieltjesOfMeasurableRat
     (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
 
+/-!
+## Bridge Lemma: Integral against directing measure equals conditional expectation
 
+This is the key Kallenberg insight: the directing measure ν(ω) is the conditional distribution
+of X₀ given the tail σ-algebra. Therefore:
+
+  ∫ f dν(ω) = E[f(X₀) | tail](ω)  a.e.
+
+**Proof Strategy:**
+1. **Base case (Iic indicators):** By Stieltjes construction,
+   `∫ 1_{Iic t} dν(ω) = alphaIic t ω = alphaIicCE t ω = E[1_{Iic t}(X₀)|tail](ω)` a.e.
+
+2. **Extension:** Iic sets form a π-system generating the Borel σ-algebra.
+   By measure extensionality, two probability measures agreeing on Iic agree everywhere.
+   The same linearity/continuity argument extends to all bounded measurable f.
+
+This lemma is the bridge that allows us to go from:
+- `cesaro_to_condexp_L2`: α = E[f(X₀)|tail]
+to:
+- `directing_measure_integral`: α = ∫f dν
+
+by transitivity.
+-/
+
+/-- **Base case:** For Iic indicators, the directing measure integral equals alphaIicCE.
+
+This follows from:
+1. Stieltjes construction: `∫ 1_{Iic t} dν(ω) = (ν(Iic t)).toReal`
+2. Measure value: `(ν(Iic t)).toReal = stieltjesOfMeasurableRat t`
+3. Stieltjes extension: `stieltjesOfMeasurableRat t = alphaIic t` a.e.
+4. Identification: `alphaIic t =ᵐ alphaIicCE t` -/
+lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    (fun ω => ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      =ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
+  -- Step 1: Simplify integral to measure value
+  have h_integral_eq : ∀ ω, ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
+      ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+      (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal := by
+    intro ω
+    rw [MeasureTheory.integral_indicator measurableSet_Iic]
+    simp only [MeasureTheory.integral_const, smul_eq_mul, mul_one]
+    rw [Measure.real_def, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+
+  -- Step 2: The measure on Iic t equals the Stieltjes function value
+  have h_meas_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal =
+      (ProbabilityTheory.stieltjesOfMeasurableRat
+        (alphaIicRat X hX_contract hX_meas hX_L2)
+        (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
+    intro ω
+    unfold directing_measure
+    rw [ProbabilityTheory.measure_stieltjesOfMeasurableRat_Iic]
+    have h_nonneg : 0 ≤ (ProbabilityTheory.stieltjesOfMeasurableRat
+          (alphaIicRat X hX_contract hX_meas hX_L2)
+          (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t :=
+      ProbabilityTheory.stieltjesOfMeasurableRat_nonneg _ _ _
+    exact ENNReal.toReal_ofReal h_nonneg
+
+  -- Step 3: Combine and use identification with alphaIicCE
+  -- The Stieltjes extension equals alphaIic a.e., and alphaIic =ᵐ alphaIicCE
+  filter_upwards [alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t] with ω h_ae
+  rw [h_integral_eq, h_meas_eq]
+  -- Need: stieltjesOfMeasurableRat ... ω t = alphaIicCE ... t ω
+  -- By h_ae: alphaIic ... t ω = alphaIicCE ... t ω
+  -- And stieltjes extension agrees with alphaIic at Stieltjes points (which is a.e.)
+
+  -- The Stieltjes function at t is the infimum over rationals > t.
+  -- At "good" ω where alphaIicRat is monotone and right-continuous at rationals,
+  -- this equals alphaIic t (which equals alphaIicCE t by h_ae).
+
+  -- For now, we use that the construction of stieltjesOfMeasurableRat ensures
+  -- agreement with the input function at points where IsRatStieltjesPoint holds.
+  -- This is the detailed argument from MoreL2Helpers.lean lines 1267-1400.
+  sorry  -- TODO: Factor out the detailed Stieltjes agreement proof
+
+/-- **Main bridge lemma:** For any bounded measurable f, the integral against directing_measure
+equals the conditional expectation E[f(X₀)|tail].
+
+This is the Kallenberg identification: ν(ω) is the conditional distribution of X₀ given tail. -/
+lemma directing_measure_integral_eq_condExp
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] := by
+  -- Strategy: Use π-system/monotone class argument
+  -- 1. Base case: directing_measure_integral_Iic_ae_eq_alphaIicCE gives result for 1_{Iic t}
+  -- 2. alphaIicCE t = E[1_{Iic t}(X₀)|tail] by definition
+  -- 3. Both operations (∫·dν and E[·|tail]) are linear and continuous
+  -- 4. Iic is π-system generating Borel, so agreement extends to all Borel sets
+  -- 5. Linear extension to bounded measurable functions
+  sorry  -- TODO: Implement the monotone class extension
+
+/-- **Simplified directing measure integral via identification chain.**
+
+This lemma proves that the L¹ limit α equals ∫f dν a.e. using the Kallenberg identification chain:
+1. α = E[f(X₀)|tail]  (from `cesaro_to_condexp_L2`)
+2. E[f(X₀)|tail] = ∫f dν  (from `directing_measure_integral_eq_condExp`)
+3. Therefore α = ∫f dν by transitivity
+
+This approach bypasses the Ioc/step function decomposition entirely, giving a much simpler proof.
+
+**Key insight:** By uniqueness of L¹ limits, the L¹ limit from `weighted_sums_converge_L1`
+equals the L² limit from `cesaro_to_condexp_L2` (since L² convergence implies L¹ on prob spaces).
+-/
+lemma directing_measure_integral_via_chain
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    ∃ (alpha : Ω → ℝ),
+      Measurable alpha ∧ MemLp alpha 1 μ ∧
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+  -- Get α from weighted_sums_converge_L1
+  obtain ⟨alpha, hα_meas, hα_L1, hα_conv⟩ :=
+    weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  refine ⟨alpha, hα_meas, hα_L1, hα_conv, ?_⟩
+
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- IDENTIFICATION CHAIN: α = E[f(X₀)|tail] = ∫f dν
+  -- ═══════════════════════════════════════════════════════════════════════════════
+
+  -- Step 1: Get α_f from cesaro_to_condexp_L2 with identification
+  -- α_f =ᵐ E[f(X₀)|tail]
+  -- Note: cesaro_to_condexp_L2 requires |f x| ≤ 1, so we need to rescale if M > 1
+  obtain ⟨M, hM⟩ := hf_bdd
+  by_cases hM_zero : M = 0
+  · -- If M = 0, then f = 0 a.e. on range of X, so both α and ∫f dν are 0 a.e.
+    have hf_zero : ∀ x, f x = 0 := fun x => by
+      have := hM x
+      rw [hM_zero] at this
+      exact abs_nonpos_iff.mp this
+    apply ae_of_all
+    intro ω
+    simp only [hf_zero, integral_zero]
+    -- Need to show alpha ω = 0, which follows from L¹ convergence with f = 0
+    sorry  -- TODO: α = 0 when f = 0
+
+  · -- M > 0 case
+    have hM_pos : 0 < M := lt_of_le_of_ne (abs_nonneg (f 0) |>.trans (hM 0)) (Ne.symm hM_zero)
+
+    -- Rescale f to g = f/M so |g| ≤ 1
+    let g : ℝ → ℝ := fun x => f x / M
+    have hg_meas : Measurable g := hf_meas.div_const M
+    have hg_bdd : ∀ x, |g x| ≤ 1 := fun x => by
+      simp only [g, abs_div]
+      have hM_abs : |M| = M := abs_of_pos hM_pos
+      rw [hM_abs]
+      calc |f x| / M ≤ M / M := div_le_div_of_nonneg_right (hM x) (le_of_lt hM_pos)
+        _ = 1 := div_self (ne_of_gt hM_pos)
+
+    -- Apply cesaro_to_condexp_L2 to g
+    obtain ⟨α_g, hα_g_L2, hα_g_tail, hα_g_conv, hα_g_eq⟩ :=
+      cesaro_to_condexp_L2 hX_contract hX_meas g hg_meas hg_bdd
+
+    -- α_g = E[g(X₀)|tail] = E[(f/M)(X₀)|tail] = (1/M) * E[f(X₀)|tail]
+    -- So: E[f(X₀)|tail] = M * α_g
+
+    -- Chain:
+    -- 1. alpha =ᵐ M * α_g  (by uniqueness of limits for f = M * g)
+    -- 2. M * α_g =ᵐ M * E[g(X₀)|tail] = E[f(X₀)|tail]  (by linearity of condExp)
+    -- 3. E[f(X₀)|tail] =ᵐ ∫f dν  (by directing_measure_integral_eq_condExp)
+
+    -- For now, use the bridge lemma directly
+    have h_bridge : (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+        =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] :=
+      directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩
+
+    -- Need: alpha =ᵐ E[f(X₀)|tail]
+    -- This follows from uniqueness of L¹ limits (both are limits of same Cesàro averages)
+    -- TODO: Factor out the uniqueness argument
+    sorry  -- TODO: Complete the uniqueness of limits argument
+
+end Exchangeability.DeFinetti.ViaL2

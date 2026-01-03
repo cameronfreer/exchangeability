@@ -128,4 +128,24 @@ lemma indicator_tsum_le_one_of_pairwise_disjoint
   · have : ∀ i, x ∉ f i := fun i hi => hx (Set.mem_iUnion.mpr ⟨i, hi⟩)
     simp [Set.indicator_of_notMem (this _)]
 
+set_option linter.unusedSectionVars false in
+/-- For pairwise disjoint measurable sets, the tsum of measures equals the measure of the union. -/
+lemma measure_tsum_eq_measure_iUnion {α : Type*} [MeasurableSpace α]
+    (μ : Measure α) (f : ℕ → Set α) (hf_meas : ∀ i, MeasurableSet (f i))
+    (hdisj : Pairwise (Disjoint on f)) :
+    ∑' i, μ (f i) = μ (⋃ i, f i) :=
+  (measure_iUnion (fun _ _ hij => hdisj hij) hf_meas).symm
+
+set_option linter.unusedSectionVars false in
+/-- For pairwise disjoint measurable sets under a probability measure,
+the tsum of measures is at most 1. -/
+lemma measure_tsum_le_one_of_pairwise_disjoint {α : Type*} [MeasurableSpace α]
+    (μ : Measure α) [IsProbabilityMeasure μ]
+    (f : ℕ → Set α) (hf_meas : ∀ i, MeasurableSet (f i))
+    (hdisj : Pairwise (Disjoint on f)) :
+    ∑' i, μ (f i) ≤ 1 := by
+  calc ∑' i, μ (f i) = μ (⋃ i, f i) := measure_tsum_eq_measure_iUnion μ f hf_meas hdisj
+    _ ≤ μ Set.univ := measure_mono (Set.subset_univ _)
+    _ = 1 := measure_univ
+
 end Exchangeability.Probability
