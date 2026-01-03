@@ -350,8 +350,28 @@ lemma alphaIicCE_right_continuous_at
     (t : ℝ) :
     ∀ᵐ ω ∂μ, ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω
              ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
-  -- The full proof uses dominated convergence for conditional expectations.
-  -- For now, we mark this as sorry - it's a standard result for CDFs.
+  /-
+  **Proof strategy (standard CDF right-continuity via DCT):**
+
+  1. Get decreasing sequence qₙ → t of rationals with qₙ > t
+     (via `Real.exists_seq_rat_strictAnti_tendsto`)
+
+  2. Show ⨅_{all q > t} alphaIicCE q ≤ ⨅_n alphaIicCE qₙ
+     (the infimum over a larger set is ≤ infimum over a subset)
+
+  3. Show ⨅_n alphaIicCE qₙ = alphaIicCE t a.e.:
+     - Indicators 1_{Iic qₙ} ↓ 1_{Iic t} pointwise (since ⋂_n Iic qₙ = Iic t)
+     - By dominated convergence for condExp: condExp(1_{Iic qₙ}) → condExp(1_{Iic t}) in L¹
+     - For monotone bounded sequences, L¹ convergence ⟹ a.e. convergence
+     - So alphaIicCE qₙ → alphaIicCE t a.e.
+     - For monotone decreasing sequences, ⨅_n = lim_n
+
+  4. Conclude: ⨅_{q > t} alphaIicCE q ≤ ⨅_n alphaIicCE qₙ = alphaIicCE t a.e.
+
+  The key mathlib lemmas are:
+  - `tendsto_condExpL1_of_dominated_convergence` for L¹ convergence
+  - `TendstoInMeasure.exists_seq_tendsto_ae` for a.e. convergence from L¹
+  -/
   sorry
 
 /-- **Right-continuity of alphaIicCE at rationals.**
