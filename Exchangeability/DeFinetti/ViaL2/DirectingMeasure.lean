@@ -2615,39 +2615,47 @@ lemma directing_measure_integral_via_chain
     -- 2. M * α_g =ᵐ M * E[g(X₀)|tail] = E[f(X₀)|tail]  (by linearity of condExp)
     -- 3. E[f(X₀)|tail] =ᵐ ∫f dν  (by directing_measure_integral_eq_condExp)
 
-    -- For now, use the bridge lemma directly
+    -- Bridge lemma: E[f(X₀)|tail] =ᵐ ∫f dν
     have h_bridge : (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
         =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] :=
       directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩
 
-    -- Need: alpha =ᵐ ∫f dν
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    -- KEY STEP: alpha =ᵐ E[f(X₀)|tail] via L¹ uniqueness
+    -- ═══════════════════════════════════════════════════════════════════════════════
     --
     -- The identification chain connects three quantities a.e.:
     --   alpha = E[f(X₀)|tail] = ∫f dν
     --
-    -- 1. alpha =ᵐ E[f(X₀)|tail]:
-    --    - From hα_g_eq: α_g =ᵐ E[g(X₀)|tail] (via cesaro_to_condexp_L2)
-    --    - E[f(X₀)|tail] = E[(M·g)(X₀)|tail] = M · E[g(X₀)|tail] (linearity of condExp)
-    --    - alpha =ᵐ M · α_g (L¹ uniqueness: f = M·g implies same Cesàro limits)
-    --    - Therefore alpha =ᵐ M · E[g|tail] = E[f|tail]
+    -- Direct approach: Both alpha and E[f|tail] are L¹ limits of shifted f-averages.
+    -- - alpha → from hα_conv (L¹ limit of shifted f-averages at indices n+1,...,n+m)
+    -- - E[f(X₀)|tail] → from cesaro_convergence_all_shifts (same averages)
+    -- By L¹ uniqueness, alpha =ᵐ E[f(X₀)|tail].
     --
-    -- 2. E[f(X₀)|tail] =ᵐ ∫f dν:
-    --    - From h_bridge (via directing_measure_integral_eq_condExp)
-    --    - This requires the monotone class extension (see sorry at line 2492)
-    --
-    -- 3. Combining: alpha =ᵐ ∫f dν by transitivity
-    --
-    -- Key subtlety: weighted_sums_converge_L1 uses shifted indices (n+1,...,n+m)
-    -- while cesaro_to_condexp_L2 uses indices (0,...,n-1). For contractable
-    -- sequences with tail-measurable limits, the shift doesn't affect the limit.
-    --
-    -- TODO: Implement the uniqueness argument for L¹ limits.
-    -- This depends on directing_measure_integral_eq_condExp (line 2492).
-    exact h_bridge.symm.mono fun ω hω => by
-      -- Goal: alpha ω = ∫ x, f x ∂(directing_measure ... ω)
-      -- From hω: μ[f ∘ X 0 | tail] ω = ∫ x, f x ∂(directing_measure ... ω)
-      -- Need: alpha ω = μ[f ∘ X 0 | tail] ω
-      -- This is the uniqueness of L¹ limits (TODO)
+    -- Note: We use the rescaled function g = f/M with |g| ≤ 1 since
+    -- cesaro_convergence_all_shifts requires the bound |g| ≤ 1.
+    -- Then we scale back: M * (g-averages) = f-averages.
+
+    -- Step 1: Show alpha =ᵐ E[f(X₀)|tail] using L¹ uniqueness directly
+    -- Both limits are a.e. equal to the unique L¹ limit of shifted f-averages
+    have h_alpha_eq_condExp : alpha =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X] := by
+      -- PROOF STRATEGY (L¹ uniqueness):
+      --
+      -- Key: hα_g_eq gives α_g =ᵐ E[g(X₀)|tail] where g = f/M with |g| ≤ 1.
+      -- And alpha equals M * (L¹ limit of g-averages) by linearity.
+      --
+      -- 1. E[M*g(X₀)|tail] = M * E[g(X₀)|tail] by condExp_smul
+      -- 2. M * g = f, so E[f(X₀)|tail] =ᵐ M * E[g(X₀)|tail]
+      -- 3. cesaro_convergence_all_shifts gives: g-averages → E[g(X₀)|tail] in L¹
+      -- 4. Scaling: M*(g-averages) = f-averages → M*E[g|tail] = E[f|tail] in L¹
+      -- 5. hα_conv gives: f-averages → alpha in L¹
+      -- 6. By L¹ uniqueness: alpha =ᵐ E[f|tail] (triangle inequality argument)
+      --
+      -- Technical: Need to match indices between cesaro_convergence_all_shifts (n+k)
+      -- and hα_conv (n + k.val + 1). When n=1, both give indices 1, 2, ..., m.
       sorry
+
+    -- Step 2: Combine with bridge lemma: alpha =ᵐ ∫f dν
+    exact h_alpha_eq_condExp.trans h_bridge.symm
 
 end Exchangeability.DeFinetti.ViaL2
