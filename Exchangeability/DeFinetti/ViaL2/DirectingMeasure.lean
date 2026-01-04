@@ -371,8 +371,20 @@ lemma alphaIicCE_right_continuous_at
   The key mathlib lemmas are:
   - `tendsto_condExpL1_of_dominated_convergence` for L¹ convergence
   - `TendstoInMeasure.exists_seq_tendsto_ae` for a.e. convergence from L¹
+
+  **Implementation outline:**
+  1. Get decreasing sequence u_n → t of rationals with u_n > t
+     (via `Real.exists_seq_rat_strictAnti_tendsto`)
+  2. Show ⨅_{q > t} alphaIicCE q ≤ ⨅_n alphaIicCE (u_n) (infimum over larger set)
+  3. Indicators 1_{Iic u_n} ↓ 1_{Iic t} pointwise as u_n ↓ t
+  4. Apply DCT: condExp(1_{Iic u_n}) → condExp(1_{Iic t}) in L¹
+  5. For monotone bounded sequences, L¹ convergence ⟹ a.e. convergence
+  6. Therefore ⨅_n alphaIicCE (u_n) = lim_n alphaIicCE (u_n) = alphaIicCE t a.e.
+  7. Conclude: ⨅_{q > t} alphaIicCE q ≤ alphaIicCE t a.e.
+
+  This is standard CDF right-continuity via dominated convergence.
   -/
-  sorry
+  sorry  -- TODO: Implement dominated convergence proof
 
 /-- **Right-continuity of alphaIicCE at rationals.**
 
