@@ -324,6 +324,257 @@ lemma alphaIicCE_nonneg_le_one
   filter_upwards [h₀, h₁] with ω h0 h1
   exact ⟨h0, h1⟩
 
+/-- **Right-continuity of alphaIicCE at any real t.**
+
+For any real t, the infimum over rationals greater than t is at most the value at t:
+`⨅ q > t (rational), alphaIicCE q ω ≤ alphaIicCE t ω` a.e.
+
+Combined with monotonicity (which gives the reverse inequality), this proves
+the infimum equals the value.
+
+**Proof strategy:**
+- Indicators 1_{Iic s} are right-continuous in s: as s ↓ t, 1_{Iic s} ↓ 1_{Iic t}
+- By dominated convergence for condExp, E[1_{Iic s}(X₀)|tail] → E[1_{Iic t}(X₀)|tail] in L¹
+- For monotone decreasing sequences, L¹ convergence + boundedness ⇒ a.e. convergence
+- Therefore ⨅ s > t, alphaIicCE s = alphaIicCE t a.e.
+
+TODO: Implement using dominated convergence for conditional expectations.
+The mathematical argument is standard: for CDFs built from conditional expectations,
+right-continuity follows from dominated convergence applied to decreasing indicators.
+-/
+lemma alphaIicCE_right_continuous_at
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    ∀ᵐ ω ∂μ, ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω
+             ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+  /-
+  **Proof strategy (standard CDF right-continuity via DCT):**
+
+  1. Get decreasing sequence qₙ → t of rationals with qₙ > t
+     (via `Real.exists_seq_rat_strictAnti_tendsto`)
+
+  2. Show ⨅_{all q > t} alphaIicCE q ≤ ⨅_n alphaIicCE qₙ
+     (the infimum over a larger set is ≤ infimum over a subset)
+
+  3. Show ⨅_n alphaIicCE qₙ = alphaIicCE t a.e.:
+     - Indicators 1_{Iic qₙ} ↓ 1_{Iic t} pointwise (since ⋂_n Iic qₙ = Iic t)
+     - By dominated convergence for condExp: condExp(1_{Iic qₙ}) → condExp(1_{Iic t}) in L¹
+     - For monotone bounded sequences, L¹ convergence ⟹ a.e. convergence
+     - So alphaIicCE qₙ → alphaIicCE t a.e.
+     - For monotone decreasing sequences, ⨅_n = lim_n
+
+  4. Conclude: ⨅_{q > t} alphaIicCE q ≤ ⨅_n alphaIicCE qₙ = alphaIicCE t a.e.
+
+  The key mathlib lemmas are:
+  - `tendsto_condExpL1_of_dominated_convergence` for L¹ convergence
+  - `TendstoInMeasure.exists_seq_tendsto_ae` for a.e. convergence from L¹
+
+  **Implementation outline:**
+  1. Get decreasing sequence u_n → t of rationals with u_n > t
+     (via `Real.exists_seq_rat_strictAnti_tendsto`)
+  2. Show ⨅_{q > t} alphaIicCE q ≤ ⨅_n alphaIicCE (u_n) (infimum over larger set)
+  3. Indicators 1_{Iic u_n} ↓ 1_{Iic t} pointwise as u_n ↓ t
+  4. Apply DCT: condExp(1_{Iic u_n}) → condExp(1_{Iic t}) in L¹
+  5. For monotone bounded sequences, L¹ convergence ⟹ a.e. convergence
+  6. Therefore ⨅_n alphaIicCE (u_n) = lim_n alphaIicCE (u_n) = alphaIicCE t a.e.
+  7. Conclude: ⨅_{q > t} alphaIicCE q ≤ alphaIicCE t a.e.
+
+  This is standard CDF right-continuity via dominated convergence.
+  -/
+  sorry  -- TODO: Implement dominated convergence proof
+
+/-- **Right-continuity of alphaIicCE at rationals.**
+
+For each rational q, the infimum from the right equals the value:
+`⨅ r > q (rational), alphaIicCE r = alphaIicCE q` a.e.
+
+**Proof strategy:**
+- alphaIicCE is monotone (increasing in t)
+- For rₙ ↓ q, the indicators 1_{Iic rₙ} ↓ 1_{Iic q} pointwise
+- By dominated convergence: E[1_{Iic rₙ}(X₀)|tail] → E[1_{Iic q}(X₀)|tail] in L¹
+- For monotone sequences, L¹ convergence implies a.e. convergence
+- So alphaIicCE rₙ → alphaIicCE q a.e. for any sequence rₙ ↓ q
+- This means ⨅ r > q, alphaIicCE r = alphaIicCE q a.e. -/
+lemma alphaIicCE_iInf_rat_gt_eq
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    ∀ᵐ ω ∂μ, ∀ q : ℚ, ⨅ r : Set.Ioi q,
+        alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
+        alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+  -- Set up tail σ-algebra infrastructure
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+
+  -- Use ae_all_iff to reduce to proving for each rational q
+  rw [ae_all_iff]
+  intro q
+
+  -- Filter on monotonicity and boundedness
+  have h_mono_ae : ∀ᵐ ω ∂μ, ∀ r s : ℚ, r ≤ s →
+      alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω ≤
+      alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω := by
+    rw [ae_all_iff]; intro r
+    rw [ae_all_iff]; intro s
+    by_cases hrs : r ≤ s
+    · have h_le : (r : ℝ) ≤ (s : ℝ) := Rat.cast_le.mpr hrs
+      filter_upwards [alphaIicCE_mono X hX_contract hX_meas hX_L2 (r : ℝ) (s : ℝ) h_le] with ω hω
+      intro _; exact hω
+    · exact ae_of_all μ (fun ω h_contra => absurd h_contra hrs)
+
+  have h_bdd_ae : ∀ᵐ ω ∂μ, ∀ r : ℚ,
+      0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω ∧
+      alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω ≤ 1 := by
+    rw [ae_all_iff]; intro r
+    exact alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (r : ℝ)
+
+  -- Get the right-continuity property at this specific rational q
+  have h_right_cont_ae : ∀ᵐ ω ∂μ, ⨅ r : {r : ℚ // (q : ℝ) < r},
+      alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω ≤
+      alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω :=
+    alphaIicCE_right_continuous_at X hX_contract hX_meas hX_L2 (q : ℝ)
+
+  filter_upwards [h_mono_ae, h_bdd_ae, h_right_cont_ae] with ω h_mono h_bdd h_right_cont
+
+  -- At this ω, alphaIicCE is monotone and bounded in [0,1]
+  -- The infimum of a monotone function from the right equals the value
+  -- by right-continuity of CDFs
+
+  apply le_antisymm
+  · -- ⨅ r > q, alphaIicCE r ω ≤ alphaIicCE q ω (right-continuity)
+    -- Key: for CDF functions, the infimum from the right equals the value
+    -- Because the measure of the singleton {q} has measure zero for continuous distributions,
+    -- the limit from the right equals the value
+
+    -- Use that alphaIicCE comes from indicators which are right-continuous
+    -- As r ↓ q, 1_{Iic r} ↓ 1_{Iic q} pointwise, so E[...|tail] ↓ as well
+
+    -- Monotone decreasing: for r > q, alphaIicCE r ω ≥ alphaIicCE q ω
+    -- The infimum is achieved in the limit, which equals alphaIicCE q ω
+
+    -- Take rational sequence rₙ = q + 1/(n+1) decreasing to q
+    -- The infimum is the limit of alphaIicCE rₙ ω
+    -- By CDF right-continuity, this limit equals alphaIicCE q ω
+
+    -- For bounded monotone functions, the infimum over r > q equals lim_{r → q⁺}
+    -- Since alphaIicCE is bounded in [0,1], the limit exists
+
+    -- Use ciInf_le with witness r = q + 1/(n+1) for any n,
+    -- then take limit as n → ∞
+
+    -- Actually, we use the property that for any ε > 0, there exists r > q such that
+    -- alphaIicCE r ω < alphaIicCE q ω + ε
+
+    -- Since monotonicity gives alphaIicCE r ω ≥ alphaIicCE q ω for all r > q,
+    -- and the function is bounded, the infimum equals the greatest lower bound
+
+    -- For right-continuous CDFs (which alphaIicCE is, by construction from indicators),
+    -- lim_{r → q⁺} F(r) = F(q)
+
+    -- The key insight: alphaIicCE at rational r equals the conditional probability
+    -- P(X₀ ≤ r | tail). For probability CDFs, the right limit equals the value.
+
+    -- Let's use the bound directly: alphaIicCE r ω ≤ 1 for all r
+    -- And alphaIicCE r ω is decreasing as r decreases toward q
+    -- So ⨅ r > q, alphaIicCE r ω ≥ alphaIicCE q ω (obvious)
+    -- For the reverse, we need that there's no jump at q
+
+    -- Since alphaIicCE is monotone and bounded, for any sequence rₙ ↓ q:
+    -- alphaIicCE rₙ ω → ⨅ r > q, alphaIicCE r ω
+
+    -- By the L¹ convergence of conditional expectations (dominated convergence),
+    -- there exists a subsequence where alphaIicCE rₙ ω → alphaIicCE q ω
+
+    -- Combined with monotonicity, the full sequence converges to alphaIicCE q ω
+
+    -- Therefore ⨅ r > q, alphaIicCE r ω = alphaIicCE q ω
+
+    -- Nonempty for the infimum
+    have h_nonempty : Nonempty (Set.Ioi q) := ⟨⟨q + 1, by simp⟩⟩
+
+    -- Bounded below by 0
+    have h_bdd_below : BddBelow (Set.range fun r : Set.Ioi q =>
+        alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω) := by
+      use 0
+      intro x hx
+      obtain ⟨r, rfl⟩ := hx
+      exact (h_bdd r).1
+
+    -- The infimum is at least the value (by monotonicity)
+    have h_inf_ge : ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω ≥
+        alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+      apply le_ciInf
+      intro ⟨r, hr⟩
+      exact h_mono q r (le_of_lt hr)
+
+    -- For the upper bound, we use that alphaIicCE is right-continuous
+    -- This follows from the fact that it's the conditional CDF, which is right-continuous
+
+    -- Key: alphaIicCE r ≤ 1 for all r, and alphaIicCE r decreases as r → q⁺
+    -- Since the function is bounded and monotone, the infimum is achieved
+
+    -- For a decreasing net bounded below, the infimum is the limit
+    -- lim_{r → q⁺} alphaIicCE r = ⨅ r > q, alphaIicCE r
+
+    -- And for conditional CDFs, lim_{r → q⁺} P(X₀ ≤ r | tail) = P(X₀ ≤ q | tail)
+
+    -- The hard direction: ⨅ r > q, alphaIicCE r ω ≤ alphaIicCE q ω
+    -- This is right-continuity of CDFs.
+    --
+    -- Mathematical proof:
+    -- 1. For sequence rₙ = q + 1/n, we have rₙ ↓ q
+    -- 2. 1_{Iic rₙ}(x) ↓ 1_{Iic q}(x) for all x (decreasing indicators)
+    -- 3. By dominated convergence for conditional expectations:
+    --    E[1_{Iic rₙ}(X₀)|tail] → E[1_{Iic q}(X₀)|tail] in L¹
+    -- 4. For monotone decreasing sequences, L¹ convergence implies a.e. convergence
+    -- 5. Therefore alphaIicCE rₙ ω → alphaIicCE q ω for a.e. ω
+    -- 6. The infimum equals this limit, so ⨅ r > q = alphaIicCE q
+
+    -- Since alphaIicCE is monotone in t and bounded in [0,1]:
+    -- - The infimum from the right exists and equals the limit from the right
+    -- - For CDFs, the limit from the right equals the value (right-continuity)
+
+    -- The key insight is that h_inf_ge shows ⨅ ≥ value (by monotonicity),
+    -- and we need ⨅ ≤ value (by right-continuity of CDF).
+    -- Combined, they give equality.
+
+    -- For now, since the proper dominated convergence proof is complex,
+    -- we use that alphaIicCE is a CDF and CDFs are right-continuous.
+    -- The proof would formally use tendsto_condExpL1_of_dominated_convergence.
+    -- See mathlib's IsRatCondKernelCDFAux.iInf_rat_gt_eq for the pattern.
+
+    -- Use the right-continuity property from h_right_cont
+    -- The infimum over Set.Ioi q is ≤ infimum over {r : ℚ // (q : ℝ) < r}
+    -- because Set.Ioi q ⊆ {r : ℚ // (q : ℝ) < r} (they're actually equal)
+
+    -- Nonempty instances for the infima
+    haveI : Nonempty { r : ℚ // (q : ℝ) < r } :=
+      ⟨⟨q + 1, by simp [Rat.cast_add, Rat.cast_one]⟩⟩
+
+    calc ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω
+        ≤ ⨅ r : {r : ℚ // (q : ℝ) < r}, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω := by
+          apply le_ciInf
+          intro ⟨r, hr⟩
+          have hr' : q < r := by exact_mod_cast hr
+          have h_bdd_below : BddBelow (Set.range fun s : Set.Ioi q =>
+              alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω) := by
+            use 0
+            intro x hx
+            obtain ⟨s, rfl⟩ := hx
+            exact (h_bdd s.val).1
+          exact ciInf_le h_bdd_below ⟨r, hr'⟩
+      _ ≤ alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := h_right_cont
+
+  · -- alphaIicCE q ω ≤ ⨅ r > q, alphaIicCE r ω (by monotonicity)
+    apply le_ciInf
+    intro ⟨r, hr⟩
+    exact h_mono q r (le_of_lt hr)
+
 /-!
 ### Identification lemma and endpoint limits for alphaIicCE
 
@@ -1888,4 +2139,515 @@ lemma directing_measure_isProbabilityMeasure
   ProbabilityTheory.instIsProbabilityMeasure_stieltjesOfMeasurableRat
     (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
 
+/-!
+## Bridge Lemma: Integral against directing measure equals conditional expectation
 
+This is the key Kallenberg insight: the directing measure ν(ω) is the conditional distribution
+of X₀ given the tail σ-algebra. Therefore:
+
+  ∫ f dν(ω) = E[f(X₀) | tail](ω)  a.e.
+
+**Proof Strategy:**
+1. **Base case (Iic indicators):** By Stieltjes construction,
+   `∫ 1_{Iic t} dν(ω) = alphaIic t ω = alphaIicCE t ω = E[1_{Iic t}(X₀)|tail](ω)` a.e.
+
+2. **Extension:** Iic sets form a π-system generating the Borel σ-algebra.
+   By measure extensionality, two probability measures agreeing on Iic agree everywhere.
+   The same linearity/continuity argument extends to all bounded measurable f.
+
+This lemma is the bridge that allows us to go from:
+- `cesaro_to_condexp_L2`: α = E[f(X₀)|tail]
+to:
+- `directing_measure_integral`: α = ∫f dν
+
+by transitivity.
+-/
+
+/-- **Base case:** For Iic indicators, the directing measure integral equals alphaIicCE.
+
+This follows from:
+1. Stieltjes construction: `∫ 1_{Iic t} dν(ω) = (ν(Iic t)).toReal`
+2. Measure value: `(ν(Iic t)).toReal = stieltjesOfMeasurableRat t`
+3. Stieltjes extension: `stieltjesOfMeasurableRat t = alphaIic t` a.e.
+4. Identification: `alphaIic t =ᵐ alphaIicCE t` -/
+lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) :
+    (fun ω => ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      =ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
+  -- Step 1: Simplify integral to measure value
+  have h_integral_eq : ∀ ω, ∫ x, (Set.Iic t).indicator (fun _ => (1 : ℝ)) x
+      ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+      (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal := by
+    intro ω
+    rw [MeasureTheory.integral_indicator measurableSet_Iic]
+    simp only [MeasureTheory.integral_const, smul_eq_mul, mul_one]
+    rw [Measure.real_def, Measure.restrict_apply MeasurableSet.univ, Set.univ_inter]
+
+  -- Step 2: The measure on Iic t equals the Stieltjes function value
+  have h_meas_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω (Set.Iic t)).toReal =
+      (ProbabilityTheory.stieltjesOfMeasurableRat
+        (alphaIicRat X hX_contract hX_meas hX_L2)
+        (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t := by
+    intro ω
+    unfold directing_measure
+    rw [ProbabilityTheory.measure_stieltjesOfMeasurableRat_Iic]
+    have h_nonneg : 0 ≤ (ProbabilityTheory.stieltjesOfMeasurableRat
+          (alphaIicRat X hX_contract hX_meas hX_L2)
+          (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t :=
+      ProbabilityTheory.stieltjesOfMeasurableRat_nonneg _ _ _
+    exact ENNReal.toReal_ofReal h_nonneg
+
+  -- Step 3: Combine and use identification with alphaIicCE
+  -- The Stieltjes extension equals alphaIic a.e., and alphaIic =ᵐ alphaIicCE
+
+  -- We need to filter on the set where IsRatStieltjesPoint alphaIicRat ω holds.
+  -- This requires: monotonicity, limits at ±∞, and right-continuity at all rationals.
+
+  -- Get monotonicity of alphaIic at all rational pairs
+  have h_mono_ae : ∀ᵐ ω ∂μ, ∀ q r : ℚ, q ≤ r →
+      alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω ≤
+      alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω := by
+    rw [ae_all_iff]; intro q
+    rw [ae_all_iff]; intro r
+    by_cases hqr : q ≤ r
+    · have h_le : (q : ℝ) ≤ (r : ℝ) := Rat.cast_le.mpr hqr
+      filter_upwards [alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ),
+                      alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ),
+                      alphaIicCE_mono X hX_contract hX_meas hX_L2 (q : ℝ) (r : ℝ) h_le]
+        with ω hq hr hCE_mono
+      intro _
+      rw [hq, hr]
+      exact hCE_mono
+    · exact ae_of_all μ (fun ω h_contra => absurd h_contra hqr)
+
+  -- Get limits at ±∞ (along integers, which implies along rationals by monotonicity)
+  have h_bot_ae : ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIic X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω) atTop (𝓝 0) :=
+    alphaIic_ae_tendsto_zero_at_bot X hX_contract hX_meas hX_L2
+
+  have h_top_ae : ∀ᵐ ω ∂μ, Tendsto (fun n : ℕ =>
+      alphaIic X hX_contract hX_meas hX_L2 (n : ℝ) ω) atTop (𝓝 1) :=
+    alphaIic_ae_tendsto_one_at_top X hX_contract hX_meas hX_L2
+
+  -- Also filter on alphaIic = alphaIicCE at all rationals (countable ae union)
+  have h_ae_all_rationals : ∀ᵐ ω ∂μ, ∀ q : ℚ,
+      alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω =
+      alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+    rw [ae_all_iff]
+    intro q
+    exact alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ)
+
+  -- Filter on alphaIicCE_mono at (t, q) for all rationals q > t
+  have h_mono_t_rational : ∀ᵐ ω ∂μ, ∀ q : ℚ, t < q →
+      alphaIicCE X hX_contract hX_meas hX_L2 t ω ≤
+      alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+    rw [ae_all_iff]
+    intro q
+    by_cases htq : t < q
+    · have h_le : t ≤ (q : ℝ) := le_of_lt htq
+      filter_upwards [alphaIicCE_mono X hX_contract hX_meas hX_L2 t (q : ℝ) h_le] with ω hω
+      intro _
+      exact hω
+    · exact ae_of_all μ (fun ω h_contra => absurd h_contra htq)
+
+  -- Filter on all necessary conditions (including right-continuity at t and all rationals)
+  filter_upwards [alphaIic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t,
+                  h_mono_ae, h_bot_ae, h_top_ae, h_ae_all_rationals, h_mono_t_rational,
+                  alphaIicCE_right_continuous_at X hX_contract hX_meas hX_L2 t,
+                  alphaIicCE_iInf_rat_gt_eq X hX_contract hX_meas hX_L2]
+    with ω h_ae h_mono h_bot h_top h_ae_rat h_mono_t_rat h_right_cont h_iInf_rat_gt_CE
+  rw [h_integral_eq, h_meas_eq]
+  -- Need: stieltjesOfMeasurableRat alphaIicRat ω t = alphaIicCE t ω
+  -- By h_ae: alphaIic t ω = alphaIicCE t ω
+  rw [← h_ae]
+
+  -- The Stieltjes function is defined via toRatCDF.
+  -- At rational points, stieltjesOfMeasurableRat equals toRatCDF.
+  -- toRatCDF uses alphaIicRat when IsRatStieltjesPoint holds, else defaultRatCDF.
+
+  -- Show that IsRatStieltjesPoint alphaIicRat ω holds for this ω.
+  -- We verify the conditions using h_mono, h_bot, h_top.
+  have h_alphaIicRat_mono : Monotone (alphaIicRat X hX_contract hX_meas hX_L2 ω) := by
+    intro q r hqr
+    unfold alphaIicRat
+    exact h_mono q r hqr
+
+  -- For limits at ±∞ along rationals, use monotonicity + integer limits
+  have h_alphaIicRat_tendsto_top : Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω)
+      atTop (𝓝 1) := by
+    -- alphaIicRat is monotone and bounded above by 1
+    -- The integer subsequence converges to 1, so the whole sequence does
+    -- Use tendsto_atTop_isLUB with the fact that 1 is the supremum
+    apply tendsto_atTop_isLUB h_alphaIicRat_mono
+    -- Need to show 1 is the LUB of the range
+    -- Since alphaIicRat is monotone, bounded by 1, and the integer sequence → 1,
+    -- the sup is 1.
+    constructor
+    · -- 1 is an upper bound
+      rintro _ ⟨q, rfl⟩
+      unfold alphaIicRat alphaIic
+      -- max 0 (min 1 x) ≤ 1 always holds
+      exact max_le zero_le_one (min_le_left _ _)
+    · -- 1 is the least upper bound
+      intro b hb
+      -- b ≥ alphaIicRat n for all n, so b ≥ lim alphaIicRat n = 1
+      by_contra h_not
+      push_neg at h_not
+      have hε : 1 - b > 0 := by linarith
+      -- Since alphaIicRat n → 1, for large n we have alphaIicRat n > b
+      have h_nat : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω (n : ℚ))
+          atTop (𝓝 1) := by
+        unfold alphaIicRat
+        simp only [Rat.cast_natCast]
+        exact h_top
+      rw [Metric.tendsto_atTop] at h_nat
+      obtain ⟨N, hN⟩ := h_nat (1 - b) hε
+      have h_contra := hb (Set.mem_range.mpr ⟨N, rfl⟩)
+      specialize hN N le_rfl
+      rw [Real.dist_eq] at hN
+      have h_abs : |alphaIicRat X hX_contract hX_meas hX_L2 ω N - 1| < 1 - b := hN
+      have h_lower : alphaIicRat X hX_contract hX_meas hX_L2 ω N ≥ 0 := by
+        unfold alphaIicRat alphaIic
+        -- 0 ≤ max 0 (min 1 x) always holds
+        exact le_max_left 0 _
+      have h_upper : alphaIicRat X hX_contract hX_meas hX_L2 ω N ≤ 1 := by
+        unfold alphaIicRat alphaIic
+        exact max_le zero_le_one (min_le_left _ _)
+      rw [abs_sub_lt_iff] at h_abs
+      linarith
+
+  have h_alphaIicRat_tendsto_bot : Tendsto (alphaIicRat X hX_contract hX_meas hX_L2 ω)
+      atBot (𝓝 0) := by
+    -- Similar argument using monotonicity and GLB at -∞
+    apply tendsto_atBot_isGLB h_alphaIicRat_mono
+    -- Need to show 0 is the GLB of the range
+    constructor
+    · -- 0 is a lower bound
+      rintro _ ⟨q, rfl⟩
+      unfold alphaIicRat alphaIic
+      -- 0 ≤ max 0 (min 1 x) always holds
+      exact le_max_left 0 _
+    · -- 0 is the greatest lower bound
+      intro b hb
+      by_contra h_not
+      push_neg at h_not
+      have hε : b > 0 := h_not
+      -- Since alphaIicRat (-n) → 0, for large n we have alphaIicRat (-n) < b
+      have h_nat : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω (-(n : ℚ)))
+          atTop (𝓝 0) := by
+        unfold alphaIicRat
+        simp only [Rat.cast_neg, Rat.cast_natCast]
+        exact h_bot
+      rw [Metric.tendsto_atTop] at h_nat
+      obtain ⟨N, hN⟩ := h_nat b hε
+      have h_contra := hb (Set.mem_range.mpr ⟨-(N : ℚ), rfl⟩)
+      specialize hN N le_rfl
+      rw [Real.dist_eq, abs_sub_comm] at hN
+      have h_lower : alphaIicRat X hX_contract hX_meas hX_L2 ω (-(N : ℚ)) ≥ 0 := by
+        unfold alphaIicRat alphaIic
+        -- 0 ≤ max 0 (min 1 x) always holds
+        exact le_max_left 0 _
+      have h_abs : |alphaIicRat X hX_contract hX_meas hX_L2 ω (-(N : ℚ)) - 0| < b := by
+        rwa [abs_sub_comm] at hN
+      simp only [sub_zero, abs_of_nonneg h_lower] at h_abs
+      linarith
+
+  -- Right-continuity at rationals for alphaIicRat.
+  -- This is a key property that follows from alphaIicCE being right-continuous
+  -- (as a conditional expectation of right-continuous indicators).
+  have h_iInf_rat_gt : ∀ q : ℚ, ⨅ r : Set.Ioi q,
+      alphaIicRat X hX_contract hX_meas hX_L2 ω r = alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
+    intro q
+    -- By monotonicity, the infimum is a limit from the right.
+    -- For CDFs, right-continuity says this limit equals the value.
+    apply le_antisymm
+    · -- iInf ≤ value: Use h_iInf_rat_gt_CE and the identification h_ae_rat.
+      -- alphaIicRat ω r = alphaIic (r : ℝ) ω = alphaIicCE (r : ℝ) ω for rational r.
+      -- h_iInf_rat_gt_CE q says: ⨅ r > q, alphaIicCE r ω = alphaIicCE q ω
+      -- Convert between alphaIicRat and alphaIicCE using h_ae_rat.
+      unfold alphaIicRat
+      -- Now goal is: ⨅ r : Set.Ioi q, alphaIic (r : ℝ) ω ≤ alphaIic (q : ℝ) ω
+      rw [h_ae_rat q]
+      -- Goal: ⨅ r : Set.Ioi q, alphaIic (r : ℝ) ω ≤ alphaIicCE (q : ℝ) ω
+      have h_eq : ⨅ r : Set.Ioi q, alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω =
+          ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω := by
+        congr 1
+        ext ⟨r, hr⟩
+        exact h_ae_rat r
+      rw [h_eq, h_iInf_rat_gt_CE q]
+    · -- value ≤ iInf: use monotonicity
+      apply le_ciInf
+      intro ⟨r, hr⟩
+      exact h_alphaIicRat_mono (le_of_lt hr)
+
+  -- Now we know IsRatStieltjesPoint holds, so toRatCDF = alphaIicRat
+  have h_isRSP : ProbabilityTheory.IsRatStieltjesPoint
+      (alphaIicRat X hX_contract hX_meas hX_L2) ω :=
+    ⟨h_alphaIicRat_mono, h_alphaIicRat_tendsto_top, h_alphaIicRat_tendsto_bot, h_iInf_rat_gt⟩
+
+  -- Use toRatCDF_of_isRatStieltjesPoint: when IsRatStieltjesPoint holds, toRatCDF = f
+  -- Then stieltjesOfMeasurableRat at t equals the infimum over rationals > t
+  -- which by h_iInf_rat_gt equals alphaIicRat restricted to t
+  -- But we need the value at real t, not rational t.
+
+  -- The Stieltjes function at real t is defined as inf over rationals > t.
+  -- stieltjesOfMeasurableRat f hf ω t = ⨅ q > t, toRatCDF f ω q
+  -- Since IsRatStieltjesPoint holds: = ⨅ q > t, f ω q = ⨅ q > t, alphaIicRat ω q
+
+  -- By right-continuity of alphaIic (which follows from being a CDF):
+  -- ⨅ q > t, alphaIic q ω = alphaIic t ω
+
+  -- The Stieltjes function equals its value via the iInf_rat_gt characterization
+  have h_stieltjes_eq : (ProbabilityTheory.stieltjesOfMeasurableRat
+        (alphaIicRat X hX_contract hX_meas hX_L2)
+        (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω) t =
+      ⨅ q : {q : ℚ // t < q}, alphaIicRat X hX_contract hX_meas hX_L2 ω q := by
+    rw [← StieltjesFunction.iInf_rat_gt_eq]
+    congr 1
+    funext q
+    rw [ProbabilityTheory.stieltjesOfMeasurableRat_eq]
+    rw [ProbabilityTheory.toRatCDF_of_isRatStieltjesPoint h_isRSP]
+
+  rw [h_stieltjes_eq]
+  unfold alphaIicRat
+  -- Now we need: ⨅ q > t, alphaIic q ω = alphaIic t ω
+
+  -- Strategy: Use h_ae_rat to transfer to alphaIicCE, then use right-continuity.
+  -- ⨅ q > t, alphaIic q ω = ⨅ q > t, alphaIicCE q ω  (by h_ae_rat)
+  -- = alphaIicCE t ω  (by right-continuity of alphaIicCE)
+  -- = alphaIic t ω   (by h_ae)
+
+  -- Step 1: Rewrite the infimum using h_ae_rat
+  have h_infimum_eq : (⨅ q : {q : ℚ // t < q}, alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) =
+      ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+    congr 1
+    ext ⟨q, _⟩
+    exact h_ae_rat q
+
+  rw [h_infimum_eq]
+
+  -- Step 2: Show ⨅ q > t, alphaIicCE q ω = alphaIicCE t ω (right-continuity of alphaIicCE)
+  -- alphaIicCE is the conditional expectation of the indicator 1_{Iic t}(X₀).
+  -- As t → t₀⁺, the indicator 1_{Iic t} ↓ 1_{Iic t₀} pointwise (since Iic t ↓ Iic t₀).
+  -- By monotone convergence for conditional expectations:
+  -- E[1_{Iic t}(X₀) | tail] → E[1_{Iic t₀}(X₀) | tail] a.e.
+
+  -- For this specific ω, we need: ⨅ q > t, alphaIicCE q ω = alphaIicCE t ω.
+  -- This is the pointwise right-continuity of alphaIicCE.
+
+  -- Actually, we filtered on conditions for alphaIicCE at rationals and at t,
+  -- but not directly on right-continuity. Let's prove it using monotonicity.
+
+  -- alphaIicCE is monotone a.e. We use the rational monotonicity we have.
+  -- For q > t (rational), alphaIicCE t ω ≤ alphaIicCE q ω (by monotonicity).
+  -- So alphaIicCE t ω ≤ ⨅ q > t, alphaIicCE q ω.
+  -- The other direction (⨅ ≤ value) requires right-continuity.
+
+  have h_nonempty : Nonempty {q : ℚ // t < q} := by
+    -- Find a rational greater than t
+    obtain ⟨q, hq⟩ := exists_rat_gt t
+    exact ⟨⟨q, hq⟩⟩
+
+  apply le_antisymm
+  · -- ⨅ q > t, alphaIicCE q ω ≤ alphaIicCE t ω
+    -- This is the "hard" direction requiring right-continuity.
+    -- Use that the infimum of a monotone decreasing sequence converging to t
+    -- equals the limit, which is the value at t for right-continuous functions.
+
+    -- The set {q : ℚ // t < q} has infimum t.
+    -- For monotone alphaIicCE, ⨅ q > t, alphaIicCE q = lim_{q → t⁺} alphaIicCE q.
+    -- Right-continuity would give lim_{q → t⁺} alphaIicCE q = alphaIicCE t.
+
+    -- For now, we use the key fact that alphaIicCE is bounded in [0,1] and monotone,
+    -- so the infimum exists. The infimum equals the value at t by right-continuity
+    -- of CDFs built from L¹ limits.
+
+    -- Use the right-continuity lemma (filtered on via h_right_cont)
+    calc ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω
+        ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := h_right_cont
+      _ = alphaIic X hX_contract hX_meas hX_L2 t ω := h_ae.symm
+
+  · -- alphaIic t ω ≤ ⨅ q > t, alphaIicCE q ω
+    -- By monotonicity: for q > t, alphaIicCE t ω ≤ alphaIicCE q ω.
+    -- And alphaIic t ω = alphaIicCE t ω by h_ae.
+    -- So alphaIic t ω ≤ ⨅ q > t, alphaIicCE q ω.
+    rw [h_ae]
+    apply le_ciInf
+    intro ⟨q, hq⟩
+    -- Need: alphaIicCE t ω ≤ alphaIicCE q ω where t < q
+    -- This follows from h_mono_t_rat!
+    exact h_mono_t_rat q hq
+
+/-- **Main bridge lemma:** For any bounded measurable f, the integral against directing_measure
+equals the conditional expectation E[f(X₀)|tail].
+
+This is the Kallenberg identification: ν(ω) is the conditional distribution of X₀ given tail. -/
+lemma directing_measure_integral_eq_condExp
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] := by
+  -- Strategy: Use π-system/monotone class argument
+  -- 1. Base case: directing_measure_integral_Iic_ae_eq_alphaIicCE gives result for 1_{Iic t}
+  -- 2. alphaIicCE t = E[1_{Iic t}(X₀)|tail] by definition
+  -- 3. Both operations (∫·dν and E[·|tail]) are linear and continuous
+  -- 4. Iic is π-system generating Borel, so agreement extends to all Borel sets
+  -- 5. Linear extension to bounded measurable functions
+  sorry  -- TODO: Implement the monotone class extension
+
+/-- **Simplified directing measure integral via identification chain.**
+
+This lemma proves that the L¹ limit α equals ∫f dν a.e. using the Kallenberg identification chain:
+1. α = E[f(X₀)|tail]  (from `cesaro_to_condexp_L2`)
+2. E[f(X₀)|tail] = ∫f dν  (from `directing_measure_integral_eq_condExp`)
+3. Therefore α = ∫f dν by transitivity
+
+This approach bypasses the Ioc/step function decomposition entirely, giving a much simpler proof.
+
+**Key insight:** By uniqueness of L¹ limits, the L¹ limit from `weighted_sums_converge_L1`
+equals the L² limit from `cesaro_to_condexp_L2` (since L² convergence implies L¹ on prob spaces).
+-/
+lemma directing_measure_integral_via_chain
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    ∃ (alpha : Ω → ℝ),
+      Measurable alpha ∧ MemLp alpha 1 μ ∧
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+  -- Get α from weighted_sums_converge_L1
+  obtain ⟨alpha, hα_meas, hα_L1, hα_conv⟩ :=
+    weighted_sums_converge_L1 X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+  refine ⟨alpha, hα_meas, hα_L1, hα_conv, ?_⟩
+
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- IDENTIFICATION CHAIN: α = E[f(X₀)|tail] = ∫f dν
+  -- ═══════════════════════════════════════════════════════════════════════════════
+
+  -- Step 1: Get α_f from cesaro_to_condexp_L2 with identification
+  -- α_f =ᵐ E[f(X₀)|tail]
+  -- Note: cesaro_to_condexp_L2 requires |f x| ≤ 1, so we need to rescale if M > 1
+  obtain ⟨M, hM⟩ := hf_bdd
+  by_cases hM_zero : M = 0
+  · -- If M = 0, then f = 0, so both α and ∫f dν are 0 a.e.
+    have hf_zero : ∀ x, f x = 0 := fun x => by
+      have := hM x
+      rw [hM_zero] at this
+      exact abs_nonpos_iff.mp this
+
+    -- Show ∫f dν = 0 for all ω (deterministic, not just a.e.)
+    have h_integral_zero : ∀ ω, ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) = 0 := by
+      intro ω
+      simp only [hf_zero, integral_zero]
+
+    -- Show alpha = 0 a.e. from L¹ convergence
+    -- When f = 0, Cesàro averages are 0, so ∫|0 - alpha| < ε for all ε > 0
+    -- This implies ∫|alpha| = 0, hence alpha = 0 a.e.
+    have h_alpha_zero_ae : alpha =ᵐ[μ] 0 := by
+      -- The Cesàro sum is 0 when f = 0
+      have h_cesaro_zero : ∀ (n : ℕ) (m : ℕ) ω,
+          (1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) = 0 := by
+        intro n m ω
+        simp only [hf_zero, Finset.sum_const_zero, mul_zero]
+      -- From hα_conv with n = 0, ε = 1/k: ∫|0 - alpha| < 1/k for large m
+      -- Taking limit: ∫|alpha| ≤ 0, so ∫|alpha| = 0
+      have h_int_abs_alpha_eq_zero : ∫ ω, |alpha ω| ∂μ = 0 := by
+        apply le_antisymm _ (integral_nonneg (fun _ => abs_nonneg _))
+        -- For any ε > 0, ∫|alpha| < ε (using hα_conv with cesaro = 0)
+        by_contra h_pos
+        push_neg at h_pos
+        have hε : (0 : ℝ) < ∫ ω, |alpha ω| ∂μ := h_pos
+        obtain ⟨M_idx, hM_idx⟩ := hα_conv 0 (∫ ω, |alpha ω| ∂μ) hε
+        specialize hM_idx M_idx (le_refl _)
+        have h_simp : ∀ ω', |(1 / (M_idx : ℝ)) * ∑ k : Fin M_idx, f (X (0 + k.val + 1) ω') - alpha ω'|
+            = |alpha ω'| := by
+          intro ω'
+          rw [h_cesaro_zero 0 M_idx ω', zero_sub, abs_neg]
+        simp_rw [h_simp] at hM_idx
+        linarith
+      -- ∫|alpha| = 0 implies alpha = 0 a.e.
+      -- Use: integral_eq_zero_iff_of_nonneg_ae
+      have h_abs_nonneg : (0 : Ω → ℝ) ≤ᵐ[μ] (fun ω => |alpha ω|) :=
+        ae_of_all μ (fun ω => abs_nonneg (alpha ω))
+      have h_abs_int : Integrable (fun ω => |alpha ω|) μ :=
+        (memLp_one_iff_integrable.mp hα_L1).norm
+      rw [integral_eq_zero_iff_of_nonneg_ae h_abs_nonneg h_abs_int] at h_int_abs_alpha_eq_zero
+      exact h_int_abs_alpha_eq_zero.mono (fun ω hω => abs_eq_zero.mp hω)
+
+    -- Combine: alpha = 0 = ∫f dν a.e.
+    filter_upwards [h_alpha_zero_ae] with ω hω
+    simp only [hω, h_integral_zero ω, Pi.zero_apply]
+
+  · -- M > 0 case
+    have hM_pos : 0 < M := lt_of_le_of_ne (abs_nonneg (f 0) |>.trans (hM 0)) (Ne.symm hM_zero)
+
+    -- Rescale f to g = f/M so |g| ≤ 1
+    let g : ℝ → ℝ := fun x => f x / M
+    have hg_meas : Measurable g := hf_meas.div_const M
+    have hg_bdd : ∀ x, |g x| ≤ 1 := fun x => by
+      simp only [g, abs_div]
+      have hM_abs : |M| = M := abs_of_pos hM_pos
+      rw [hM_abs]
+      calc |f x| / M ≤ M / M := div_le_div_of_nonneg_right (hM x) (le_of_lt hM_pos)
+        _ = 1 := div_self (ne_of_gt hM_pos)
+
+    -- Apply cesaro_to_condexp_L2 to g
+    obtain ⟨α_g, hα_g_L2, hα_g_tail, hα_g_conv, hα_g_eq⟩ :=
+      cesaro_to_condexp_L2 hX_contract hX_meas g hg_meas hg_bdd
+
+    -- α_g = E[g(X₀)|tail] = E[(f/M)(X₀)|tail] = (1/M) * E[f(X₀)|tail]
+    -- So: E[f(X₀)|tail] = M * α_g
+
+    -- Chain:
+    -- 1. alpha =ᵐ M * α_g  (by uniqueness of limits for f = M * g)
+    -- 2. M * α_g =ᵐ M * E[g(X₀)|tail] = E[f(X₀)|tail]  (by linearity of condExp)
+    -- 3. E[f(X₀)|tail] =ᵐ ∫f dν  (by directing_measure_integral_eq_condExp)
+
+    -- For now, use the bridge lemma directly
+    have h_bridge : (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+        =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] :=
+      directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩
+
+    -- Need: alpha =ᵐ ∫f dν
+    --
+    -- The identification chain connects three quantities a.e.:
+    --   alpha = E[f(X₀)|tail] = ∫f dν
+    --
+    -- 1. alpha =ᵐ E[f(X₀)|tail]:
+    --    - From hα_g_eq: α_g =ᵐ E[g(X₀)|tail] (via cesaro_to_condexp_L2)
+    --    - E[f(X₀)|tail] = E[(M·g)(X₀)|tail] = M · E[g(X₀)|tail] (linearity of condExp)
+    --    - alpha =ᵐ M · α_g (L¹ uniqueness: f = M·g implies same Cesàro limits)
+    --    - Therefore alpha =ᵐ M · E[g|tail] = E[f|tail]
+    --
+    -- 2. E[f(X₀)|tail] =ᵐ ∫f dν:
+    --    - From h_bridge (via directing_measure_integral_eq_condExp)
+    --    - This requires the monotone class extension (see sorry at line 2492)
+    --
+    -- 3. Combining: alpha =ᵐ ∫f dν by transitivity
+    --
+    -- Key subtlety: weighted_sums_converge_L1 uses shifted indices (n+1,...,n+m)
+    -- while cesaro_to_condexp_L2 uses indices (0,...,n-1). For contractable
+    -- sequences with tail-measurable limits, the shift doesn't affect the limit.
+    --
+    -- TODO: Implement the uniqueness argument for L¹ limits.
+    -- This depends on directing_measure_integral_eq_condExp (line 2492).
+    exact h_bridge.symm.mono fun ω hω => by
+      -- Goal: alpha ω = ∫ x, f x ∂(directing_measure ... ω)
+      -- From hω: μ[f ∘ X 0 | tail] ω = ∫ x, f x ∂(directing_measure ... ω)
+      -- Need: alpha ω = μ[f ∘ X 0 | tail] ω
+      -- This is the uniqueness of L¹ limits (TODO)
+      sorry
+
+end Exchangeability.DeFinetti.ViaL2
