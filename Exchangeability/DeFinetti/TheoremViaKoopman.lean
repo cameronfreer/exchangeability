@@ -165,17 +165,57 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   constructor
   · -- Forward: Contractable → Exchangeable ∧ ConditionallyIID
-    -- The Koopman approach requires exchangeability as a starting point.
-    -- To prove this direction directly from contractability, we would need
-    -- either the ViaL2 approach or a direct contractability-based proof.
-    -- Here we use the fact that once we have ConditionallyIID, we get Exchangeable.
+    -- Use the Koopman/contractability approach via ViaKoopmanContractable
     intro hContract
-    -- For the Koopman proof starting from Contractable, we need to establish
-    -- exchangeability first. This creates a circularity that the other proof
-    -- methods (ViaL2, ViaMartingale) handle differently.
-    -- For now, we note this requires the full de Finetti machinery.
-    -- The ViaKoopmanContractable module provides the direct path-space approach.
-    sorry
+    -- Step 1: Get path-space contractability
+    have hPathContract := pathSpace_contractable_of_contractable X hX_meas hContract
+    -- Step 2: Get shift-preservation on path space
+    have hσ := pathSpace_shift_preserving_of_contractable X hX_meas hContract
+    -- Step 3: Get path exchangeability from exchangeability (which we derive from ciid)
+    -- First, get path-space ConditionallyIID via the existing lemma
+    haveI : IsProbabilityMeasure (μ_path μ X) :=
+      Exchangeability.Bridge.isProbabilityMeasure_μ_path μ X hX_meas
+    -- The path-space result uses exchangeable_implies_ciid_modulo_bridge
+    -- which requires path exchangeability. But path exchangeability requires
+    -- original-space exchangeability, creating a seeming circularity.
+    --
+    -- The resolution: ConditionallyIID ⟹ Exchangeable (by exchangeable_of_conditionallyIID)
+    -- So we first prove ConditionallyIID using the contractability machinery.
+    --
+    -- Use the direct contractable path:
+    -- 1. Get path-space ConditionallyIID via conditionallyIID_transfer
+    -- 2. Then get Exchangeable from ConditionallyIID
+    have hPathExch : ∀ π : Equiv.Perm ℕ,
+        Measure.map (reindex π) (μ_path μ X) = μ_path μ X := by
+      -- From contractability, derive path exchangeability via the following argument:
+      --
+      -- **Key insight**: Contractability + π-system uniqueness gives exchangeability.
+      --
+      -- For any permutation π and finite marginal on {0,...,n-1}:
+      --   The marginal of μ_path.map(reindex π) equals the marginal of μ_path
+      -- This follows from contractability: for any injection k, we can extend to
+      -- a permutation and use contractability to show marginals agree.
+      --
+      -- Then apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality.
+      intro π
+      -- The mapped measure is also a probability measure
+      haveI : IsProbabilityMeasure (Measure.map (reindex π) (μ_path μ X)) := by
+        apply Measure.isProbabilityMeasure_map
+        exact (Exchangeability.measurable_reindex (α := ℝ) (π := π)).aemeasurable
+      apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := ℝ)
+      intro n
+      -- Need: marginal on first n coordinates is preserved
+      -- This follows from contractability + permutation argument
+      sorry -- TODO: Complete via finite-dimensional contractability argument
+    -- Apply the path-space result
+    have h_path_ciid : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i) :=
+      ViaKoopman.exchangeable_implies_ciid_modulo_bridge (μ_path μ X) hσ hPathExch
+    -- Transfer from path space to original space
+    have hCIID : ConditionallyIID μ X :=
+      conditionallyIID_transfer X hX_meas h_path_ciid
+    -- Get Exchangeable from ConditionallyIID
+    have hExch : Exchangeable μ X := exchangeable_of_conditionallyIID hX_meas hCIID
+    exact ⟨hExch, hCIID⟩
   · -- Backward: Exchangeable ∧ ConditionallyIID → Contractable
     intro ⟨hExch, _hCIID⟩
     exact contractable_of_exchangeable hExch hX_meas
