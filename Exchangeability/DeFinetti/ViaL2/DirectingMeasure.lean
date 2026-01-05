@@ -2696,21 +2696,69 @@ lemma directing_measure_integral_via_chain
     -- Step 1: Show alpha =ᵐ E[f(X₀)|tail] using L¹ uniqueness directly
     -- Both limits are a.e. equal to the unique L¹ limit of shifted f-averages
     have h_alpha_eq_condExp : alpha =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X] := by
-      -- PROOF STRATEGY (L¹ uniqueness):
+      -- PROOF: Use condExp_smul and the identification from cesaro_to_condexp_L2
       --
-      -- Key: hα_g_eq gives α_g =ᵐ E[g(X₀)|tail] where g = f/M with |g| ≤ 1.
-      -- And alpha equals M * (L¹ limit of g-averages) by linearity.
+      -- We have from cesaro_to_condexp_L2:
+      --   α_g =ᵐ μ[g ∘ X 0 | tail]    where g = f/M
       --
-      -- 1. E[M*g(X₀)|tail] = M * E[g(X₀)|tail] by condExp_smul
-      -- 2. M * g = f, so E[f(X₀)|tail] =ᵐ M * E[g(X₀)|tail]
-      -- 3. cesaro_convergence_all_shifts gives: g-averages → E[g(X₀)|tail] in L¹
-      -- 4. Scaling: M*(g-averages) = f-averages → M*E[g|tail] = E[f|tail] in L¹
-      -- 5. hα_conv gives: f-averages → alpha in L¹
-      -- 6. By L¹ uniqueness: alpha =ᵐ E[f|tail] (triangle inequality argument)
+      -- By condExp_smul: μ[M • (g ∘ X 0) | tail] = M • μ[g ∘ X 0 | tail]
+      -- Since f = M * g: μ[f ∘ X 0 | tail] = M * μ[g ∘ X 0 | tail] =ᵐ M * α_g
       --
-      -- Technical: Need to match indices between cesaro_convergence_all_shifts (n+k)
-      -- and hα_conv (n + k.val + 1). When n=1, both give indices 1, 2, ..., m.
-      sorry
+      -- The L¹ uniqueness argument:
+      -- - f-averages = M * g-averages (algebra)
+      -- - g-averages → α_g in L² (from cesaro_to_condexp_L2, via L² convergence)
+      -- - L² convergence ⟹ L¹ convergence on probability spaces
+      -- - So M * g-averages = f-averages → M * α_g in L¹
+      -- - But hα_conv says f-averages → alpha in L¹
+      -- - By uniqueness of L¹ limits: alpha =ᵐ M * α_g
+      --
+      -- Conclusion: alpha =ᵐ M * α_g =ᵐ M * μ[g ∘ X 0 | tail] = μ[f ∘ X 0 | tail]
+
+      -- Step 1a: Show μ[f ∘ X 0 | tail] = M * μ[g ∘ X 0 | tail]
+      have hm_le := TailSigma.tailSigma_le X hX_meas
+      have h_condExp_f_eq : μ[f ∘ X 0 | TailSigma.tailSigma X]
+          =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+        -- f x = M * g x (since g x = f x / M and M > 0)
+        have h_f_eq_Mg : ∀ x, f x = M * g x := fun x => by
+          simp only [g]
+          field_simp [ne_of_gt hM_pos]
+        -- f ∘ X 0 = (M • g) ∘ X 0 (pointwise)
+        have h_comp_eq : (f ∘ X 0) = fun ω => M * g (X 0 ω) := by
+          ext ω
+          simp only [Function.comp_apply, h_f_eq_Mg]
+        -- Use condExp linearity: E[M * h | m] = M * E[h | m]
+        have h_ae : μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X]
+            =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+          -- Use condExp_smul with appropriate coercions
+          have h_smul := condExp_smul M (g ∘ X 0) (m := TailSigma.tailSigma X) (μ := μ)
+          simp only [smul_eq_mul, Pi.smul_apply] at h_smul
+          convert h_smul using 2 <;> ext ω <;> ring
+        calc μ[f ∘ X 0 | TailSigma.tailSigma X]
+            = μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X] := by rw [h_comp_eq]
+          _ =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := h_ae
+
+      -- Step 1b: Show alpha =ᵐ M * α_g by L¹ uniqueness
+      -- Both are L¹ limits of f-averages (which equal M * g-averages)
+      have h_alpha_eq_M_alpha_g : alpha =ᵐ[μ] fun ω => M * α_g ω := by
+        -- From hα_g_conv: blockAvg g X 0 n → α_g in L²
+        -- L² convergence implies L¹ convergence on probability spaces
+        -- f-averages = M * g-averages, so f-averages → M * α_g in L¹
+        -- hα_conv says f-averages → alpha in L¹
+        -- By uniqueness of L¹ limits: alpha =ᵐ M * α_g
+        --
+        -- TODO: The formal proof requires matching the indexing conventions between
+        -- cesaro_to_condexp_L2 (uses blockAvg at offset 0) and weighted_sums_converge_L1
+        -- (uses indices n + k.val + 1). With n=0, weighted_sums indices are 1, 2, ..., m
+        -- while blockAvg uses 0, 1, ..., m-1. Need to show these differ by index shift
+        -- which doesn't affect the L¹ limit (by contractability / shift invariance).
+        sorry
+
+      -- Step 1c: Combine: alpha =ᵐ M * α_g =ᵐ M * μ[g|tail] = μ[f|tail]
+      calc alpha =ᵐ[μ] fun ω => M * α_g ω := h_alpha_eq_M_alpha_g
+        _ =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+            filter_upwards [hα_g_eq] with ω hω
+            simp only [hω]
+        _ =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X] := h_condExp_f_eq.symm
 
     -- Step 2: Combine with bridge lemma: alpha =ᵐ ∫f dν
     exact h_alpha_eq_condExp.trans h_bridge.symm
