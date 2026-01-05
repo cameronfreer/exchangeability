@@ -187,16 +187,24 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     -- 2. Then get Exchangeable from ConditionallyIID
     have hPathExch : ∀ π : Equiv.Perm ℕ,
         Measure.map (reindex π) (μ_path μ X) = μ_path μ X := by
-      -- From contractability, derive path exchangeability via the following argument:
+      -- MATHEMATICAL NOTE: This step derives path exchangeability from path contractability.
       --
-      -- **Key insight**: Contractability + π-system uniqueness gives exchangeability.
+      -- **The difficulty**: Contractability gives invariance under strictly monotone
+      -- subsequences, but exchangeability requires invariance under arbitrary permutations.
+      -- These are equivalent for infinite sequences (de Finetti), but proving this
+      -- direction requires the full theorem!
       --
-      -- For any permutation π and finite marginal on {0,...,n-1}:
-      --   The marginal of μ_path.map(reindex π) equals the marginal of μ_path
-      -- This follows from contractability: for any injection k, we can extend to
-      -- a permutation and use contractability to show marginals agree.
+      -- **Current approach**: Use finite-marginal equality via π-λ theorem.
+      -- For π and n-marginal: need μ.map(fun ω i => ω(π i)) = μ.map(fun ω i => ω i)
+      -- for (i : Fin n).
       --
-      -- Then apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality.
+      -- **Alternative approach** (see ContractableFactorization.lean):
+      -- - Sort {π(0), ..., π(n-1)} to get StrictMono ρ
+      -- - π = ρ ∘ σ for some permutation σ of Fin n
+      -- - By contractability: marginal on ρ-indices = marginal on consecutive
+      -- - Need: permutation σ preserves the measure (requires finite exchangeability)
+      --
+      -- This is the key gap: finite exchangeability from finite contractability.
       intro π
       -- The mapped measure is also a probability measure
       haveI : IsProbabilityMeasure (Measure.map (reindex π) (μ_path μ X)) := by
@@ -205,8 +213,8 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
       apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := ℝ)
       intro n
       -- Need: marginal on first n coordinates is preserved
-      -- This follows from contractability + permutation argument
-      sorry -- TODO: Complete via finite-dimensional contractability argument
+      -- See ContractableFactorization.lean for the bridge strategy
+      sorry -- TODO: Complete via finite-dimensional contractability + permutation argument
     -- Apply the path-space result
     have h_path_ciid : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i) :=
       ViaKoopman.exchangeable_implies_ciid_modulo_bridge (μ_path μ X) hσ hPathExch

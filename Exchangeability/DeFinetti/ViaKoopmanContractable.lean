@@ -328,6 +328,58 @@ lemma pathSpace_contractable_of_contractable
   rw [h1, h2]
   exact hContract m k hk
 
+/-- Shifting coordinates by +1 preserves the pushforward measure for contractable sequences.
+
+This is the key measure-theoretic step for shift-preservation: if X is contractable,
+then μ.map(i ↦ X(i+1)) = μ.map(i ↦ X i).
+
+**Proof outline:**
+1. Contractability gives finite-dimensional marginal equality
+2. For each n, the marginal on {0,...,n-1} of μ.map(i ↦ X(i+1)) equals
+   the marginal of μ.map(i ↦ X i) (by contractability with k(i) = i+1)
+3. Apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality
+-/
+lemma measure_map_shift_eq_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    Measure.map (fun ω' i => X (i + 1) ω') μ = Measure.map (fun ω' i => X i ω') μ := by
+  -- Both measures are probability measures
+  have hφ_meas : Measurable (fun ω' i => X i ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas i)
+  have hφ1_meas : Measurable (fun ω' i => X (i + 1) ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas (i + 1))
+  haveI h1 : IsProbabilityMeasure (Measure.map (fun ω' i => X (i + 1) ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ1_meas.aemeasurable
+  haveI h2 : IsProbabilityMeasure (Measure.map (fun ω' i => X i ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ_meas.aemeasurable
+  -- Use measure_eq_of_fin_marginals_eq_prob: two probability measures agree iff
+  -- their finite marginals agree
+  apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α)
+  intro n S hS
+  -- Need: marginal on first n coords of μ.map(i ↦ X(i+1)) = marginal of μ.map(i ↦ X i)
+  -- LHS marginal: μ.map(i < n ↦ X(i+1))
+  -- RHS marginal: μ.map(i < n ↦ X i)
+  -- By contractability with k(i) = i+1 (strictly monotone): these are equal
+  have hk : StrictMono (fun i : Fin n => (i.val + 1 : ℕ)) := by
+    intro i j hij
+    exact Nat.add_lt_add_right hij 1
+  -- The marginal projection
+  have h_proj_L : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X (i + 1) ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X (i.val + 1) ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ1_meas]
+    rfl
+  have h_proj_R : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X i ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X i.val ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ_meas]
+    rfl
+  rw [h_proj_L, h_proj_R]
+  -- Now apply contractability: hContract gives measure equality
+  have h_eq := hContract n (fun i => i.val + 1) hk
+  -- Extract the set-wise equality from measure equality
+  rw [h_eq]
+
 /-- Shift-preservation transfers to the pushforward measure.
 
 If `X` is contractable, the pushforward measure is shift-preserving. -/
@@ -348,13 +400,8 @@ lemma pathSpace_shift_preserving_of_contractable
       ext ω i
       simp [shift]
     rw [h_comp]
-    -- Use contractability with strictly monotone (· + 1)
-    have hk : StrictMono (· + 1 : ℕ → ℕ) := fun _ _ h => Nat.add_lt_add_right h 1
-    -- The marginals on any finite prefix agree
-    ext s hs
-    -- This requires showing ∫ 1_s d(μ.map (i ↦ X (i+1))) = ∫ 1_s d(μ.map (i ↦ X i))
-    -- which follows from contractability for appropriate k
-    sorry  -- TODO: Complete using cylinder set argument
+    -- Apply the helper lemma
+    exact measure_map_shift_eq_of_contractable X hX_meas hContract
 
 /-- ConditionallyIID transfers between path space and original space.
 
