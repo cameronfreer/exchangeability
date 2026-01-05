@@ -2520,13 +2520,45 @@ lemma directing_measure_integral_eq_condExp
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
       =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] := by
-  -- Strategy: Use π-system/monotone class argument
-  -- 1. Base case: directing_measure_integral_Iic_ae_eq_alphaIicCE gives result for 1_{Iic t}
-  -- 2. alphaIicCE t = E[1_{Iic t}(X₀)|tail] by definition
-  -- 3. Both operations (∫·dν and E[·|tail]) are linear and continuous
-  -- 4. Iic is π-system generating Borel, so agreement extends to all Borel sets
-  -- 5. Linear extension to bounded measurable functions
-  sorry  -- TODO: Implement the monotone class extension
+  -- PROOF STRATEGY: Monotone class extension from Iic to bounded measurable
+  --
+  -- === STEP 1: Base case for Iic indicators ===
+  -- For f = 1_{Iic t}, we need: ∫ 1_{Iic t} dν(ω) =ᵐ E[1_{Iic t}(X₀)|tail](ω)
+  --
+  -- - LHS: By directing_measure_integral_Iic_ae_eq_alphaIicCE, ∫ 1_{Iic t} dν(ω) =ᵐ αIicCE t ω
+  -- - RHS: By definition of αIicCE, αIicCE t ω = μ[1_{Iic t} ∘ X 0 | TailSigma.tailSigma X](ω)
+  -- - Result: LHS =ᵐ αIicCE t =ᵐ RHS ✓
+  --
+  -- === STEP 2: Extend to Ioc indicators ===
+  -- For f = 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a} (when a < b):
+  -- - ∫ 1_{Ioc a b} dν(ω) = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν  (linearity of integral)
+  -- - E[1_{Ioc a b}(X₀)|tail] = E[1_{Iic b}(X₀)|tail] - E[1_{Iic a}(X₀)|tail]  (condExp_sub)
+  -- - By Step 1, both pairs are a.e. equal → 1_{Ioc a b} works ✓
+  --
+  -- === STEP 3: Extend to simple functions ===
+  -- Simple functions are finite linear combinations of Ioc indicators.
+  -- By linearity of both operations (integral_add, integral_smul, condExp_add, condExp_smul),
+  -- the result holds for all simple functions ✓
+  --
+  -- === STEP 4: Extend to bounded measurable ===
+  -- For bounded measurable f with |f| ≤ M:
+  -- - Use SimpleFunc.approxOn (or MeasureTheory.Lp.simpleFunc_approximation) to get
+  --   simple functions s_n → f pointwise with |s_n| ≤ M
+  -- - For LHS: Apply MeasureTheory.tendsto_integral_of_dominated_convergence
+  --   (dominating function is M, bound by boundedness)
+  -- - For RHS: Apply MeasureTheory.tendsto_condExpL1_of_dominated_convergence
+  --   (same dominating function)
+  -- - Both sides converge in L¹, and by Step 3 they're a.e. equal for each s_n
+  -- - By L¹ limit uniqueness, the limits are a.e. equal ✓
+  --
+  -- Key mathlib lemmas:
+  -- - directing_measure_integral_Iic_ae_eq_alphaIicCE (base case, exists above)
+  -- - MeasureTheory.condExp_sub, MeasureTheory.condExp_smul (linearity)
+  -- - MeasureTheory.SimpleFunc.approxOn (approximation by simple functions)
+  -- - MeasureTheory.tendsto_integral_of_dominated_convergence (DCT for integrals)
+  -- - MeasureTheory.tendsto_condExpL1_of_dominated_convergence (DCT for condExp)
+  --
+  sorry  -- TODO: Implement the above strategy
 
 /-- **Simplified directing measure integral via identification chain.**
 
