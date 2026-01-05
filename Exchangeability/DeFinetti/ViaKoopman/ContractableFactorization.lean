@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaKoopman.BlockInjection
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
+import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
 import Exchangeability.Contractability
 import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 
@@ -1401,5 +1402,24 @@ theorem condexp_product_factorization_contractable
   exact h_ae_eq.symm
 
 end KernelIndependence
+
+/-! ### Bridge to CommonEnding (TODO)
+
+The bridge lemma `indicator_product_bridge_contractable` would connect the CE-based
+factorization in this file to the `ConditionallyIID` definition required by
+`CommonEnding.conditional_iid_from_directing_measure`.
+
+The key insight is:
+- For injective k, sort to get StrictMono ρ with permutation σ such that k = ρ ∘ σ
+- Apply contractability to get integral equality
+- Use CE factorization and the ν ↔ CE relationship
+
+This bridge is needed to complete the sorry at line 178 of TheoremViaKoopman.lean,
+which proves `Contractable μ X → Exchangeable μ X ∧ ConditionallyIID μ X`.
+
+**Status**: Incomplete. The path-space proof in `ViaKoopmanContractable.lean` is complete;
+the original-space bridge requires additional work to match the `ConditionallyIID`
+definition's bind-based formula.
+-/
 
 end Exchangeability.DeFinetti.ViaKoopman

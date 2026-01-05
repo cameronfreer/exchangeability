@@ -291,4 +291,172 @@ theorem conditionallyIID_of_contractable
     rw [h_prod_eq, h_rhs_eq]
     exact h_fact
 
+/-! ### Transfer to General Spaces
+
+The path-space result `conditionallyIID_of_contractable` can be transferred to general
+random sequences `X : ℕ → Ω → α` via the pushforward measure.
+
+**Key insight**: For `X : ℕ → Ω → α`, the pushforward measure `μ.map (fun ω i => X i ω)`
+on path space satisfies the contractability hypothesis if `X` is contractable.
+-/
+
+/-- Transfer path-space contractability to the pushforward of a general sequence.
+
+Given `X : ℕ → Ω → α` that is contractable, the pushforward measure on `Ω[α] = ℕ → α`
+satisfies the path-space contractability hypothesis. -/
+lemma pathSpace_contractable_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+      Measure.map (fun ω i => ω (k i)) (μ.map (fun ω' i => X i ω')) =
+      Measure.map (fun ω (i : Fin m) => ω i.val) (μ.map (fun ω' i => X i ω')) := by
+  intro m k hk
+  -- The path-space map is the pushforward of the original contractability
+  have hφ_meas : Measurable (fun ω' i => X i ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas i)
+  have hk_meas : Measurable (fun (ω : Ω[α]) i => ω (k i)) :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+  have hid_meas : Measurable (fun (ω : Ω[α]) (i : Fin m) => ω i.val) :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply i.val)
+  -- Rewrite using composition
+  rw [Measure.map_map hk_meas hφ_meas, Measure.map_map hid_meas hφ_meas]
+  -- The compositions give the original contractability
+  have h1 : (fun ω i => ω (k i)) ∘ (fun ω' i => X i ω') = fun ω' i => X (k i) ω' := rfl
+  have h2 : (fun ω (i : Fin m) => ω i.val) ∘ (fun ω' i => X i ω') = fun ω' i => X i.val ω' := rfl
+  rw [h1, h2]
+  exact hContract m k hk
+
+/-- Shifting coordinates by +1 preserves the pushforward measure for contractable sequences.
+
+This is the key measure-theoretic step for shift-preservation: if X is contractable,
+then μ.map(i ↦ X(i+1)) = μ.map(i ↦ X i).
+
+**Proof outline:**
+1. Contractability gives finite-dimensional marginal equality
+2. For each n, the marginal on {0,...,n-1} of μ.map(i ↦ X(i+1)) equals
+   the marginal of μ.map(i ↦ X i) (by contractability with k(i) = i+1)
+3. Apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality
+-/
+lemma measure_map_shift_eq_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    Measure.map (fun ω' i => X (i + 1) ω') μ = Measure.map (fun ω' i => X i ω') μ := by
+  -- Both measures are probability measures
+  have hφ_meas : Measurable (fun ω' i => X i ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas i)
+  have hφ1_meas : Measurable (fun ω' i => X (i + 1) ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas (i + 1))
+  haveI h1 : IsProbabilityMeasure (Measure.map (fun ω' i => X (i + 1) ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ1_meas.aemeasurable
+  haveI h2 : IsProbabilityMeasure (Measure.map (fun ω' i => X i ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ_meas.aemeasurable
+  -- Use measure_eq_of_fin_marginals_eq_prob: two probability measures agree iff
+  -- their finite marginals agree
+  apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α)
+  intro n S hS
+  -- Need: marginal on first n coords of μ.map(i ↦ X(i+1)) = marginal of μ.map(i ↦ X i)
+  -- LHS marginal: μ.map(i < n ↦ X(i+1))
+  -- RHS marginal: μ.map(i < n ↦ X i)
+  -- By contractability with k(i) = i+1 (strictly monotone): these are equal
+  have hk : StrictMono (fun i : Fin n => (i.val + 1 : ℕ)) := by
+    intro i j hij
+    exact Nat.add_lt_add_right hij 1
+  -- The marginal projection
+  have h_proj_L : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X (i + 1) ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X (i.val + 1) ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ1_meas]
+    rfl
+  have h_proj_R : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X i ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X i.val ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ_meas]
+    rfl
+  rw [h_proj_L, h_proj_R]
+  -- Now apply contractability: hContract gives measure equality
+  have h_eq := hContract n (fun i => i.val + 1) hk
+  -- Extract the set-wise equality from measure equality
+  rw [h_eq]
+
+/-- Shift-preservation transfers to the pushforward measure.
+
+If `X` is contractable, the pushforward measure is shift-preserving. -/
+lemma pathSpace_shift_preserving_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    MeasurePreserving shift (μ.map (fun ω' i => X i ω')) (μ.map (fun ω' i => X i ω')) := by
+  constructor
+  · exact shift_measurable
+  · -- Use contractability with k(i) = i + 1
+    have hφ_meas : Measurable (fun ω' i => X i ω') :=
+      measurable_pi_lambda _ (fun i => hX_meas i)
+    rw [Measure.map_map shift_measurable hφ_meas]
+    -- shift ∘ φ = (fun ω i => X (i+1) ω)
+    have h_comp : shift ∘ (fun ω' i => X i ω') = fun ω' i => X (i + 1) ω' := by
+      ext ω i
+      simp [shift]
+    rw [h_comp]
+    -- Apply the helper lemma
+    exact measure_map_shift_eq_of_contractable X hX_meas hContract
+
+/-- ConditionallyIID transfers between path space and original space.
+
+If `μ_path = μ.map φ` where `φ ω = (fun i => X i ω)`, then
+`ConditionallyIID μ_path id ↔ ConditionallyIID μ X`
+where `id` on path space is `fun i ω => ω i`. -/
+lemma conditionallyIID_transfer
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hCIID_path : Exchangeability.ConditionallyIID
+        (μ.map (fun ω' i => X i ω')) (fun i (ω : Ω[α]) => ω i)) :
+    Exchangeability.ConditionallyIID μ X := by
+  -- Extract the directing measure from path-space result
+  obtain ⟨ν_path, hν_prob, hν_meas, h_bind⟩ := hCIID_path
+  -- Define the directing measure on original space via composition
+  let φ : Ω → Ω[α] := fun ω' i => X i ω'
+  have hφ_meas : Measurable φ := measurable_pi_lambda _ (fun i => hX_meas i)
+  -- The directing measure on Ω is ν_path ∘ φ
+  let ν : Ω → Measure α := fun ω => ν_path (φ ω)
+  use ν
+  refine ⟨?_, ?_, ?_⟩
+  · -- ν(ω) is a probability measure
+    intro ω
+    exact hν_prob (φ ω)
+  · -- Measurability of ν
+    intro B hB
+    have : (fun ω => ν ω B) = (fun ω => ν_path (φ ω) B) := rfl
+    rw [this]
+    exact (hν_meas B hB).comp hφ_meas
+  · -- The bind formula
+    intro m k hk
+    -- LHS: μ.map (fun ω => fun i => X (k i) ω)
+    -- This equals (μ.map φ).map (fun ω => fun i => ω (k i))
+    have h_lhs : Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ =
+        Measure.map (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) (μ.map φ) := by
+      have hk_meas : Measurable (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) :=
+        measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+      -- Use map_map forward: map f (map g μ) = map (f ∘ g) μ
+      rw [Measure.map_map hk_meas hφ_meas]
+      -- The composition (fun ω i => ω (k i)) ∘ φ = (fun ω i => X (k i) ω)
+      rfl
+    -- RHS: μ.bind (fun ω => Measure.pi (fun _ => ν ω))
+    -- This equals (μ.map φ).bind (fun ω => Measure.pi (fun _ => ν_path ω))
+    have h_rhs : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) =
+        (μ.map φ).bind (fun ω => Measure.pi fun _ : Fin m => ν_path ω) := by
+      simp only [Measure.bind, ν]
+      have h_pi_meas : Measurable (fun ω' : Ω[α] => Measure.pi fun _ : Fin m => ν_path ω') := by
+        apply measurable_measure_pi
+        · intro ω; exact hν_prob ω
+        · intro s hs; exact hν_meas s hs
+      rw [Measure.map_map h_pi_meas hφ_meas]
+      rfl
+    rw [h_lhs, h_rhs]
+    -- Now apply the path-space bind formula
+    exact h_bind m k hk
+
 end Exchangeability.DeFinetti
