@@ -384,7 +384,32 @@ lemma alphaIicCE_right_continuous_at
 
   This is standard CDF right-continuity via dominated convergence.
   -/
-  sorry  -- TODO: Implement dominated convergence proof
+  -- PROOF STRUCTURE (standard CDF right-continuity via DCT):
+  --
+  -- Step 1: Get decreasing sequence u_n → t of rationals with u_n > t
+  --         via Real.exists_seq_rat_strictAnti_tendsto
+  --
+  -- Step 2: Show ⨅_{q > t} alphaIicCE q ≤ ⨅_n alphaIicCE (u_n) (subset property)
+  --         The sequence {u_n} ⊆ {q : ℚ // t < q}, so infimum over larger set ≤ infimum over subset
+  --
+  -- Step 3: Show ⨅_n alphaIicCE (u_n) ≤ alphaIicCE t a.e. via:
+  --    a. Indicators 1_{Iic u_n} ↓ 1_{Iic t} pointwise (⋂_n Iic u_n = Iic t)
+  --    b. Apply tendsto_condExpL1_of_dominated_convergence:
+  --       condExp(1_{Iic u_n} ∘ X 0) → condExp(1_{Iic t} ∘ X 0) in L¹
+  --       (bound by 1, limit exists pointwise)
+  --    c. For monotone bounded L¹-convergent sequences, TendstoInMeasure.exists_seq_tendsto_ae
+  --       gives a.e. convergent subsequence
+  --    d. alphaIicCE is monotone (alphaIicCE_mono), so sequence is antitone
+  --    e. For antitone sequences bounded below, ⨅_n = lim_n
+  --
+  -- Step 4: Combine: ⨅_{q > t} ≤ ⨅_n = lim_n = alphaIicCE t a.e.
+  --
+  -- Key lemmas:
+  -- - Real.exists_seq_rat_strictAnti_tendsto
+  -- - tendsto_condExpL1_of_dominated_convergence
+  -- - TendstoInMeasure.exists_seq_tendsto_ae
+  -- - alphaIicCE_mono
+  sorry
 
 /-- **Right-continuity of alphaIicCE at rationals.**
 
