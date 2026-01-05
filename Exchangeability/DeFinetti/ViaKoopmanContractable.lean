@@ -459,4 +459,76 @@ lemma conditionallyIID_transfer
     -- Now apply the path-space bind formula
     exact h_bind m k hk
 
+/-! ### Bridge from Contractability to ConditionallyIID
+
+The bridge from contractability to the bind-based `Exchangeability.ConditionallyIID` requires
+extending from StrictMono indices (which contractability gives) to arbitrary Injective indices
+(which `CommonEnding.conditional_iid_from_directing_measure` needs).
+
+The key insight is that any injective function can be sorted to a StrictMono one, and products
+are commutative. So for injective k : Fin m → ℕ:
+1. Sort k to get sorted : Fin m → ℕ which is StrictMono
+2. k = sorted ∘ σ for some permutation σ of Fin m
+3. Use contractability with sorted to reduce to consecutive indices
+4. Use product commutativity to handle the σ reordering
+-/
+
+/-- Bridge condition for contractable measures: extends from StrictMono to Injective.
+
+This is the key technical step connecting contractability to `conditional_iid_from_directing_measure`.
+The proof uses that any injective function on Fin m can be sorted to a StrictMono one.
+Then contractability reduces to consecutive indices, and product commutativity handles reordering.
+
+**Proof sketch**:
+1. Sort k to get ρ : Fin m → ℕ (StrictMono) and σ : Fin m ≃ Fin m with k = ρ ∘ σ
+2. ∏ i, indicator(B i)(ω(k i)) = ∏ j, indicator(B(σ⁻¹ j))(ω(ρ j))  (reorder)
+3. By contractability: ∫ ... dμ at ρ-indices = ∫ ... dμ at consecutive indices
+4. By condexp_product_factorization_contractable: = ∫ ∏ j, (∫ indicator(B(σ⁻¹ j)) dν) dμ
+5. = ∫ ∏ i, ν(B i) dμ  (by product commutativity)
+-/
+lemma indicator_product_bridge_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
+  -- The proof involves sorting k to a StrictMono function, applying contractability,
+  -- then using product commutativity. This is technically involved but mathematically
+  -- straightforward.
+  --
+  -- Key steps:
+  -- 1. Use Finset.orderIsoOfFin to sort k to get ρ : Fin m → ℕ (StrictMono)
+  -- 2. k = ρ ∘ σ for some permutation σ
+  -- 3. By reordering and contractability, reduce to condexp_product_factorization_contractable
+  -- 4. Use product commutativity to match LHS and RHS
+  sorry
+
+/-- Bridge from contractable to bind-based ConditionallyIID on path space.
+
+This is the key lemma connecting contractability to `Exchangeability.ConditionallyIID`.
+It uses `CommonEnding.conditional_iid_from_directing_measure` with the bridge condition
+proved by `indicator_product_bridge_contractable`. -/
+lemma conditionallyIID_bind_of_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ) :
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  apply CommonEnding.conditional_iid_from_directing_measure
+  -- 1. Coordinates are measurable
+  · exact fun i => measurable_pi_apply i
+  -- 2. ν is a probability measure at each point
+  · intro ω
+    exact ν_isProbabilityMeasure (μ := μ) ω
+  -- 3. ν ω s is measurable in ω for each measurable set s
+  · intro s hs
+    exact ν_eval_measurable hs
+  -- 4. Bridge condition: indicator products equal kernel products
+  · intro m k hk B hB_meas
+    exact indicator_product_bridge_contractable hσ hContract m k hk B hB_meas
+
 end Exchangeability.DeFinetti
