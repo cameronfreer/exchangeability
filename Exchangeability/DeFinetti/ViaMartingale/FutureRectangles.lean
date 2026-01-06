@@ -183,13 +183,9 @@ lemma contractable_dist_eq_on_rectangles_future
                        = {ω | X j ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
     simp only [Set.setOf_and]; congr 1; ext ω; simp only [Set.mem_setOf]
     exact forall_congr' fun i => by rw [show m + 1 + i.1 = m + (i.1 + 1) by omega]
-  -- Measurability of ψ₁ and ψ₂
-  have hψ₁_meas : Measurable ψ₁ :=
-    (hX_meas m).prodMk (measurable_shiftRV hX_meas)
-  have hψ₂_meas : Measurable ψ₂ :=
-    (hX_meas k).prodMk (measurable_shiftRV hX_meas)
-  -- Apply Measure.map_apply and connect the pieces
-  rw [Measure.map_apply hψ₁_meas hrect, Measure.map_apply hψ₂_meas hrect]
+  -- Apply Measure.map_apply with measurability of ψ₁ and ψ₂
+  rw [Measure.map_apply ((hX_meas m).prodMk (measurable_shiftRV hX_meas)) hrect,
+      Measure.map_apply ((hX_meas k).prodMk (measurable_shiftRV hX_meas)) hrect]
   rw [hpre₁, hpre₂, hset_eq m, hset_eq k]
   exact hfd
 
