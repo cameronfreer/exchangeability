@@ -128,13 +128,11 @@ def shiftℤInv (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n - 1)
 
 @[simp] lemma shiftℤ_comp_shiftℤInv (ω : Ωℤ[α]) :
     shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by
-  funext n
-  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm, add_assoc]
+  funext n; simp [shiftℤ, shiftℤInv]
 
 @[simp] lemma shiftℤInv_comp_shiftℤ (ω : Ωℤ[α]) :
     shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by
-  funext n
-  simp [shiftℤ, shiftℤInv, add_comm, add_left_comm, add_assoc]
+  funext n; simp [shiftℤ, shiftℤInv]
 
 /-- Restrict a bi-infinite path to its nonnegative coordinates. -/
 def restrictNonneg (ω : Ωℤ[α]) : Ω[α] := fun n => ω (Int.ofNat n)
@@ -546,7 +544,7 @@ lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
 lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
     (s : Set Ω) (f : Ω → ℝ) :
     ∫ x, s.indicator f x ∂μ = ∫ x, f x * s.indicator (fun _ => (1 : ℝ)) x ∂μ := by
-  simpa [indicator_as_mul_one s f]
+  simp [indicator_as_mul_one s f]
 
 /-- "Lift" a measurable-in-sub-σ-algebra set to ambient measurability. -/
 lemma measurableSet_of_sub {Ω} [mΩ : MeasurableSpace Ω]

@@ -239,27 +239,8 @@ lemma metProjection_eq_condExpL2_shiftInvariant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) := by
-  classical
-  -- Strategy: Show metProjection = METProjection, then use proj_eq_condexp
-
-  -- Step 1: Both metProjection and METProjection are defined identically
-  -- as S.subtypeL.comp S.orthogonalProjection where S = fixedSpace (koopman shift hσ)
-
-  -- metProjection (from KoopmanMeanErgodic.lean:216-230):
-  -- let S := fixedSpace (koopman T hT)
-  -- S.subtypeL.comp S.orthogonalProjection
-
-  -- METProjection (from InvariantSigma.lean:707-715):
-  -- let S := fixedSubspace hσ := fixedSpace (koopman shift hσ)
-  -- S.subtypeL.comp S.orthogonalProjection
-
-  -- Show they're definitionally equal
-  have h_eq_MET : metProjection (shift (α := α)) hσ = METProjection hσ := by
-    unfold metProjection METProjection fixedSubspace
-    rfl
-
-  -- Step 2: Use the existing theorem proj_eq_condexp
-  rw [h_eq_MET]
+  -- metProjection and METProjection are definitionally equal (same construction)
+  simp only [metProjection, METProjection]
   exact proj_eq_condexp hσ
 
 end Exchangeability.DeFinetti.ViaKoopman

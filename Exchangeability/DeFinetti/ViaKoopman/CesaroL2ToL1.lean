@@ -93,17 +93,12 @@ lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
   hT.quasiMeasurePreserving.ae_eq_comp hfg
 
-/-- Iterate of a measure-preserving map is measure-preserving.
-    Proof: By induction; identity is measure-preserving, and composition preserves the property. -/
+/-- Iterate of a measure-preserving map is measure-preserving. -/
 lemma MeasurePreserving.iterate' (hT : MeasurePreserving shift μ μ) (k : ℕ) :
     MeasurePreserving (shift^[k]) μ μ := by
   induction k with
-  | zero =>
-      simp only [Function.iterate_zero]
-      exact MeasurePreserving.id μ
-  | succ k ih =>
-      simp only [Function.iterate_succ']
-      exact hT.comp ih
+  | zero => exact MeasurePreserving.id μ
+  | succ k ih => simp only [Function.iterate_succ']; exact hT.comp ih
 
 /-- General evaluation formula for shift iteration. -/
 lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
