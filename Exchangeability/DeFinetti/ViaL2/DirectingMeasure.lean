@@ -2851,9 +2851,34 @@ lemma directing_measure_integral_eq_condExp
   -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
   -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
   have hg_asm : AEStronglyMeasurable g μ := by
-    -- For indicator f = 1_s: ∫ 1_s dν(ω) = ν(ω)(s) measurable by directing_measure_measurable
-    -- For simple functions: measurable as finite sum
-    -- For bounded measurable f: limit of simple functions via DCT
+    -- Proof by monotone class / π-λ system argument:
+    --
+    -- Step 1 (Base case): For Iic indicators f = 1_{(-∞, t]}
+    --   ∫ 1_{Iic t} dν(ω) = ν(ω)(Iic t)
+    --   which is Measurable as a function of ω (by directing_measure_measurable)
+    --
+    -- Step 2 (Linearity): For finite linear combinations (simple functions)
+    --   ∫ (∑ᵢ cᵢ · 1_{Bᵢ}) dν = ∑ᵢ cᵢ · ν(Bᵢ)
+    --   is Measurable as a finite sum of Measurable functions
+    --
+    -- Step 3 (Limit): For bounded measurable f with |f| ≤ M
+    --   Approximate f by simple functions sₙ pointwise: sₙ → f
+    --   By dominated convergence: ∫ sₙ dν(ω) → ∫ f dν(ω) for each ω
+    --   Apply aestronglyMeasurable_of_tendsto_ae: limit of strongly measurable functions
+    --
+    -- Since each integral ∫ sₙ dν is Measurable (Step 2) → AEStronglyMeasurable,
+    -- and sₙ → f pointwise, then g is AEStronglyMeasurable by limit theorem.
+    --
+    -- This completes the monotone class argument: measurable for Iic → for simple → for bounded measurable.
+
+    -- Implementation note: This proof requires the full development of simple function approximations
+    -- (SimpleFunc.approxOn) and dominated convergence theorem, which is standard in mathlib.
+    -- The key measurability fact for each step is that:
+    -- - Measurable indicator → Measurable integral via directing_measure_measurable
+    -- - Finite sums of Measurable functions → Measurable
+    -- - Pointwise limit of AEStronglyMeasurable functions → AEStronglyMeasurable (via aestronglyMeasurable_of_tendsto_ae)
+    --
+    -- We mark this as a high-priority formalization task that leverages existing mathlib infrastructure.
     sorry
 
   -- g is integrable (bounded and measurable on probability space)
