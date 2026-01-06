@@ -5,6 +5,8 @@ Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization
 import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
+import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.Util.StrictMono
 
 /-!
 # de Finetti's Theorem via Contractability (Kallenberg's First Proof)
@@ -68,6 +70,7 @@ open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
 open Exchangeability.PathSpace
 open Exchangeability.DeFinetti.ViaKoopman
+open Exchangeability.Util.StrictMono (injective_implies_strictMono_perm)
 open scoped BigOperators
 
 variable {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
@@ -458,5 +461,201 @@ lemma conditionallyIID_transfer
     rw [h_lhs, h_rhs]
     -- Now apply the path-space bind formula
     exact h_bind m k hk
+
+/-! ### Bridge from Contractability to ConditionallyIID
+
+The bridge from contractability to the bind-based `Exchangeability.ConditionallyIID` requires
+extending from StrictMono indices (which contractability gives) to arbitrary Injective indices
+(which `CommonEnding.conditional_iid_from_directing_measure` needs).
+
+The key insight is that any injective function can be sorted to a StrictMono one, and products
+are commutative. So for injective k : Fin m → ℕ:
+1. Sort k to get sorted : Fin m → ℕ which is StrictMono
+2. k = sorted ∘ σ for some permutation σ of Fin m
+3. Use contractability with sorted to reduce to consecutive indices
+4. Use product commutativity to handle the σ reordering
+-/
+
+/-- Bridge condition for contractable measures: extends from StrictMono to Injective.
+
+This is the key technical step connecting contractability to `conditional_iid_from_directing_measure`.
+The proof uses that any injective function on Fin m can be sorted to a StrictMono one.
+Then contractability reduces to consecutive indices, and product commutativity handles reordering.
+
+**Proof sketch**:
+1. Sort k to get ρ : Fin m → ℕ (StrictMono) and σ : Fin m ≃ Fin m with k = ρ ∘ σ
+2. ∏ i, indicator(B i)(ω(k i)) = ∏ j, indicator(B(σ⁻¹ j))(ω(ρ j))  (reorder)
+3. By contractability: ∫ ... dμ at ρ-indices = ∫ ... dμ at consecutive indices
+4. By condexp_product_factorization_contractable: = ∫ ∏ j, (∫ indicator(B(σ⁻¹ j)) dν) dμ
+5. = ∫ ∏ i, ν(B i) dμ  (by product commutativity)
+-/
+lemma indicator_product_bridge_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
+  classical
+  -- Handle m = 0 trivially (empty products are 1)
+  rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+  · simp only [Finset.univ_eq_empty, Finset.prod_empty]
+  -- For m > 0, we proceed by sorting k
+  -- Step 1: Get σ : Perm (Fin m) such that ρ := fun i => k (σ i) is StrictMono
+  obtain ⟨σ, hρ_mono⟩ := injective_implies_strictMono_perm k hk
+  -- Define ρ := k ∘ σ (the sorted version of k)
+  let ρ : Fin m → ℕ := fun i => k (σ i)
+  -- Step 2: Product reindexing lemmas (k i = ρ (σ⁻¹ i) by definition)
+  have h_lhs_reindex : ∀ ω : Ω[α],
+      ∏ i, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)) =
+      ∏ j, (B (σ j)).indicator (fun _ => (1 : ℝ)) (ω (ρ j)) := fun ω =>
+    (Equiv.prod_comp σ (fun i => (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)))).symm
+  have h_rhs_reindex : ∀ ω : Ω[α],
+      ∏ i, (ν (μ := μ) ω) (B i) = ∏ j, (ν (μ := μ) ω) (B (σ j)) := fun ω =>
+    (Equiv.prod_comp σ (fun i => (ν (μ := μ) ω) (B i))).symm
+  -- Step 3: Use contractability to reduce from ρ-indices to consecutive indices
+  have h_contr_ρ := hContract m ρ hρ_mono
+  -- Step 4: For consecutive indices, apply the existing factorization
+  let fs_σ : Fin m → α → ℝ := fun j => (B (σ j)).indicator (fun _ => 1)
+  have hfs_meas : ∀ j, Measurable (fs_σ j) := fun j =>
+    Measurable.indicator measurable_const (hB_meas (σ j))
+  have hfs_bd : ∀ j, ∃ C, ∀ x, |fs_σ j x| ≤ C := fun j => ⟨1, fun x => by
+    by_cases h : x ∈ B (σ j) <;> simp [fs_σ, h]⟩
+  -- Use conditional expectation factorization
+  have h_ν_eq_ce : ∀ j, (fun ω => ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+      μ[fun ω' => fs_σ j (ω' 0) | mSI] := by
+    intro j
+    have hfj_int : Integrable (fun ω' => fs_σ j (ω' 0)) μ := by
+      obtain ⟨C, hC⟩ := hfs_bd j
+      apply Integrable.of_bound
+        ((hfs_meas j).comp (measurable_pi_apply 0)).aestronglyMeasurable C
+      exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).trans_le (hC (ω 0)))
+    have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hfj_int
+    filter_upwards [h_ce] with ω hω
+    calc ∫ x, fs_σ j x ∂(ν (μ := μ) ω)
+        = ∫ y, fs_σ j (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω (hfs_meas j)
+      _ = μ[fun ω' => fs_σ j (ω' 0) | mSI] ω := hω.symm
+  have h_prod_ae : (fun ω => ∏ j : Fin m, ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+      (fun ω => ∏ j : Fin m, μ[fun ω' => fs_σ j (ω' 0) | mSI] ω) := by
+    have h_all := ae_all_iff.mpr h_ν_eq_ce
+    filter_upwards [h_all] with ω hω
+    exact Finset.prod_congr rfl (fun j _ => hω j)
+  have h_fact := condexp_product_factorization_contractable hσ hContract fs_σ hfs_meas hfs_bd
+  -- Tower property and consecutive-index result
+  have h_consec : ∫ ω, (∏ j : Fin m, fs_σ j (ω j.val)) ∂μ =
+      ∫ ω, (∏ j : Fin m, ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) ∂μ := by
+    have h_lhs_tower : ∫ ω, (∏ j : Fin m, fs_σ j (ω j.val)) ∂μ =
+        ∫ ω, μ[(fun ω' => ∏ j : Fin m, fs_σ j (ω' j.val)) | mSI] ω ∂μ := by
+      symm; apply integral_condExp (shiftInvariantSigma_le (α := α))
+    rw [h_lhs_tower]
+    apply integral_congr_ae
+    filter_upwards [h_fact, h_prod_ae] with ω h_fact_ω h_prod_ω
+    rw [h_fact_ω, ← h_prod_ω]
+  have h_ind_integral : ∀ j ω, ∫ x, fs_σ j x ∂(ν (μ := μ) ω) = ((ν (μ := μ) ω) (B (σ j))).toReal :=
+    fun j ω => integral_indicator_one (hB_meas (σ j))
+  -- Step 5: Integral at ρ-indices equals integral at consecutive indices
+  have h_ρ_to_consec : ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
+    have hρ_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω (ρ j)) :=
+      measurable_pi_lambda _ (fun j => measurable_pi_apply (ρ j))
+    have hconsec_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω j.val) :=
+      measurable_pi_lambda _ (fun j => measurable_pi_apply j.val)
+    have hg_meas : Measurable (fun ω' : Fin m → α => ∏ j, fs_σ j (ω' j)) :=
+      Finset.measurable_prod Finset.univ (fun j _ => (hfs_meas j).comp (measurable_pi_apply j))
+    calc ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ
+        = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω (ρ j)) μ) := by
+            rw [integral_map hρ_meas.aemeasurable hg_meas.aestronglyMeasurable]
+      _ = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω j.val) μ) := by
+            rw [h_contr_ρ]
+      _ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
+            rw [integral_map hconsec_meas.aemeasurable hg_meas.aestronglyMeasurable]
+  -- Define auxiliary functions for lintegral conversion
+  let F_ρ : Ω[α] → ℝ := fun ω => ∏ j, fs_σ j (ω (ρ j))
+  let G : Ω[α] → ℝ := fun ω => ∏ j, ((ν (μ := μ) ω) (B (σ j))).toReal
+  have hF_nonneg : ∀ ω, 0 ≤ F_ρ ω := fun ω =>
+    Finset.prod_nonneg (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)
+  have hF_bd : ∀ ω, F_ρ ω ≤ 1 := fun ω => by
+    apply Finset.prod_le_one (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)
+    intro j _
+    by_cases h : ω (ρ j) ∈ B (σ j)
+    · simp only [Set.indicator_of_mem h]; norm_num
+    · simp only [Set.indicator_of_notMem h]; norm_num
+  have hF_int : Integrable F_ρ μ := by
+    apply Integrable.of_bound (C := 1)
+    · exact (Finset.measurable_prod Finset.univ (fun j _ =>
+        (hfs_meas j).comp (measurable_pi_apply (ρ j)))).aestronglyMeasurable
+    · exact ae_of_all μ (fun ω => by simp [Real.norm_eq_abs, abs_of_nonneg (hF_nonneg ω), hF_bd ω])
+  have hG_nonneg : ∀ ω, 0 ≤ G ω := fun ω =>
+    Finset.prod_nonneg (fun j _ => ENNReal.toReal_nonneg)
+  have hG_bd : ∀ ω, G ω ≤ 1 := fun ω => by
+    apply Finset.prod_le_one (fun j _ => ENNReal.toReal_nonneg)
+    intro j _
+    haveI : IsProbabilityMeasure (ν (μ := μ) ω) := ν_isProbabilityMeasure (μ := μ) ω
+    exact ENNReal.toReal_le_of_le_ofReal (by linarith : (0 : ℝ) ≤ 1)
+      (prob_le_one.trans_eq ENNReal.ofReal_one.symm)
+  have hG_int : Integrable G μ := by
+    apply Integrable.of_bound (C := 1)
+    · exact (Finset.measurable_prod Finset.univ (fun j _ =>
+        (ν_eval_measurable (hB_meas (σ j))).ennreal_toReal)).aestronglyMeasurable
+    · exact ae_of_all μ (fun ω => by simp [Real.norm_eq_abs, abs_of_nonneg (hG_nonneg ω), hG_bd ω])
+  -- Chain of equalities
+  calc ∫⁻ ω, ∏ i, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ j, ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (ω (ρ j))) ∂μ := by
+          congr 1; funext ω
+          rw [← ENNReal.ofReal_prod_of_nonneg (fun i _ =>
+            Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+          rw [← ENNReal.ofReal_prod_of_nonneg (fun j _ =>
+            Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+          congr 1
+          exact h_lhs_reindex ω
+    _ = ∫⁻ ω, ENNReal.ofReal (F_ρ ω) ∂μ := by
+          congr 1; funext ω
+          rw [ENNReal.ofReal_prod_of_nonneg (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+    _ = ENNReal.ofReal (∫ ω, F_ρ ω ∂μ) :=
+          (ofReal_integral_eq_lintegral_ofReal hF_int (ae_of_all μ hF_nonneg)).symm
+    _ = ENNReal.ofReal (∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ) := by rw [h_ρ_to_consec]
+    _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by
+          congr 1
+          rw [h_consec]
+          apply integral_congr_ae
+          filter_upwards with ω
+          simp only [G]; congr 1; ext j; exact h_ind_integral j ω
+    _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ :=
+          ofReal_integral_eq_lintegral_ofReal hG_int (ae_of_all μ hG_nonneg)
+    _ = ∫⁻ ω, ∏ j, ENNReal.ofReal (((ν (μ := μ) ω) (B (σ j))).toReal) ∂μ := by
+          congr 1; funext ω
+          rw [ENNReal.ofReal_prod_of_nonneg (fun j _ => ENNReal.toReal_nonneg)]
+    _ = ∫⁻ ω, ∏ j, (ν (μ := μ) ω) (B (σ j)) ∂μ := by
+          congr 1; funext ω; congr 1; ext j
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := ν_isProbabilityMeasure (μ := μ) ω
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
+    _ = ∫⁻ ω, ∏ i, (ν (μ := μ) ω) (B i) ∂μ := by
+          congr 1; funext ω; conv_rhs => rw [h_rhs_reindex ω]
+
+/-- Bridge from contractable to bind-based ConditionallyIID on path space.
+
+This is the key lemma connecting contractability to `Exchangeability.ConditionallyIID`.
+It uses `CommonEnding.conditional_iid_from_directing_measure` with the bridge condition
+proved by `indicator_product_bridge_contractable`. -/
+lemma conditionallyIID_bind_of_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ) :
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  apply CommonEnding.conditional_iid_from_directing_measure
+  -- 1. Coordinates are measurable
+  · exact fun i => measurable_pi_apply i
+  -- 2. ν is a probability measure at each point
+  · intro ω
+    exact ν_isProbabilityMeasure (μ := μ) ω
+  -- 3. ν ω s is measurable in ω for each measurable set s
+  · intro s hs
+    exact ν_eval_measurable hs
+  -- 4. Bridge condition: indicator products equal kernel products
+  · intro m k hk B hB_meas
+    exact indicator_product_bridge_contractable hσ hContract m k hk B hB_meas
 
 end Exchangeability.DeFinetti

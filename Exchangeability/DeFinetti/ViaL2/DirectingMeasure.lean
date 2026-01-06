@@ -409,7 +409,218 @@ lemma alphaIicCE_right_continuous_at
   -- - tendsto_condExpL1_of_dominated_convergence
   -- - TendstoInMeasure.exists_seq_tendsto_ae
   -- - alphaIicCE_mono
-  sorry
+
+  -- Set up tail σ-algebra infrastructure
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI h_fact : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  haveI h_sf : SigmaFinite (μ.trim hm_le) :=
+    Exchangeability.Probability.sigmaFinite_trim μ hm_le
+
+  -- Step 1: Get decreasing rational sequence u_n → t with u_n > t
+  obtain ⟨u, u_anti, u_gt, u_tendsto⟩ := Real.exists_seq_rat_strictAnti_tendsto t
+
+  -- Step 2: The infimum over all q > t is at most the infimum over the sequence {u_n}
+  -- because {u_n : n ∈ ℕ} ⊆ {q : ℚ // t < q}
+  -- This holds a.e. where alphaIicCE is bounded below by 0
+  have h_infs_le_ae : ∀ᵐ ω ∂μ, ⨅ q : {q : ℚ // t < q},
+      alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω ≤
+      ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω := by
+    -- First get a.e. boundedness
+    have h_bdd_all : ∀ᵐ ω ∂μ, ∀ q : ℚ, 0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
+      rw [ae_all_iff]; intro q
+      filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (q : ℝ)]
+        with ω ⟨h0, _⟩; exact h0
+    filter_upwards [h_bdd_all] with ω h_bdd
+    apply le_ciInf
+    intro n
+    have h_mem : t < (u n : ℝ) := u_gt n
+    have h_bddBelow : BddBelow (Set.range (fun q : {q : ℚ // t < q} =>
+        alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω)) := by
+      use 0
+      intro x ⟨q, hq⟩
+      rw [← hq]
+      exact h_bdd q.val
+    exact ciInf_le h_bddBelow ⟨u n, h_mem⟩
+
+  -- Step 3: Show ⨅_n alphaIicCE (u_n) ≤ alphaIicCE t a.e.
+  -- The key is that alphaIicCE (u_n) → alphaIicCE t a.e. and the sequence is antitone
+
+  -- 3a: Define the sequence of functions f_n = indIic (u_n) ∘ X 0
+  let fs (n : ℕ) := fun ω => indIic (u n : ℝ) (X 0 ω)
+  let f := fun ω => indIic t (X 0 ω)
+
+  -- 3b: Pointwise convergence: 1_{Iic u_n} → 1_{Iic t} pointwise as n → ∞
+  -- This is because ⋂_n Iic u_n = Iic t when u_n ↓ t
+  have h_ptwise : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => fs n x) Filter.atTop (nhds (f x)) := by
+    apply ae_of_all
+    intro ω
+    simp only [fs, f, indIic]
+    by_cases hxt : X 0 ω ≤ t
+    · -- X 0 ω ≤ t, so eventually X 0 ω ≤ u_n, hence eventually indicator = 1
+      simp only [Set.indicator_apply, Set.mem_Iic]
+      have h_ev : ∀ n, X 0 ω ≤ (u n : ℝ) := fun n =>
+        hxt.trans (le_of_lt (u_gt n))
+      simp only [h_ev, ↓reduceIte, hxt]
+      exact tendsto_const_nhds
+    · -- X 0 ω > t, so eventually X 0 ω > u_n (since u_n → t)
+      push_neg at hxt
+      simp only [Set.indicator_apply, Set.mem_Iic, not_le.mpr hxt, ↓reduceIte]
+      -- u_n → t and X 0 ω > t, so eventually u_n < X 0 ω
+      have h_ev : ∀ᶠ n in Filter.atTop, (u n : ℝ) < X 0 ω := by
+        have : Filter.Tendsto (fun n => (u n : ℝ)) Filter.atTop (nhds t) := u_tendsto
+        rw [Metric.tendsto_atTop] at this
+        specialize this ((X 0 ω) - t) (by linarith)
+        obtain ⟨N, hN⟩ := this
+        apply Filter.eventually_atTop.mpr
+        use N
+        intro n hn
+        specialize hN n hn
+        rw [Real.dist_eq, abs_lt] at hN
+        linarith
+      apply Filter.Tendsto.congr' _ tendsto_const_nhds
+      filter_upwards [h_ev] with n hn
+      simp only [Set.mem_Iic, not_le.mpr hn, ↓reduceIte]
+
+  -- 3c: Each f_n is a.e. strongly measurable
+  have h_meas : ∀ n, AEStronglyMeasurable (fs n) μ := fun n =>
+    ((indIic_measurable (u n : ℝ)).comp (hX_meas 0)).aestronglyMeasurable
+
+  -- 3d: Uniform bound by 1
+  have h_bound : ∀ n, ∀ᵐ x ∂μ, ‖fs n x‖ ≤ (1 : ℝ) := by
+    intro n
+    apply ae_of_all
+    intro x
+    simp only [fs]
+    calc ‖indIic (u n : ℝ) (X 0 x)‖ = |indIic (u n : ℝ) (X 0 x)| := Real.norm_eq_abs _
+      _ ≤ 1 := indIic_bdd (u n : ℝ) (X 0 x)
+
+  -- 3e: Apply DCT to get L¹ convergence of condExpL1
+  have h_L1_conv : Filter.Tendsto (fun n => condExpL1 hm_le μ (fs n))
+      Filter.atTop (nhds (condExpL1 hm_le μ f)) := by
+    apply tendsto_condExpL1_of_dominated_convergence (bound_fs := fun _ => 1)
+    · exact h_meas
+    · exact integrable_const 1
+    · exact h_bound
+    · exact h_ptwise
+
+  -- 3f: L¹ convergence implies convergence in measure
+  have h_in_measure : TendstoInMeasure μ
+      (fun n => (↑(condExpL1 hm_le μ (fs n)) : Ω → ℝ))
+      Filter.atTop
+      ((↑(condExpL1 hm_le μ f) : Ω → ℝ)) :=
+    tendstoInMeasure_of_tendsto_Lp h_L1_conv
+
+  -- 3g: Extract a.e. convergent subsequence
+  obtain ⟨ns, ns_mono, h_ae_conv⟩ := h_in_measure.exists_seq_tendsto_ae
+
+  -- 3h: The condExpL1 representatives are a.e. equal to alphaIicCE
+  have h_repr_eq : ∀ n, (↑(condExpL1 hm_le μ (fs n)) : Ω → ℝ) =ᵐ[μ]
+      alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) := by
+    intro n
+    unfold alphaIicCE fs
+    exact (condExp_ae_eq_condExpL1 hm_le _).symm
+
+  have h_repr_eq_lim : (↑(condExpL1 hm_le μ f) : Ω → ℝ) =ᵐ[μ]
+      alphaIicCE X hX_contract hX_meas hX_L2 t := by
+    unfold alphaIicCE f
+    exact (condExp_ae_eq_condExpL1 hm_le _).symm
+
+  -- 3i: alphaIicCE (u (ns n)) → alphaIicCE t a.e.
+  have h_ae_conv_alpha : ∀ᵐ ω ∂μ, Filter.Tendsto
+      (fun n => alphaIicCE X hX_contract hX_meas hX_L2 (u (ns n) : ℝ) ω)
+      Filter.atTop (nhds (alphaIicCE X hX_contract hX_meas hX_L2 t ω)) := by
+    -- Combine the a.e. equalities with the a.e. convergence
+    have h_all_repr : ∀ᵐ ω ∂μ, ∀ n, (↑(condExpL1 hm_le μ (fs n)) : Ω → ℝ) ω =
+        alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω := by
+      rw [ae_all_iff]
+      intro n
+      exact h_repr_eq n
+    filter_upwards [h_ae_conv, h_all_repr, h_repr_eq_lim] with ω h_conv h_eq h_eq_lim
+    -- h_conv: condExpL1(fs (ns n)) ω → condExpL1(f) ω
+    -- h_eq: condExpL1(fs n) ω = alphaIicCE (u n) ω for all n
+    -- h_eq_lim: condExpL1(f) ω = alphaIicCE t ω
+    rw [← h_eq_lim]
+    have h_eq_fun : (fun n => (↑(condExpL1 hm_le μ (fs (ns n))) : Ω → ℝ) ω) =
+        (fun n => alphaIicCE X hX_contract hX_meas hX_L2 (u (ns n) : ℝ) ω) := by
+      ext n
+      exact h_eq (ns n)
+    rw [← h_eq_fun]
+    exact h_conv
+
+  -- 3j: The sequence alphaIicCE (u_n) is antitone (since u_n is decreasing and alphaIicCE is monotone)
+  have h_antitone_ae : ∀ᵐ ω ∂μ, ∀ m n : ℕ, m ≤ n →
+      alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω ≤
+      alphaIicCE X hX_contract hX_meas hX_L2 (u m : ℝ) ω := by
+    -- Get a.e. monotonicity for all pairs of indices
+    have h_all_mono : ∀ᵐ ω ∂μ, ∀ m n : ℕ, (u n : ℝ) ≤ (u m : ℝ) →
+        alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω ≤
+        alphaIicCE X hX_contract hX_meas hX_L2 (u m : ℝ) ω := by
+      rw [ae_all_iff]; intro m
+      rw [ae_all_iff]; intro n
+      by_cases hle : (u n : ℝ) ≤ (u m : ℝ)
+      · filter_upwards [alphaIicCE_mono X hX_contract hX_meas hX_L2 (u n : ℝ) (u m : ℝ) hle]
+          with ω hω _; exact hω
+      · exact ae_of_all μ (fun ω h_contra => absurd h_contra hle)
+    filter_upwards [h_all_mono] with ω h_mono m n hmn
+    -- u is strictly anti, so m ≤ n implies u n ≤ u m
+    have h_u_le : (u n : ℝ) ≤ (u m : ℝ) := by
+      rcases hmn.lt_or_eq with h | h
+      · exact le_of_lt (Rat.cast_lt.mpr (u_anti.lt_iff_lt.mpr h))
+      · simp [h]
+    exact h_mono m n h_u_le
+
+  -- 3k: Boundedness: alphaIicCE is bounded in [0, 1]
+  have h_bdd_ae : ∀ᵐ ω ∂μ, ∀ n : ℕ,
+      0 ≤ alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω := by
+    rw [ae_all_iff]; intro n
+    filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (u n : ℝ)] with ω ⟨h0, _⟩
+    exact h0
+
+  -- 3l: For an antitone bounded-below sequence converging to a limit, ⨅_n = lim_n
+  -- Since the subsequence converges, the full infimum is at most the limit
+  have h_inf_le_lim : ∀ᵐ ω ∂μ, ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω ≤
+      alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+    filter_upwards [h_ae_conv_alpha, h_antitone_ae, h_bdd_ae] with ω h_conv h_anti h_bdd
+    -- The sequence along ns converges to alphaIicCE t ω
+    -- The full infimum ≤ infimum along subsequence = limit along subsequence = alphaIicCE t ω
+
+    -- First, ⨅_n ≤ ⨅_{n in subsequence} because we're taking inf over more terms
+    have h1 : ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω ≤
+        ⨅ k : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω := by
+      apply le_ciInf
+      intro k
+      exact ciInf_le ⟨0, fun x ⟨n, hn⟩ => hn ▸ h_bdd n⟩ (ns k)
+
+    -- For antitone sequences with a limit, ⨅ = lim
+    -- The subsequence is also antitone (composition of monotone ns with antitone (alpha ∘ u))
+    have h_sub_anti : Antitone (fun k => alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω) := by
+      intro k1 k2 hk
+      exact h_anti (ns k1) (ns k2) (ns_mono.monotone hk)
+
+    -- The infimum of an antitone convergent sequence equals its limit
+    have h2 : ⨅ k : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω =
+        alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
+      have h_bounded_below : BddBelow (Set.range
+          (fun k => alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω)) := by
+        use 0
+        intro x ⟨k, hk⟩
+        rw [← hk]
+        exact h_bdd (ns k)
+      -- For antitone bounded-below sequence, it converges to its infimum
+      have h_conv_to_inf := tendsto_atTop_ciInf h_sub_anti h_bounded_below
+      -- The limit is unique
+      exact tendsto_nhds_unique h_conv_to_inf h_conv
+
+    calc ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω
+        ≤ ⨅ k : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω := h1
+      _ = alphaIicCE X hX_contract hX_meas hX_L2 t ω := h2
+
+  -- Step 4: Combine everything
+  filter_upwards [h_infs_le_ae, h_inf_le_lim] with ω h_infs_le h_inf
+  calc ⨅ q : { q : ℚ // t < ↑q }, alphaIicCE X hX_contract hX_meas hX_L2 (↑↑q) ω
+      ≤ ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω := h_infs_le
+    _ ≤ alphaIicCE X hX_contract hX_meas hX_L2 t ω := h_inf
 
 /-- **Right-continuity of alphaIicCE at rationals.**
 
@@ -2696,21 +2907,306 @@ lemma directing_measure_integral_via_chain
     -- Step 1: Show alpha =ᵐ E[f(X₀)|tail] using L¹ uniqueness directly
     -- Both limits are a.e. equal to the unique L¹ limit of shifted f-averages
     have h_alpha_eq_condExp : alpha =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X] := by
-      -- PROOF STRATEGY (L¹ uniqueness):
+      -- PROOF: Use condExp_smul and the identification from cesaro_to_condexp_L2
       --
-      -- Key: hα_g_eq gives α_g =ᵐ E[g(X₀)|tail] where g = f/M with |g| ≤ 1.
-      -- And alpha equals M * (L¹ limit of g-averages) by linearity.
+      -- We have from cesaro_to_condexp_L2:
+      --   α_g =ᵐ μ[g ∘ X 0 | tail]    where g = f/M
       --
-      -- 1. E[M*g(X₀)|tail] = M * E[g(X₀)|tail] by condExp_smul
-      -- 2. M * g = f, so E[f(X₀)|tail] =ᵐ M * E[g(X₀)|tail]
-      -- 3. cesaro_convergence_all_shifts gives: g-averages → E[g(X₀)|tail] in L¹
-      -- 4. Scaling: M*(g-averages) = f-averages → M*E[g|tail] = E[f|tail] in L¹
-      -- 5. hα_conv gives: f-averages → alpha in L¹
-      -- 6. By L¹ uniqueness: alpha =ᵐ E[f|tail] (triangle inequality argument)
+      -- By condExp_smul: μ[M • (g ∘ X 0) | tail] = M • μ[g ∘ X 0 | tail]
+      -- Since f = M * g: μ[f ∘ X 0 | tail] = M * μ[g ∘ X 0 | tail] =ᵐ M * α_g
       --
-      -- Technical: Need to match indices between cesaro_convergence_all_shifts (n+k)
-      -- and hα_conv (n + k.val + 1). When n=1, both give indices 1, 2, ..., m.
-      sorry
+      -- The L¹ uniqueness argument:
+      -- - f-averages = M * g-averages (algebra)
+      -- - g-averages → α_g in L² (from cesaro_to_condexp_L2, via L² convergence)
+      -- - L² convergence ⟹ L¹ convergence on probability spaces
+      -- - So M * g-averages = f-averages → M * α_g in L¹
+      -- - But hα_conv says f-averages → alpha in L¹
+      -- - By uniqueness of L¹ limits: alpha =ᵐ M * α_g
+      --
+      -- Conclusion: alpha =ᵐ M * α_g =ᵐ M * μ[g ∘ X 0 | tail] = μ[f ∘ X 0 | tail]
+
+      -- Step 1a: Show μ[f ∘ X 0 | tail] = M * μ[g ∘ X 0 | tail]
+      have hm_le := TailSigma.tailSigma_le X hX_meas
+      have h_condExp_f_eq : μ[f ∘ X 0 | TailSigma.tailSigma X]
+          =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+        -- f x = M * g x (since g x = f x / M and M > 0)
+        have h_f_eq_Mg : ∀ x, f x = M * g x := fun x => by
+          simp only [g]
+          field_simp [ne_of_gt hM_pos]
+        -- f ∘ X 0 = (M • g) ∘ X 0 (pointwise)
+        have h_comp_eq : (f ∘ X 0) = fun ω => M * g (X 0 ω) := by
+          ext ω
+          simp only [Function.comp_apply, h_f_eq_Mg]
+        -- Use condExp linearity: E[M * h | m] = M * E[h | m]
+        have h_ae : μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X]
+            =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+          -- Use condExp_smul with appropriate coercions
+          have h_smul := condExp_smul M (g ∘ X 0) (m := TailSigma.tailSigma X) (μ := μ)
+          simp only [smul_eq_mul, Pi.smul_apply] at h_smul
+          convert h_smul using 2 <;> ext ω <;> ring
+        calc μ[f ∘ X 0 | TailSigma.tailSigma X]
+            = μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X] := by rw [h_comp_eq]
+          _ =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := h_ae
+
+      -- Step 1b: Show alpha =ᵐ M * α_g by L¹ uniqueness
+      -- Both are L¹ limits of f-averages (which equal M * g-averages)
+      have h_alpha_eq_M_alpha_g : alpha =ᵐ[μ] fun ω => M * α_g ω := by
+        -- Strategy: Both alpha and M * α_g are L¹ limits of the same sequence:
+        --   A m ω := m⁻¹ * ∑ k : Fin m, f (X (k.val + 1) ω)
+        -- The indices match:
+        --   - hα_conv 0: uses X (0 + k.val + 1) = X (k.val + 1), indices 1, 2, ..., m
+        --   - cesaro_convergence_all_shifts with n=1: uses X (1+k), indices 1, 2, ..., m
+        -- By L¹ uniqueness, alpha =ᵐ M * α_g.
+
+        -- Define the averaging sequence with matching indices
+        let A : ℕ → Ω → ℝ := fun m ω => (1/(m:ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)
+
+        -- From hα_conv 0: A → alpha in L¹
+        have hA_to_alpha : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
+            ∫ ω, |A m ω - alpha ω| ∂μ < ε := by
+          intro ε hε
+          obtain ⟨M_idx, hM_idx⟩ := hα_conv 0 ε hε
+          use M_idx
+          intro m hm
+          convert hM_idx m hm using 2
+          ext ω
+          simp only [A, zero_add]
+
+        -- From cesaro_convergence_all_shifts with n=1: g-averages → E[g∘X 0|tail] in L¹
+        have hg_cesaro : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (1+k) ω) -
+                 μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ < ε := by
+          intro ε hε
+          exact cesaro_convergence_all_shifts X hX_contract hX_meas g hg_meas hg_bdd 1 ε hε
+
+        -- Reindex: X(1+k) = X(k.val+1) for k : Fin m
+        have hg_cesaro' : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
+                 μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ < ε := by
+          intro ε hε
+          obtain ⟨M_idx, hM_idx⟩ := hg_cesaro ε hε
+          use M_idx
+          intro m hm
+          convert hM_idx m hm using 3
+          ext k
+          ring_nf
+
+        -- Since α_g =ᵐ E[g∘X 0|tail], we have ∫ |α_g - E[g∘X 0|tail]| = 0
+        have hα_g_diff_zero : ∫ ω, |α_g ω - μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ = 0 := by
+          have h_ae := hα_g_eq
+          rw [integral_eq_zero_iff_of_nonneg_ae (ae_of_all μ (fun _ => abs_nonneg _))]
+          · filter_upwards [h_ae] with ω hω
+            simp only [hω, sub_self, abs_zero]
+          · -- Integrability: α_g - condExp is in L¹
+            have hα_g_int : Integrable α_g μ := hα_g_L2.integrable one_le_two
+            have hcond_int : Integrable (μ[g ∘ X 0 | TailSigma.tailSigma X]) μ :=
+              integrable_condExp
+            exact (hα_g_int.sub hcond_int).norm
+
+        -- Triangle inequality: g-averages → α_g in L¹
+        have hg_to_alpha_g : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
+            ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ < ε := by
+          intro ε hε
+          obtain ⟨M_idx, hM_idx⟩ := hg_cesaro' ε hε
+          use M_idx
+          intro m hm
+          calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ
+              ≤ ∫ ω, (|(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
+                      μ[g ∘ X 0 | TailSigma.tailSigma X] ω| +
+                     |μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω|) ∂μ := by
+                  apply integral_mono_of_nonneg (ae_of_all μ (fun _ => abs_nonneg _))
+                  · apply Integrable.add
+                    · have hg_avg_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
+                        apply Measurable.const_mul
+                        apply Finset.measurable_sum
+                        intro k _
+                        exact hg_meas.comp (hX_meas (k.val + 1))
+                      have hg_avg_bdd : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)| ≤ 1 := by
+                        intro ω
+                        by_cases hm : m = 0
+                        · simp [hm]
+                        · calc |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)|
+                              ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |g (X (k.val+1) ω)| := by
+                                rw [one_div, abs_mul, abs_of_pos (by positivity : (m:ℝ)⁻¹ > 0)]
+                                gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                            _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
+                                gcongr with k _; exact hg_bdd _
+                            _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+                      refine (Integrable.of_bound hg_avg_meas 1 (ae_of_all μ hg_avg_bdd)).sub integrable_condExp |>.norm
+                    · refine (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
+                  · apply ae_of_all μ
+                    intro ω
+                    calc |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω|
+                        = |((1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
+                            μ[g ∘ X 0 | TailSigma.tailSigma X] ω) +
+                           (μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω)| := by ring_nf
+                      _ ≤ _ := abs_add _ _
+            _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
+                      μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ +
+                ∫ ω, |μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω| ∂μ := by
+                  apply integral_add
+                  · have hg_avg_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
+                      apply Measurable.const_mul
+                      apply Finset.measurable_sum
+                      intro k _
+                      exact hg_meas.comp (hX_meas (k.val + 1))
+                    have hg_avg_bdd : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)| ≤ 1 := by
+                      intro ω
+                      by_cases hm : m = 0
+                      · simp [hm]
+                      · calc |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)|
+                            ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |g (X (k.val+1) ω)| := by
+                              rw [one_div, abs_mul, abs_of_pos (by positivity : (m:ℝ)⁻¹ > 0)]
+                              gcongr; exact Finset.abs_sum_le_sum_abs _ _
+                          _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
+                              gcongr with k _; exact hg_bdd _
+                          _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+                    exact (Integrable.of_bound hg_avg_meas 1 (ae_of_all μ hg_avg_bdd)).sub integrable_condExp |>.norm
+                  · exact (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
+            _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
+                      μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ + 0 := by
+                  congr 1
+                  convert hα_g_diff_zero using 2
+                  ext ω
+                  rw [abs_sub_comm]
+            _ < ε := by simp; exact hM_idx m hm
+
+        -- Scaling: f-averages = M * g-averages
+        have hfg_scaling : ∀ m ω, A m ω = M * ((1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
+          intro m ω
+          simp only [A, g]
+          by_cases hm : m = 0
+          · simp [hm]
+          · rw [mul_comm M, ← mul_assoc]
+            congr 1
+            rw [Finset.mul_sum]
+            congr 1
+            ext k
+            field_simp [ne_of_gt hM_pos]
+
+        -- Therefore: A → M * α_g in L¹
+        have hA_to_M_alpha_g : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
+            ∫ ω, |A m ω - M * α_g ω| ∂μ < ε := by
+          intro ε hε
+          have hε' : 0 < ε / (|M| + 1) := by positivity
+          obtain ⟨M_idx, hM_idx⟩ := hg_to_alpha_g (ε / (|M| + 1)) hε'
+          use M_idx
+          intro m hm
+          calc ∫ ω, |A m ω - M * α_g ω| ∂μ
+              = ∫ ω, |M * ((1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) - M * α_g ω| ∂μ := by
+                  congr 1; ext ω; rw [hfg_scaling]
+            _ = ∫ ω, |M| * |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ := by
+                  congr 1; ext ω; rw [← mul_sub, abs_mul]
+            _ = |M| * ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ := by
+                  rw [integral_mul_left]
+            _ < |M| * (ε / (|M| + 1)) := by
+                  gcongr; exact hM_idx m hm
+            _ < (|M| + 1) * (ε / (|M| + 1)) := by
+                  gcongr; linarith
+            _ = ε := by field_simp
+
+        -- Convert to TendstoInMeasure and apply uniqueness
+        -- Both A → alpha and A → M * α_g in L¹
+
+        -- First convert L¹ convergence to eLpNorm convergence
+        have hA_meas : ∀ m, Measurable (A m) := fun m => by
+          apply Measurable.const_mul
+          apply Finset.measurable_sum
+          intro k _
+          exact hf_meas.comp (hX_meas (k.val + 1))
+
+        have hA_bdd : ∀ m ω, |A m ω| ≤ M := fun m ω => by
+          simp only [A]
+          by_cases hm : m = 0
+          · simp [hm]; exact abs_nonneg _ |>.trans (hM 0)
+          · calc |(1/(m:ℝ)) * ∑ k : Fin m, f (X (k.val+1) ω)|
+                ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |f (X (k.val+1) ω)| := by
+                    rw [one_div, abs_mul, abs_of_pos (by positivity : (m:ℝ)⁻¹ > 0)]
+                    gcongr; exact Finset.abs_sum_le_sum_abs _ _
+              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, M := by
+                    gcongr with k _; exact hM _
+              _ = M := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+
+        have hAalpha_integrable : ∀ m, Integrable (fun ω => A m ω - alpha ω) μ := fun m =>
+          (Integrable.of_bound (hA_meas m) M (ae_of_all μ (hA_bdd m))).sub
+            (hα_L1.integrable)
+
+        have hAMalpha_g_integrable : ∀ m, Integrable (fun ω => A m ω - M * α_g ω) μ := fun m =>
+          (Integrable.of_bound (hA_meas m) M (ae_of_all μ (hA_bdd m))).sub
+            ((hα_g_L2.integrable one_le_two).const_mul M)
+
+        have hA_tendsto_alpha : Tendsto (fun m => ∫ ω, |A m ω - alpha ω| ∂μ) atTop (𝓝 0) := by
+          rw [Metric.tendsto_atTop]
+          intro ε hε
+          obtain ⟨M_idx, hM_idx⟩ := hA_to_alpha ε hε
+          use M_idx
+          intro m hm
+          rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+          exact hM_idx m hm
+
+        have hA_tendsto_M_alpha_g : Tendsto (fun m => ∫ ω, |A m ω - M * α_g ω| ∂μ) atTop (𝓝 0) := by
+          rw [Metric.tendsto_atTop]
+          intro ε hε
+          obtain ⟨M_idx, hM_idx⟩ := hA_to_M_alpha_g ε hε
+          use M_idx
+          intro m hm
+          rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))]
+          exact hM_idx m hm
+
+        have halpha_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A m ω - alpha ω) 1 μ) atTop (𝓝 0) := by
+          rw [ENNReal.tendsto_nhds_zero]
+          intro ε hε
+          rw [Metric.tendsto_atTop] at hA_tendsto_alpha
+          by_cases h_top : ε = ⊤
+          · simp [h_top]
+          · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
+            obtain ⟨M_idx, hM_idx⟩ := hA_tendsto_alpha ε.toReal ε_pos
+            refine Filter.eventually_atTop.mpr ⟨M_idx, fun m hm => ?_⟩
+            rw [Exchangeability.Probability.IntegrationHelpers.eLpNorm_one_eq_integral_abs (hAalpha_integrable m)]
+            rw [← ENNReal.ofReal_toReal h_top]
+            rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+            have := hM_idx m hm
+            rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
+            exact this.le
+
+        have hM_alpha_g_eLpNorm : Tendsto (fun m => eLpNorm (fun ω => A m ω - M * α_g ω) 1 μ) atTop (𝓝 0) := by
+          rw [ENNReal.tendsto_nhds_zero]
+          intro ε hε
+          rw [Metric.tendsto_atTop] at hA_tendsto_M_alpha_g
+          by_cases h_top : ε = ⊤
+          · simp [h_top]
+          · have ε_pos : 0 < ε.toReal := ENNReal.toReal_pos hε.ne' h_top
+            obtain ⟨M_idx, hM_idx⟩ := hA_tendsto_M_alpha_g ε.toReal ε_pos
+            refine Filter.eventually_atTop.mpr ⟨M_idx, fun m hm => ?_⟩
+            rw [Exchangeability.Probability.IntegrationHelpers.eLpNorm_one_eq_integral_abs (hAMalpha_g_integrable m)]
+            rw [← ENNReal.ofReal_toReal h_top]
+            rw [ENNReal.ofReal_le_ofReal_iff ε_pos.le]
+            have := hM_idx m hm
+            rw [Real.dist_eq, sub_zero, abs_of_nonneg (integral_nonneg (fun ω => abs_nonneg _))] at this
+            exact this.le
+
+        -- Convert to TendstoInMeasure
+        have halpha_meas_conv : TendstoInMeasure μ A atTop alpha := by
+          apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
+          · intro m; exact hA_meas m
+          · exact hα_meas
+          · exact halpha_eLpNorm
+
+        have hM_alpha_g_meas_conv : TendstoInMeasure μ A atTop (fun ω => M * α_g ω) := by
+          apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
+          · intro m; exact hA_meas m
+          · exact measurable_const.mul hα_g_L2.aestronglyMeasurable.measurable
+          · exact hM_alpha_g_eLpNorm
+
+        -- Apply uniqueness
+        exact tendstoInMeasure_ae_unique halpha_meas_conv hM_alpha_g_meas_conv
+
+      -- Step 1c: Combine: alpha =ᵐ M * α_g =ᵐ M * μ[g|tail] = μ[f|tail]
+      calc alpha =ᵐ[μ] fun ω => M * α_g ω := h_alpha_eq_M_alpha_g
+        _ =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
+            filter_upwards [hα_g_eq] with ω hω
+            simp only [hω]
+        _ =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X] := h_condExp_f_eq.symm
 
     -- Step 2: Combine with bridge lemma: alpha =ᵐ ∫f dν
     exact h_alpha_eq_condExp.trans h_bridge.symm
