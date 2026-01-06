@@ -207,7 +207,7 @@ f such that f ∘ shift = f almost everywhere.
 In the ergodic approach to de Finetti, this is the target space of the limiting
 projection from the Mean Ergodic Theorem.
 -/
-def fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+abbrev fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) : Submodule ℝ (Lp ℝ 2 μ) :=
   fixedSpace (koopman shift hσ)
 
@@ -250,16 +250,14 @@ Mean Ergodic Theorem (MET). It is defined as the composition of:
 
 **Key theorem**: `proj_eq_condexp` shows this projection equals conditional expectation
 onto the shift-invariant σ-algebra.
+
+Defined as an alias for `metProjection shift`, the generic projection for any
+measure-preserving transformation.
 -/
-noncomputable def METProjection
+noncomputable abbrev METProjection
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := by
-  classical
-  let S := fixedSubspace hσ
-  have hclosed := fixedSubspace_closed (μ := μ) hσ
-  haveI : CompleteSpace S := hclosed.completeSpace_coe
-  haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
-  exact (S.subtypeL).comp S.orthogonalProjection
+    (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
+  metProjection shift hσ
 
 lemma METProjection_apply
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -270,11 +268,7 @@ lemma METProjection_apply
       Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
     METProjection (μ := μ) hσ f =
       (fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection f) := by
-  classical
-  have hclosed := fixedSubspace_closed (μ := μ) hσ
-  haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-  haveI : (fixedSubspace hσ).HasOrthogonalProjection :=
-    Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
+  -- Now definitionally equal since fixedSubspace = fixedSpace (koopman shift hσ)
   rfl
 
 lemma METProjection_mem
@@ -305,7 +299,8 @@ lemma METProjection_fixed
   have hproj_val :
       (((fixedSubspace hσ).orthogonalProjection g) : Lp ℝ 2 μ) = g := by
     simpa using congrArg Subtype.val hproj
-  simp [METProjection, hproj_val]
+  rw [METProjection_apply]
+  simp [hproj_val]
 
 lemma METProjection_idem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]

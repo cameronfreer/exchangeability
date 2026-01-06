@@ -238,9 +238,8 @@ probabilistic perspective (conditional expectation onto a sub-σ-algebra).
 lemma metProjection_eq_condExpL2_shiftInvariant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) := by
-  -- metProjection and METProjection are definitionally equal (same construction)
-  simp only [metProjection, METProjection]
-  exact proj_eq_condexp hσ
+    metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) :=
+  -- METProjection is now an alias for metProjection shift
+  proj_eq_condexp hσ
 
 end Exchangeability.DeFinetti.ViaKoopman
