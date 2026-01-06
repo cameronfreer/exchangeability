@@ -68,7 +68,7 @@ private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
 
 /-- Pull absolute value through division when denominator is nonnegative. -/
 private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
-  |x / y| = |x| / y := by simpa [abs_div, abs_of_nonneg hy]
+  |x / y| = |x| / y := by simp [abs_div, abs_of_nonneg hy]
 
 /-! ### Lp coercion lemmas for measure spaces -/
 

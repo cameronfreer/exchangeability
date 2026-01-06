@@ -183,7 +183,7 @@ lemma condexp_precomp_shiftℤInv_eq
       -- Use that shiftℤ '' s = s (from shiftℤ⁻¹' s = s and bijectivity)
       have h_surj : shiftℤ (α := α) '' s = s := by
         ext x
-        simp only [Set.mem_image, Set.mem_preimage]
+        simp only [Set.mem_image]
         constructor
         · rintro ⟨y, hy, rfl⟩
           -- y ∈ s, want shiftℤ y ∈ s
