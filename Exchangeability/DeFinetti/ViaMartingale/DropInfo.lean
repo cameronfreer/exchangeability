@@ -95,30 +95,23 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
   --                μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|mη]
 
   -- Both CEs are integrable
-  have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
-    exact Integrable.indicator (integrable_const 1) (hξ hB)
+  have hint : Integrable (Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))) μ :=
+    Integrable.indicator (integrable_const 1) (hξ hB)
 
   -- Prove inclusions without naming the pullbacks (Pattern B)
-  have hmη_le : MeasurableSpace.comap η mγ ≤ mΩ := by
-    intro s hs
-    rcases hs with ⟨t, ht, rfl⟩
-    exact (hη ht : @MeasurableSet Ω mΩ (η ⁻¹' t))
-
-  have hmζ_le : MeasurableSpace.comap ζ mγ ≤ mΩ := by
-    intro s hs
-    rcases hs with ⟨t, ht, rfl⟩
-    exact (hζ ht : @MeasurableSet Ω mΩ (ζ ⁻¹' t))
+  have hmη_le : MeasurableSpace.comap η mγ ≤ mΩ := by intro s hs; rcases hs with ⟨t, ht, rfl⟩; exact hη ht
+  have hmζ_le : MeasurableSpace.comap ζ mγ ≤ mΩ := by intro s hs; rcases hs with ⟨t, ht, rfl⟩; exact hζ ht
 
   -- Step 1: Express CEs via kernel integrals (inline comaps, let Lean synthesize instances)
   have hCEη : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | MeasurableSpace.comap η mγ] =ᵐ[μ]
               (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y
-                ∂(condExpKernel μ (MeasurableSpace.comap η mγ) ω)) := by
-    exact condExp_ae_eq_integral_condExpKernel hmη_le hint
+                ∂(condExpKernel μ (MeasurableSpace.comap η mγ) ω)) :=
+    condExp_ae_eq_integral_condExpKernel hmη_le hint
 
   have hCEζ : μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) | MeasurableSpace.comap ζ mγ] =ᵐ[μ]
               (fun ω => ∫ y, Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ)) y
-                ∂(condExpKernel μ (MeasurableSpace.comap ζ mγ) ω)) := by
-    exact condExp_ae_eq_integral_condExpKernel hmζ_le hint
+                ∂(condExpKernel μ (MeasurableSpace.comap ζ mγ) ω)) :=
+    condExp_ae_eq_integral_condExpKernel hmζ_le hint
 
   -- Note: We have kernel integral representations from hCEη and hCEζ
   -- The integrals of indicators equal measure evaluations, but we don't need to prove
@@ -180,17 +173,15 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
       rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
     -- Step 2: Express joint distributions using compProd in the RIGHT direction
-    have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) := by
-      exact compProd_map_condDistrib hξ.aemeasurable
-
-    have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) := by
-      exact compProd_map_condDistrib hξ.aemeasurable
+    have hζ_compProd : (μ.map ζ) ⊗ₘ (condDistrib ξ ζ μ) = μ.map (fun ω => (ζ ω, ξ ω)) :=
+      compProd_map_condDistrib hξ.aemeasurable
+    have hη_compProd : (μ.map η) ⊗ₘ (condDistrib ξ η μ) = μ.map (fun ω => (η ω, ξ ω)) :=
+      compProd_map_condDistrib hξ.aemeasurable
 
     -- Step 3: Get marginal equality from swapped pair-law
     have h_marg_eq : μ.map ζ = μ.map η := by
-      have h1 : (μ.map (fun ω => (ζ ω, ξ ω))).fst = μ.map ζ := Measure.fst_map_prodMk₀ hξ.aemeasurable
-      have h2 : (μ.map (fun ω => (η ω, ξ ω))).fst = μ.map η := Measure.fst_map_prodMk₀ hξ.aemeasurable
-      rw [← h1, ← h2, h_law_swapped]
+      rw [← Measure.fst_map_prodMk₀ (X := ζ) hξ.aemeasurable,
+          ← Measure.fst_map_prodMk₀ (X := η) hξ.aemeasurable, h_law_swapped]
 
     -- Step 4: The deep content - show conditional expectations w.r.t. σ(ζ) and σ(η) coincide.
     -- This follows from the tower property since σ(η) ≤ σ(ζ), plus uniqueness.
@@ -293,31 +284,16 @@ lemma condexp_indicator_drop_info_of_pair_law
         | MeasurableSpace.comap η inferInstance] := by
   classical
   -- Direct proof via tower property for sub-σ-algebras
-  have h_tower : μ[μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
-                      | MeasurableSpace.comap ζ inferInstance]
-                    | MeasurableSpace.comap η inferInstance]
-                 =ᵐ[μ]
-                 μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
-                    | MeasurableSpace.comap η inferInstance] := by
-    -- Establish σ-algebra inequalities
-    have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-      intro s hs
-      obtain ⟨t, ht, rfl⟩ := hs
-      exact hη ht
-    have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-      intro s hs
-      obtain ⟨t, ht, rfl⟩ := hs
-      exact hζ ht
-    -- Indicator function is integrable (bounded by 1 on probability space)
-    have hf_int : Integrable (Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ) μ := by
-      apply Integrable.comp_measurable _ hξ
-      exact integrable_const (1 : ℝ) |>.indicator hB
-    -- Apply tower property from CondExpHelpers
-    exact condExp_project_of_le
-      (MeasurableSpace.comap η inferInstance)
-      (MeasurableSpace.comap ζ inferInstance)
-      inferInstance
-      hη_le hζ_le h_le hf_int
-  exact h_tower
+  -- Establish σ-algebra inequalities
+  have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
+  have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
+  -- Apply tower property
+  exact condExp_project_of_le
+    (MeasurableSpace.comap η inferInstance)
+    (MeasurableSpace.comap ζ inferInstance)
+    inferInstance
+    hη_le hζ_le h_le ((integrable_const 1 |>.indicator hB).comp_measurable hξ)
 
 end Exchangeability.DeFinetti.ViaMartingale

@@ -98,26 +98,22 @@ lemma directingMeasure_X0_marginal
     =ᵐ[μ]
   μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   classical
+  let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
   have hInt : Integrable (fun ω => (Set.indicator B (fun _ => (1 : ℝ)) (X 0 ω))) μ :=
     (integrable_const 1).indicator ((hX 0) hB)
-  let κ := ProbabilityTheory.condExpKernel μ (tailSigma X)
-
-  -- Conditional expectation equals kernel integral a.e.
-  have hAE := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel (tailSigma_le X hX) hInt
-
   -- Identify the kernel integral with evaluation of `directingMeasure` on `B`
   have hId : (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω) =
              (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal) := by
     funext ω
-    have h_eq : (fun x => Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) =
-                Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) := by ext x; simp [Set.indicator]
-    simp only [h_eq, directingMeasure, Measure.map_apply (hX 0) hB]
+    simp only [show (fun x => Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) =
+                    Set.indicator ((X 0) ⁻¹' B) (fun _ => (1 : ℝ)) by ext x; simp [Set.indicator],
+               directingMeasure, Measure.map_apply (hX 0) hB]
     exact MeasureTheory.integral_indicator_one ((hX 0) hB)
-
-  -- Combine: rewrite with hId then apply hAE
+  -- Combine: rewrite with hId then apply condExp kernel equality
   calc (fun ω => (directingMeasure (μ := μ) X hX ω B).toReal)
       = (fun ω => ∫ x, (Set.indicator B (fun _ => (1 : ℝ)) (X 0 x)) ∂κ ω) := hId.symm
-    _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := hAE.symm
+    _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] :=
+        (condExp_ae_eq_integral_condExpKernel (tailSigma_le X hX) hInt).symm
 
 end Directing
 

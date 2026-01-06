@@ -287,18 +287,11 @@ lemma finite_product_formula_id
       tail_factorization_from_future X hX_meas m C hC h_fact h_conv
 
     -- Integrate both sides; tower property: ∫ μ[g|tail] = ∫ g
+    -- Tower property: ∫ f = ∫ E[f|τ] and use h_tail
     have h_int_tail : ∫ ω, indProd X m C ω ∂μ
         = ∫ ω, (∏ i : Fin m,
-            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ := by
-      -- Tower property: ∫ f = ∫ E[f|τ] and use h_tail
-      symm
-      calc ∫ ω, (∏ i : Fin m,
-            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ
-          = ∫ ω, μ[indProd X m C | tailSigma X] ω ∂μ :=
-              integral_congr_ae h_tail.symm
-        _ = ∫ ω, indProd X m C ω ∂μ :=
-              -- Tower property: ∫ E[f|m] = ∫ f
-              integral_condExp (tailSigma_le X hX_meas)
+            μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | tailSigma X] ω) ∂μ :=
+      ((integral_congr_ae h_tail.symm).trans (integral_condExp (tailSigma_le X hX_meas))).symm
 
     -- Replace each conditional expectation by ν ω (C i).toReal using hν_law
     have h_swap : (fun ω => ∏ i : Fin m,
@@ -478,8 +471,7 @@ lemma finite_product_formula_id'
     (m : ℕ) :
   Measure.map (fun ω => fun i : Fin m => X i ω) μ
     = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) := by
-  refine finite_product_formula X hX hX_meas ν hν_prob hν_meas hν_law m (fun i => (i : ℕ)) ?_
-  -- `i ↦ i` is strictly monotone on `Fin m`.
-  intro i j hij; exact hij
+  exact finite_product_formula X hX hX_meas ν hν_prob hν_meas hν_law m (fun i => (i : ℕ))
+    fun _ _ => id
 
 end Exchangeability.DeFinetti.ViaMartingale

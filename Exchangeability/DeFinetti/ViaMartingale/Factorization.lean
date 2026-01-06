@@ -142,8 +142,7 @@ lemma block_coord_condIndep
   -- - futureFiltration X m = comap W inferInstance ✓
   --
   -- Thus the result follows from condExp_Xr_indicator_eq_of_contractable.
-  have h := condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
-  exact h
+  exact condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
 
   -- NOTE: The previous proof used a finite-level approximation + Lévy upward convergence
   -- approach, but that depended on a broken chain (condIndep_of_triple_law_INVALID).
@@ -247,9 +246,7 @@ lemma finite_level_factorization
         = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
       ext ω
       have hg' : Set.indicator Clast (fun _ => (1:ℝ)) (X r ω) = B.indicator (fun _ => (1:ℝ)) ω := by
-        have := congr_fun hg_indicator ω
-        simp only [Function.comp_apply] at this
-        exact this
+        simpa only [Function.comp_apply] using congr_fun hg_indicator ω
       rw [congr_fun hf_indicator ω, hg']
       have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
       simp only [Pi.mul_apply] at this
@@ -285,10 +282,8 @@ lemma finite_level_factorization
       -- Convert product of indicators to indicator of intersection
       have h_inter : (A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ)))
                    = (A ∩ B).indicator (fun _ => (1:ℝ)) := by
-        ext ω
-        simp only [Pi.mul_apply]
-        have := congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
-        simpa using this
+        ext ω; simp only [Pi.mul_apply]
+        simpa using congr_fun (indicator_mul_indicator_eq_indicator_inter A B 1 1) ω
       -- Apply standard CI product formula
       calc μ[(A.indicator (fun _ => (1:ℝ))) * (B.indicator (fun _ => (1:ℝ))) | futureFiltration X m]
           _ =ᵐ[μ] μ[(A ∩ B).indicator (fun _ => (1:ℝ)) | futureFiltration X m] :=
@@ -334,23 +329,19 @@ lemma finite_level_factorization
         _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                           * (μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)) := hfactor
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)
-                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) := by
-          apply EventuallyEq.mul
-          · refine condExp_congr_ae (EventuallyEq.of_eq hf_indicator.symm)
-          · refine condExp_congr_ae (EventuallyEq.of_eq hg_indicator.symm)
+                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) :=
+          (condExp_congr_ae (.of_eq hf_indicator.symm)).mul (condExp_congr_ae (.of_eq hg_indicator.symm))
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω)
-                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) := by
-          apply EventuallyEq.mul hIH
-          exact EventuallyEq.rfl
+                          * (μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ X r | futureFiltration X m] ω)) :=
+          hIH.mul .rfl
         _ =ᵐ[μ] (fun ω => (∏ i : Fin r,
                             μ[Set.indicator (Cinit i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω)
                           * μ[Set.indicator Clast (fun _ => (1:ℝ)) ∘ (X 0)
-                              | futureFiltration X m] ω) := by
-          apply EventuallyEq.mul EventuallyEq.rfl
-          exact hswap
+                              | futureFiltration X m] ω) :=
+          EventuallyEq.rfl.mul hswap
         _ =ᵐ[μ] (fun ω => ∏ i : Fin (r+1),
                             μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0)
                               | futureFiltration X m] ω) := by
@@ -421,9 +412,7 @@ lemma tail_factorization_from_future
       (h_le := fun n => futureFiltration_le X n hX)
       (f := indProd X r C)
       (h_f_int := indProd_integrable X r C hX hC)
-    -- Convert ⨅ n, futureFiltration X n to tailSigma X
-    simp only [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] at h_conv
-    exact h_conv
+    simpa only [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] using h_conv
 
   -- RHS convergence: product of convergent sequences
   have h_rhs_conv : ∀ᵐ ω ∂μ,
