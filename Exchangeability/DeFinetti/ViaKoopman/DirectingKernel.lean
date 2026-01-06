@@ -67,8 +67,7 @@ noncomputable def rcdKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 instance rcdKernel_isMarkovKernel {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     [StandardBorelSpace α] : IsMarkovKernel (rcdKernel (μ := μ)) := by
   unfold rcdKernel
-  have h1 : IsMarkovKernel (condExpKernel μ (shiftInvariantSigma (α := α))) := inferInstance
-  have h2 : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
+  haveI : IsMarkovKernel ((condExpKernel μ (shiftInvariantSigma (α := α))).map (π0 (α := α))) :=
     Kernel.IsMarkovKernel.map _ (measurable_pi0 (α := α))
   exact Kernel.IsMarkovKernel.comap _ (measurable_id'' (shiftInvariantSigma_le (α := α)))
 

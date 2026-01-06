@@ -59,20 +59,14 @@ lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε �
   classical
   set v := max (-C) (min C x) with hv
   -- |v| ≤ C
-  have hv_le : |v| ≤ C := by
-    have hv_lo : -C ≤ v := le_max_left _ _
-    have hv_hi : v ≤ C := by
-      calc v = max (-C) (min C x) := hv.symm
-        _ ≤ C := by apply max_le; linarith; exact min_le_left _ _
-    exact abs_le.mpr ⟨by linarith, hv_hi⟩
-  -- |quantize - v| ≤ ε
-  have herr := quantize_err_le (C := C) (ε := ε) (x := x) hε
+  have hv_le : |v| ≤ C := abs_le.mpr ⟨by linarith [le_max_left (-C) (min C x)],
+    max_le (by linarith) (min_le_left _ _)⟩
   -- Triangle inequality: |q| ≤ |v| + |q - v| ≤ C + ε ≤ C + 1
-  have : |quantize C ε x| ≤ |v| + ε := by
+  have : |quantize C ε x| ≤ |v| + ε :=
     calc |quantize C ε x|
         = |(quantize C ε x - v) + v| := by ring_nf
       _ ≤ |quantize C ε x - v| + |v| := abs_add_le _ _
-      _ ≤ ε + |v| := by linarith [herr]
+      _ ≤ ε + |v| := by linarith [quantize_err_le (C := C) (ε := ε) (x := x) hε]
       _ = |v| + ε := by ring
   linarith [hv_le, this, hε1]
 
@@ -91,9 +85,8 @@ lemma quantize_tendsto {C x : ℝ} (_hC : 0 ≤ C) :
   -- hε_dist : dist ε 0 < δ
   rw [Real.dist_eq] at hε_dist ⊢
   simp only [sub_zero] at hε_dist
-  have hε_lt : ε < δ := by rwa [abs_of_pos hε_pos] at hε_dist
   calc |quantize C ε x - max (-C) (min C x)|
       ≤ ε := quantize_err_le hε_pos
-    _ < δ := hε_lt
+    _ < δ := by rwa [abs_of_pos hε_pos] at hε_dist
 
 end MeasureTheory

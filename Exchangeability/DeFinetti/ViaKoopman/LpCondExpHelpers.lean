@@ -76,13 +76,9 @@ lemma condExp_sum_finset
 lemma integrable_of_bounded_measurable
     {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  refine ⟨hf_meas.aestronglyMeasurable, ?_⟩
-  -- Bounded by C on finite measure space ⇒ finite integral
-  have h_bd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ C := by
-    filter_upwards with ω
-    simpa [Real.norm_eq_abs] using hf_bd ω
-  exact HasFiniteIntegral.of_bounded h_bd
+    Integrable f μ :=
+  ⟨hf_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (by
+    filter_upwards with ω; simpa [Real.norm_eq_abs] using hf_bd ω)⟩
 
 /-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
 We assume `MemLp f 2 μ` so the right-hand side is finite; this matches all uses below
@@ -124,8 +120,5 @@ lemma ennreal_tendsto_toReal_zero {ι : Type*}
     (f : ι → ENNReal) {a : Filter ι}
     (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
     Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
-  -- `toReal` is continuous at any finite point; in particular at `0`.
-  have hcont : ContinuousAt ENNReal.toReal (0 : ENNReal) :=
-    ENNReal.continuousAt_toReal ENNReal.zero_ne_top
-  -- Compose the limits.
-  simpa [ENNReal.toReal_zero] using hcont.tendsto.comp hf
+  simpa [ENNReal.toReal_zero] using
+    (ENNReal.continuousAt_toReal ENNReal.zero_ne_top).tendsto.comp hf

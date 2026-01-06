@@ -53,9 +53,8 @@ lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     (_hφ : Measurable φ) :
     Measurable (cylinderFunction φ) := by
   classical
-  have hproj : Measurable fun ω : ℕ → α => fun k : Fin m => ω k.val := by
-    measurability
-  simpa [cylinderFunction] using _hφ.comp hproj
+  simpa [cylinderFunction] using _hφ.comp (by measurability :
+    Measurable fun ω : ℕ → α => fun k : Fin m => ω k.val)
 
 /-- Measurability of product cylinders. -/
 lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
@@ -104,10 +103,8 @@ lemma productCylinder_memLp
     MeasureTheory.MemLp (productCylinder fs) 2 μ := by
   classical
   obtain ⟨C, hC⟩ := productCylinder_bounded (fs:=fs) hbd
-  have hFmeas : Measurable (productCylinder fs) :=
-    measurable_productCylinder (fs:=fs) hmeas
   refine MeasureTheory.MemLp.of_bound (μ := μ) (p := 2)
-    hFmeas.aestronglyMeasurable C ?_
+    (measurable_productCylinder hmeas).aestronglyMeasurable C ?_
   filter_upwards with ω
   simpa [Real.norm_eq_abs] using hC ω
 
