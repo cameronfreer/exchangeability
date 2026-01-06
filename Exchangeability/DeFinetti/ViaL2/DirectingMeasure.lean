@@ -2769,7 +2769,150 @@ lemma directing_measure_integral_eq_condExp
   -- - MeasureTheory.tendsto_integral_of_dominated_convergence (DCT for integrals)
   -- - MeasureTheory.tendsto_condExpL1_of_dominated_convergence (DCT for condExp)
   --
-  sorry  -- TODO: Implement the above strategy
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  -- PROOF STRATEGY: Conditional distribution uniqueness
+  --
+  -- The directing measure ν(ω) is constructed so that its CDF equals αIicCE:
+  --   (ν(ω))(Iic t) = αIicCE t ω = E[1_{Iic t}(X₀)|tail](ω) a.e.
+  --
+  -- Since measures on ℝ are uniquely determined by their CDFs, and the conditional
+  -- distribution of X₀ given tail is uniquely characterized by the same CDF values,
+  -- we have ν(ω) = P_{X₀|tail}(ω) as measures for a.e. ω.
+  --
+  -- Therefore, for any bounded measurable f:
+  --   ∫ f dν(ω) = E[f(X₀)|tail](ω) a.e.
+  --
+  -- The proof involves:
+  -- 1. Base case: For Iic indicators, directing_measure_integral_Iic_ae_eq_alphaIicCE
+  --    gives ∫ 1_{Iic t} dν(ω) =ᵐ αIicCE t ω = E[1_{Iic t}(X₀)|tail](ω)
+  --
+  -- 2. Extension: For general bounded measurable f, use:
+  --    - Step functions approximation (via Ioc indicators)
+  --    - Linearity of both ∫ · dν and E[·|tail]
+  --    - Dominated convergence to pass to limit
+  --
+  -- OR use the uniqueness of conditional expectation:
+  -- If h is m-measurable and ∫_A h dμ = ∫_A f(X₀) dμ for all m-measurable A,
+  -- then h =ᵐ E[f(X₀)|m].
+  --
+  -- The key is showing ∫_A (∫ f dν) dμ = ∫_A f(X₀) dμ via Fubini and the
+  -- conditional distribution property.
+  -- ═══════════════════════════════════════════════════════════════════════════════
+  --
+  -- MATHEMATICAL CONTENT (to be formalized):
+  --
+  -- The proof requires showing that ν(ω) is the regular conditional distribution
+  -- of X₀ given the tail σ-algebra. This follows from:
+  -- 1. CDF agreement: For all t, (ν(ω))(Iic t) = E[1_{Iic t}(X₀)|tail](ω) a.e.
+  -- 2. Measures are determined by CDFs (uniqueness)
+  -- 3. Integration against measures determined by CDFs
+  --
+  -- The formalization uses ae_eq_condExp_of_forall_setIntegral_eq and requires:
+  -- 1. Measurability of ω ↦ ∫ f dν(ω) w.r.t. tail σ-algebra
+  -- 2. Set integral equality: ∫_A (∫ f dν) dμ = ∫_A f(X₀) dμ for tail-measurable A
+  -- 3. Monotone class extension from Iic indicators to bounded measurable functions
+
+  -- Set up the sub-σ-algebra and sigma-finiteness
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI hm_fact : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  haveI hσ : SigmaFinite (μ.trim hm_le) := inferInstance
+
+  -- Get the bound M (ensure M ≥ 0)
+  obtain ⟨M, hM⟩ := hf_bdd
+  obtain ⟨M', hM'_nonneg, hM'⟩ : ∃ M' : ℝ, 0 ≤ M' ∧ ∀ x, |f x| ≤ M' := by
+    use max M 0
+    exact ⟨le_max_right M 0, fun x => (hM x).trans (le_max_left M 0)⟩
+
+  -- Define g = fun ω => ∫ x, f x ∂ν(ω)
+  let g : Ω → ℝ := fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+
+  -- f ∘ X 0 is integrable (bounded function composed with measurable map)
+  have hfX0_int : Integrable (fun ω => f (X 0 ω)) μ := by
+    refine Integrable.mono' (integrable_const M') ?_ ?_
+    · exact (hf_meas.comp (hX_meas 0)).aestronglyMeasurable
+    · filter_upwards with ω; rw [Real.norm_eq_abs]; exact hM' (X 0 ω)
+
+  -- g is bounded by M' (since ν(ω) is a probability measure)
+  have hg_bdd : ∀ ω, |g ω| ≤ M' := by
+    intro ω
+    haveI : IsProbabilityMeasure (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+      directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+    calc |g ω| = |∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)| := rfl
+      _ ≤ ∫ x, |f x| ∂(directing_measure X hX_contract hX_meas hX_L2 ω) :=
+          abs_integral_le_integral_abs
+      _ ≤ ∫ x, M' ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+          apply integral_mono_of_nonneg
+          · exact ae_of_all _ (fun _ => abs_nonneg _)
+          · exact integrable_const M'
+          · exact ae_of_all _ hM'
+      _ = M' := by simp only [integral_const, measureReal_univ_eq_one, smul_eq_mul, one_mul]
+
+  -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
+  -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
+  have hg_asm : AEStronglyMeasurable g μ := by
+    -- For indicator f = 1_s: ∫ 1_s dν(ω) = ν(ω)(s) measurable by directing_measure_measurable
+    -- For simple functions: measurable as finite sum
+    -- For bounded measurable f: limit of simple functions via DCT
+    sorry
+
+  -- g is integrable (bounded and measurable on probability space)
+  have hg_int : Integrable g μ := by
+    refine Integrable.mono' (integrable_const M') hg_asm ?_
+    filter_upwards with ω; rw [Real.norm_eq_abs]; exact hg_bdd ω
+
+  -- Apply ae_eq_condExp_of_forall_setIntegral_eq
+  -- The theorem says: if g is tail-AEStronglyMeasurable and has the same set integrals as f ∘ X 0
+  -- on all tail-measurable sets, then g =ᵐ μ[f ∘ X 0 | tail].
+  -- Our goal is g =ᵐ μ[f ∘ X 0 | tail] where g = fun ω => ∫ f dν(ω).
+  refine ae_eq_condExp_of_forall_setIntegral_eq hm_le hfX0_int ?hg_int_finite ?hg_eq ?hgm
+
+  case hg_int_finite =>
+    intro s _ _; exact hg_int.integrableOn
+
+  case hgm =>
+    -- g is AEStronglyMeasurable w.r.t. tail σ-algebra
+    -- Since ν(ω) is built from tail-measurable Cesàro limits (alphaIicCE),
+    -- and f is Borel measurable, the integral ∫ f dν(ω) is tail-AEStronglyMeasurable.
+    --
+    -- The construction of directing_measure uses stieltjesOfMeasurableRat applied to
+    -- alphaIicRat, which is defined from alphaIic (the L¹ limit of Cesàro averages).
+    -- By the L¹ martingale convergence theorem, alphaIic is tail-measurable a.e.
+    -- The Stieltjes extension preserves measurability w.r.t. the same σ-algebra.
+    -- Finally, the integral of a bounded measurable function against ν(ω) is
+    -- tail-measurable by the monotone class theorem.
+    sorry
+
+  case hg_eq =>
+    -- The key: ∫_A g dμ = ∫_A f(X₀) dμ for tail-measurable A with μ A < ∞
+    intro A hA hμA
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    -- PROOF OUTLINE (monotone class extension):
+    --
+    -- Base case: For f = 1_{Iic t}, directing_measure_integral_Iic_ae_eq_alphaIicCE gives:
+    --   ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω = μ[1_{Iic t}(X₀)|tail](ω)
+    --
+    -- Integrating both sides over A (tail-measurable):
+    --   ∫_A (∫ 1_{Iic t} dν) dμ = ∫_A μ[1_{Iic t}(X₀)|tail] dμ  (by setIntegral_congr_ae)
+    --                          = ∫_A 1_{Iic t}(X₀) dμ           (by setIntegral_condExp)
+    --
+    -- Extension to simple functions:
+    --   Linear combinations of Iic indicators cover all Ioc intervals
+    --   By linearity (integral_add, integral_smul, condExp_add, condExp_smul)
+    --
+    -- Extension to bounded measurable f:
+    --   Approximate f by simple functions s_n → f pointwise with |s_n| ≤ M'
+    --   LHS: ∫_A (∫ s_n dν) dμ → ∫_A (∫ f dν) dμ by DCT (each ν(ω) is prob measure)
+    --   RHS: ∫_A s_n(X₀) dμ → ∫_A f(X₀) dμ by DCT
+    --   Since LHS = RHS for each s_n, limits are equal
+    --
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    -- This requires:
+    -- 1. directing_measure_integral_Iic_ae_eq_alphaIicCE (have it)
+    -- 2. setIntegral_condExp for tail-measurable sets (mathlib)
+    -- 3. SimpleFunc approximation (mathlib)
+    -- 4. DCT for both sides (tendsto_setIntegral_of_dominated_convergence)
+    sorry
 
 /-- **Simplified directing measure integral via identification chain.**
 
