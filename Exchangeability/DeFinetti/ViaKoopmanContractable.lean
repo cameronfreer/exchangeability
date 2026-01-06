@@ -5,8 +5,8 @@ Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization
 import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
-import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 import Exchangeability.DeFinetti.CommonEnding
+import Exchangeability.Util.StrictMono
 
 /-!
 # de Finetti's Theorem via Contractability (Kallenberg's First Proof)
@@ -70,7 +70,7 @@ open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
 open Exchangeability.PathSpace
 open Exchangeability.DeFinetti.ViaKoopman
-open Exchangeability.DeFinetti.ViaL2 (injective_implies_strictMono_perm)
+open Exchangeability.Util.StrictMono (injective_implies_strictMono_perm)
 open scoped BigOperators
 
 variable {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]

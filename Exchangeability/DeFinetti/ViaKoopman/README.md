@@ -152,7 +152,8 @@ ViaKoopmanContractable.lean ← indicator_product_bridge_contractable
 TheoremViaKoopman.lean (main theorem)
 ```
 
-**Note:** `ViaKoopmanContractable.lean` imports `ViaL2.MoreL2Helpers` for `injective_implies_strictMono_perm`. This cross-namespace dependency should be refactored by moving the lemma to a common utilities file.
+The lemma `injective_implies_strictMono_perm` lives in `Exchangeability.Util.StrictMono`,
+a common utilities file with no project dependencies.
 
 ## Comparison with Other Proofs
 

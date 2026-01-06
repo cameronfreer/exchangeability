@@ -9,6 +9,7 @@ import Exchangeability.DeFinetti.ViaL2.MainConvergence
 import Exchangeability.DeFinetti.ViaL2.DirectingMeasure
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
+import Exchangeability.Util.StrictMono
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.Data.Finset.Sort
 import Mathlib.Analysis.SpecialFunctions.Choose
@@ -41,6 +42,7 @@ namespace Exchangeability.DeFinetti.ViaL2
 
 open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
+open Exchangeability.Util.StrictMono (injective_implies_strictMono_perm)
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
@@ -1520,80 +1522,10 @@ lemma integral_alphaIic_eq_marginal
 
 For the bridge property, we need to convert an injective function `k : Fin m → ℕ`
 to a strictly monotone one. This is done by sorting the image of k.
+
+**Note:** The lemma `injective_implies_strictMono_perm` is now in
+`Exchangeability.Util.StrictMono` and imported via `open` at the top of this file.
 -/
-
-/-- Any injective function `k : Fin m → ℕ` can be composed with a permutation
-to become strictly monotone.
-
-**Construction:** Let `s := image k univ` (the image of k as a finset of ℕ).
-Since k is injective, `s.card = m`. The `orderIsoOfFin` gives the sorted
-enumeration of s. We define σ to map i to the position of k(i) in the sorted order.
-
-**Key property:** `(fun i => k (σ i))` is strictly increasing (sorted order). -/
-lemma injective_implies_strictMono_perm {m : ℕ}
-    (k : Fin m → ℕ) (hk : Function.Injective k) :
-    ∃ (σ : Equiv.Perm (Fin m)), StrictMono (fun i => k (σ i)) := by
-  classical
-  -- Define the image of k as a finset
-  let s : Finset ℕ := Finset.image k Finset.univ
-  -- By injectivity, s has cardinality m
-  have hs : s.card = m := by
-    simp only [s, Finset.card_image_of_injective Finset.univ hk, Finset.card_univ, Fintype.card_fin]
-  -- Get the sorted enumeration of s
-  let sorted : Fin m ≃o ↑s := Finset.orderIsoOfFin s hs
-  -- For each i : Fin m, k(i) is in s, so we can find its sorted position
-  have hk_mem : ∀ i : Fin m, k i ∈ s := by
-    intro i
-    simp only [s, Finset.mem_image, Finset.mem_univ, true_and]
-    exact ⟨i, rfl⟩
-  -- Define σ: for each position j in sorted order, find which i : Fin m maps to it
-  -- sorted j gives the j-th smallest element of s
-  -- We want σ such that k (σ j) = sorted j
-  -- Define σ⁻¹ first: σ⁻¹(i) = sorted position of k(i)
-  let σ_inv : Fin m → Fin m := fun i =>
-    sorted.symm ⟨k i, hk_mem i⟩
-  -- σ_inv is injective because sorted.symm and k are both injective
-  have hσ_inv_inj : Function.Injective σ_inv := by
-    intro i j hij
-    simp only [σ_inv] at hij
-    have h := sorted.symm.injective hij
-    simp only [Subtype.mk.injEq] at h
-    exact hk h
-  -- Since σ_inv : Fin m → Fin m is injective, it's a bijection (by Fintype.bijective_iff_injective_and_card)
-  have hσ_inv_bij : Function.Bijective σ_inv := by
-    rw [Fintype.bijective_iff_injective_and_card]
-    exact ⟨hσ_inv_inj, rfl⟩
-  -- Convert to an Equiv.Perm
-  let σ : Equiv.Perm (Fin m) := Equiv.ofBijective σ_inv hσ_inv_bij
-  -- Now σ.symm is the permutation we want
-  use σ.symm
-  -- Show k ∘ σ.symm is strictly monotone
-  intro i j hij
-  -- σ.symm(i) is the unique index such that σ_inv(σ.symm(i)) = i
-  -- i.e., sorted position of k(σ.symm(i)) is i
-  -- So k(σ.symm(i)) = sorted(i) (the i-th smallest element)
-  have h_eq_i : k (σ.symm i) = ↑(sorted i) := by
-    have h1 : σ_inv (σ.symm i) = i := by
-      simp only [σ, Equiv.ofBijective_apply_symm_apply]
-    simp only [σ_inv] at h1
-    have h2 : sorted.symm ⟨k (σ.symm i), hk_mem (σ.symm i)⟩ = i := h1
-    have h3 := sorted.apply_symm_apply ⟨k (σ.symm i), hk_mem (σ.symm i)⟩
-    rw [h2] at h3
-    exact Subtype.ext_iff.mp h3.symm
-  have h_eq_j : k (σ.symm j) = ↑(sorted j) := by
-    have h1 : σ_inv (σ.symm j) = j := by
-      simp only [σ, Equiv.ofBijective_apply_symm_apply]
-    simp only [σ_inv] at h1
-    have h2 : sorted.symm ⟨k (σ.symm j), hk_mem (σ.symm j)⟩ = j := h1
-    have h3 := sorted.apply_symm_apply ⟨k (σ.symm j), hk_mem (σ.symm j)⟩
-    rw [h2] at h3
-    exact Subtype.ext_iff.mp h3.symm
-  -- Goal: (fun i => k (σ.symm i)) i < (fun i => k (σ.symm i)) j
-  -- This simplifies to: k (σ.symm i) < k (σ.symm j)
-  simp only
-  rw [h_eq_i, h_eq_j]
-  -- sorted is an OrderIso, so it's strictly monotone
-  exact sorted.strictMono hij
 
 /-! ### Collision Bound for Route B
 
