@@ -133,11 +133,9 @@ lemma integral_pair_transfer
 
   -- Change of variables for pushforward integrals
   have map₁ : ∫ x, φ x ∂(Measure.map (fun ω => (ξ ω, η ω)) μ) =
-              ∫ ω, φ (ξ ω, η ω) ∂μ := by
-    exact integral_map hξη.aemeasurable hint₁.aestronglyMeasurable
+              ∫ ω, φ (ξ ω, η ω) ∂μ := integral_map hξη.aemeasurable hint₁.aestronglyMeasurable
   have map₂ : ∫ x, φ x ∂(Measure.map (fun ω => (ξ ω, ζ ω)) μ) =
-              ∫ ω, φ (ξ ω, ζ ω) ∂μ := by
-    exact integral_map hξζ.aemeasurable hint₂.aestronglyMeasurable
+              ∫ ω, φ (ξ ω, ζ ω) ∂μ := integral_map hξζ.aemeasurable hint₂.aestronglyMeasurable
 
   -- Apply the pair-law on the pushforward side
   calc ∫ ω, φ (ξ ω, η ω) ∂μ
@@ -477,9 +475,7 @@ lemma common_version_condExp_with_props
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W inferInstance] ω = v (W ω)) ∧
     (∀ᵐ ω ∂μ, μ[(ψ ∘ Z) | MeasurableSpace.comap W' inferInstance] ω = v (W' ω)) := by
   -- Use the infrastructure lemma with C = 1
-  have hψ_bdd' : ∀ᵐ ω ∂μ, ‖ψ (Z ω)‖ ≤ 1 := by
-    filter_upwards [] with ω
-    exact hψ_bdd (Z ω)
-  exact common_version_condexp_bdd (C := 1) (by norm_num) hZ hW hW' hψ hψ_int hψ_bdd' h_pair
+  exact common_version_condexp_bdd (C := 1) (by norm_num) hZ hW hW' hψ hψ_int
+    (by filter_upwards with ω; exact hψ_bdd (Z ω)) h_pair
 
 end Exchangeability.DeFinetti.ViaMartingale
