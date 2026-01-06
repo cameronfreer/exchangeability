@@ -236,19 +236,13 @@ lemma contractable_finite_cylinder_measure
       intro j
       exact measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j)
 
-  -- Prove the functions are measurable
-  have h_meas_idx : Measurable (fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) := by
-    fun_prop (disch := measurability)
-  have h_meas_std : Measurable (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) := by
-    fun_prop (disch := measurability)
-
+  -- Apply measure equality (with inline measurability from fun_prop)
   calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S)
       = Measure.map (fun ω i => X (idx i) ω) μ S := by
-        rw [Measure.map_apply h_meas_idx hS_meas]
-    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S := by
-        rw [contract]
+        rw [Measure.map_apply (by fun_prop (disch := measurability)) hS_meas]
+    _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S := by rw [contract]
     _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S) := by
-        rw [Measure.map_apply h_meas_std hS_meas]
+        rw [Measure.map_apply (by fun_prop (disch := measurability)) hS_meas]
 
 /-! ### Triple Pushforward -/
 
@@ -355,16 +349,9 @@ lemma contractable_triple_pushforward
     simp only [Bseq]
     exact measure_ne_top _ Set.univ
 
-  -- Convert h_agree to explicit form for Measure.ext_of_generateFrom_of_iUnion
-  have h_agree_explicit : ∀ s ∈ Rectangles,
-      Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ s
-        = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ s := by
-    intro s hs
-    exact h_agree hs
-
   -- Apply Measure.ext_of_generateFrom_of_iUnion
   exact Measure.ext_of_generateFrom_of_iUnion
-    Rectangles Bseq h_gen h_pi h1B h2B hμB h_agree_explicit
+    Rectangles Bseq h_gen h_pi h1B h2B hμB fun s hs => h_agree hs
 
 /-! ### σ-Algebra Join Characterization -/
 

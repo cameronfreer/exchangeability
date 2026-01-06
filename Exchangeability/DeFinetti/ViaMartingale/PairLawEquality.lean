@@ -261,13 +261,9 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
       (fun i j hij => phi1_strictMono r m hr hij)
     exact congrArg (· S) heq
 
-  -- Probability instances for pushforward measures
-  have hprob_seq0 : IsProbabilityMeasure (Measure.map seq0 μ) :=
-    Measure.isProbabilityMeasure_map hseq0_meas.aemeasurable
-  have hprob_seq1 : IsProbabilityMeasure (Measure.map seq1 μ) :=
-    Measure.isProbabilityMeasure_map hseq1_meas.aemeasurable
-
-  -- Measures on ℕ → α are equal by π-system uniqueness
+  -- Measures on ℕ → α are equal by π-system uniqueness (need probability instances)
+  haveI : IsProbabilityMeasure (Measure.map seq0 μ) := Measure.isProbabilityMeasure_map hseq0_meas.aemeasurable
+  haveI : IsProbabilityMeasure (Measure.map seq1 μ) := Measure.isProbabilityMeasure_map hseq1_meas.aemeasurable
   have h_seq_eq : Measure.map seq0 μ = Measure.map seq1 μ :=
     Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α) h_marginals
 
@@ -337,18 +333,10 @@ lemma condExp_indicator_eq_of_contractable
     | zero => exact hX_meas r
     | succ k => exact hX_meas (m + 1 + k)
 
-  -- Step 1: Pair law from contractability
-  have h_pair : Measure.map (fun ω => (U ω, W ω)) μ =
-                Measure.map (fun ω => (U ω, W' ω)) μ :=
-    pair_law_eq_of_contractable hContr hX_meas r m hrm
-
-  -- Step 2: Contraction σ(W) ⊆ σ(W')
-  have h_contr : MeasurableSpace.comap W inferInstance ≤
-                 MeasurableSpace.comap W' inferInstance :=
-    comap_le_comap_consRV (fun ω => X r ω) W
-
-  -- Step 3: Apply Kallenberg 1.3
-  exact condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU hW hW' h_pair h_contr hA
+  -- Apply Kallenberg 1.3 with pair law and contraction σ(W) ⊆ σ(W')
+  exact condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU hW hW'
+    (pair_law_eq_of_contractable hContr hX_meas r m hrm)
+    (comap_le_comap_consRV (fun ω => X r ω) W) hA
 
 /-- **The σ-algebra of W' = consRV (X r) W equals the join of σ(X_r) and σ(W).**
 
@@ -496,13 +484,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
   have h_le : MeasurableSpace.comap W inferInstance ≤ MeasurableSpace.comap W' inferInstance :=
     comap_le_comap_consRV (fun ω => X r ω) W
 
-  -- Step 3: Use comap_consRV_eq_sup to get σ(W') = σ(X_r) ⊔ σ(W)
-  have h_sup : MeasurableSpace.comap W' inferInstance =
-               MeasurableSpace.comap (fun ω => X r ω) inferInstance ⊔
-               MeasurableSpace.comap W inferInstance :=
-    comap_consRV_eq_sup (fun ω => X r ω) W
-
-  -- Step 4: Apply Kallenberg 1.3 to get drop-info for U
+  -- Step 3: Apply Kallenberg 1.3 to get drop-info for U
   -- E[1_{U∈A} | σ(W')] = E[1_{U∈A} | σ(W)] for all measurable A
   -- This uses condExp_indicator_eq_of_law_eq_of_comap_le (fully proved)
 
@@ -575,10 +557,8 @@ lemma condExp_Xr_indicator_eq_of_contractable
         ext ω; simp only [W', consRV]
       rw [h_eq]
       exact h0_meas
-    have hIndB_mW'_meas : @Measurable Ω ℝ mW' _ indB := by
-      have h_ind_meas : Measurable (Set.indicator B_Xr (fun _ => (1 : ℝ))) :=
-        measurable_const.indicator hB_Xr
-      exact h_ind_meas.comp hXr_mW'_meas
+    have hIndB_mW'_meas : @Measurable Ω ℝ mW' _ indB :=
+      (measurable_const.indicator hB_Xr).comp hXr_mW'_meas
     have hIndB_stronglyMeas_mW' : StronglyMeasurable[mW'] indB :=
       hIndB_mW'_meas.stronglyMeasurable
 
@@ -600,11 +580,9 @@ lemma condExp_Xr_indicator_eq_of_contractable
     have h_step12 : μ[indA * indB | mW'] =ᵐ[μ] μ[indA | mW] * indB :=
       h_step1.trans h_step2
 
-    -- Step 5: Apply condExp mW to both sides
-    have h_step3a : μ[μ[indA * indB | mW'] | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] :=
-      condExp_congr_ae h_step12
+    -- Step 5: Apply condExp mW to both sides (tower + congr)
     have h_step3 : μ[indA * indB | mW] =ᵐ[μ] μ[μ[indA | mW] * indB | mW] :=
-      h_tower_prod.symm.trans h_step3a
+      h_tower_prod.symm.trans (condExp_congr_ae h_step12)
 
     -- Step 6: Pull-out for mW: E[E[indA|mW] * indB | mW] =ᵐ E[indA|mW] * E[indB|mW]
     have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
