@@ -265,12 +265,10 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α) h_marginals
 
   -- Pull back via split
-  have h0 : Measure.map (fun ω => (U ω, W ω)) μ = Measure.map (split ∘ seq0) μ := by
-    congr 1; ext ω : 1
-    exact (h_split_concat (U ω, W ω)).symm
-  have h1 : Measure.map (fun ω => (U ω, W' ω)) μ = Measure.map (split ∘ seq1) μ := by
-    congr 1; ext ω : 1
-    exact (h_split_concat (U ω, W' ω)).symm
+  have h0 : Measure.map (fun ω => (U ω, W ω)) μ = Measure.map (split ∘ seq0) μ :=
+    congrArg (Measure.map · μ) <| funext fun ω => (h_split_concat (U ω, W ω)).symm
+  have h1 : Measure.map (fun ω => (U ω, W' ω)) μ = Measure.map (split ∘ seq1) μ :=
+    congrArg (Measure.map · μ) <| funext fun ω => (h_split_concat (U ω, W' ω)).symm
   rw [h0, h1]
   -- Use Measure.map_map to factor through seq0/seq1
   rw [← Measure.map_map h_split_meas hseq0_meas, ← Measure.map_map h_split_meas hseq1_meas]
@@ -543,8 +541,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
         @Measurable.comp Ω (ℕ → α) α mW' _ _ (fun f => f 0) W'
           (measurable_pi_apply 0) hW'_ident
       -- X r = fun ω => W' ω 0 by definition of consRV
-      have h_eq : (X r) = (fun ω => W' ω 0) := by
-        ext ω; simp only [W', consRV]
+      have h_eq : (X r) = (fun ω => W' ω 0) := funext fun ω => by simp only [W', consRV]
       rw [h_eq]
       exact h0_meas
     have hIndB_mW'_meas : @Measurable Ω ℝ mW' _ indB :=
