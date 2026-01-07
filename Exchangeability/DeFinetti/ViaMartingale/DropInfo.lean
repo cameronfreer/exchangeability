@@ -165,11 +165,9 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Step 1: Swap pair-law to get the right direction: law(ζ,ξ) = law(η,ξ)
     have h_law_swapped : μ.map (fun ω => (ζ ω, ξ ω)) = μ.map (fun ω => (η ω, ξ ω)) := by
       have h_prod_comm_ζ : μ.map (fun ω => (ζ ω, ξ ω)) = (μ.map (fun ω => (ξ ω, ζ ω))).map Prod.swap := by
-        rw [Measure.map_map (measurable_swap) (hξ.prodMk hζ)]
-        rfl
+        rw [Measure.map_map measurable_swap (hξ.prodMk hζ)]; rfl
       have h_prod_comm_η : μ.map (fun ω => (η ω, ξ ω)) = (μ.map (fun ω => (ξ ω, η ω))).map Prod.swap := by
-        rw [Measure.map_map (measurable_swap) (hξ.prodMk hη)]
-        rfl
+        rw [Measure.map_map measurable_swap (hξ.prodMk hη)]; rfl
       rw [h_prod_comm_ζ, h_prod_comm_η, h_law]
 
     -- Step 2: Express joint distributions using compProd in the RIGHT direction
