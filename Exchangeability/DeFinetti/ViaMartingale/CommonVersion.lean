@@ -93,9 +93,7 @@ lemma exists_clipped_version
   · -- Pointwise bound
     intro y
     simp only [v, Real.norm_eq_abs, abs_le]
-    constructor
-    · exact le_max_left _ _
-    · exact max_le (neg_le_self (by linarith [hC])) (min_le_right _ _)
+    exact ⟨le_max_left _ _, max_le (neg_le_self (by linarith [hC])) (min_le_right _ _)⟩
   · -- A.e. equality: v = v₀ wherever |v₀| ≤ C
     filter_upwards [hBound] with y hy
     simp only [v]

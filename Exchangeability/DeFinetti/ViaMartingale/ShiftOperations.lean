@@ -97,12 +97,8 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
     MeasurableSpace.comap t inferInstance := by
   intro S hS
   obtain ⟨A, hA, rfl⟩ := hS
-  use (fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A
-  constructor
-  · exact hA.preimage (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1))
-  · ext ω
-    simp only [Set.mem_preimage]
-    rfl
+  exact ⟨(fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A,
+    hA.preimage (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1)), rfl⟩
 
 set_option linter.unusedSectionVars false in
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
