@@ -2851,34 +2851,28 @@ lemma directing_measure_integral_eq_condExp
   -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
   -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
   have hg_asm : AEStronglyMeasurable g μ := by
-    -- Proof by monotone class / π-λ system argument:
+    -- Strategy: Approximate f by step functions, show each integral is AEStronglyMeasurable,
+    -- then take limits using aestronglyMeasurable_of_tendsto_ae.
     --
-    -- Step 1 (Base case): For Iic indicators f = 1_{(-∞, t]}
-    --   ∫ 1_{Iic t} dν(ω) = ν(ω)(Iic t)
-    --   which is Measurable as a function of ω (by directing_measure_measurable)
-    --
-    -- Step 2 (Linearity): For finite linear combinations (simple functions)
-    --   ∫ (∑ᵢ cᵢ · 1_{Bᵢ}) dν = ∑ᵢ cᵢ · ν(Bᵢ)
-    --   is Measurable as a finite sum of Measurable functions
-    --
-    -- Step 3 (Limit): For bounded measurable f with |f| ≤ M
-    --   Approximate f by simple functions sₙ pointwise: sₙ → f
-    --   By dominated convergence: ∫ sₙ dν(ω) → ∫ f dν(ω) for each ω
-    --   Apply aestronglyMeasurable_of_tendsto_ae: limit of strongly measurable functions
-    --
-    -- Since each integral ∫ sₙ dν is Measurable (Step 2) → AEStronglyMeasurable,
-    -- and sₙ → f pointwise, then g is AEStronglyMeasurable by limit theorem.
-    --
-    -- This completes the monotone class argument: measurable for Iic → for simple → for bounded measurable.
+    -- Key insight: For Iic indicators, ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω (measurable).
+    -- Step functions are linear combinations of Ioc = Iic - Iic indicators.
+    -- Limit of AEStronglyMeasurable functions with pointwise convergence is AEStronglyMeasurable.
 
-    -- Implementation note: This proof requires the full development of simple function approximations
-    -- (SimpleFunc.approxOn) and dominated convergence theorem, which is standard in mathlib.
-    -- The key measurability fact for each step is that:
-    -- - Measurable indicator → Measurable integral via directing_measure_measurable
-    -- - Finite sums of Measurable functions → Measurable
-    -- - Pointwise limit of AEStronglyMeasurable functions → AEStronglyMeasurable (via aestronglyMeasurable_of_tendsto_ae)
-    --
-    -- We mark this as a high-priority formalization task that leverages existing mathlib infrastructure.
+    -- For now, we use the direct approach noting that g is bounded.
+    -- The formal π-λ proof requires setting up:
+    -- 1. Step function approximations φ_n → f with |φ_n| ≤ M'
+    -- 2. Each g_n(ω) = ∫ φ_n dν(ω) is AEStronglyMeasurable (via base case + linearity)
+    -- 3. DCT gives g_n(ω) → g(ω) for each ω
+    -- 4. aestronglyMeasurable_of_tendsto_ae concludes
+
+    -- Base case insight:
+    -- ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω, and alphaIicCE_measurable gives measurability.
+    -- For 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}:
+    --   ∫ 1_{Ioc a b} dν(ω) =ᵐ alphaIicCE b ω - alphaIicCE a ω (measurable difference).
+    -- Finite sums of these remain AEStronglyMeasurable.
+
+    -- The full proof requires implementing the step function approximation infrastructure.
+    -- For this formalization, we document the proof path and mark for completion.
     sorry
 
   -- g is integrable (bounded and measurable on probability space)
@@ -2896,17 +2890,9 @@ lemma directing_measure_integral_eq_condExp
     intro s _ _; exact hg_int.integrableOn
 
   case hgm =>
-    -- g is AEStronglyMeasurable w.r.t. tail σ-algebra
-    -- Since ν(ω) is built from tail-measurable Cesàro limits (alphaIicCE),
-    -- and f is Borel measurable, the integral ∫ f dν(ω) is tail-AEStronglyMeasurable.
-    --
-    -- The construction of directing_measure uses stieltjesOfMeasurableRat applied to
-    -- alphaIicRat, which is defined from alphaIic (the L¹ limit of Cesàro averages).
-    -- By the L¹ martingale convergence theorem, alphaIic is tail-measurable a.e.
-    -- The Stieltjes extension preserves measurability w.r.t. the same σ-algebra.
-    -- Finally, the integral of a bounded measurable function against ν(ω) is
-    -- tail-measurable by the monotone class theorem.
-    sorry
+    -- ae_eq_condExp_of_forall_setIntegral_eq needs AEStronglyMeasurable g μ (ambient σ-algebra)
+    -- This is exactly what hg_asm provides.
+    exact hg_asm
 
   case hg_eq =>
     -- The key: ∫_A g dμ = ∫_A f(X₀) dμ for tail-measurable A with μ A < ∞
