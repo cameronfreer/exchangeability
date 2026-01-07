@@ -54,8 +54,7 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
   obtain ⟨f, hf⟩ := hg_range
   change condexpL2 (μ := μ) f = g at hf
   subst hf
-  have h_idem := congrArg (fun T => T f) (condexpL2_idem (μ := μ))
-  simpa [ContinuousLinearMap.comp_apply] using h_idem
+  simpa [ContinuousLinearMap.comp_apply] using congrArg (fun T => T f) (condexpL2_idem (μ := μ))
 
 /-- Main theorem: Birkhoff averages converge in L² to conditional expectation.
 

@@ -164,16 +164,10 @@ lemma aestronglyMeasurable_shiftInvariant_of_koopman
     simpa [koopman]
       using
         (MeasureTheory.Lp.coeFn_compMeasurePreserving f hσ)
-  have hfixAE : (koopman shift hσ f) =ᵐ[μ] f := by
-    simp [hfix]
-  have hshift : (fun ω => f (shift ω)) =ᵐ[μ] f := by
-    exact hcomp.symm.trans hfixAE
-  have hf_base : AEStronglyMeasurable f μ := Lp.aestronglyMeasurable f
+  have hshift : (fun ω => f (shift ω)) =ᵐ[μ] f := hcomp.symm.trans (by simp [hfix])
   obtain ⟨g', hg'_meas, hAE, _⟩ :=
-    mkShiftInvariantRep (μ := μ) hσ (fun ω => f ω) hf_base hshift
-  have hf_meas : AEStronglyMeasurable[shiftInvariantSigma (α := α)] f μ :=
-    (AEStronglyMeasurable.congr hg'_meas hAE)
-  exact hf_meas
+    mkShiftInvariantRep (μ := μ) hσ (fun ω => f ω) (Lp.aestronglyMeasurable f) hshift
+  exact AEStronglyMeasurable.congr hg'_meas hAE
 
 /-! ### The Mean Ergodic Theorem and conditional expectation
 

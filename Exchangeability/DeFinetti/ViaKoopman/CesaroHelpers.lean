@@ -63,13 +63,10 @@ lemma condexp_precomp_iterate_eq
         (hgm := (MeasureTheory.stronglyMeasurable_condExp (μ := μ)).aestronglyMeasurable)).symm
   case hg_int_finite =>
     intro s hs _
-    have h_int : Integrable (μ[f | shiftInvariantSigma (α := α)]) μ := integrable_condExp
-    exact h_int.integrableOn
+    exact integrable_condExp.integrableOn
   case hg_eq =>
     intro s hs _
-    have hS := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
-    have hS_meas : MeasurableSet s := hS.1
-    have hS_shift : shift ⁻¹' s = s := hS.2
+    have ⟨hS_meas, hS_shift⟩ := (mem_shiftInvariantSigma_iff (α := α) (s := s)).1 hs
     have hS_iter : shiftk ⁻¹' s = s := by
       rw [hshiftk_def]
       clear hshiftk_def shiftk h_shiftk_pres h_shiftk_meas h_int_shift h_condexp_int
@@ -471,7 +468,7 @@ lemma product_ce_constant_of_lag_const_from_one
                 (fun j => f (ω 0) * g (ω (j + 1)))) | mSI] ω) := by
     have : (fun ω => f (ω 0) * A' ω)
          = (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) := by
-      funext ω; simp [A', Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
+      funext ω; simp [A', Finset.mul_sum, mul_left_comm]
     rw [this]
     exact condExp_const_mul (shiftInvariantSigma_le (α := α))
       (1 / (n : ℝ)) (fun ω => (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1))))
