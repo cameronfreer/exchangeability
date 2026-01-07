@@ -1599,4 +1599,26 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
+/-- **Stub for directing kernel packaged result.**
+The complete proof is in MoreL2Helpers.lean. This stub is needed due to import structure
+(MoreL2Helpers imports MainConvergence which imports this file). -/
+lemma alpha_is_conditional_expectation_packaged
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
+      Measurable alpha ∧
+      MemLp alpha 1 μ ∧
+      (∀ ω, IsProbabilityMeasure (nu ω)) ∧
+      (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
+  -- Stub: real proof in MoreL2Helpers.alpha_is_conditional_expectation_packaged
+  sorry
+
 

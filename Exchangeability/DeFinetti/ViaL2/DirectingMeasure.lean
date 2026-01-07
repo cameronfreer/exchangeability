@@ -2719,6 +2719,134 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
     -- This follows from h_mono_t_rat!
     exact h_mono_t_rat q hq
 
+/-! ### Helper Lemmas for Monotone Class Extension
+
+The following lemmas build up the π-λ argument needed for `directing_measure_integral_eq_condExp`.
+Each phase is factored out as a separate lemma with its own sorry to be filled.
+
+**Phase A**: Indicators of Borel sets → tail-AEStronglyMeasurable
+**Phase B**: Simple functions → tail-AEStronglyMeasurable (via linearity)
+**Phase C**: Bounded measurable functions → tail-AEStronglyMeasurable (via DCT + limits)
+-/
+
+/-- **Phase A:** For all Borel sets s, ω ↦ ∫ 1_s dν(ω) is tail-AEStronglyMeasurable.
+
+The π-λ argument:
+1. Base case: `{Iic t | t ∈ ℝ}` is a π-system generating Borel ℝ
+2. For Iic t: uses `directing_measure_integral_Iic_ae_eq_alphaIicCE` + `stronglyMeasurable_condExp`
+3. For ∅: integral is 0 (constant)
+4. For complement: ∫ 1_{sᶜ} dν = 1 - ∫ 1_s dν (probability measure)
+5. For disjoint unions: ∫ 1_{⋃ fn} dν = ∑' ∫ 1_{fn n} dν (σ-additivity)
+6. Apply `MeasurableSpace.induction_on_inter` with `borel_eq_generateFrom_Iic`
+-/
+lemma integral_indicator_borel_tailAEStronglyMeasurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (s : Set ℝ) (hs : MeasurableSet s) :
+    @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+      (fun ω => ∫ x, s.indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+  -- Use π-λ theorem: borel_eq_generateFrom_Iic + MeasurableSpace.induction_on_inter
+  -- Base case (Iic t) from h_Iic_tail in main proof
+  -- Closure under complement: ∫ 1_{sᶜ} = 1 - ∫ 1_s
+  -- Closure under disjoint union: ∫ 1_{⋃ fn} = ∑' ∫ 1_{fn n}
+  sorry
+
+/-- **Phase B:** For simple functions, the integral is tail-AEStronglyMeasurable.
+
+Simple functions are finite linear combinations of indicator functions.
+Uses `Finset.aestronglyMeasurable_sum` and scalar multiplication. -/
+lemma integral_simpleFunc_tailAEStronglyMeasurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (φ : SimpleFunc ℝ ℝ) :
+    @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+      (fun ω => ∫ x, φ x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+  -- SimpleFunc is finite linear combination of indicators
+  -- Use integral_simpleFunc_eq_sum + Finset.aestronglyMeasurable_sum
+  -- Each term: c • ∫ 1_s dν is tail-AEStronglyMeasurable by Phase A + scalar mult
+  sorry
+
+/-- **Phase C:** For bounded measurable f, the integral is tail-AEStronglyMeasurable.
+
+Uses `SimpleFunc.approxOn` to approximate f by simple functions.
+Takes limit via `aestronglyMeasurable_of_tendsto_ae` + DCT. -/
+lemma integral_bounded_measurable_tailAEStronglyMeasurable
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
+    @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+      (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+  -- Use SimpleFunc.approxOn to get sequence φ_n → f pointwise with |φ_n| ≤ |f|
+  -- Each ∫ φ_n dν is tail-AEStronglyMeasurable by Phase B
+  -- ∫ φ_n dν → ∫ f dν pointwise (DCT on each ν(ω))
+  -- Apply aestronglyMeasurable_of_tendsto_ae
+  sorry
+
+/-- **Set integral equality for Iic indicators.**
+
+Base case: For Iic indicators, set integral equality follows from
+`directing_measure_integral_Iic_ae_eq_alphaIicCE` + `setIntegral_condExp`. -/
+lemma setIntegral_directing_measure_indicator_Iic_eq
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (t : ℝ) (A : Set Ω)
+    (hA : @MeasurableSet Ω (TailSigma.tailSigma X) A)
+    (hμA : μ A < ⊤) :
+    ∫ ω in A, (∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
+      = ∫ ω in A, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
+  -- By directing_measure_integral_Iic_ae_eq_alphaIicCE:
+  --   ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
+  -- Since alphaIicCE t = μ[1_{Iic t}(X₀)|tail], we have by setIntegral_condExp:
+  --   ∫_A alphaIicCE t dμ = ∫_A 1_{Iic t}(X₀) dμ
+  -- Therefore ∫_A (∫ 1_{Iic t} dν) dμ = ∫_A 1_{Iic t}(X₀) dμ
+  sorry
+
+/-- **Set integral equality for Borel indicator functions.**
+
+Extended from Iic indicators via π-λ argument. -/
+lemma setIntegral_directing_measure_indicator_eq
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (s : Set ℝ) (hs : MeasurableSet s)
+    (A : Set Ω) (hA : @MeasurableSet Ω (TailSigma.tailSigma X) A) (hμA : μ A < ⊤) :
+    ∫ ω in A, (∫ x, s.indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
+      = ∫ ω in A, s.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
+  -- π-λ argument parallel to integral_indicator_borel_tailAEStronglyMeasurable
+  -- Base case: Iic from setIntegral_directing_measure_indicator_Iic_eq
+  -- Complement: both sides transform by 1 - (value)
+  -- Disjoint union: both sides are countable sums
+  sorry
+
+/-- **Set integral equality for bounded measurable functions.**
+
+This is the key equality needed for `ae_eq_condExp_of_forall_setIntegral_eq`. -/
+lemma setIntegral_directing_measure_bounded_measurable_eq
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
+    (A : Set Ω) (hA : @MeasurableSet Ω (TailSigma.tailSigma X) A) (hμA : μ A < ⊤) :
+    ∫ ω in A, (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
+      = ∫ ω in A, f (X 0 ω) ∂μ := by
+  -- Approximate f by simple functions φ_n → f pointwise with |φ_n| ≤ M
+  -- For each φ_n, equality holds by setIntegral_directing_measure_indicator_eq + linearity
+  -- Take limit via DCT on both sides
+  sorry
+
 /-- **Main bridge lemma:** For any bounded measurable f, the integral against directing_measure
 equals the conditional expectation E[f(X₀)|tail].
 
@@ -2855,57 +2983,9 @@ lemma directing_measure_integral_eq_condExp
   -- So ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω is tail-AEStronglyMeasurable
   -- Extend to bounded measurable f via step function approximation + limits
 
-  have hgm_early : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ := by
-    -- Strategy: Show g is a.e. equal to something tail-strongly measurable
-    -- For Iic indicators: ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
-    -- alphaIicCE t = μ[1_{Iic t}(X₀)|tail] is tail-strongly measurable by stronglyMeasurable_condExp
-
-    -- Step 1: For Iic indicators, integral is tail-AEStronglyMeasurable
-    have h_Iic_tail : ∀ t : ℝ, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
-        (fun ω => ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
-          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
-      intro t
-      have h_ae := directing_measure_integral_Iic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t
-      -- alphaIicCE t is the conditional expectation, hence tail-strongly measurable
-      have h_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X)
-          (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
-        -- alphaIicCE t = μ[indIic t ∘ X 0 | TailSigma.tailSigma X]
-        -- Conditional expectation is strongly measurable w.r.t. the conditioning σ-algebra
-        unfold alphaIicCE
-        exact stronglyMeasurable_condExp
-      exact AEStronglyMeasurable.congr h_tail_sm.aestronglyMeasurable h_ae.symm
-
-    -- ═══════════════════════════════════════════════════════════════════════════════
-    -- Step 2-3: Extend from Iic indicators to bounded measurable f via π-λ theorem
-    -- ═══════════════════════════════════════════════════════════════════════════════
-    --
-    -- PROOF STRUCTURE (following directing_measure_measurable in MoreL2Helpers.lean):
-    --
-    -- Phase A: π-λ for indicator functions of Borel sets
-    --   Define G = {s | MeasurableSet s ∧ ω ↦ ∫ 1_s dν(ω) is tail-AEStronglyMeasurable}
-    --   (1) h_pi: Iic t ∈ G for all t  [from h_Iic_tail above]
-    --   (2) h_empty: ∅ ∈ G  [integral is 0, hence const]
-    --   (3) h_compl: s ∈ G → sᶜ ∈ G  [∫ 1_{sᶜ} dν = 1 - ∫ 1_s dν, use .sub]
-    --   (4) h_iUnion: disjoint union closure  [∫ 1_{⋃ fn} = ∑' ∫ 1_{fn n}, use limit]
-    --   (5) Apply MeasurableSpace.induction_on_inter with borel_eq_generateFrom_Iic
-    --
-    -- Phase B: Extend from indicators to simple functions
-    --   Simple functions are finite linear combinations of indicators
-    --   Use integral_smul and integral_add to preserve tail-AEStronglyMeasurable
-    --
-    -- Phase C: Extend from simple to bounded measurable f
-    --   Use SimpleFunc.approxOn to approximate f by simple functions
-    --   Take limit via DCT + aestronglyMeasurable_of_tendsto_ae
-    --
-    -- KEY LEMMAS NEEDED:
-    -- - integral_indicator_one: ∫ 1_s dν = ν.real s
-    -- - prob_compl_eq_one_sub: ν(sᶜ) = 1 - ν(s) for prob measure
-    -- - measure_iUnion: ν(⋃ fn) = ∑' ν(fn n) for disjoint
-    -- - Finset.aestronglyMeasurable_sum: finite sum preserves AESMeas
-    -- - aestronglyMeasurable_of_tendsto_ae: limit preserves AESMeas
-    -- - HasSum.tendsto_sum_nat: partial sums converge to tsum
-    -- ═══════════════════════════════════════════════════════════════════════════════
-    sorry
+  have hgm_early : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ :=
+    -- Use the factored-out helper lemma for Phase C (which builds on Phases A and B)
+    integral_bounded_measurable_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
   -- Ambient AEStronglyMeasurable follows from tail via .mono
   have hg_asm : AEStronglyMeasurable g μ := AEStronglyMeasurable.mono hm_le hgm_early
@@ -2932,33 +3012,9 @@ lemma directing_measure_integral_eq_condExp
   case hg_eq =>
     -- The key: ∫_A g dμ = ∫_A f(X₀) dμ for tail-measurable A with μ A < ∞
     intro A hA hμA
-    -- ═══════════════════════════════════════════════════════════════════════════════
-    -- PROOF OUTLINE (monotone class extension):
-    --
-    -- Base case: For f = 1_{Iic t}, directing_measure_integral_Iic_ae_eq_alphaIicCE gives:
-    --   ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω = μ[1_{Iic t}(X₀)|tail](ω)
-    --
-    -- Integrating both sides over A (tail-measurable):
-    --   ∫_A (∫ 1_{Iic t} dν) dμ = ∫_A μ[1_{Iic t}(X₀)|tail] dμ  (by setIntegral_congr_ae)
-    --                          = ∫_A 1_{Iic t}(X₀) dμ           (by setIntegral_condExp)
-    --
-    -- Extension to simple functions:
-    --   Linear combinations of Iic indicators cover all Ioc intervals
-    --   By linearity (integral_add, integral_smul, condExp_add, condExp_smul)
-    --
-    -- Extension to bounded measurable f:
-    --   Approximate f by simple functions s_n → f pointwise with |s_n| ≤ M'
-    --   LHS: ∫_A (∫ s_n dν) dμ → ∫_A (∫ f dν) dμ by DCT (each ν(ω) is prob measure)
-    --   RHS: ∫_A s_n(X₀) dμ → ∫_A f(X₀) dμ by DCT
-    --   Since LHS = RHS for each s_n, limits are equal
-    --
-    -- ═══════════════════════════════════════════════════════════════════════════════
-    -- This requires:
-    -- 1. directing_measure_integral_Iic_ae_eq_alphaIicCE (have it)
-    -- 2. setIntegral_condExp for tail-measurable sets (mathlib)
-    -- 3. SimpleFunc approximation (mathlib)
-    -- 4. DCT for both sides (tendsto_setIntegral_of_dominated_convergence)
-    sorry
+    -- Use the factored-out helper lemma for set integral equality
+    exact setIntegral_directing_measure_bounded_measurable_eq
+      X hX_contract hX_meas hX_L2 f hf_meas hf_bdd A hA hμA
 
 /-- **Simplified directing measure integral via identification chain.**
 
