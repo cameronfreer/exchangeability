@@ -256,11 +256,8 @@ lemma common_version_condexp_bdd
             -- Apply topology-free integral transfer via pushforward measures
             let g : β × γ → ℝ := fun (z, w) => ψ z * S.indicator (fun _ => 1) w
 
-            -- Prove g is measurable
-            have hg_meas : Measurable g := by
-              apply Measurable.mul
-              · exact hψ.comp measurable_fst
-              · exact (measurable_const.indicator hS).comp measurable_snd
+            have hg_meas : Measurable g :=
+              (hψ.comp measurable_fst).mul ((measurable_const.indicator hS).comp measurable_snd)
 
             -- Prove g ∘ (Z, W) is integrable
             have hg_int : Integrable (fun ω => g (Z ω, W ω)) μ := by
