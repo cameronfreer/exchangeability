@@ -219,8 +219,8 @@ lemma condExp_indicator_revFiltration_eq_self_of_eq
     have hIdent : @Measurable Ω (ℕ → α) (revFiltration X m) _ (shiftRV X m) := measurable_iff_comap_le.mpr le_rfl
     exact (measurable_pi_apply 0).comp hIdent
   have hm_le := revFiltration_le X hX m
-  haveI : SigmaFinite (μ.trim hm_le) := inferInstance
-  exact .of_eq <| @condExp_of_stronglyMeasurable Ω ℝ (revFiltration X m) _ _ _ _ _ hm_le _
+  exact haveI : SigmaFinite (μ.trim hm_le) := inferInstance
+    .of_eq <| @condExp_of_stronglyMeasurable Ω ℝ (revFiltration X m) _ _ _ _ _ hm_le _
     _ ((measurable_const.indicator hB).comp hXm_meas).stronglyMeasurable
     (.indicator (integrable_const 1) ((hX m) hB))
 

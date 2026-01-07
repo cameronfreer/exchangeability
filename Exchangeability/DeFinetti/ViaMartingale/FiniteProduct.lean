@@ -361,13 +361,8 @@ lemma finite_product_formula_id
       rw [Measure.bind_apply MeasurableSet.univ h_aemeas]
       -- ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ ∂μ
       -- For each ω, Measure.pi is a product of probability measures, so it's a probability measure
-      have h_pi_prob : ∀ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ = 1 := by
-        intro ω
-        -- Measure.pi of probability measures is a probability measure
-        haveI : ∀ i : Fin m, IsProbabilityMeasure (ν ω) := fun i => inferInstance
-        -- Product measure gives measure 1 to univ
-        haveI : IsProbabilityMeasure (Measure.pi (fun _ : Fin m => ν ω)) := inferInstance
-        exact measure_univ
+      have h_pi_prob : ∀ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ = 1 := fun ω =>
+        haveI := hν_prob ω; measure_univ
       -- Integrate constant 1: ∫⁻ ω, 1 ∂μ = 1 * μ Set.univ = 1
       simp only [h_pi_prob]
       rw [lintegral_const]

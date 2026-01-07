@@ -320,9 +320,7 @@ lemma condExp_indicator_eq_of_contractable
 
   -- Measurability
   have hU : Measurable U := by measurability
-  have hW : Measurable W := by
-    apply measurable_pi_lambda
-    intro n; exact hX_meas (m + 1 + n)
+  have hW : Measurable W := measurable_pi_lambda _ fun n => hX_meas (m + 1 + n)
   have hW' : Measurable W' := by
     apply measurable_pi_lambda
     intro n

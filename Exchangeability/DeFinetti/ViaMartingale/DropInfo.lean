@@ -222,8 +222,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     have step1 : ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ =
                  ∫ ω in S, (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) ω ∂μ := by
       -- S is measurable in σ(ζ), need SigmaFinite instance
-      haveI : SigmaFinite (μ.trim hmζ_le) := inferInstance
-      exact setIntegral_condExp hmζ_le hint hS
+      exact haveI : SigmaFinite (μ.trim hmζ_le) := inferInstance
+        setIntegral_condExp hmζ_le hint hS
 
     -- Then, prove ∫_S μ[f|η] = ∫_S μ[f|ζ] using the a.e. equality
     have step2 : ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω ∂μ =
