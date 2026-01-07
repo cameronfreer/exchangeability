@@ -36,7 +36,7 @@ The exchangeability development consists of approximately 5,000 lines of Lean 4 
    - **Approach:** Use `firstHit` stratification and shift properties
    - **Dependencies:** Nat.find properties, iterate lemmas
    
-2. **Line 616**: `METProjection_fixed` - Orthogonal projection fixes subspace elements
+2. **Line 616**: `metProjectionShift_fixed` - Orthogonal projection fixes subspace elements
    - **Difficulty:** Low  
    - **Approach:** Apply `Submodule.orthogonalProjection_mem_subspace_eq_self`
    - **Dependencies:** Mathlib orthogonal projection API

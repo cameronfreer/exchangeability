@@ -69,25 +69,25 @@ theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
   -- Step 1: Get convergence to projection P onto fixedSpace from MET
   classical
   -- Use the canonical mean ergodic projection from `InvariantSigma`
-  let P := METProjection (μ := μ) hσ
-  have hP_tendsto := METProjection_tendsto (μ := μ) hσ f
+  let P := metProjectionShift (μ := μ) hσ
+  have hP_tendsto := metProjectionShift_tendsto (μ := μ) hσ f
   have hP_fixed : ∀ g ∈ fixedSubspace hσ, P g = g :=
-    fun g hg => METProjection_fixes_fixedSubspace (μ := μ) hσ hg
+    fun g hg => metProjectionShift_fixes_fixedSubspace (μ := μ) hσ hg
 
   -- Step 2: Show P = condexpL2 using the factored lemmas
   have hP_eq : P = condexpL2 (μ := μ) := by
     -- Both P and condexpL2 are orthogonal projections onto the fixed subspace
     -- Use uniqueness of symmetric idempotent projections with the same range
     have h_range_P : Set.range P = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-      METProjection_range_fixedSubspace (μ := μ) hσ
+      metProjectionShift_range_fixedSubspace (μ := μ) hσ
     have h_range_condexp : Set.range (condexpL2 (μ := μ)) =
         (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := range_condexp_eq_fixedSubspace hσ
     have hQ_fixes : ∀ g ∈ fixedSubspace hσ, condexpL2 (μ := μ) g = g :=
       fun g hg => condexpL2_fixes_fixedSubspace (hσ := hσ) hg
-    have hP_idem : P.comp P = P := METProjection_idem (μ := μ) hσ
+    have hP_idem : P.comp P = P := metProjectionShift_idem (μ := μ) hσ
     have hQ_idem : (condexpL2 (μ := μ)).comp (condexpL2 (μ := μ)) = condexpL2 (μ := μ) :=
       condexpL2_idem (μ := μ)
-    have hP_sym : P.IsSymmetric := METProjection_isSymmetric (μ := μ) hσ
+    have hP_sym : P.IsSymmetric := metProjectionShift_isSymmetric (μ := μ) hσ
     have hQ_sym : (condexpL2 (μ := μ)).IsSymmetric := by
       intro f g
       unfold condexpL2
@@ -460,23 +460,23 @@ theorem birkhoffCylinder_tendsto_condexp
     have h_met := Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection
       shift hσ (productCylinderLp (μ := μ) (fs := fs) hmeas hbd)
     -- Now we need to show metProjection shift hσ (productCylinderLp ...) = condexpL2 (productCylinderLp ...)
-    -- Both metProjection and METProjection are orthogonal projections onto fixedSpace (koopman shift hσ)
+    -- Both metProjection and metProjectionShift are orthogonal projections onto fixedSpace (koopman shift hσ)
     -- Since fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition
-    -- The proj_eq_condexp theorem shows METProjection hσ = condexpL2
+    -- The proj_eq_condexp theorem shows metProjectionShift hσ = condexpL2
 
-    -- Key insight: metProjection shift hσ and METProjection hσ are both orthogonal projections
+    -- Key insight: metProjection shift hσ and metProjectionShift hσ are both orthogonal projections
     -- onto the same closed subspace fixedSpace (koopman shift hσ), so they must be equal
     -- by uniqueness of orthogonal projections.
 
-    -- Both metProjection and METProjection are orthogonal projections onto fixedSpace (koopman shift hσ)
+    -- Both metProjection and metProjectionShift are orthogonal projections onto fixedSpace (koopman shift hσ)
     -- Since fixedSubspace hσ = fixedSpace (koopman shift hσ) by definition,
     -- they are projections onto the same subspace and must be equal by uniqueness.
     have h_proj_eq : Exchangeability.Ergodic.metProjection shift hσ =
-        Exchangeability.DeFinetti.METProjection hσ := by
+        Exchangeability.DeFinetti.metProjectionShift hσ := by
       -- Both are defined as S.subtypeL.comp S.orthogonalProjection for the same subspace S
       -- The orthogonal projection is unique, so they must be equal
       ext f
-      simp only [Exchangeability.Ergodic.metProjection, Exchangeability.DeFinetti.METProjection]
+      simp only [Exchangeability.Ergodic.metProjection, Exchangeability.DeFinetti.metProjectionShift]
       -- Both reduce to orthogonal projection onto fixedSpace (koopman shift hσ) = fixedSubspace hσ
       rfl
 

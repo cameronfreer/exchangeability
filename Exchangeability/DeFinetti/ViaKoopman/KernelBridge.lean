@@ -239,7 +239,7 @@ lemma metProjection_eq_condExpL2_shiftInvariant
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     metProjection (shift (α := α)) hσ = condexpL2 (μ := μ) :=
-  -- METProjection is now an alias for metProjection shift
+  -- metProjectionShift is now an alias for metProjection shift
   proj_eq_condexp hσ
 
 end Exchangeability.DeFinetti.ViaKoopman

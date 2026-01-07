@@ -34,7 +34,7 @@ are in separate modules:
 ## Main definitions
 
 * `fixedSubspace`: The subspace of L² functions fixed by the Koopman operator.
-* `METProjection`: Orthogonal projection onto the fixed-point subspace.
+* `metProjectionShift`: Orthogonal projection onto the fixed-point subspace.
 * `condexpL2`: Conditional expectation on L² with respect to the shift-invariant σ-algebra.
 
 ## Main results
@@ -243,10 +243,10 @@ Mean Ergodic Theorem (MET). It is defined as the composition of:
 2. The subtype inclusion back into L²(μ)
 
 **Properties** (established in subsequent lemmas):
-- `METProjection_idem`: Idempotent (`P² = P`)
-- `METProjection_isSymmetric`: Symmetric/self-adjoint
-- `METProjection_range`: Range equals the fixed-point subspace
-- `METProjection_tendsto`: Limit of Cesàro averages (Mean Ergodic Theorem)
+- `metProjectionShift_idem`: Idempotent (`P² = P`)
+- `metProjectionShift_isSymmetric`: Symmetric/self-adjoint
+- `metProjectionShift_range`: Range equals the fixed-point subspace
+- `metProjectionShift_tendsto`: Limit of Cesàro averages (Mean Ergodic Theorem)
 
 **Key theorem**: `proj_eq_condexp` shows this projection equals conditional expectation
 onto the shift-invariant σ-algebra.
@@ -254,40 +254,40 @@ onto the shift-invariant σ-algebra.
 Defined as an alias for `metProjection shift`, the generic projection for any
 measure-preserving transformation.
 -/
-noncomputable abbrev METProjection
+noncomputable abbrev metProjectionShift
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
   metProjection shift hσ
 
-lemma METProjection_apply
+lemma metProjectionShift_apply
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
     let hclosed := fixedSubspace_closed (μ := μ) hσ
     haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
     haveI : (fixedSubspace hσ).HasOrthogonalProjection :=
       Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-    METProjection (μ := μ) hσ f =
+    metProjectionShift (μ := μ) hσ f =
       (fixedSubspace hσ).subtypeL ((fixedSubspace hσ).orthogonalProjection f) := by
   -- Now definitionally equal since fixedSubspace = fixedSpace (koopman shift hσ)
   rfl
 
-lemma METProjection_mem
+lemma metProjectionShift_mem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
-    METProjection (μ := μ) hσ f ∈ fixedSubspace hσ := by
+    metProjectionShift (μ := μ) hσ f ∈ fixedSubspace hσ := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
   haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
   haveI : (fixedSubspace hσ).HasOrthogonalProjection :=
     Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-  rw [METProjection_apply]
+  rw [metProjectionShift_apply]
   simp
 
-lemma METProjection_fixed
+lemma metProjectionShift_fixed
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
-    METProjection (μ := μ) hσ g = g := by
+    metProjectionShift (μ := μ) hσ g = g := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
   haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
@@ -299,25 +299,25 @@ lemma METProjection_fixed
   have hproj_val :
       (((fixedSubspace hσ).orthogonalProjection g) : Lp ℝ 2 μ) = g := by
     simpa using congrArg Subtype.val hproj
-  rw [METProjection_apply]
+  rw [metProjectionShift_apply]
   simp [hproj_val]
 
-lemma METProjection_idem
+lemma metProjectionShift_idem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    (METProjection (μ := μ) hσ).comp (METProjection (μ := μ) hσ) =
-      METProjection (μ := μ) hσ := by
+    (metProjectionShift (μ := μ) hσ).comp (metProjectionShift (μ := μ) hσ) =
+      metProjectionShift (μ := μ) hσ := by
   classical
   apply ContinuousLinearMap.ext
   intro f
-  have hf_mem := METProjection_mem (μ := μ) hσ f
+  have hf_mem := metProjectionShift_mem (μ := μ) hσ f
   simp [ContinuousLinearMap.coe_comp', Function.comp_apply,
-    METProjection_fixed (μ := μ) hσ hf_mem]
+    metProjectionShift_fixed (μ := μ) hσ hf_mem]
 
-lemma METProjection_range
+lemma metProjectionShift_range
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    Set.range (METProjection (μ := μ) hσ) =
+    Set.range (metProjectionShift (μ := μ) hσ) =
       (fixedSubspace hσ : Set (Lp ℝ 2 μ)) := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
@@ -326,27 +326,27 @@ lemma METProjection_range
   constructor
   · intro hx
     rcases hx with ⟨f, rfl⟩
-    exact METProjection_mem (μ := μ) hσ f
+    exact metProjectionShift_mem (μ := μ) hσ f
   · intro hx
     refine ⟨x, ?_⟩
-    simpa using METProjection_fixed (μ := μ) hσ hx
+    simpa using metProjectionShift_fixed (μ := μ) hσ hx
 
-lemma METProjection_isSymmetric
+lemma metProjectionShift_isSymmetric
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    (METProjection (μ := μ) hσ).IsSymmetric := by
+    (metProjectionShift (μ := μ) hσ).IsSymmetric := by
   classical
   have hclosed := fixedSubspace_closed (μ := μ) hσ
   have : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-  simpa [METProjection] using
+  simpa [metProjectionShift] using
     (subtypeL_comp_orthogonalProjection_isSymmetric
       (fixedSubspace hσ : Submodule ℝ (Lp ℝ 2 μ)))
 
-lemma METProjection_tendsto
+lemma metProjectionShift_tendsto
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
-      atTop (𝓝 (METProjection (μ := μ) hσ f)) := by
+      atTop (𝓝 (metProjectionShift (μ := μ) hσ f)) := by
   classical
   let K : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := koopman shift hσ
   have hnorm : ‖K‖ ≤ (1 : ℝ) := by
@@ -369,21 +369,21 @@ lemma METProjection_tendsto
   have hlimit := ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
   convert hlimit using 1
 
-/-- The range of `METProjection` equals the fixed subspace. -/
-lemma METProjection_range_fixedSubspace
+/-- The range of `metProjectionShift` equals the fixed subspace. -/
+lemma metProjectionShift_range_fixedSubspace
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    Set.range (METProjection (μ := μ) hσ) =
+    Set.range (metProjectionShift (μ := μ) hσ) =
       (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-  METProjection_range (μ := μ) hσ
+  metProjectionShift_range (μ := μ) hσ
 
-/-- `METProjection` fixes elements of the fixed subspace. -/
-lemma METProjection_fixes_fixedSubspace
+/-- `metProjectionShift` fixes elements of the fixed subspace. -/
+lemma metProjectionShift_fixes_fixedSubspace
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
-    METProjection (μ := μ) hσ g = g :=
-  METProjection_fixed (μ := μ) hσ hg
+    metProjectionShift (μ := μ) hσ g = g :=
+  metProjectionShift_fixed (μ := μ) hσ hg
 
 /-- Conditional expectation on L² with respect to the shift-invariant σ-algebra.
 
@@ -488,12 +488,12 @@ lemma range_condexp_eq_fixedSubspace {μ : Measure (Ω[α])}
 The orthogonal projection onto the fixed-point subspace of the Koopman operator
 equals the conditional expectation onto the shift-invariant σ-algebra.
 
-**Statement**: `METProjection = condexpL2`
+**Statement**: `metProjectionShift = condexpL2`
 
 **Significance**: This theorem bridges three major areas:
 1. **Ergodic theory**: The Mean Ergodic Theorem provides convergence of Cesàro averages
-   to `METProjection`
-2. **Functional analysis**: `METProjection` is the orthogonal projection in the Hilbert
+   to `metProjectionShift`
+2. **Functional analysis**: `metProjectionShift` is the orthogonal projection in the Hilbert
    space L²(μ)
 3. **Probability theory**: `condexpL2` is the L² conditional expectation operator
 
@@ -509,7 +509,7 @@ equals the conditional expectation onto the shift-invariant σ-algebra.
 - Key step in the ergodic/Koopman operator proof of de Finetti's theorem
 - Connects shift-invariance (algebraic) to conditional independence (probabilistic)
 -/
--- condexpL2 properties matching METProjection structure
+-- condexpL2 properties matching metProjectionShift structure
 private lemma condexpL2_projection_properties {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     (condexpL2 (μ := μ) * condexpL2 (μ := μ) = condexpL2 (μ := μ)) ∧
@@ -549,24 +549,24 @@ private lemma fixedSubspace_hasOrthogonalProjection {μ : Measure (Ω[α])} [IsP
 
 theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
-    METProjection hσ = condexpL2 (μ := μ) := by
+    metProjectionShift hσ = condexpL2 (μ := μ) := by
   classical
-  -- Establish METProjection properties
-  have h_idem_MET : METProjection hσ * METProjection hσ = METProjection hσ :=
-    METProjection_idem hσ
-  have h_symm_MET : (METProjection hσ).IsSymmetric :=
-    METProjection_isSymmetric hσ
-  have h_range_MET : Set.range (METProjection hσ) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-    METProjection_range_fixedSubspace hσ
-  have h_fixes_MET : ∀ g ∈ fixedSubspace hσ, METProjection hσ g = g :=
-    fun g hg => METProjection_fixes_fixedSubspace hσ hg
+  -- Establish metProjectionShift properties
+  have h_idem_MET : metProjectionShift hσ * metProjectionShift hσ = metProjectionShift hσ :=
+    metProjectionShift_idem hσ
+  have h_symm_MET : (metProjectionShift hσ).IsSymmetric :=
+    metProjectionShift_isSymmetric hσ
+  have h_range_MET : Set.range (metProjectionShift hσ) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
+    metProjectionShift_range_fixedSubspace hσ
+  have h_fixes_MET : ∀ g ∈ fixedSubspace hσ, metProjectionShift hσ g = g :=
+    fun g hg => metProjectionShift_fixes_fixedSubspace hσ hg
 
   -- Establish condexpL2 properties (via helper)
   obtain ⟨h_idem_cond, h_symm_cond, h_range_cond, h_fixes_cond⟩ :=
     condexpL2_projection_properties hσ
 
   -- Convert to composition form
-  have h_idem_MET_comp := mul_to_comp (METProjection hσ) h_idem_MET
+  have h_idem_MET_comp := mul_to_comp (metProjectionShift hσ) h_idem_MET
   have h_idem_cond_comp := mul_to_comp (condexpL2 (μ := μ)) h_idem_cond
 
   -- Ensure orthogonal projection structure
@@ -574,7 +574,7 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 
   -- Apply uniqueness: two projections with same range are equal
   exact orthogonalProjections_same_range_eq
-    (METProjection hσ) (condexpL2 (μ := μ)) (fixedSubspace hσ)
+    (metProjectionShift hσ) (condexpL2 (μ := μ)) (fixedSubspace hσ)
     h_range_MET h_range_cond
     h_fixes_MET h_fixes_cond
     h_idem_MET_comp h_idem_cond_comp
