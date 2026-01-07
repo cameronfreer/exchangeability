@@ -2916,10 +2916,52 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
     (φ : SimpleFunc ℝ ℝ) :
     @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
       (fun ω => ∫ x, φ x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
-  -- SimpleFunc is finite linear combination of indicators
-  -- Use integral_simpleFunc_eq_sum + Finset.aestronglyMeasurable_sum
-  -- Each term: c • ∫ 1_s dν is tail-AEStronglyMeasurable by Phase A + scalar mult
-  sorry
+  -- SimpleFunc integral: ∫ φ dν = ∑ c ∈ φ.range, ν.real(φ⁻¹'{c}) • c
+  -- For each c: ν.real(φ⁻¹'{c}) = ∫ 1_{φ⁻¹'{c}} dν, which is tail-AESM by A1
+  -- c • (tail-AESM) is tail-AESM
+  -- Finite sum of tail-AESM is tail-AESM
+
+  -- The integral equals a finite sum over the range
+  have h_eq : ∀ ω, ∫ x, φ x ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+      ∑ c ∈ φ.range, (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c := by
+    intro ω
+    haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+    -- φ is integrable on any probability measure (simple functions are bounded)
+    have h_int : Integrable (⇑φ) (directing_measure X hX_contract hX_meas hX_L2 ω) := by
+      apply SimpleFunc.integrable
+      intro c _
+      exact measure_ne_top _ _
+    exact SimpleFunc.integral_eq_sum φ h_int
+
+  -- Rewrite using h_eq
+  have h_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+      (fun ω => ∑ c ∈ φ.range,
+        (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) μ := by
+    apply Finset.aestronglyMeasurable_sum
+    intro c _
+    -- Need to show: ω ↦ ν(ω).real(φ⁻¹'{c}) • c is tail-AESM
+    -- ν(ω).real(s) = ∫ 1_s dν(ω) for probability measures
+    have h_preimage_meas : MeasurableSet (φ ⁻¹' {c}) := SimpleFunc.measurableSet_preimage φ {c}
+
+    -- ω ↦ ν(ω).real(φ⁻¹'{c}) = ∫ 1_{φ⁻¹'{c}} dν(ω) is tail-AESM by A1
+    have h_real_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) =
+        ∫ x, (φ ⁻¹' {c}).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+      intro ω
+      haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+      -- integral of indicator = measure (for probability measures)
+      rw [integral_indicator_one h_preimage_meas]
+
+    have h_term_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c})) μ := by
+      have := integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
+        (φ ⁻¹' {c}) h_preimage_meas
+      exact AEStronglyMeasurable.congr this (ae_of_all _ (fun ω => (h_real_eq ω).symm))
+
+    -- c • (tail-AESM) is tail-AESM
+    exact h_term_aesm.const_smul c
+
+  exact AEStronglyMeasurable.congr h_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
 /-- **Phase C:** For bounded measurable f, the integral is tail-AEStronglyMeasurable.
 
