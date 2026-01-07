@@ -243,9 +243,7 @@ lemma common_version_condexp_bdd
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW ht
-          haveI : SigmaFinite (μ.trim hm_le) := by
-            haveI : IsFiniteMeasure μ := inferInstance  -- IsProbabilityMeasure → IsFiniteMeasure
-            infer_instance
+          haveI : SigmaFinite (μ.trim hm_le) := inferInstance
           exact setIntegral_condExp hm_le hψ_int hT_meas
       _ = ∫ ω in T', (ψ ∘ Z) ω ∂μ := by
           -- Pair law: T and T' have same (ψ∘Z)-integral via measure equality
@@ -308,9 +306,7 @@ lemma common_version_condexp_bdd
             intro s hs
             obtain ⟨t, ht, rfl⟩ := hs
             exact hW' ht
-          haveI : SigmaFinite (μ.trim hm'_le) := by
-            haveI : IsFiniteMeasure μ := inferInstance
-            infer_instance
+          haveI : SigmaFinite (μ.trim hm'_le) := inferInstance
           exact (setIntegral_condExp hm'_le hψ_int hT'_meas).symm
       _ = ∫ ω in T', (v₂ ∘ W') ω ∂μ := by
           -- V' = v₂∘W' a.e.
