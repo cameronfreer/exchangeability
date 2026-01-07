@@ -3165,7 +3165,193 @@ lemma directing_measure_bridge
               -- - directing_measure_integral: L¹ convergence + a.e. identification alpha = ∫f dν
               -- - integral_indicator_one: ∫ 1_S dμ = μ(S).toReal
               -- ══════════════════════════════════════════════════════════════════════
-              sorry
+
+              -- Step 1: Get the indicator function for B' i
+              let f_i : ℝ → ℝ := (B' i).indicator (fun _ => (1 : ℝ))
+              have hf_i_meas : Measurable f_i := measurable_const.indicator (hB (σ i))
+              have hf_i_bdd : ∃ M, ∀ x, |f_i x| ≤ M := ⟨1, fun x => by
+                simp only [f_i, Set.indicator]
+                split_ifs <;> simp⟩
+
+              -- Step 2: Get L¹ limit alpha and its properties from directing_measure_integral
+              obtain ⟨alpha, hα_meas, hα_L1, hα_conv, hα_eq⟩ :=
+                directing_measure_integral X hX_contract hX_meas hX_L2 f_i hf_i_meas hf_i_bdd
+
+              -- Step 3: r_funcs i = alpha a.e. (by indicator identity)
+              have h_alpha_eq_r : alpha =ᵐ[μ] r_funcs i := by
+                filter_upwards [hα_eq] with ω hω
+                simp only [r_funcs, hω]
+                -- ∫ 1_{B' i}(x) dν = ν(B' i).toReal
+                convert MeasureTheory.integral_indicator_one (hB (σ i)) using 1
+
+              -- Step 4: Get covariance constant for L² bounds
+              obtain ⟨Cf, mf, σSqf, ρf, hCf_def, hCf_nonneg, hmean, hvar, hcov, hσSq_nn, hρ_bd1, hρ_bd2⟩ :=
+                Helpers.get_covariance_constant X hX_contract hX_meas hX_L2 f_i hf_i_meas hf_i_bdd
+
+              -- Step 5: Define shifted average A_shifted N using indices {i*N+1, ..., i*N+N}
+              -- This matches the indexing in l2_bound_two_windows_uniform
+              let A_shifted : ℕ → Ω → ℝ := fun N ω =>
+                if hN : N = 0 then 0
+                else (1 / (N : ℝ)) * ∑ k : Fin N, f_i (X (i.val * N + k.val + 1) ω)
+
+              -- Define reference average A_ref N using indices {1, ..., N}
+              let A_ref : ℕ → Ω → ℝ := fun N ω =>
+                if hN : N = 0 then 0
+                else (1 / (N : ℝ)) * ∑ k : Fin N, f_i (X (k.val + 1) ω)
+
+              -- Step 6: Show p_block N i ≈ A_shifted N with O(1/N) error
+              -- p_block uses indices {i*N, ..., i*N+N-1}
+              -- A_shifted uses indices {i*N+1, ..., i*N+N}
+              -- Difference is just first vs last term, bounded by 2/N
+              have h_pblock_vs_shifted : ∀ N > 0, ∀ ω, |p_block N i ω - A_shifted N ω| ≤ 2 / N := by
+                intro N hN ω
+                simp only [p_block, A_shifted, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+                -- Both are averages of [0,1]-valued functions
+                -- |avg1 - avg2| ≤ (sum of |differences|) / N ≤ 2/N (only endpoints differ)
+                have hN_pos : (0 : ℝ) < N := Nat.cast_pos.mpr hN
+                have hN_ne : (N : ℝ) ≠ 0 := ne_of_gt hN_pos
+                -- Bound: both averages are in [0,1]
+                have h_bdd1 : |p_block N i ω| ≤ 1 := hp_abs_le_one N i ω
+                have h_bdd2 : |A_shifted N ω| ≤ 1 := by
+                  simp only [A_shifted, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+                  apply abs_le_one_of_avg hN
+                  intro k
+                  simp only [f_i, Set.indicator]
+                  split_ifs <;> norm_num
+                -- |a - b| ≤ |a| + |b| ≤ 2
+                calc |p_block N i ω - A_shifted N ω|
+                    ≤ |p_block N i ω| + |A_shifted N ω| := abs_sub_abs_le_abs_sub _ _
+                  _ ≤ 1 + 1 := add_le_add h_bdd1 h_bdd2
+                  _ = 2 := by ring
+                  _ ≤ 2 / N + 2 * (N - 1) / N := by
+                      have : 2 = 2 / N + 2 * (N - 1) / N := by field_simp; ring
+                      linarith
+                  _ ≤ 2 / N + 2 := by
+                      have h1 : 2 * (N - 1) / N ≤ 2 := by
+                        rw [div_le_iff hN_pos]
+                        have hN_ge1 : 1 ≤ (N : ℝ) := Nat.one_le_cast.mpr hN
+                        nlinarith
+                      linarith
+                -- Actually we need a tighter bound. Let's use that both are bounded by 1.
+                sorry
+
+              -- Step 7: L² bound between A_shifted and A_ref via l2_bound_two_windows_uniform
+              have h_L2_shifted_ref : ∀ N > 0,
+                  ∫ ω, (A_shifted N ω - A_ref N ω)^2 ∂μ ≤ Cf / N := by
+                intro N hN
+                simp only [A_shifted, A_ref, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+                -- This matches l2_bound_two_windows_uniform with n = i*N, m = 0
+                exact Helpers.l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2
+                  f_i hf_i_meas hf_i_bdd Cf mf σSqf ρf hCf_def hCf_nonneg
+                  hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩ (i.val * N) 0 N hN
+
+              -- Step 8: L¹ bound from L² via Cauchy-Schwarz: ∫|·| ≤ √(∫|·|²)
+              have h_L1_shifted_ref : ∀ N > 0,
+                  ∫ ω, |A_shifted N ω - A_ref N ω| ∂μ ≤ Real.sqrt (Cf / N) := by
+                intro N hN
+                have h_integ : Integrable (fun ω => A_shifted N ω - A_ref N ω) μ := by
+                  apply Integrable.sub
+                  · simp only [A_shifted, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+                    apply Integrable.const_mul
+                    apply integrable_finset_sum
+                    intro k _
+                    exact (hf_i_meas.comp (hX_meas _)).integrable_of_bounded_of_prob
+                      (by simp only [f_i, Set.indicator]; split_ifs <;> simp)
+                  · simp only [A_ref, dif_neg (Nat.pos_iff_ne_zero.mp hN)]
+                    apply Integrable.const_mul
+                    apply integrable_finset_sum
+                    intro k _
+                    exact (hf_i_meas.comp (hX_meas _)).integrable_of_bounded_of_prob
+                      (by simp only [f_i, Set.indicator]; split_ifs <;> simp)
+                -- Cauchy-Schwarz: ∫|f| ≤ √(∫f²) · √(μ univ) = √(∫f²) since μ is prob measure
+                calc ∫ ω, |A_shifted N ω - A_ref N ω| ∂μ
+                    ≤ Real.sqrt (∫ ω, (A_shifted N ω - A_ref N ω)^2 ∂μ) *
+                      Real.sqrt (μ Set.univ).toReal := by
+                        have := MeasureTheory.inner_mul_le_norm_mul_norm
+                          (E := ℝ) (𝕜 := ℝ) (μ := μ)
+                          (fun ω => A_shifted N ω - A_ref N ω) 1
+                        simp at this
+                        sorry -- Cauchy-Schwarz application
+                  _ = Real.sqrt (∫ ω, (A_shifted N ω - A_ref N ω)^2 ∂μ) := by
+                        simp [measure_univ]
+                  _ ≤ Real.sqrt (Cf / N) := by
+                        apply Real.sqrt_le_sqrt
+                        exact h_L2_shifted_ref N hN
+
+              -- Step 9: L¹ convergence of A_ref to alpha (from directing_measure_integral)
+              have h_Aref_to_alpha : Tendsto (fun N => ∫ ω, |A_ref N ω - alpha ω| ∂μ) atTop (𝓝 0) := by
+                rw [Metric.tendsto_atTop]
+                intro ε hε
+                obtain ⟨M, hM⟩ := hα_conv 0 ε hε
+                refine ⟨max M 1, fun N hN => ?_⟩
+                have hN_pos : 0 < N := lt_of_lt_of_le (by norm_num : 0 < max M 1) hN
+                simp only [A_ref, dif_neg (Nat.pos_iff_ne_zero.mp hN_pos), Real.dist_eq, sub_zero]
+                -- A_ref matches the indexing in directing_measure_integral with n=0
+                have h_match : (fun ω => (1 / (N : ℝ)) * ∑ k : Fin N, f_i (X (k.val + 1) ω))
+                    = (fun ω => (1 / (N : ℝ)) * ∑ k : Fin N, f_i (X (0 + k.val + 1) ω)) := by
+                  ext ω; simp
+                rw [h_match]
+                have hN_ge_M : N ≥ M := le_of_max_le_left hN
+                exact hM N hN_ge_M
+
+              -- Step 10: Combine via triangle inequality
+              -- |p_block - r_funcs| ≤ |p_block - A_shifted| + |A_shifted - A_ref| + |A_ref - alpha| + |alpha - r_funcs|
+              -- Term 4 is 0 a.e.
+              rw [Metric.tendsto_atTop]
+              intro ε hε
+              -- Choose N large enough for each term
+              -- Term 1: 2/N < ε/3 when N > 6/ε
+              -- Term 2: √(Cf/N) < ε/3 when N > 9Cf/ε²
+              -- Term 3: from h_Aref_to_alpha, ∃ M, N ≥ M → term < ε/3
+              obtain ⟨M3, hM3⟩ := Metric.tendsto_atTop.mp h_Aref_to_alpha (ε/3) (by linarith)
+              let N0 := max (max (Nat.ceil (6/ε) + 1) (Nat.ceil (9*Cf/ε^2) + 1)) (max M3 1)
+              refine ⟨N0, fun N hN => ?_⟩
+              have hN_pos : 0 < N := by
+                calc 0 < 1 := by norm_num
+                  _ ≤ max M3 1 := le_max_right _ _
+                  _ ≤ N0 := le_max_right _ _
+                  _ ≤ N := hN
+              simp only [Real.dist_eq, sub_zero]
+
+              -- Use a.e. equality to replace alpha with r_funcs
+              have h_integral_eq : ∫ ω, |p_block N i ω - r_funcs i ω| ∂μ
+                  = ∫ ω, |p_block N i ω - alpha ω| ∂μ := by
+                apply integral_congr_ae
+                filter_upwards [h_alpha_eq_r] with ω hω
+                simp [hω]
+
+              rw [h_integral_eq]
+              -- Now bound ∫|p_block - alpha|
+              calc ∫ ω, |p_block N i ω - alpha ω| ∂μ
+                  ≤ ∫ ω, |p_block N i ω - A_ref N ω| + |A_ref N ω - alpha ω| ∂μ := by
+                    apply integral_mono_of_nonneg
+                    · exact Filter.Eventually.of_forall (fun _ => abs_nonneg _)
+                    · apply Integrable.add
+                      · sorry -- integrability
+                      · sorry -- integrability
+                    · filter_upwards with ω
+                      calc |p_block N i ω - alpha ω|
+                          ≤ |p_block N i ω - A_ref N ω| + |A_ref N ω - alpha ω| :=
+                            abs_sub_le _ _ _
+                _ = ∫ ω, |p_block N i ω - A_ref N ω| ∂μ + ∫ ω, |A_ref N ω - alpha ω| ∂μ := by
+                    rw [integral_add]
+                    · sorry -- integrability
+                    · sorry -- integrability
+                _ ≤ (2/N + Real.sqrt (Cf/N)) + ε/3 := by
+                    apply add_le_add
+                    · -- |p_block - A_ref| ≤ |p_block - A_shifted| + |A_shifted - A_ref|
+                      sorry
+                    · -- A_ref → alpha bound
+                      have hN_ge_M3 : N ≥ M3 := by
+                        calc M3 ≤ max M3 1 := le_max_left _ _
+                          _ ≤ N0 := le_max_right _ _
+                          _ ≤ N := hN
+                      have := hM3 N hN_ge_M3
+                      simp only [Real.dist_eq, sub_zero] at this
+                      linarith
+                _ < ε := by
+                    -- 2/N < ε/3 and √(Cf/N) < ε/3 for large enough N
+                    sorry
 
             -- STEP 2: Apply prod_tendsto_L1_of_L1_tendsto
             -- First, verify the boundedness conditions
