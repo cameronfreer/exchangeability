@@ -226,15 +226,9 @@ lemma contractable_finite_cylinder_measure
       tauto
 
     rw [h_decomp]
-    apply MeasurableSet.inter
-    · apply MeasurableSet.inter
-      · apply MeasurableSet.iInter
-        intro i
-        exact measurable_pi_apply (Fin.mk i.val (by omega)) (hA i)
-      · exact measurable_pi_apply (Fin.mk r (by omega)) hB
-    · apply MeasurableSet.iInter
-      intro j
-      exact measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j)
+    exact .inter (.inter (.iInter fun i => measurable_pi_apply (Fin.mk i.val (by omega)) (hA i))
+      (measurable_pi_apply (Fin.mk r (by omega)) hB))
+      (.iInter fun j => measurable_pi_apply (Fin.mk (r + 1 + j.val) (by omega)) (hC j))
 
   -- Apply measure equality (with inline measurability from fun_prop)
   calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S)

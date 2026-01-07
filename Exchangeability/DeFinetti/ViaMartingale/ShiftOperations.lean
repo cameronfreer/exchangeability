@@ -85,10 +85,8 @@ lemma shiftProcess_apply (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) :
 /-! ### Measurability -/
 
 /-- Tail is measurable when the original sequence is measurable. -/
-lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) := by
-  rw [measurable_pi_iff]
-  intro n
-  exact (measurable_pi_apply (n + 1)).comp ht
+lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) :=
+  measurable_pi_iff.mpr fun n => (measurable_pi_apply (n + 1)).comp ht
 
 set_option linter.unusedSectionVars false in
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
@@ -101,11 +99,7 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
   obtain ⟨A, hA, rfl⟩ := hS
   use (fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A
   constructor
-  · apply MeasurableSet.preimage
-    · exact hA
-    · rw [measurable_pi_iff]
-      intro n
-      exact measurable_pi_apply (n + 1)
+  · exact hA.preimage (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1))
   · ext ω
     simp only [Set.mem_preimage]
     rfl

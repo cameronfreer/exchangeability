@@ -487,10 +487,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
 
   -- Measurability facts
   have hU_meas : Measurable U := by measurability
-  have hW_meas : Measurable W := by
-    -- shiftRV X (m+1) is measurable when all X i are measurable
-    rw [measurable_pi_iff]; intro n
-    exact hX_meas (m + 1 + n)
+  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX_meas (m + 1 + n)
   have hW'_meas : Measurable W' := by
     -- consRV x t is measurable when x and t are measurable
     rw [measurable_pi_iff]; intro n

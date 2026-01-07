@@ -93,10 +93,8 @@ lemma lintegral_prod_prob_eq_ofReal_integral
     exact (ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)).symm
   -- now apply lintegral_ofReal
   rw [h_point]
-  have h_nonneg : ∀ᵐ ω ∂μ, 0 ≤ ∏ i : Fin m, (ν ω (C i)).toReal := by
-    apply ae_of_all
-    intro ω
-    exact Finset.prod_nonneg (fun i _ => ENNReal.toReal_nonneg)
+  have h_nonneg : ∀ᵐ ω ∂μ, 0 ≤ ∏ i : Fin m, (ν ω (C i)).toReal :=
+    ae_of_all _ fun _ => Finset.prod_nonneg fun _ _ => ENNReal.toReal_nonneg
   -- Step 1: Show measurability of the product function
   let f : Ω → ℝ := fun ω => ∏ i : Fin m, (ν ω (C i)).toReal
   have h_meas : Measurable f := by
