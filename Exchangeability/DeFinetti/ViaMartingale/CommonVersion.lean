@@ -207,30 +207,16 @@ lemma common_version_condexp_bdd
   have hv_eq : v₁ =ᵐ[Measure.map W μ] v₂ := by
     -- First establish Law(W) = Law(W') from the pair law
     have h_law_eq : Measure.map W μ = Measure.map W' μ := by
-      have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
-        rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
-      have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
-        rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
-      rw [h1, h2, hPair]
+      rw [← Measure.snd_map_prodMk₀ (Y := W) hZ.aemeasurable,
+          ← Measure.snd_map_prodMk₀ (Y := W') hZ.aemeasurable, hPair]
 
     -- Show v₁ and v₂ are integrable on Law(W)
-    have hv₁_int : Integrable v₁ (Measure.map W μ) := by
-      -- V = v₁∘W a.e. and V is integrable, so v₁ integrable w.r.t. Law(W)
-      have hV_int : Integrable V μ := integrable_condExp
-      -- V =ᵐ v₁∘W, so Integrable V μ → Integrable (v₁∘W) μ
-      have h_comp_int : Integrable (v₁ ∘ W) μ := hV_int.congr hV_eq
-      -- Use integrable_map_measure: Integrable (v₁∘W) μ ↔ Integrable v₁ (map W μ)
-      exact (integrable_map_measure hv₁_meas.aestronglyMeasurable hW.aemeasurable).mpr h_comp_int
-
-    have hv₂_int : Integrable v₂ (Measure.map W μ) := by
-      -- Rewrite using h_law_eq
-      rw [h_law_eq]
-      -- V' = v₂∘W' a.e. and V' is integrable
-      have hV'_int : Integrable V' μ := integrable_condExp
-      -- V' =ᵐ v₂∘W', so Integrable V' μ → Integrable (v₂∘W') μ
-      have h_comp_int : Integrable (v₂ ∘ W') μ := hV'_int.congr hV'_eq
-      -- Use integrable_map_measure: Integrable (v₂∘W') μ ↔ Integrable v₂ (map W' μ)
-      exact (integrable_map_measure hv₂_meas.aestronglyMeasurable hW'.aemeasurable).mpr h_comp_int
+    have hv₁_int : Integrable v₁ (Measure.map W μ) :=
+      (integrable_map_measure hv₁_meas.aestronglyMeasurable hW.aemeasurable).mpr
+        (integrable_condExp.congr hV_eq)
+    have hv₂_int : Integrable v₂ (Measure.map W μ) := h_law_eq ▸
+      (integrable_map_measure hv₂_meas.aestronglyMeasurable hW'.aemeasurable).mpr
+        (integrable_condExp.congr hV'_eq)
 
     -- Main proof: show ∫_S v₁ = ∫_S v₂ for all measurable S using CE properties + pair law
     refine Integrable.ae_eq_of_forall_setIntegral_eq v₁ v₂ hv₁_int hv₂_int fun S hS hS_fin => ?_
@@ -240,11 +226,8 @@ lemma common_version_condexp_bdd
     let T := W ⁻¹' S
     let T' := W' ⁻¹' S
 
-    have hT_meas : MeasurableSet[MeasurableSpace.comap W inferInstance] T := by
-      exact ⟨S, hS, rfl⟩
-
-    have hT'_meas : MeasurableSet[MeasurableSpace.comap W' inferInstance] T' := by
-      exact ⟨S, hS, rfl⟩
+    have hT_meas : MeasurableSet[MeasurableSpace.comap W inferInstance] T := ⟨S, hS, rfl⟩
+    have hT'_meas : MeasurableSet[MeasurableSpace.comap W' inferInstance] T' := ⟨S, hS, rfl⟩
 
     calc ∫ y in S, v₁ y ∂(Measure.map W μ)
         = ∫ ω in T, (v₁ ∘ W) ω ∂μ := by

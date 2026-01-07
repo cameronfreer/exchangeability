@@ -2850,30 +2850,62 @@ lemma directing_measure_integral_eq_condExp
 
   -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
   -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
-  have hg_asm : AEStronglyMeasurable g μ := by
-    -- Strategy: Approximate f by step functions, show each integral is AEStronglyMeasurable,
-    -- then take limits using aestronglyMeasurable_of_tendsto_ae.
+  -- First prove tail-AEStronglyMeasurable (hgm), then get ambient from it
+  -- Key insight: alphaIicCE t is strongly measurable w.r.t. tail σ-algebra (it's a condExp)
+  -- So ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω is tail-AEStronglyMeasurable
+  -- Extend to bounded measurable f via step function approximation + limits
+
+  have hgm_early : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ := by
+    -- Strategy: Show g is a.e. equal to something tail-strongly measurable
+    -- For Iic indicators: ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
+    -- alphaIicCE t = μ[1_{Iic t}(X₀)|tail] is tail-strongly measurable by stronglyMeasurable_condExp
+
+    -- Step 1: For Iic indicators, integral is tail-AEStronglyMeasurable
+    have h_Iic_tail : ∀ t : ℝ, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+      intro t
+      have h_ae := directing_measure_integral_Iic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t
+      -- alphaIicCE t is the conditional expectation, hence tail-strongly measurable
+      have h_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X)
+          (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
+        -- alphaIicCE t = μ[indIic t ∘ X 0 | TailSigma.tailSigma X]
+        -- Conditional expectation is strongly measurable w.r.t. the conditioning σ-algebra
+        unfold alphaIicCE
+        exact stronglyMeasurable_condExp
+      exact AEStronglyMeasurable.congr h_tail_sm.aestronglyMeasurable h_ae.symm
+
+    -- Step 2: For Ioc indicators (differences of Iic), integral is tail-AEStronglyMeasurable
+    -- This follows from h_Iic_tail by expressing ∫ 1_{Ioc a b} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
+    -- For probability measures: ν(Ioc a b) = ν(Iic b) - ν(Iic a) when a ≤ b
+    -- (and Ioc a b = ∅ when a > b, so integral is 0)
+    have h_Ioc_tail : ∀ a b : ℝ, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+      intro a b
+      -- Express as ν(Iic b) - ν(Iic a) (handling both a ≤ b and a > b cases)
+      -- Use integral_indicator, measure_diff, and AEStronglyMeasurable.sub
+      sorry
+
+    -- Step 3: Extend to bounded measurable f via π-λ + approximation
     --
-    -- Key insight: For Iic indicators, ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω (measurable).
-    -- Step functions are linear combinations of Ioc = Iic - Iic indicators.
-    -- Limit of AEStronglyMeasurable functions with pointwise convergence is AEStronglyMeasurable.
-
-    -- For now, we use the direct approach noting that g is bounded.
-    -- The formal π-λ proof requires setting up:
-    -- 1. Step function approximations φ_n → f with |φ_n| ≤ M'
-    -- 2. Each g_n(ω) = ∫ φ_n dν(ω) is AEStronglyMeasurable (via base case + linearity)
-    -- 3. DCT gives g_n(ω) → g(ω) for each ω
-    -- 4. aestronglyMeasurable_of_tendsto_ae concludes
-
-    -- Base case insight:
-    -- ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω, and alphaIicCE_measurable gives measurability.
-    -- For 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}:
-    --   ∫ 1_{Ioc a b} dν(ω) =ᵐ alphaIicCE b ω - alphaIicCE a ω (measurable difference).
-    -- Finite sums of these remain AEStronglyMeasurable.
-
-    -- The full proof requires implementing the step function approximation infrastructure.
-    -- For this formalization, we document the proof path and mark for completion.
+    -- STRATEGY:
+    -- 1. By π-λ theorem: ω ↦ ν(ω)(B).toReal is tail-AEStronglyMeasurable for ALL Borel B
+    --    (extends from Iic base case since Iic generates Borel ℝ)
+    -- 2. Simple functions: finite sums of indicator integrals → tail-AEStronglyMeasurable
+    -- 3. Bounded measurable f: DCT + aestronglyMeasurable_of_tendsto_ae
+    --
+    -- The full π-λ argument requires infrastructure for:
+    -- - induction_on_inter with borel_eq_generateFrom_Iic
+    -- - Showing countable disjoint union closure via partial sums + aestronglyMeasurable_of_tendsto_ae
+    -- - Simple function approximation + DCT
+    --
+    -- For now, we note this is mathematically straightforward but tedious to formalize.
+    -- The key ingredients (h_Iic_tail, DCT, aestronglyMeasurable_of_tendsto_ae) are all available.
     sorry
+
+  -- Ambient AEStronglyMeasurable follows from tail via .mono
+  have hg_asm : AEStronglyMeasurable g μ := AEStronglyMeasurable.mono hm_le hgm_early
 
   -- g is integrable (bounded and measurable on probability space)
   have hg_int : Integrable g μ := by
@@ -2890,9 +2922,9 @@ lemma directing_measure_integral_eq_condExp
     intro s _ _; exact hg_int.integrableOn
 
   case hgm =>
-    -- ae_eq_condExp_of_forall_setIntegral_eq needs AEStronglyMeasurable g μ (ambient σ-algebra)
-    -- This is exactly what hg_asm provides.
-    exact hg_asm
+    -- ae_eq_condExp_of_forall_setIntegral_eq needs tail-AEStronglyMeasurable
+    -- This is exactly what hgm_early provides.
+    exact hgm_early
 
   case hg_eq =>
     -- The key: ∫_A g dμ = ∫_A f(X₀) dμ for tail-measurable A with μ A < ∞
