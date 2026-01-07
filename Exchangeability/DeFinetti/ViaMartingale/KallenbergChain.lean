@@ -158,12 +158,10 @@ lemma pair_law_shift_eq_of_contractable
     have hcompN : (prefixProj (α := α) r) ∘ seqN = fun ω (i : Fin r) => X (pairInjection k n i) ω := rfl
     rw [hcompM, hcompN]
     -- Both finite marginals come from strictly increasing subsequences
-    have h1 := hContr.allStrictMono_eq r
-      (fun i : Fin r => pairInjection k m i.val)
-      (fun i : Fin r => pairInjection k n i.val)
-      (fun i j hij => pairInjection_strictMono k m hkm hij)
-      (fun i j hij => pairInjection_strictMono k n hkn hij)
-    exact congrArg (· S) h1
+    exact congrArg (· S) (hContr.allStrictMono_eq r
+      (fun i => pairInjection k m i.val) (fun i => pairInjection k n i.val)
+      (fun _ _ hij => pairInjection_strictMono k m hkm hij)
+      (fun _ _ hij => pairInjection_strictMono k n hkn hij))
 
   -- Factor pair maps through projectPairSeq
   have h_factor : ∀ j, (fun ω => (X k ω, shiftRV X j ω)) = projectPairSeq ∘ fun ω i => X (pairInjection k j i) ω :=
