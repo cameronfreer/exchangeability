@@ -546,8 +546,8 @@ lemma condExp_Xr_indicator_eq_of_contractable
       -- W' is mW'-measurable (identity on comap)
       have hW'_ident : @Measurable Ω (ℕ → α) mW' _ W' := measurable_iff_comap_le.mpr le_rfl
       -- W' ω 0 is mW'-measurable via projection
-      have h0_meas : @Measurable Ω α mW' _ (fun ω => W' ω 0) := by
-        exact @Measurable.comp Ω (ℕ → α) α mW' _ _ (fun f => f 0) W'
+      have h0_meas : @Measurable Ω α mW' _ (fun ω => W' ω 0) :=
+        @Measurable.comp Ω (ℕ → α) α mW' _ _ (fun f => f 0) W'
           (measurable_pi_apply 0) hW'_ident
       -- X r = fun ω => W' ω 0 by definition of consRV
       have h_eq : (X r) = (fun ω => W' ω 0) := by

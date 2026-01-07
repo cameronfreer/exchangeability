@@ -367,28 +367,19 @@ lemma common_version_condexp_bdd
           -- v₁ = v a.e. on Law(W), so v₁ ∘ W = v ∘ W a.e. on μ
           exact (MeasureTheory.ae_eq_comp hW.aemeasurable hv_eq_v₁).symm
   · -- V' = v ∘ W' a.e.
+    -- Law(W') = Law(W) from pair law (marginal equality)
+    have h_law_eq : Measure.map W' μ = Measure.map W μ := by
+      have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
+        rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
+      have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
+        rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
+      rw [h1, h2, hPair]
     calc V'
         =ᵐ[μ] v₂ ∘ W' := hV'_eq
       _ =ᵐ[μ] v₁ ∘ W' := by
-          -- v₂ = v₁ a.e. on Law(W), and Law(W) = Law(W') from pair law
-          -- First, get v₁ = v₂ a.e. on Law(W')
-          have h_law_eq : Measure.map W' μ = Measure.map W μ := by
-            -- Extract from pair law: (Z,W) =^d (Z,W') implies W =^d W'
-            have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
-            have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
-            rw [h1, h2, hPair]
           have hv_eq' : v₁ =ᵐ[Measure.map W' μ] v₂ := h_law_eq ▸ hv_eq
           exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
       _ =ᵐ[μ] v ∘ W' := by
-          -- v = v₁ a.e. on Law(W) = Law(W'), so v ∘ W' = v₁ ∘ W' a.e. on μ
-          have h_law_eq : Measure.map W' μ = Measure.map W μ := by
-            have h1 : Measure.map W μ = (Measure.map (fun ω => (Z ω, W ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prodMk hW)]; rfl
-            have h2 : Measure.map W' μ = (Measure.map (fun ω => (Z ω, W' ω)) μ).map Prod.snd := by
-              rw [Measure.map_map measurable_snd (hZ.prodMk hW')]; rfl
-            rw [h1, h2, hPair]
           have hv_eq' : v =ᵐ[Measure.map W' μ] v₁ := h_law_eq ▸ hv_eq_v₁
           exact (MeasureTheory.ae_eq_comp hW'.aemeasurable hv_eq').symm
 

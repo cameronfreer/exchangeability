@@ -140,8 +140,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
     -- Use tower property to establish the integral characterization
     have htower : μ[μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ]|
                       MeasurableSpace.comap η mγ] =ᵐ[μ]
-                    μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] := by
-      exact condExp_condExp_of_le h_le hmζ_le
+                    μ[Set.indicator (ξ ⁻¹' B) (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] :=
+      condExp_condExp_of_le h_le hmζ_le
 
     -- μ[f|η] is measurable w.r.t. σ(η), hence also w.r.t. σ(ζ) (since σ(η) ≤ σ(ζ))
     have hCE_η_meas_ζ : AEStronglyMeasurable[MeasurableSpace.comap ζ mγ]
@@ -232,8 +232,8 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
                  ∫ ω in S, μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω ∂μ := by
       -- A.e. equal functions have equal integrals
       have : (fun ω => μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap η mγ] ω) =ᵐ[μ.restrict S]
-             (fun ω => μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω) := by
-        exact ae_restrict_of_ae h_ce_eq.symm
+             (fun ω => μ[(ξ ⁻¹' B).indicator (fun _ => (1 : ℝ))|MeasurableSpace.comap ζ mγ] ω) :=
+        ae_restrict_of_ae h_ce_eq.symm
       exact integral_congr_ae this
 
     -- Combine to get ∫_S μ[f|η] = ∫_S f
