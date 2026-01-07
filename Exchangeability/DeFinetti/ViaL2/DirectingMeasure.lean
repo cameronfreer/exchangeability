@@ -2875,10 +2875,33 @@ lemma directing_measure_integral_eq_condExp
         exact stronglyMeasurable_condExp
       exact AEStronglyMeasurable.congr h_tail_sm.aestronglyMeasurable h_ae.symm
 
-    -- Step 2: Extend to bounded measurable f via approximation
-    -- Use step functions on Ioc intervals (differences of Iic)
-    -- Finite sums preserve tail-AEStronglyMeasurable
-    -- Pointwise limit preserves tail-AEStronglyMeasurable via aestronglyMeasurable_of_tendsto_ae
+    -- Step 2: For Ioc indicators (differences of Iic), integral is tail-AEStronglyMeasurable
+    -- This follows from h_Iic_tail by expressing ∫ 1_{Ioc a b} dν = ∫ 1_{Iic b} dν - ∫ 1_{Iic a} dν
+    -- For probability measures: ν(Ioc a b) = ν(Iic b) - ν(Iic a) when a ≤ b
+    -- (and Ioc a b = ∅ when a > b, so integral is 0)
+    have h_Ioc_tail : ∀ a b : ℝ, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => ∫ x, (Set.Ioc a b).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+      intro a b
+      -- Express as ν(Iic b) - ν(Iic a) (handling both a ≤ b and a > b cases)
+      -- Use integral_indicator, measure_diff, and AEStronglyMeasurable.sub
+      sorry
+
+    -- Step 3: Extend to bounded measurable f via π-λ + approximation
+    --
+    -- STRATEGY:
+    -- 1. By π-λ theorem: ω ↦ ν(ω)(B).toReal is tail-AEStronglyMeasurable for ALL Borel B
+    --    (extends from Iic base case since Iic generates Borel ℝ)
+    -- 2. Simple functions: finite sums of indicator integrals → tail-AEStronglyMeasurable
+    -- 3. Bounded measurable f: DCT + aestronglyMeasurable_of_tendsto_ae
+    --
+    -- The full π-λ argument requires infrastructure for:
+    -- - induction_on_inter with borel_eq_generateFrom_Iic
+    -- - Showing countable disjoint union closure via partial sums + aestronglyMeasurable_of_tendsto_ae
+    -- - Simple function approximation + DCT
+    --
+    -- For now, we note this is mathematically straightforward but tedious to formalize.
+    -- The key ingredients (h_Iic_tail, DCT, aestronglyMeasurable_of_tendsto_ae) are all available.
     sorry
 
   -- Ambient AEStronglyMeasurable follows from tail via .mono
