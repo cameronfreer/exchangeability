@@ -2875,15 +2875,36 @@ lemma directing_measure_integral_eq_condExp
         exact stronglyMeasurable_condExp
       exact AEStronglyMeasurable.congr h_tail_sm.aestronglyMeasurable h_ae.symm
 
-    -- Step 2-3: Extend from Iic indicators to bounded measurable f
-    -- The proof uses:
-    -- 1. h_Iic_tail: Iic indicator integrals are tail-AEStronglyMeasurable
-    -- 2. π-λ theorem: extend from Iic (π-system generating Borel) to all Borel sets
-    -- 3. Simple function approximation: bounded measurable f ≈ simple functions
-    -- 4. DCT + aestronglyMeasurable_of_tendsto_ae: take limits
+    -- ═══════════════════════════════════════════════════════════════════════════════
+    -- Step 2-3: Extend from Iic indicators to bounded measurable f via π-λ theorem
+    -- ═══════════════════════════════════════════════════════════════════════════════
     --
-    -- This follows the same pattern as directing_measure_measurable in MoreL2Helpers.lean,
-    -- but for AEStronglyMeasurable instead of Measurable.
+    -- PROOF STRUCTURE (following directing_measure_measurable in MoreL2Helpers.lean):
+    --
+    -- Phase A: π-λ for indicator functions of Borel sets
+    --   Define G = {s | MeasurableSet s ∧ ω ↦ ∫ 1_s dν(ω) is tail-AEStronglyMeasurable}
+    --   (1) h_pi: Iic t ∈ G for all t  [from h_Iic_tail above]
+    --   (2) h_empty: ∅ ∈ G  [integral is 0, hence const]
+    --   (3) h_compl: s ∈ G → sᶜ ∈ G  [∫ 1_{sᶜ} dν = 1 - ∫ 1_s dν, use .sub]
+    --   (4) h_iUnion: disjoint union closure  [∫ 1_{⋃ fn} = ∑' ∫ 1_{fn n}, use limit]
+    --   (5) Apply MeasurableSpace.induction_on_inter with borel_eq_generateFrom_Iic
+    --
+    -- Phase B: Extend from indicators to simple functions
+    --   Simple functions are finite linear combinations of indicators
+    --   Use integral_smul and integral_add to preserve tail-AEStronglyMeasurable
+    --
+    -- Phase C: Extend from simple to bounded measurable f
+    --   Use SimpleFunc.approxOn to approximate f by simple functions
+    --   Take limit via DCT + aestronglyMeasurable_of_tendsto_ae
+    --
+    -- KEY LEMMAS NEEDED:
+    -- - integral_indicator_one: ∫ 1_s dν = ν.real s
+    -- - prob_compl_eq_one_sub: ν(sᶜ) = 1 - ν(s) for prob measure
+    -- - measure_iUnion: ν(⋃ fn) = ∑' ν(fn n) for disjoint
+    -- - Finset.aestronglyMeasurable_sum: finite sum preserves AESMeas
+    -- - aestronglyMeasurable_of_tendsto_ae: limit preserves AESMeas
+    -- - HasSum.tendsto_sum_nat: partial sums converge to tsum
+    -- ═══════════════════════════════════════════════════════════════════════════════
     sorry
 
   -- Ambient AEStronglyMeasurable follows from tail via .mono
