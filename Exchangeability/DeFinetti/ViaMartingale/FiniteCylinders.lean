@@ -332,14 +332,10 @@ lemma contractable_triple_pushforward
     refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
             Set.univ, MeasurableSet.univ,
             fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
-    ext ⟨z, y, c⟩
-    simp only [Bseq, Set.mem_univ, Set.mem_prod, Set.mem_univ_pi]
-    tauto
+    ext ⟨z, y, c⟩; simp only [Bseq, Set.mem_univ, Set.mem_prod, Set.mem_univ_pi]; tauto
 
-  have hμB : ∀ n, Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ (Bseq n) ≠ ⊤ := by
-    intro n
-    simp only [Bseq]
-    exact measure_ne_top _ Set.univ
+  have hμB : ∀ n, Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ (Bseq n) ≠ ⊤ := fun n => by
+    simp only [Bseq]; exact measure_ne_top _ Set.univ
 
   -- Apply Measure.ext_of_generateFrom_of_iUnion
   exact Measure.ext_of_generateFrom_of_iUnion
