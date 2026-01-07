@@ -2954,12 +2954,37 @@ lemma setIntegral_directing_measure_indicator_Iic_eq
     ∫ ω in A, (∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
         ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
       = ∫ ω in A, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
-  -- By directing_measure_integral_Iic_ae_eq_alphaIicCE:
-  --   ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
-  -- Since alphaIicCE t = μ[1_{Iic t}(X₀)|tail], we have by setIntegral_condExp:
-  --   ∫_A alphaIicCE t dμ = ∫_A 1_{Iic t}(X₀) dμ
-  -- Therefore ∫_A (∫ 1_{Iic t} dν) dμ = ∫_A 1_{Iic t}(X₀) dμ
-  sorry
+  -- Set up σ-algebra facts
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  haveI : SigmaFinite (μ.trim hm_le) := inferInstance
+
+  -- Step 1: ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
+  have h_ae := directing_measure_integral_Iic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t
+
+  -- Step 2: ∫_A (∫ 1_{Iic t} dν) dμ = ∫_A alphaIicCE t dμ
+  -- Use setIntegral_congr_ae
+  have hA_ambient : MeasurableSet A := hm_le A hA
+  have h_step2 : ∫ ω in A, (∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+      ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ =
+      ∫ ω in A, alphaIicCE X hX_contract hX_meas hX_L2 t ω ∂μ := by
+    apply setIntegral_congr_ae hA_ambient
+    filter_upwards [h_ae] with ω hω _
+    exact hω
+
+  -- Step 3: ∫_A alphaIicCE t dμ = ∫_A 1_{Iic t}(X₀) dμ
+  -- alphaIicCE t = μ[1_{Iic t} ∘ X 0 | tail], so by setIntegral_condExp
+  have h_step3 : ∫ ω in A, alphaIicCE X hX_contract hX_meas hX_L2 t ω ∂μ =
+      ∫ ω in A, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
+    unfold alphaIicCE
+    -- Need to show the indicator function is integrable
+    have h_int : Integrable (fun ω => (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω)) μ := by
+      apply Integrable.indicator
+      · exact integrable_const 1
+      · exact measurableSet_Iic.preimage (hX_meas 0)
+    rw [setIntegral_condExp hm_le h_int hA]
+
+  rw [h_step2, h_step3]
 
 /-- **Set integral equality for Borel indicator functions.**
 
