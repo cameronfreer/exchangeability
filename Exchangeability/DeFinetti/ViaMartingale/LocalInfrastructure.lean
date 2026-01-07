@@ -193,26 +193,16 @@ lemma condDistrib_factor_indicator_agree
 
   -- Comap measurable spaces are sub-σ-algebras of ambient space
   have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs
-    obtain ⟨t, ht, rfl⟩ := hs
-    exact hη ht
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
   have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs
-    obtain ⟨t, ht, rfl⟩ := hs
-    exact hζ ht
-
-  -- f is integrable: bounded indicator function on probability space
-  have hf_int : Integrable f μ := by
-    apply Integrable.comp_measurable _ hξ
-    exact integrable_const (1 : ℝ) |>.indicator hB
+    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
 
   -- Apply the tower/projection property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
-  -- This is exactly what condExp_project_of_le provides!
   exact condExp_project_of_le
     (MeasurableSpace.comap η inferInstance)
     (MeasurableSpace.comap ζ inferInstance)
     inferInstance
-    hη_le hζ_le h_le hf_int
+    hη_le hζ_le h_le ((integrable_const 1 |>.indicator hB).comp_measurable hξ)
 
   -- ══════════════════════════════════════════════════════════════════════════════
   -- THREE ROUTES TO COMPLETE THIS PROOF
