@@ -2797,7 +2797,7 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
           · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
         rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
-        exact integrable_indicator_const_Lp one_ne_top ht_meas (Or.inr one_ne_zero)
+        exact (integrable_const 1).indicator ht_meas
       simp_rw [h_eq]
       exact aestronglyMeasurable_const.sub ht_aesm
 
@@ -2835,8 +2835,23 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         simp_rw [h_ind_union]
         -- integral of tsum = tsum of integrals (for nonneg functions)
         rw [integral_tsum]
-        · intro n; exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
         · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
+        · -- Show ∑' i, ∫⁻ ‖1_{fi}‖ dν ≠ ⊤
+          apply ne_top_of_le_ne_top ENNReal.one_ne_top
+          calc ∑' i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+              = ∑' i, ∫⁻ a, (f i).indicator (fun _ => (1:ℝ≥0∞)) a
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                  congr 1; ext i; congr 1; ext a
+                  simp only [Set.indicator, enorm_eq_ofReal, Real.norm_eq_abs]
+                  split_ifs <;> simp
+              _ = ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω (f i)) := by
+                  congr 1; ext i
+                  rw [lintegral_indicator _ (hf i).1]
+                  simp
+              _ ≤ (directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i)) :=
+                  measure_iUnion_le (f := f)
+              _ ≤ 1 := prob_le_one
       -- Now show the AEStronglyMeasurable property
       -- Key: partial sums ∑_{i<N} ∫ 1_{fi} dν are tail-AESM, converge to tsum
       let partialSum (N : ℕ) (ω : Ω) : ℝ := ∑ n ∈ Finset.range N,
@@ -2859,21 +2874,42 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
           intro n
           apply integral_nonneg
-          intro x; simp only [Set.indicator_nonneg (fun _ _ => zero_le_one)]
-        have h_summable : Summable (fun n => ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
-            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
-          -- Sum is bounded by 1 (probability measure)
-          apply summable_of_nonneg_of_le h_nonneg
-          · intro n
-            calc ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+          intro x; exact Set.indicator_nonneg (fun _ _ => zero_le_one) x
+        -- For disjoint sets, partial sums ≤ 1 (probability measure)
+        have h_partial_le : ∀ N, ∑ n ∈ Finset.range N, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) ≤ 1 := by
+          intro N
+          calc ∑ n ∈ Finset.range N, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
                 ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
-              ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-                  apply integral_mono
-                  · exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
-                  · exact integrable_const 1
-                  · intro x; exact Set.indicator_le_self' (fun _ _ => zero_le_one) x
-              _ = 1 := by simp [measureReal_univ_eq_one]
-          · exact summable_one
+            = ∫ x, ∑ n ∈ Finset.range N, (f n).indicator (fun _ => (1:ℝ)) x
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                rw [integral_finset_sum]
+                intro i _
+                exact (integrable_const 1).indicator (hf i).1
+            _ ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                apply integral_mono
+                · apply integrable_finset_sum
+                  intro i _
+                  exact (integrable_const 1).indicator (hf i).1
+                · exact integrable_const 1
+                · intro x
+                  -- Sum of disjoint indicators ≤ 1
+                  have : ∑ n ∈ Finset.range N, (f n).indicator (fun _ => (1:ℝ)) x ≤ 1 := by
+                    by_cases hx : ∃ n ∈ Finset.range N, x ∈ f n
+                    · obtain ⟨m, hm_mem, hxm⟩ := hx
+                      rw [Finset.sum_eq_single m]
+                      · simp [Set.indicator_of_mem hxm]
+                      · intro n hn hn_ne
+                        simp [Set.indicator_of_not_mem (hdisj m n hn_ne |>.symm.ne_of_mem hxm)]
+                      · intro hm_not; exact absurd hm_mem hm_not
+                    · push_neg at hx
+                      simp_rw [Set.indicator_of_not_mem (hx _)]
+                      simp
+                  exact this
+            _ = 1 := by simp [measureReal_univ_eq_one]
+        have h_summable : Summable (fun n => ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) :=
+          summable_of_sum_range_le h_nonneg h_partial_le
         exact h_summable.hasSum.tendsto_sum_nat
       -- Apply aestronglyMeasurable_of_tendsto_ae
       have h_ae_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun N => partialSum N ω) Filter.atTop
@@ -2985,7 +3021,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le_self (f x) |>.trans (by linarith [hM' x]),
+    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
            (le_abs_self (f x)).trans (hM' x)⟩
 
   -- Set.Icc (-M') M' is nonempty (contains 0 when M' ≥ 0)
@@ -3146,7 +3182,7 @@ lemma setIntegral_directing_measure_indicator_eq
             · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
           simp_rw [h_ind_compl]
           rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
-          exact integrable_indicator_const_Lp one_ne_top ht_meas (Or.inr one_ne_zero)
+          exact (integrable_const 1).indicator ht_meas
         simp_rw [h_compl_eq]
         rw [integral_sub, integral_const, Measure.restrict_apply_univ]
         · exact (integrable_const 1).integrableOn
@@ -3220,7 +3256,7 @@ lemma setIntegral_directing_measure_indicator_eq
               simp [Set.indicator_of_not_mem (this _)]
           simp_rw [h_ind_union]
           rw [integral_tsum]
-          · intro n; exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
+          · intro n; exact (integrable_const 1).indicator (hf n).1
           · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
         simp_rw [h_inner_eq]
         -- Now we need: ∫_A (∑' fn) dμ = ∑' ∫_A fn dμ
@@ -3245,7 +3281,7 @@ lemma setIntegral_directing_measure_indicator_eq
                       _ ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) :=
                           integral_nonneg (fun _ => zero_le_one)
                   · apply integral_mono
-                    · exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
+                    · exact (integrable_const 1).indicator (hf n).1
                     · exact integrable_const 1
                     · intro x; exact Set.indicator_le_self' (fun _ _ => zero_le_one) x
               _ = 1 := by simp [measureReal_univ_eq_one]
@@ -3329,7 +3365,7 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le_self (f x) |>.trans (by linarith [hM' x]),
+    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
            (le_abs_self (f x)).trans (hM' x)⟩
 
   have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
