@@ -2975,11 +2975,69 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
       (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
-  -- Use SimpleFunc.approxOn to get sequence φ_n → f pointwise with |φ_n| ≤ |f|
-  -- Each ∫ φ_n dν is tail-AEStronglyMeasurable by Phase B
-  -- ∫ φ_n dν → ∫ f dν pointwise (DCT on each ν(ω))
+  -- Get the bound M (ensure M ≥ 0)
+  obtain ⟨M, hM⟩ := hf_bdd
+  obtain ⟨M', hM'_nonneg, hM'⟩ : ∃ M' : ℝ, 0 ≤ M' ∧ ∀ x, |f x| ≤ M' := by
+    use max M 0
+    exact ⟨le_max_right M 0, fun x => (hM x).trans (le_max_left M 0)⟩
+
+  -- The range of f is in Set.Icc (-M') M'
+  have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
+    intro x
+    rw [Set.mem_Icc]
+    exact ⟨neg_abs_le_self (f x) |>.trans (by linarith [hM' x]),
+           (le_abs_self (f x)).trans (hM' x)⟩
+
+  -- Set.Icc (-M') M' is nonempty (contains 0 when M' ≥ 0)
+  have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
+    rw [Set.mem_Icc]
+    exact ⟨by linarith, hM'_nonneg⟩
+
+  -- Approximate f by simple functions using approxOn
+  let φ : ℕ → SimpleFunc ℝ ℝ := SimpleFunc.approxOn f hf_meas (Set.Icc (-M') M') 0 h0_mem
+
+  -- Each φ n has values in Set.Icc (-M') M'
+  have hφ_range : ∀ n x, φ n x ∈ Set.Icc (-M') M' := by
+    intro n x
+    exact SimpleFunc.approxOn_mem hf_meas h0_mem n x
+
+  -- φ n → f pointwise (since f x ∈ closure (Icc (-M') M') = Icc (-M') M')
+  have hφ_tendsto : ∀ x, Filter.Tendsto (fun n => φ n x) Filter.atTop (nhds (f x)) := by
+    intro x
+    apply SimpleFunc.tendsto_approxOn hf_meas h0_mem
+    -- f x ∈ closure (Icc (-M') M') = Icc (-M') M' (closed set)
+    rw [IsClosed.closure_eq (isClosed_Icc)]
+    exact hf_range x
+
+  -- Each ∫ φ_n dν(ω) is tail-AESM by Phase B
+  have hφ_aesm : ∀ n, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+      (fun ω => ∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+    intro n
+    exact integral_simpleFunc_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 (φ n)
+
+  -- ∫ φ_n dν(ω) → ∫ f dν(ω) for each ω (by DCT on ν(ω))
+  have h_int_tendsto : ∀ ω, Filter.Tendsto
+      (fun n => ∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      Filter.atTop
+      (nhds (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) := by
+    intro ω
+    haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+    -- Apply DCT with bound M' (constant, hence integrable)
+    apply tendsto_integral_of_dominated_convergence (fun _ => M')
+    · intro n
+      exact (SimpleFunc.measurable (φ n)).aestronglyMeasurable
+    · exact integrable_const M'
+    · intro n
+      filter_upwards with x
+      rw [Real.norm_eq_abs]
+      have := hφ_range n x
+      rw [Set.mem_Icc] at this
+      exact abs_le.mpr this
+    · filter_upwards with x
+      exact hφ_tendsto x
+
   -- Apply aestronglyMeasurable_of_tendsto_ae
-  sorry
+  exact aestronglyMeasurable_of_tendsto_ae Filter.atTop hφ_aesm (ae_of_all _ h_int_tendsto)
 
 /-- **Set integral equality for Iic indicators.**
 
