@@ -2999,11 +2999,209 @@ lemma setIntegral_directing_measure_indicator_eq
     ∫ ω in A, (∫ x, s.indicator (fun _ => (1:ℝ)) x
         ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
       = ∫ ω in A, s.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
-  -- π-λ argument parallel to integral_indicator_borel_tailAEStronglyMeasurable
-  -- Base case: Iic from setIntegral_directing_measure_indicator_Iic_eq
-  -- Complement: both sides transform by 1 - (value)
-  -- Disjoint union: both sides are countable sums
-  sorry
+  classical
+  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+    TailSigma.tailSigma_le X hX_meas
+  have hA_ambient : MeasurableSet A := hm_le A hA
+
+  -- Define G = {t | MeasurableSet t ∧ set integral equality holds}
+  let G : Set (Set ℝ) := {t | MeasurableSet t ∧
+    ∫ ω in A, (∫ x, t.indicator (fun _ => (1:ℝ)) x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ
+      = ∫ ω in A, t.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ}
+
+  -- Step 1: G contains {Iic t}
+  have h_pi : ∀ t : ℝ, Set.Iic t ∈ G := fun t => ⟨measurableSet_Iic,
+    setIntegral_directing_measure_indicator_Iic_eq X hX_contract hX_meas hX_L2 t A hA hμA⟩
+
+  -- Step 2: G is a Dynkin system
+  have h_empty : ∅ ∈ G := by
+    constructor
+    · exact MeasurableSet.empty
+    · simp only [Set.indicator_empty, integral_zero]
+
+  have h_compl : ∀ t ∈ G, tᶜ ∈ G := by
+    intro t ⟨ht_meas, ht_eq⟩
+    constructor
+    · exact ht_meas.compl
+    · -- LHS: ∫_A (∫ 1_{tᶜ} dν) dμ = ∫_A (1 - ∫ 1_t dν) dμ = ∫_A 1 dμ - ∫_A (∫ 1_t dν) dμ
+      -- RHS: ∫_A 1_{tᶜ}(X₀) dμ = ∫_A (1 - 1_t(X₀)) dμ = ∫_A 1 dμ - ∫_A 1_t(X₀) dμ
+      -- By ht_eq, LHS = RHS
+      have h_lhs_eq : ∫ ω in A, (∫ x, tᶜ.indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ =
+          ∫ ω in A, (1 : ℝ) ∂μ - ∫ ω in A, (∫ x, t.indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ := by
+        -- ∫ 1_{tᶜ} dν = 1 - ∫ 1_t dν (since ν is probability measure)
+        have h_compl_eq : ∀ ω, ∫ x, tᶜ.indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+            1 - ∫ x, t.indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+          intro ω
+          haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          have h_ind_compl : ∀ x, tᶜ.indicator (fun _ => (1:ℝ)) x =
+              1 - t.indicator (fun _ => (1:ℝ)) x := by
+            intro x
+            by_cases hx : x ∈ t
+            · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
+            · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
+          simp_rw [h_ind_compl]
+          rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
+          exact integrable_indicator_const_Lp one_ne_top ht_meas (Or.inr one_ne_zero)
+        simp_rw [h_compl_eq]
+        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        · exact (integrable_const 1).integrableOn
+        · -- Need integrability of ω ↦ ∫ 1_t dν(ω) on A
+          apply Integrable.integrableOn
+          apply Integrable.mono' (integrable_const 1)
+          · exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 t ht_meas
+              |>.mono hm_le
+          · filter_upwards with ω
+            rw [Real.norm_eq_abs]
+            haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            calc |∫ x, t.indicator (fun _ => (1:ℝ)) x
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|
+              ≤ ∫ x, |t.indicator (fun _ => (1:ℝ)) x|
+                  ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := abs_integral_le_integral_abs
+              _ ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                  apply integral_mono_of_nonneg
+                  · exact ae_of_all _ (fun _ => abs_nonneg _)
+                  · exact integrable_const 1
+                  · exact ae_of_all _ (fun x => by
+                      simp only [Set.indicator_apply]
+                      split_ifs <;> simp)
+              _ = 1 := by simp [measureReal_univ_eq_one]
+      have h_rhs_eq : ∫ ω in A, tᶜ.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ =
+          ∫ ω in A, (1 : ℝ) ∂μ - ∫ ω in A, t.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
+        have h_ind_compl : ∀ ω, tᶜ.indicator (fun _ => (1:ℝ)) (X 0 ω) =
+            1 - t.indicator (fun _ => (1:ℝ)) (X 0 ω) := by
+          intro ω
+          by_cases hx : X 0 ω ∈ t
+          · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
+          · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
+        simp_rw [h_ind_compl]
+        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        · exact (integrable_const 1).integrableOn
+        · apply Integrable.integrableOn
+          exact (integrable_const 1).indicator (ht_meas.preimage (hX_meas 0))
+      rw [h_lhs_eq, h_rhs_eq, ht_eq]
+
+  have h_iUnion : ∀ (f : ℕ → Set ℝ), (∀ i j, i ≠ j → Disjoint (f i) (f j)) →
+      (∀ n, f n ∈ G) → (⋃ n, f n) ∈ G := by
+    intro f hdisj hf
+    constructor
+    · exact MeasurableSet.iUnion (fun n => (hf n).1)
+    · -- LHS: ∫_A (∫ 1_{⋃ fn} dν) dμ = ∫_A (∑' ∫ 1_{fn} dν) dμ = ∑' ∫_A (∫ 1_{fn} dν) dμ
+      -- RHS: ∫_A 1_{⋃ fn}(X₀) dμ = ∫_A (∑' 1_{fn}(X₀)) dμ = ∑' ∫_A 1_{fn}(X₀) dμ
+      -- By (hf n).2, each term is equal, hence sums are equal
+      have h_lhs_eq : ∫ ω in A, (∫ x, (⋃ n, f n).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ =
+          ∑' n, ∫ ω in A, (∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ := by
+        -- First rewrite the inner integral as a tsum
+        have h_inner_eq : ∀ ω, ∫ x, (⋃ n, f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+            ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+          intro ω
+          haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+          have h_ind_union : ∀ x, (⋃ n, f n).indicator (fun _ => (1:ℝ)) x =
+              ∑' n, (f n).indicator (fun _ => (1:ℝ)) x := by
+            intro x
+            by_cases hx : x ∈ ⋃ n, f n
+            · obtain ⟨n, hn⟩ := Set.mem_iUnion.mp hx
+              rw [Set.indicator_of_mem hx]
+              have h_unique : ∀ m, m ≠ n → x ∉ f m := by
+                intro m hm hxm; exact (hdisj n m (Ne.symm hm)).ne_of_mem hn hxm rfl
+              rw [tsum_eq_single n]
+              · simp [Set.indicator_of_mem hn]
+              · intro m hm; simp [Set.indicator_of_not_mem (h_unique m hm)]
+            · simp only [Set.indicator_of_not_mem hx]
+              have : ∀ n, x ∉ f n := fun n hn => hx (Set.mem_iUnion.mpr ⟨n, hn⟩)
+              simp [Set.indicator_of_not_mem (this _)]
+          simp_rw [h_ind_union]
+          rw [integral_tsum]
+          · intro n; exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
+          · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
+        simp_rw [h_inner_eq]
+        -- Now we need: ∫_A (∑' fn) dμ = ∑' ∫_A fn dμ
+        rw [integral_tsum]
+        · intro n
+          apply Integrable.integrableOn
+          apply Integrable.mono' (integrable_const 1)
+          · exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
+              (f n) (hf n).1 |>.mono hm_le
+          · filter_upwards with ω
+            rw [Real.norm_eq_abs]
+            haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            calc |∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|
+              ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                  rw [abs_le]; constructor
+                  · calc -∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+                        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+                      ≤ 0 := by
+                          simp only [neg_nonpos]
+                          exact integral_nonneg (fun x => Set.indicator_nonneg (fun _ _ => zero_le_one) x)
+                      _ ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) :=
+                          integral_nonneg (fun _ => zero_le_one)
+                  · apply integral_mono
+                    · exact integrable_indicator_const_Lp one_ne_top (hf n).1 (Or.inr one_ne_zero)
+                    · exact integrable_const 1
+                    · intro x; exact Set.indicator_le_self' (fun _ _ => zero_le_one) x
+              _ = 1 := by simp [measureReal_univ_eq_one]
+        · intro n
+          exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
+            (f n) (hf n).1 |>.mono hm_le |>.restrict
+
+      have h_rhs_eq : ∫ ω in A, (⋃ n, f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ =
+          ∑' n, ∫ ω in A, (f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
+        have h_ind_union : ∀ ω, (⋃ n, f n).indicator (fun _ => (1:ℝ)) (X 0 ω) =
+            ∑' n, (f n).indicator (fun _ => (1:ℝ)) (X 0 ω) := by
+          intro ω
+          by_cases hx : X 0 ω ∈ ⋃ n, f n
+          · obtain ⟨n, hn⟩ := Set.mem_iUnion.mp hx
+            rw [Set.indicator_of_mem hx]
+            have h_unique : ∀ m, m ≠ n → X 0 ω ∉ f m := by
+              intro m hm hxm; exact (hdisj n m (Ne.symm hm)).ne_of_mem hn hxm rfl
+            rw [tsum_eq_single n]
+            · simp [Set.indicator_of_mem hn]
+            · intro m hm; simp [Set.indicator_of_not_mem (h_unique m hm)]
+          · simp only [Set.indicator_of_not_mem hx]
+            have : ∀ n, X 0 ω ∉ f n := fun n hn => hx (Set.mem_iUnion.mpr ⟨n, hn⟩)
+            simp [Set.indicator_of_not_mem (this _)]
+        simp_rw [h_ind_union]
+        rw [integral_tsum]
+        · intro n
+          apply Integrable.integrableOn
+          exact (integrable_const 1).indicator ((hf n).1.preimage (hX_meas 0))
+        · intro n
+          exact ((measurable_const.indicator (hf n).1).comp (hX_meas 0)).aestronglyMeasurable.restrict
+
+      rw [h_lhs_eq, h_rhs_eq]
+      congr 1
+      ext n
+      exact (hf n).2
+
+  -- Step 3: Apply π-λ theorem
+  let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
+  have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
+    @borel_eq_generateFrom_Iic ℝ _ _ _ _
+  have h_pi_S : IsPiSystem S := by
+    intro u hu v hv _
+    obtain ⟨r, rfl⟩ := hu
+    obtain ⟨t, rfl⟩ := hv
+    use min r t
+    exact Set.Iic_inter_Iic.symm
+
+  have h_induction : ∀ t (htm : MeasurableSet t), t ∈ G := fun t htm =>
+    MeasurableSpace.induction_on_inter h_gen h_pi_S
+      h_empty
+      (fun u ⟨r, hr⟩ => hr ▸ h_pi r)
+      (fun u hum hu => h_compl u hu)
+      (fun f hdisj hfm hf => h_iUnion f hdisj hf)
+      t htm
+
+  exact (h_induction s hs).2
 
 /-- **Set integral equality for bounded measurable functions.**
 
