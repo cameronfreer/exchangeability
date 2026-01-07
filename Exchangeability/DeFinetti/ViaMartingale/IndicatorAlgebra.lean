@@ -95,9 +95,7 @@ lemma indProd_stronglyMeasurable [MeasurableSpace Ω] [MeasurableSpace α]
     (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
     StronglyMeasurable (indProd X r C) := by
   rw [indProd_eq_firstRCylinder_indicator]
-  refine StronglyMeasurable.indicator ?_ ?_
-  · exact stronglyMeasurable_const
-  · exact firstRCylinder_measurable_ambient X r C hX hC
+  exact .indicator stronglyMeasurable_const (firstRCylinder_measurable_ambient X r C hX hC)
 
 /-- indProd takes values in [0,1]. -/
 lemma indProd_nonneg_le_one (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :

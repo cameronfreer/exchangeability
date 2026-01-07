@@ -401,9 +401,7 @@ lemma comap_consRV_eq_sup
       obtain ⟨S, hS_meas, rfl⟩ := hs
       -- s = x ⁻¹' S, need to show it's in σ(consRV x t)
       -- x ω = (consRV x t ω) 0, so x ⁻¹' S = (consRV x t) ⁻¹' {f | f 0 ∈ S}
-      refine ⟨{f | f 0 ∈ S}, ?_, ?_⟩
-      · exact measurable_pi_apply 0 hS_meas
-      · ext ω; simp [consRV]
+      exact ⟨{f | f 0 ∈ S}, measurable_pi_apply 0 hS_meas, by ext ω; simp [consRV]⟩
     -- σ(t) ≤ σ(consRV x t)
     · exact comap_le_comap_consRV x t
 
