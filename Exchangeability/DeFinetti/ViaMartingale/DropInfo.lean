@@ -86,8 +86,7 @@ lemma condexp_indicator_drop_info_of_pair_law_direct
 
   -- Convert goal from composition form to preimage form
   have hind : Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ = (ξ ⁻¹' B).indicator (fun _ => (1 : ℝ)) := by
-    ext ω
-    simp [Set.indicator, Set.mem_preimage]
+    ext ω; simp [Set.indicator, Set.mem_preimage]
 
   rw [hind]
 

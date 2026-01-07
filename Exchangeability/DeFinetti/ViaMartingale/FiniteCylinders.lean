@@ -221,9 +221,7 @@ lemma contractable_finite_cylinder_measure
         (⋂ i : Fin r, {f | f ⟨i.val, by omega⟩ ∈ A i}) ∩
         {f | f ⟨r, by omega⟩ ∈ B} ∩
         (⋂ j : Fin k, {f | f ⟨r + 1 + j.val, by omega⟩ ∈ C j}) := by
-      ext f
-      simp only [S, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]
-      tauto
+      ext f; simp only [S, Set.mem_iInter, Set.mem_inter_iff, Set.mem_setOf]; tauto
 
     rw [h_decomp]
     exact .inter (.inter (.iInter fun i => measurable_pi_apply (Fin.mk i.val (by omega)) (hA i))

@@ -384,9 +384,7 @@ lemma finite_product_formula_id
   have h2B : ∀ n, Bseq n ∈ Rectangles := by
     intro n
     refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
-    ext f
-    simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]
-    tauto
+    ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto
 
   have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ := by
     intro n
