@@ -2850,30 +2850,39 @@ lemma directing_measure_integral_eq_condExp
 
   -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
   -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
-  have hg_asm : AEStronglyMeasurable g μ := by
-    -- Strategy: Approximate f by step functions, show each integral is AEStronglyMeasurable,
-    -- then take limits using aestronglyMeasurable_of_tendsto_ae.
-    --
-    -- Key insight: For Iic indicators, ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω (measurable).
-    -- Step functions are linear combinations of Ioc = Iic - Iic indicators.
-    -- Limit of AEStronglyMeasurable functions with pointwise convergence is AEStronglyMeasurable.
+  -- First prove tail-AEStronglyMeasurable (hgm), then get ambient from it
+  -- Key insight: alphaIicCE t is strongly measurable w.r.t. tail σ-algebra (it's a condExp)
+  -- So ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω is tail-AEStronglyMeasurable
+  -- Extend to bounded measurable f via step function approximation + limits
 
-    -- For now, we use the direct approach noting that g is bounded.
-    -- The formal π-λ proof requires setting up:
-    -- 1. Step function approximations φ_n → f with |φ_n| ≤ M'
-    -- 2. Each g_n(ω) = ∫ φ_n dν(ω) is AEStronglyMeasurable (via base case + linearity)
-    -- 3. DCT gives g_n(ω) → g(ω) for each ω
-    -- 4. aestronglyMeasurable_of_tendsto_ae concludes
+  have hgm_early : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ := by
+    -- Strategy: Show g is a.e. equal to something tail-strongly measurable
+    -- For Iic indicators: ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω
+    -- alphaIicCE t = μ[1_{Iic t}(X₀)|tail] is tail-strongly measurable by stronglyMeasurable_condExp
 
-    -- Base case insight:
-    -- ∫ 1_{Iic t} dν(ω) =ᵐ alphaIicCE t ω, and alphaIicCE_measurable gives measurability.
-    -- For 1_{Ioc a b} = 1_{Iic b} - 1_{Iic a}:
-    --   ∫ 1_{Ioc a b} dν(ω) =ᵐ alphaIicCE b ω - alphaIicCE a ω (measurable difference).
-    -- Finite sums of these remain AEStronglyMeasurable.
+    -- Step 1: For Iic indicators, integral is tail-AEStronglyMeasurable
+    have h_Iic_tail : ∀ t : ℝ, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => ∫ x, (Set.Iic t).indicator (fun _ => (1:ℝ)) x
+          ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+      intro t
+      have h_ae := directing_measure_integral_Iic_ae_eq_alphaIicCE X hX_contract hX_meas hX_L2 t
+      -- alphaIicCE t is the conditional expectation, hence tail-strongly measurable
+      have h_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X)
+          (alphaIicCE X hX_contract hX_meas hX_L2 t) := by
+        -- alphaIicCE t = μ[indIic t ∘ X 0 | TailSigma.tailSigma X]
+        -- Conditional expectation is strongly measurable w.r.t. the conditioning σ-algebra
+        unfold alphaIicCE
+        exact stronglyMeasurable_condExp
+      exact AEStronglyMeasurable.congr h_tail_sm.aestronglyMeasurable h_ae.symm
 
-    -- The full proof requires implementing the step function approximation infrastructure.
-    -- For this formalization, we document the proof path and mark for completion.
+    -- Step 2: Extend to bounded measurable f via approximation
+    -- Use step functions on Ioc intervals (differences of Iic)
+    -- Finite sums preserve tail-AEStronglyMeasurable
+    -- Pointwise limit preserves tail-AEStronglyMeasurable via aestronglyMeasurable_of_tendsto_ae
     sorry
+
+  -- Ambient AEStronglyMeasurable follows from tail via .mono
+  have hg_asm : AEStronglyMeasurable g μ := AEStronglyMeasurable.mono hm_le hgm_early
 
   -- g is integrable (bounded and measurable on probability space)
   have hg_int : Integrable g μ := by
@@ -2890,9 +2899,9 @@ lemma directing_measure_integral_eq_condExp
     intro s _ _; exact hg_int.integrableOn
 
   case hgm =>
-    -- ae_eq_condExp_of_forall_setIntegral_eq needs AEStronglyMeasurable g μ (ambient σ-algebra)
-    -- This is exactly what hg_asm provides.
-    exact hg_asm
+    -- ae_eq_condExp_of_forall_setIntegral_eq needs tail-AEStronglyMeasurable
+    -- This is exactly what hgm_early provides.
+    exact hgm_early
 
   case hg_eq =>
     -- The key: ∫_A g dμ = ∫_A f(X₀) dμ for tail-measurable A with μ A < ∞
