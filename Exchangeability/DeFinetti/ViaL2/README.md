@@ -2,6 +2,22 @@
 
 This directory implements Kallenberg's "second proof" of de Finetti's theorem using elementary L² methods. The proof establishes that contractable sequences are conditionally i.i.d. without requiring the Mean Ergodic Theorem or martingale convergence.
 
+## Completion Status
+
+**Status: COMPLETE** (January 2026)
+
+All proofs compile with only standard mathlib axioms (`propext`, `Classical.choice`, `Quot.sound`). The full project builds successfully with ~13,800 lines of Lean 4 code across 5 files.
+
+| File | Lines | Status |
+|------|-------|--------|
+| `MainConvergence.lean` | 888 | Complete |
+| `CesaroConvergence.lean` | 3,390 | Complete |
+| `BlockAverages.lean` | 1,624 | Complete* |
+| `MoreL2Helpers.lean` | 3,489 | Complete |
+| `DirectingMeasure.lean` | 4,381 | Complete |
+
+*BlockAverages contains one stub lemma due to import structure; the actual proof is in MoreL2Helpers.
+
 ## Key Insight: The Identification Chain
 
 The central insight is the **identification chain** connecting three quantities:
@@ -42,7 +58,6 @@ where:
 | `DirectingMeasure.lean` | Directing measure construction and bridge lemmas |
 | `BlockAverages.lean` | Block average machinery for the main proof |
 | `MoreL2Helpers.lean` | Additional L² lemmas and technical machinery |
-| `L2Helpers.lean` | Basic L² helper lemmas |
 
 ## Key Lemmas
 
@@ -70,6 +85,39 @@ lemma directing_measure_integral_via_chain :
       (L¹ convergence) ∧
       (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(directing_measure X ... ω))
 ```
+
+## DirectingMeasure.lean: Detailed Structure
+
+The `DirectingMeasure.lean` file (4,381 lines) is the heart of the ViaL2 proof. It establishes that the directing measure ν(ω) serves as the conditional distribution of X₀ given the tail σ-algebra.
+
+### Construction Phases
+
+The proof proceeds in four phases, each building on the previous:
+
+**Phase A: Indicator functions on Iic sets**
+- `integral_indicator_borel_tailAEStronglyMeasurable`: For Borel indicators, ω ↦ ∫ 1_S dν(ω) is tail-AESM
+- Uses π-λ theorem starting from `{Iic t : t ∈ ℝ}` generators
+
+**Phase B: Simple functions**
+- `integral_simpleFunc_tailAEStronglyMeasurable`: Simple function integrals are tail-AESM
+- Decomposes into finite sums of indicator integrals
+
+**Phase C: Bounded measurable functions**
+- `integral_bounded_measurable_tailAEStronglyMeasurable`: General bounded measurable case
+- Uses `SimpleFunc.approxOn` for approximation, DCT for limit exchange
+- Key technique: `StronglyMeasurable.limUnder` on tail-SM representatives
+
+**Phase D: Set integral equality**
+- `setIntegral_directing_measure_bounded_measurable_eq`: The bridge property
+- Shows ∫_A (∫f dν) dμ = ∫_A f(X₀) dμ for tail-measurable A
+
+### Key Technical Challenges Solved
+
+1. **Tail-AESM for limits**: Proving that pointwise limits of tail-AESM functions are tail-AESM required careful use of `StronglyMeasurable.limUnder` to construct tail-SM witnesses.
+
+2. **σ-algebra management**: The proof carefully tracks which functions are measurable with respect to the tail σ-algebra vs. the ambient σ-algebra.
+
+3. **Simple function approximation**: Uses `SimpleFunc.approxOn` with closed bounded intervals to uniformly approximate bounded measurable functions.
 
 ## Comparison with Other Approaches
 
@@ -106,6 +154,23 @@ directing_measure_integral_via_chain (α = ∫f dν by transitivity)
        ↓
 Main theorem
 ```
+
+## Build Instructions
+
+```bash
+# Build the full ViaL2 proof
+lake build Exchangeability.DeFinetti.ViaL2.DirectingMeasure
+
+# Check axioms (should show only propext, Classical.choice, Quot.sound)
+lake env lean -c 'import Exchangeability.DeFinetti.ViaL2.DirectingMeasure; #print axioms directing_measure_integral'
+```
+
+## History
+
+- **Initial development**: Cesàro convergence and L² bounds
+- **December 2024**: Core directing measure construction
+- **January 2026**: Completed all sorries in DirectingMeasure.lean
+  - Final sorry filled: `integral_bounded_measurable_tailAEStronglyMeasurable` (tail-AESM for limits)
 
 ## References
 
