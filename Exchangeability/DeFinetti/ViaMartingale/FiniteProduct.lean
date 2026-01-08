@@ -377,15 +377,11 @@ lemma finite_product_formula_id
   have h1B : ⋃ n, Bseq n = Set.univ := by
     simp only [Bseq, Set.iUnion_const]
 
-  have h2B : ∀ n, Bseq n ∈ Rectangles := by
-    intro n
-    refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
-    ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto
+  have h2B : ∀ n, Bseq n ∈ Rectangles := fun n =>
+    ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, by ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto⟩
 
-  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ := by
-    intro n
-    simp only [Bseq]
-    exact measure_ne_top _ Set.univ
+  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ :=
+    fun n => by simp only [Bseq]; exact measure_ne_top _ Set.univ
 
   -- Apply Measure.ext_of_generateFrom_of_iUnion
   exact Measure.ext_of_generateFrom_of_iUnion
