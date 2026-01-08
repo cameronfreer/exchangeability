@@ -327,12 +327,8 @@ lemma measure_ext_of_future_rectangles
               intro i A hA
               let r := i + 1
               let C : Fin r → Set α := fun j => if j.val = i then A else Set.univ
-              have hC_meas : ∀ j, MeasurableSet (C j) := by
-                intro j
-                simp only [C]
-                split_ifs
-                · exact hA
-                · exact MeasurableSet.univ
+              have hC_meas : ∀ j, MeasurableSet (C j) := fun j => by
+                simp only [C]; split_ifs <;> [exact hA; exact MeasurableSet.univ]
               have h_eq : ((fun f : ℕ → α => f i) ⁻¹' A) = MartingaleHelpers.cylinder r C := by
                 ext f
                 simp only [C, r, Set.mem_preimage, MartingaleHelpers.cylinder]

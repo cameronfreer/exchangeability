@@ -291,14 +291,10 @@ lemma contractable_triple_pushforward
         (C := C) (hC := hC)
     -- Convert to map equality
     -- First, prove measurability of the triple functions
-    have h_meas_future : Measurable (fun ω => (Z_r ω, X r ω, Y_future ω)) := by
-      refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
-      · measurability
-      · measurability
-    have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) := by
-      refine Measurable.prodMk ?_ (Measurable.prodMk (hX_meas r) ?_)
-      · measurability
-      · measurability
+    have h_meas_future : Measurable (fun ω => (Z_r ω, X r ω, Y_future ω)) :=
+      Measurable.prodMk (by measurability) (Measurable.prodMk (hX_meas r) (by measurability))
+    have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) :=
+      Measurable.prodMk (by measurability) (Measurable.prodMk (hX_meas r) (by measurability))
     -- The rectangle is measurable
     have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
       show MeasurableSet ((Set.univ.pi A) ×ˢ (B ×ˢ (Set.univ.pi C)))
