@@ -508,8 +508,8 @@ lemma condExp_Xr_indicator_eq_of_contractable
     -- Set up notation (AFTER computing h_drop_raw)
     let mW : MeasurableSpace Ω := MeasurableSpace.comap W inferInstance
     let mW' : MeasurableSpace Ω := MeasurableSpace.comap W' inferInstance
-    let indA := fun ω => Set.indicator (U ⁻¹' A_U) (fun _ => (1 : ℝ)) ω
-    let indB := fun ω => Set.indicator ((X r) ⁻¹' B_Xr) (fun _ => (1 : ℝ)) ω
+    let indA := (U ⁻¹' A_U).indicator (fun _ => (1 : ℝ))
+    let indB := ((X r) ⁻¹' B_Xr).indicator (fun _ => (1 : ℝ))
 
     -- Transfer h_drop_raw to local notation
     have h_drop : μ[indA | mW'] =ᵐ[μ] μ[indA | mW] := h_drop_raw
