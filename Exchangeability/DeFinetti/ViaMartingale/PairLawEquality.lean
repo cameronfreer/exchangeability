@@ -319,12 +319,9 @@ lemma condExp_indicator_eq_of_contractable
   -- Measurability
   have hU : Measurable U := by measurability
   have hW : Measurable W := measurable_pi_lambda _ fun n => hX_meas (m + 1 + n)
-  have hW' : Measurable W' := by
-    apply measurable_pi_lambda
-    intro n
-    cases n with
-    | zero => exact hX_meas r
-    | succ k => exact hX_meas (m + 1 + k)
+  have hW' : Measurable W' := measurable_pi_lambda _ fun
+    | 0 => hX_meas r
+    | n + 1 => hX_meas (m + 1 + n)
 
   -- Apply Kallenberg 1.3 with pair law and contraction σ(W) ⊆ σ(W')
   exact condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU hW hW'
