@@ -30,7 +30,7 @@ import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
 import Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers
 import Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
-import Exchangeability.DeFinetti.ViaKoopman.KernelIndependence_Unfinished
+import Exchangeability.Extras.ViaKoopman.KernelIndependence_Unfinished
 import Exchangeability.Probability.IntegrationHelpers
 
 open Filter MeasureTheory
