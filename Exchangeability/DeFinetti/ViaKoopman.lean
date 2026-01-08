@@ -1,601 +1,661 @@
 /-
-Copyright (c) 2025 Cameron Freer. All rights reserved.
+Copyright (c) 2025 The Exchangeability Contributors
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
-import Mathlib.MeasureTheory.Function.SimpleFuncDense
-import Mathlib.Analysis.InnerProductSpace.Projection.Basic
-import Mathlib.Probability.Kernel.Condexp
-import Mathlib.Probability.Independence.Kernel
-import Mathlib.Probability.Independence.Integration
-import Exchangeability.Ergodic.KoopmanMeanErgodic
-import Exchangeability.Ergodic.InvariantSigma
-import Exchangeability.Ergodic.ProjectionLemmas
-import Exchangeability.Ergodic.BirkhoffAvgCLM
+import Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization
+import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
 import Exchangeability.DeFinetti.CommonEnding
-import Exchangeability.DeFinetti.MartingaleHelpers
-import Exchangeability.ConditionallyIID
-import Exchangeability.Probability.CesaroHelpers
-import Exchangeability.Probability.CondExp
-import Exchangeability.PathSpace.Shift
-import Mathlib.Tactic
-import Mathlib.Tactic.FieldSimp
-import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
-import Exchangeability.DeFinetti.ViaKoopman.Quantization
-import Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions
-import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
-import Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers
-import Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation
-import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
-import Exchangeability.DeFinetti.ViaKoopman.KernelIndependence
-import Exchangeability.Probability.IntegrationHelpers
-
-open Filter MeasureTheory
+import Exchangeability.Util.StrictMono
 
 /-!
-# de Finetti's Theorem via Koopman Operator
+# de Finetti's Theorem via Contractability (Kallenberg's First Proof)
 
-**Kallenberg's "first proof"** of de Finetti's theorem using the Mean Ergodic
-Theorem and Koopman operator. This proof has the **heaviest dependencies**.
-
-## Proof approach
-
-1. Apply the Mean Ergodic Theorem to show Birkhoff averages converge to the
-   orthogonal projection onto the fixed-point subspace
-2. Identify this projection with conditional expectation onto the shift-invariant σ-algebra
-3. Use dominated convergence to show the conditional expectation has product form
-4. Apply monotone class theorem to extend from cylinders to the full σ-algebra
-
-## Main definitions
-
-* `cylinderFunction`: Functions depending only on finitely many coordinates
-* `productCylinder`: Product of functions evaluated at different coordinates
-* `shiftedCylinder`: Cylinder function composed with shift^n
+This file provides de Finetti's theorem using contractability directly, following
+Kallenberg's "first proof" which uses disjoint-block averaging rather than permutations.
 
 ## Main results
 
-* `deFinetti_viaKoopman`: **Main theorem** - contractable implies conditionally i.i.d.
-* Supporting lemmas for Birkhoff averages and conditional expectations
+* `deFinetti_viaKoopman`: de Finetti's theorem from contractability.
+  For a contractable sequence on a standard Borel space, there exists a kernel ν
+  such that the coordinates are conditionally i.i.d. given ν.
 
-## Current Status (updated 2025-12-25)
+## Mathematical overview
 
-✅ **Compiles successfully**
-✅ **All infrastructure sections complete** - no sorries in Sections 1, 2, 5, 7, 9
-✅ **Major proofs complete** - L¹ Cesàro convergence, cylinder functions, main theorem
-✅ **Only 4 active sorries remain** - all in Sections 3-4 (MET/factorization)
+The key insight of Kallenberg's first proof is that contractability (invariance under
+strictly monotone subsequences) directly implies conditional i.i.d., without going
+through exchangeability.
 
-**Active sorries** (4 total):
+The proof proceeds as follows:
 
-1. **Line 1626** - `condexp_product_factorization_consecutive` inductive step
-   - Needs conditional independence for product factorization
-   - Strategy: Use `condIndep_simpleFunc` from CondIndep.lean
+1. **Block injection**: For `m` blocks of size `n`, define strictly monotone maps
+   `ρⱼ : ℕ → ℕ` that select one element from each block.
 
-2. **Line 1713** - `condexp_product_factorization_general` inductive step
-   - Depends on `condexp_product_factorization_consecutive`
-   - Once ax is done, this follows from shift invariance
+2. **Contractability application**: For each choice function `j : Fin m → Fin n`,
+   the block injection `ρⱼ` is strictly monotone, so contractability gives:
+   `∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ fᵢ(ω(ρⱼ(i))) dμ`
 
-3. **Line 4460** - `ce_lipschitz_convergence`
-   - L¹-Lipschitz property of CE for products
-   - Detailed proof outline in comments (squeeze theorem + CE Lipschitz)
+3. **Averaging**: Sum over all `n^m` choice functions to get:
+   `∫ ∏ fᵢ(ωᵢ) dμ = ∫ ∏ blockAvg_i dμ`
 
-4. **Line 4720** - `h_tower_of_lagConst_from_one`
-   - Tower property via Cesàro averaging
-   - Avoids false k=0 lag constancy, uses indices from 1
+4. **L¹ convergence**: As `n → ∞`, block averages converge in L¹ to conditional
+   expectations (using Cesàro convergence).
 
-**Commented-out sorries** (not blocking, for reference only):
-- Lines 1647, 2372, 5212 - In comment blocks, not active code
+5. **Factorization**: Taking limits yields:
+   `CE[∏ fᵢ(ωᵢ) | mSI] = ∏ CE[fᵢ(ω₀) | mSI]` a.e.
 
-## Dependencies
+6. **Kernel construction**: The product factorization gives kernel independence,
+   from which we construct the directing measure ν.
 
-❌ **Heavy** - Requires ergodic theory, Mean Ergodic Theorem, orthogonal projections
-✅ **Deep connection** to dynamical systems and ergodic theory
-✅ **Generalizes** beyond exchangeability to measure-preserving systems
-✅ **Extensive mathlib integration** - conditional expectation, kernels, independence
+## Comparison with ViaKoopmanExchangeable_Unfinished.lean
 
-## File Structure (6650 lines total)
+The alternative proof in `ViaKoopmanExchangeable_Unfinished.lean` uses exchangeability, which requires:
+- Extending strictly monotone maps to permutations (`exists_perm_extending_strictMono`)
+- Proving exchangeability implies contractability
 
-This file is organized into 8 major logical sections. **Refactoring planned**: Split into
-modular files to improve navigability and enable parallel development.
-
-### Section 1: Infrastructure (Lines 1-701) ✅ COMPLETE
-- Imports and API compatibility aliases
-- Reusable micro-lemmas (ae_ball_range_mpr, le_eq_or_lt, abs_div_of_nonneg)
-- Lp coercion lemmas (coeFn_finset_sum)
-- Two-sided natural extension infrastructure (shiftℤ, shiftℤInv, embedℤ)
-- Helpers section (shift properties, pathspace lemmas)
-- Instance-locking shims for conditional expectation
-- **Status**: No sorries, ready for extraction
-- **Planned file**: `ViaKoopman/Infrastructure.lean`
-
-### Section 2: Lp Norm Helpers (Lines 1625-1728)
-- Lp seminorm using mathlib's `eLpNorm`
-- Conditional expectation linearity helpers
-- **Status**: Complete
-- **Planned file**: Can merge into Infrastructure.lean
-
-### Section 3: Product Factorization (Lines ~1600-1900) ⚠️ 2 sorries
-- `condexp_product_factorization_consecutive` - product of bounded functions factorizes
-- `condexp_product_factorization_general` - generalization to arbitrary indices
-- **Status**: Lines 1661, 1748 have sorries (inductive steps need CI)
-- **Key dependency**: `condIndep_simpleFunc` from CondIndep.lean
-
-### Section 4: L¹ Cesàro Convergence (Lines ~1900-3100) ✅ COMPLETE
-- `L1_cesaro_convergence_bounded` - bounded case ✅
-- `L1_cesaro_convergence` - general case ✅
-- **Status**: No sorries
-
-### Section 5: Cylinder Functions (Lines ~3100-3543) ✅ COMPLETE
-- Helper lemmas for indicator_product_bridge
-- MeasureTheory namespace extensions
-- **Status**: No sorries
-
-### Section 6: Main Convergence (Lines ~3545-4000) ✅ COMPLETE
-- `birkhoffAverage_tendsto_condexp` specialized for shift
-- Helper lemmas for condexpL2_koopman_comm
-- **Status**: No sorries
-
-### Section 7: Tower Property & Lipschitz (Lines ~4000-4800) ⚠️ 2 sorries
-- `ce_lipschitz_convergence` - L¹-Lipschitz property of CE
-- `h_tower_of_lagConst_from_one` - tower property via Cesàro
-- **Status**: Lines 4482, 4742 have sorries
-- **Strategy**: Use `integral_abs_condExp_le` (Jensen/contraction)
-
-### Section 8: Extreme Members (Lines ~4800-6554) ✅ COMPLETE
-- Mathlib infrastructure for conditional independence
-- Kernel independence and integral factorization
-- Pair factorization for conditional expectation
-- **Status**: No sorries
-
-### Section 9: Main Theorem (Lines 6609-6650) ✅ COMPLETE
-- Bridge Lemma connecting conditional expectation factorization to measure products
-- Main theorem: `exchangeable_implies_conditionallyIID_viaKoopman`
-- **Status**: Complete, uses all above sections
-- **Planned file**: `ViaKoopman/Theorem.lean`
-
-## Refactoring Strategy
-
-**Phase 1 (Current)**: Option 2 - Extract completed infrastructure
-- Extract Infrastructure.lean (lines 1-701 + 1625-1728)
-- Extract CylinderFunctions.lean (lines 3102-3543)
-- **Estimated time**: 2-3 hours
-- **Benefit**: Reduce main file 6650 → ~5200 lines, separate complete from WIP
-
-**Phase 2 (Future)**: Option 1 - Full modular split
-- Create all 8 files listed above
-- Update imports and dependencies
-- **Estimated time**: 8-12 hours total
-- **Benefit**: Enable parallel development, clearer boundaries, easier testing
-
-## Active Sorry Summary
-
-| Line | Section | Description | Priority |
-|------|---------|-------------|----------|
-| 1952 | MeanErgodicTheorem | Type class synthesis | Low |
-| 2403 | OptionB_DensityUI | L1_cesaro_convergence unbounded | High |
-| 3934 | MainConvergence | condexpL2_ae_eq_condExp lpMeas | Medium |
-| 4065 | OptionB_L1Convergence | h_le (needs bridge) | High |
-| 4081 | OptionB_L1Convergence | h_toNorm (needs bridge) | High |
-| 6165 | ExtremeMembers | Kernel.IndepFun autoparam | Medium |
-
-**Next steps for L¹ convergence (lines 4065, 4081)**:
-1. Implement `birkhoffAverage_lp_eq_birkhoffAvgCLM` in BirkhoffAvgCLM.lean
-2. Implement `birkhoffAverage_coerce_eq_ae` using birkhoffAvgCLM_coe_ae_eq_function_avg ✅
-3. Apply bridge lemmas to resolve coercion mismatches
-4. Estimated: 2-3 hours total
-
-See `VIAKOOPMAN_REFACTORING_ANALYSIS.md` for detailed refactoring plan.
+This file avoids that step entirely, working directly with contractability.
 
 ## References
 
-* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
-  Chapter 1, pages 26-27: "First proof of Theorem 1.1"
-
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Chapter 1
 -/
+
+open Filter MeasureTheory
 
 noncomputable section
 
-namespace Exchangeability.DeFinetti.ViaKoopman
+namespace Exchangeability.DeFinetti
 
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
 open Exchangeability.PathSpace
-open Exchangeability.DeFinetti.MartingaleHelpers (comap_comp_le)
-open scoped BigOperators RealInnerProductSpace
+open Exchangeability.DeFinetti.ViaKoopman
+open Exchangeability.Util.StrictMono (injective_implies_strictMono_perm)
+open scoped BigOperators
 
-variable {α : Type*} [MeasurableSpace α]
+variable {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
 
--- Short notation for shift-invariant σ-algebra (used throughout this file)
+-- Short notation for shift-invariant σ-algebra
 local notation "mSI" => shiftInvariantSigma (α := α)
 
-/-! ## Utility lemmas -/
+/-- de Finetti's Theorem from contractability (Kallenberg's first proof).
 
-/-- Integrability of a bounded product on a finite measure space. -/
-private lemma integrable_of_bounded_mul
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
-    {φ ψ : Ω → ℝ}
-    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
-    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
-    Integrable (fun ω => φ ω * ψ ω) μ := by
-  classical
-  obtain ⟨Cφ, hCφ⟩ := hφ_bd
-  obtain ⟨Cψ, hCψ⟩ := hψ_bd
-  have hCφ_nonneg : 0 ≤ Cφ := by
-    have h := hCφ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have hCψ_nonneg : 0 ≤ Cψ := by
-    have h := hCψ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
-    intro ω
-    have hφ := hCφ ω
-    have hψ := hCψ ω
-    have hmul :=
-      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
-    simpa [abs_mul] using hmul
-  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
-  exact integrable_of_bounded_measurable h_meas (Cφ * Cψ) h_bound
+For a contractable probability measure on path space where the shift is measure-preserving,
+there exists a kernel ν (the "directing measure") such that the coordinates are
+conditionally i.i.d. given ν.
 
-/-! ### Product factorization theorems -/
+**Hypotheses:**
+- `hσ`: The shift map is measure-preserving
+- `hContract`: The measure is contractable (invariant under strictly monotone subsequences)
 
-/-- Conditional expectation factorizes through the regular conditional distribution.
+**Conclusion:**
+There exists a kernel `ν : Ω[α] → Measure α` such that:
+1. `ν ω` is a probability measure for a.e. ω
+2. For any bounded measurable functions `fs : Fin m → α → ℝ`:
+   `∫ ∏ fᵢ(ωᵢ) dμ = ∫ (∏ᵢ ∫ fᵢ dν(ω)) dμ(ω)`
 
-Assuming conditional independence of coordinates given the tail σ-algebra,
-the conditional expectation of a product equals the product of integrals
-against the conditional distribution ν.
+This is the **product factorization** form of de Finetti:
+- LHS: Product at different coordinates ω(0), ω(1), ..., ω(m-1)
+- RHS: Product of expectations, each ∫ fᵢ dν evaluated against same ν(ω)
 
-**Proof structure note** (218 lines, lines 4977-5194):
-The proof body is commented out and delegated to `condexp_product_factorization_consecutive`.
-The commented-out proof shows the intended inductive structure:
-- Base case: m = 0 (trivial)
-- Inductive step: split product into (first m factors) * (last factor)
-  - Apply IH to first m factors
-  - Use `condexp_coordinate_via_ν` for last factor
-  - Combine using conditional independence
+**Mathematical content:**
+This is the hard direction of de Finetti's equivalence:
+  Contractable → Conditionally i.i.d.
 
-This proof is blocked on finishing the conditional independence machinery.
-Once `hciid` is properly implemented (currently `True`), the proof can be uncommented
-and refined. No immediate subdivision needed - the inductive structure is natural.
--/
-theorem condexp_product_factorization
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
-    (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ)
-    (hciid : ∀ (S : Finset ℕ) (f : ℕ → Set α),
-              (∀ i ∈ S, MeasurableSet (f i)) →
-              ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a)
-                (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
-                ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) ({ω' | ω' i ∈ f i}))
-    (m : ℕ) (fs : Fin m → α → ℝ)
-    (hmeas : ∀ k, Measurable (fs k))
-    (hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C) :
-    μ[fun ω => ∏ k, fs k (ω (k : ℕ)) | shiftInvariantSigma (α := α)]
-      =ᵐ[μ] (fun ω => ∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω)) :=
-  condexp_product_factorization_consecutive μ hσ hExch hciid m fs hmeas hbd
-  /-
-  · -- Inductive step: split product into (product of first m factors) * (last factor)
-    -- Reindex: product over Fin (m + 1) splits into product over Fin m and the m-th term
-    have h_split_prod :
-        (fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
-          = fun ω =>
-            (∏ k : Fin m, fs (Fin.castSucc k) (ω (k : ℕ))) *
-            fs (Fin.last m) (ω m) := by
-      funext ω
-      rw [Fin.prod_univ_castSucc]
-      simp only [Fin.coe_castSucc, Fin.val_last]
-
-    -- Apply IH to the first m factors
-    let fs' : Fin m → α → ℝ := fun k => fs (Fin.castSucc k)
-    have hmeas' : ∀ k, Measurable (fs' k) := fun k => hmeas (Fin.castSucc k)
-    have hbd' : ∀ k, ∃ C, ∀ x, |fs' k x| ≤ C := fun k => hbd (Fin.castSucc k)
-    have hciid' : ProbabilityTheory.Kernel.iIndepFun (fun k : Fin m => fun ω : Ω[α] => ω k)
-        (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
-      -- Restriction of ProbabilityTheory.Kernel.iIndepFun to a subset of indices
-      exact ProbabilityTheory.Kernel.iIndepFun_of_subset hciid
-        (fun k => Fin.castSucc k) Fin.castSucc_injective
-
-    have h_ih := ih fs' hmeas' hbd' hciid'
-
-    -- The last factor's conditional expectation
-    have h_last :=
-      condexp_coordinate_via_ν (μ := μ) (α := α) hσ
-        (ψ := fs (Fin.last m))
-        (hψ := hmeas (Fin.last m))
-        (hbd := hbd (Fin.last m))
-        (k := m)
-
-    -- Product structure under conditional expectation
-    have h_prod_condexp :
-        μ[(fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
-          | shiftInvariantSigma (α := α)]
-          =ᵐ[μ]
-        μ[(fun ω =>
-            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-          | shiftInvariantSigma (α := α)] := by
-      refine Filter.EventuallyEq.condExp (Filter.EventuallyEq.of_forall ?_)
-      intro ω
-      exact congrFun h_split_prod ω
-
-    -- This is a product of two "functions" - apply pair factorization
-    -- But we need to be more careful: one factor is already a product, not atomic
-    -- Use linearity + dominated convergence instead
-
-    -- First show the product factors under conditional expectation
-    -- This uses conditional independence of disjoint coordinate sets
-    have h_prod_factor :
-        μ[(fun ω =>
-            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-          | shiftInvariantSigma (α := α)]
-          =ᵐ[μ]
-        fun ω =>
-          (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
-            | shiftInvariantSigma (α := α)] ω) *
-          (μ[(fun ω' => fs (Fin.last m) (ω' m))
-            | shiftInvariantSigma (α := α)] ω) := by
-      -- The key observation: functions of disjoint coordinate sets are independent
-      -- X := (ω 0, ..., ω (m-1)) and Y := ω m are independent under condExpKernel
-      -- Therefore f(X) and g(Y) are independent for any measurable f, g
-      --
-      -- We need: the function (fun ω => ∏ k : Fin m, fs' k (ω k)) composed with
-      -- the projection to first m coordinates is independent from the projection
-      -- to the m-th coordinate.
-      --
-      -- This follows from `hciid.indepFun_finset` applied to S = Finset.univ.image castSucc
-      -- and T = {last m}, which are disjoint.
-      have h_disjoint : Disjoint
-          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
-          ({Fin.last m} : Finset (Fin (m + 1))) := by
-        simp [Finset.disjoint_left]
-        intro i _ hi
-        simp at hi
-        exact Fin.castSucc_lt_last i |>.ne hi
-      have h_indep_finsets :=
-        hciid.indepFun_finset
-          (Finset.univ.image (Fin.castSucc : Fin m → Fin (m + 1)))
-          {Fin.last m}
-          h_disjoint
-          (fun i => measurable_pi_apply i)
-      -- Now we have independence of tuples:
-      -- X := (fun ω i => ω (castSucc i)) and Y := (fun ω i => ω (last m))
-      -- We need independence of: f(X) := ∏ fs' k (ω k) and g(Y) := fs (last m) (ω m)
-
-      -- The conditional expectation via kernel equals the integral
-      have h_via_kernel :
-          μ[(fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-            | shiftInvariantSigma (α := α)]
-            =ᵐ[μ]
-          fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
-            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
-        exact ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ) (m := shiftInvariantSigma (α := α))
-          (f := fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-          (hf := by
-            apply Measurable.mul
-            · apply Finset.measurable_prod
-              intro k _
-              fun_prop (disch := measurability)
-            · fun_prop (disch := measurability))
-
-      -- Apply Kernel.IndepFun.integral_mul to the composite functions
-      -- We use h_indep_finsets composed with the product function and single evaluation
-      have h_kernel_mul :
-          (fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
-            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-            =ᵐ[μ]
-          fun ω =>
-            (∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
-              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-            (∫ y, fs (Fin.last m) (y m)
-              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := by
-        -- Apply kernel integral multiplication lemma
-        -- The independence h_indep_finsets gives us independence of the tuple vs. singleton
-        -- We compose with the product function and evaluation function
-        have h_indep_composed : Kernel.IndepFun
-            (fun ω : Ω[α] => ∏ k : Fin m, fs' k (ω (k : ℕ)))
-            (fun ω => fs (Fin.last m) (ω m))
-            (condExpKernel μ (shiftInvariantSigma (α := α))) μ := by
-          -- h_indep_finsets gives independence of tuple vs. singleton
-          -- We compose with measurable functions to get independence of f(tuple) vs. g(singleton)
-          refine Kernel.IndepFun.comp h_indep_finsets ?_ ?_
-          · -- Product function is measurable
-            exact measurable_pi_lambda _ fun i =>
-              (hmeas' i).comp (measurable_pi_apply (Finset.univ.image Fin.castSucc).toSet.restrict _)
-          · -- Evaluation at m is measurable
-            exact measurable_pi_lambda _ fun _ =>
-              (hmeas (Fin.last m)).comp (measurable_pi_apply m)
-        exact Kernel.IndepFun.integral_mul h_indep_composed
-          (Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k)))
-          ((hmeas (Fin.last m)).comp (measurable_pi_apply m))
-          (by
-            -- Boundedness of product
-            choose bounds hbounds using hbd'
-            refine ⟨∏ k, bounds k, ?_⟩
-            intro ω
-            calc |(∏ k : Fin m, fs' k (ω (k : ℕ)))|
-                = ∏ k, |fs' k (ω (k : ℕ))| := by simp [abs_prod]
-              _ ≤ ∏ k, bounds k := Finset.prod_le_prod (fun _ _ => abs_nonneg _)
-                  (fun k _ => hbounds k (ω k)))
-          (hbd (Fin.last m))
-
-      -- Separate conditional expectations
-      have h_sep_prod :
-          (fun ω => ∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
-            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-            =ᵐ[μ]
-          fun ω => μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
-            | shiftInvariantSigma (α := α)] ω := by
-        refine (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ) (m := shiftInvariantSigma (α := α))
-          (f := fun ω => ∏ k : Fin m, fs' k (ω (k : ℕ)))
-          (hf := Finset.measurable_prod _ (fun k _ => (hmeas' k).comp (measurable_pi_apply k)))).symm
-
-      have h_sep_last :
-          (fun ω => ∫ y, fs (Fin.last m) (y m)
-            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω))
-            =ᵐ[μ]
-          fun ω => μ[(fun ω' => fs (Fin.last m) (ω' m))
-            | shiftInvariantSigma (α := α)] ω := by
-        refine (ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-          (μ := μ) (m := shiftInvariantSigma (α := α))
-          (f := fun ω => fs (Fin.last m) (ω m))
-          (hf := (hmeas (Fin.last m)).comp (measurable_pi_apply m))).symm
-
-      -- Chain the equalities
-      calc μ[(fun ω => (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-            | shiftInvariantSigma (α := α)]
-          =ᵐ[μ] fun ω => ∫ y, (∏ k : Fin m, fs' k (y (k : ℕ))) * fs (Fin.last m) (y m)
-            ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := h_via_kernel
-        _ =ᵐ[μ] fun ω =>
-            (∫ y, ∏ k : Fin m, fs' k (y (k : ℕ))
-              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) *
-            (∫ y, fs (Fin.last m) (y m)
-              ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω)) := h_kernel_mul
-        _ =ᵐ[μ] fun ω =>
-            (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
-              | shiftInvariantSigma (α := α)] ω) *
-            (μ[(fun ω' => fs (Fin.last m) (ω' m))
-              | shiftInvariantSigma (α := α)] ω) := by
-          filter_upwards [h_sep_prod, h_sep_last] with ω hp hl
-          rw [hp, hl]
-
-    -- Apply IH and coordinate formula
-    calc μ[(fun ω => ∏ k : Fin (m + 1), fs k (ω (k : ℕ)))
-          | shiftInvariantSigma (α := α)]
-        =ᵐ[μ] μ[(fun ω =>
-            (∏ k : Fin m, fs' k (ω (k : ℕ))) * fs (Fin.last m) (ω m))
-          | shiftInvariantSigma (α := α)] := h_prod_condexp
-      _ =ᵐ[μ] fun ω =>
-          (μ[(fun ω' => ∏ k : Fin m, fs' k (ω' (k : ℕ)))
-            | shiftInvariantSigma (α := α)] ω) *
-          (μ[(fun ω' => fs (Fin.last m) (ω' m))
-            | shiftInvariantSigma (α := α)] ω) := h_prod_factor
-      _ =ᵐ[μ] fun ω =>
-          (∏ k : Fin m, ∫ x, fs' k x ∂(ν (μ := μ) ω)) *
-          (∫ x, fs (Fin.last m) x ∂(ν (μ := μ) ω)) := by
-            filter_upwards [h_ih, h_last] with ω hih hlast
-            rw [hih, hlast]
-      _ =ᵐ[μ] fun ω => ∏ k : Fin (m + 1), ∫ x, fs k x ∂(ν (μ := μ) ω) := by
-            refine Filter.EventuallyEq.of_forall ?_
-            intro ω
-            rw [Fin.prod_univ_castSucc]
-            simp only [Fin.coe_castSucc, Fin.val_last]
-            rfl
-  -/
-
-/-- Factorization theorem: conditional expectation of cylinder has product form.
-
-This is Kallenberg's conclusion: E[∏ₖ fₖ(ξᵢₖ) | 𝓘_ξ] = ∏ₖ ∫fₖ dν a.s.,
-where ν is the conditional law of ξ₁ given 𝓘_ξ.
-
-The proof combines:
-1. Existence of regular conditional distributions (ergodic decomposition)
-2. The extreme members lemma (`extremeMembers_agree`)
-3. Factorization through the conditional kernel
-4. Shift-invariance of the tail σ-algebra
-
-This completes Kallenberg's "First proof" approach using the mean ergodic theorem. -/
-theorem condexp_cylinder_factorizes {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    [StandardBorelSpace α]
-    (_hσ : MeasurePreserving shift μ μ)
-    (m : ℕ) (fs : Fin m → α → ℝ)
-    (_hmeas : ∀ k, Measurable (fs k))
-    (_hbd : ∀ k, ∃ C, ∀ x, |fs k x| ≤ C)
-    -- Conditional independence hypothesis (using sorry to avoid typeclass issues):
-    (_hciid : True) :
-    ∃ (ν_result : Ω[α] → Measure α),
-      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν_result ω)) ∧
-      (∀ᵐ ω ∂μ, ∃ (val : ℝ), val = ∏ k : Fin m, ∫ x, fs k x ∂(ν_result ω)) := by
-  -- Just use our regular conditional distribution ν
-  use ν (μ := μ)
-  constructor
-  · -- ν gives probability measures
-    exact ae_of_all _ (fun ω => ν_isProbabilityMeasure (μ := μ) ω)
-  · -- The value exists (trivially)
-    exact ae_of_all _ (fun ω => ⟨∏ k, ∫ x, fs k x ∂(ν (μ := μ) ω), rfl⟩)
-
-/-- **de Finetti's Theorem via Koopman Operator (Main Result)**
-
-For an exchangeable sequence on a standard Borel space, there exists a random
-probability measure ν such that, conditioned on the tail σ-algebra, the sequence
-is i.i.d. with law ν.
-
-**Statement**: If (ξₙ) is an exchangeable sequence of random variables taking values
-in a standard Borel space α, then there exists a regular conditional distribution
-ν : Ω[α] → Measure α such that:
-
-1. ν(ω) is a probability measure for μ-a.e. ω
-2. Conditional on the tail σ-algebra, the coordinates are i.i.d. with law ν(ω)
-3. The marginal distribution μ equals ∫ ν(ω)^⊗ℕ dμ(ω)
-
-**Proof strategy** (Kallenberg's "first proof"):
-1. Use shift-invariance to apply Mean Ergodic Theorem
-2. Construct regular conditional distribution ν via condExpKernel
-3. Show ν is shift-invariant (extremeMembers_agree)
-4. Prove conditional independence via factorization (condexp_cylinder_factorizes)
-5. Apply monotone class theorem to extend from cylinders to full σ-algebra
-
-**Current status**: Main infrastructure in place, remaining gaps:
-- Conditional independence establishment (needs `Kernel.iIndepFun` development)
-- Shift-invariance circularity resolution
-- Several large proofs requiring mathlib additions
-
-**References**:
-- Kallenberg (2005), "Probabilistic Symmetries and Invariance Principles", Theorem 1.1
-  "First proof" approach, pages 26-27
+The proof uses disjoint-block averaging (see `ContractableFactorization.lean`):
+1. For each n, partition into blocks and average over block positions
+2. Contractability ensures the integral is unchanged
+3. As n → ∞, block averages converge to conditional expectations
+4. The product factorization gives kernel independence
+5. The kernel ν is constructed from the conditional expectation
 -/
 theorem deFinetti_viaKoopman
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
-    (hExch : ∀ π : Equiv.Perm ℕ, Measure.map (Exchangeability.reindex π) μ = μ) :
-    ∃ (ν : Ω[α] → Measure α),
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ) :
+    ∃ (ν : (Ω[α]) → Measure α),
       (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
       (∀ (m : ℕ) (fs : Fin m → α → ℝ),
-        (∀ k, Measurable (fs k)) →
-        (∀ k, ∃ C, ∀ x, |fs k x| ≤ C) →
-        μ[fun ω => ∏ k, fs k (ω k) | shiftInvariantSigma (α := α)]
-          =ᵐ[μ] fun ω => ∏ k, ∫ x, fs k x ∂(ν ω)) := by
-  -- Use the regular conditional distribution constructed via condExpKernel
+        (∀ i, Measurable (fs i)) →
+        (∀ i, ∃ C, ∀ x, |fs i x| ≤ C) →
+        ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+          ∫ ω, (∏ i : Fin m, ∫ x, fs i x ∂(ν ω)) ∂μ) := by
+  -- Use ν from KernelIndependence.lean (the regular conditional distribution)
   use ν (μ := μ)
   constructor
-  · -- ν(ω) is a probability measure a.e.
+  · -- Step 1: ν ω is a probability measure for a.e. ω
+    -- This follows from rcdKernel being a Markov kernel
     apply ae_of_all
     intro ω
-    infer_instance
-  · -- Conditional factorization
-    intro m fs hmeas hbd
-    -- Apply condexp_product_factorization with kernel_indep_finset
-    have hciid : ∀ (S : Finset ℕ) (f : ℕ → Set α),
-        (∀ i ∈ S, MeasurableSet (f i)) →
-        ∀ᵐ a ∂μ, (condExpKernel μ (shiftInvariantSigma (α := α)) a)
-          (⋂ i ∈ S, {ω' | ω' i ∈ f i}) =
-          ∏ i ∈ S, (condExpKernel μ (shiftInvariantSigma (α := α)) a) ({ω' | ω' i ∈ f i}) :=
-      kernel_indep_finset hσ hExch
-    exact condexp_product_factorization hσ hExch hciid m fs hmeas hbd
+    exact IsMarkovKernel.isProbabilityMeasure ω
+  · -- Step 2: Product factorization for bounded measurable functions
+    intro m fs hfs_meas hfs_bd
+    -- Key step: for each i, ∫ fs_i d(ν ω) =ᵃᵉ μ[fs_i ∘ π0 | mSI](ω)
+    have h_ν_eq_ce : ∀ i, (fun ω => ∫ x, fs i x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+        μ[fun ω' => fs i (ω' 0) | mSI] := by
+      intro i
+      have hfi_int : Integrable (fun ω' => fs i (ω' 0)) μ := by
+        obtain ⟨C, hC⟩ := hfs_bd i
+        apply Integrable.of_bound
+          ((hfs_meas i).comp (measurable_pi_apply 0)).aestronglyMeasurable C
+        exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).trans_le (hC (ω 0)))
+      have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hfi_int
+      filter_upwards [h_ce] with ω hω
+      calc ∫ x, fs i x ∂(ν (μ := μ) ω)
+          = ∫ y, fs i (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω (hfs_meas i)
+        _ = μ[fun ω' => fs i (ω' 0) | mSI] ω := hω.symm
+    -- Product of a.e. equalities
+    have h_prod_ae : (fun ω => ∏ i : Fin m, ∫ x, fs i x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+        (fun ω => ∏ i : Fin m, μ[fun ω' => fs i (ω' 0) | mSI] ω) := by
+      have h_all := ae_all_iff.mpr h_ν_eq_ce
+      filter_upwards [h_all] with ω hω
+      exact Finset.prod_congr rfl (fun i _ => hω i)
+    -- Apply condexp_product_factorization_contractable
+    have h_fact := condexp_product_factorization_contractable hσ hContract fs hfs_meas hfs_bd
+    -- The factorization gives: μ[(∏ fᵢ(ωᵢ)) | mSI] =ᵐ ∏ μ[fᵢ(ω₀) | mSI]
+    -- Integrate both sides using tower property
+    have h_lhs_tower : ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
+        ∫ ω, μ[(fun ω' => ∏ i : Fin m, fs i (ω' i.val)) | mSI] ω ∂μ := by
+      symm
+      apply integral_condExp (shiftInvariantSigma_le (α := α))
+    rw [h_lhs_tower]
+    apply integral_congr_ae
+    filter_upwards [h_fact, h_prod_ae] with ω h_fact_ω h_prod_ω
+    rw [h_fact_ω, ← h_prod_ω]
 
-/-! ### Bridge Lemma: Connect conditional expectation factorization to measure products
+/-- Contractability implies conditional i.i.d. (Kallenberg's first proof).
 
-This is the key technical lemma connecting ViaKoopman's factorization results to
-CommonEnding's `conditional_iid_from_directing_measure` infrastructure.
+This is the key implication in de Finetti's theorem: a contractable sequence
+is conditionally i.i.d. given the tail σ-algebra.
 
-Given measurable sets B_i, the integral of the product of indicators equals the
-integral of the product of measures ν(ω)(B_i). This is exactly the "bridge condition"
-needed by CommonEnding.
+This theorem provides the **standard form** of conditionally i.i.d.:
+1. ν(ω) is the conditional distribution at coordinate 0 given mSI
+2. The conditional expectation of the indicator of a cylinder set factors as
+   a product of conditional expectations of single-coordinate indicators
+-/
+theorem conditionallyIID_of_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ) :
+    ∃ (ν : (Ω[α]) → Measure α),
+      (∀ᵐ ω ∂μ, IsProbabilityMeasure (ν ω)) ∧
+      -- Identical distribution: ν ω = conditional distribution at coordinate 0
+      (∀ s, MeasurableSet s →
+        (fun ω => (ν ω s).toReal) =ᵐ[μ]
+          μ[(fun ω' => Set.indicator s (1 : α → ℝ) (ω' 0)) | mSI]) ∧
+      -- Conditional independence: joint CE factors as product
+      (∀ (m : ℕ) (sets : Fin m → Set α),
+        (∀ i, MeasurableSet (sets i)) →
+        μ[(fun ω' => Set.indicator (⋂ (i : Fin m), (fun ω'' => ω'' i.val) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI]
+          =ᵐ[μ] fun ω =>
+            ∏ i : Fin m, μ[(fun ω' => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI] ω) := by
+  -- Use ν from KernelIndependence.lean
+  use ν (μ := μ)
+  refine ⟨?_, ?_, ?_⟩
+  · -- Part 1: ν ω is a probability measure for a.e. ω
+    apply ae_of_all
+    intro ω
+    exact IsMarkovKernel.isProbabilityMeasure ω
+  · -- Part 2: Identical distribution - ν ω s = CE[1_s(ω₀) | mSI](ω) a.e.
+    -- This is the definition of ν via rcdKernel (pushforward of condExpKernel by π₀)
+    --
+    -- By definition:
+    --   ν ω = rcdKernel ω
+    --       = (condExpKernel μ mSI).map π₀ ω
+    --
+    -- For a measurable set s ⊆ α:
+    --   (ν ω) s = (condExpKernel μ mSI ω) (π₀⁻¹(s))
+    --           = (condExpKernel μ mSI ω) {ω' | ω' 0 ∈ s}
+    --
+    -- And by condExp_ae_eq_integral_condExpKernel:
+    --   CE[1_s(ω₀) | mSI] =ᵐ ∫ 1_{ω' 0 ∈ s} d(condExpKernel μ mSI ω)
+    --                     = (condExpKernel μ mSI ω) {ω' | ω' 0 ∈ s}
+    --                     = (ν ω) s
+    --
+    -- The proof requires unwinding the definitions of ν, rcdKernel, and condExpKernel.
+    intro s hs
+    -- The integrand fun ω' => 1_s(ω' 0) is f ∘ π0 where f = Set.indicator s 1
+    let f : α → ℝ := Set.indicator s 1
+    have hf_meas : Measurable f := measurable_const.indicator hs
+    have hf_int : Integrable (f ∘ π0) μ := by
+      apply Integrable.indicator
+      · exact integrable_const 1
+      · exact (measurable_pi0 (α := α)) hs
+    -- By condExp_ae_eq_integral_condExpKernel:
+    -- μ[f ∘ π0 | mSI] =ᵃᵉ ∫ y, f (y 0) ∂(condExpKernel μ mSI ω)
+    have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hf_int
+    -- Combine all the identities
+    filter_upwards [h_ce] with ω hω
+    calc (ν (μ := μ) ω s).toReal
+        = (ν (μ := μ) ω).real s := by simp only [Measure.real]
+      _ = ∫ x, f x ∂(ν (μ := μ) ω) := (integral_indicator_one hs).symm
+      _ = ∫ y, f (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω hf_meas
+      _ = μ[(f ∘ π0) | mSI] ω := hω.symm
+  · -- Part 3: Conditional independence - CE factors as product for indicator functions
+    -- This is exactly condexp_product_factorization_contractable applied to indicators
+    intro m sets hsets
+    -- Define indicator functions fs : Fin m → α → ℝ
+    let fs : Fin m → α → ℝ := fun i => Set.indicator (sets i) 1
+    -- These are bounded (by 1) and measurable
+    have hfs_meas : ∀ i, Measurable (fs i) := fun i =>
+      measurable_const.indicator (hsets i)
+    have hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C := fun i => ⟨1, fun x => by
+      simp only [fs]
+      by_cases hx : x ∈ sets i
+      · simp [Set.indicator_of_mem hx]
+      · simp [Set.indicator_of_notMem hx]⟩
+    -- Apply condexp_product_factorization_contractable
+    have h_fact := condexp_product_factorization_contractable hσ hContract fs hfs_meas hfs_bd
+    -- The LHS indicator is the product of individual indicators
+    -- 1_{∩ᵢ ωᵢ ∈ sets i} = ∏ᵢ 1_{sets i}(ωᵢ)
+    have h_prod_eq : (fun ω' => Set.indicator
+        (⋂ (i : Fin m), (fun ω'' => ω'' i.val) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω')
+        = (fun ω' => ∏ i : Fin m, fs i (ω' i.val)) := by
+      ext ω'
+      simp only [fs]
+      by_cases h : ω' ∈ ⋂ (i : Fin m), (fun ω'' => ω'' i.val) ⁻¹' sets i
+      · -- ω' is in the intersection, so each coordinate is in the corresponding set
+        have h' : ∀ i : Fin m, ω' i.val ∈ sets i := by
+          simpa only [Set.mem_iInter, Set.mem_preimage] using h
+        rw [Set.indicator_of_mem h]
+        -- Each indicator is 1
+        have h_each : ∀ i, Set.indicator (sets i) (1 : α → ℝ) (ω' i.val) = 1 := by
+          intro i
+          rw [Set.indicator_of_mem (h' i)]
+          rfl
+        simp only [h_each, Finset.prod_const_one, Pi.one_apply]
+      · -- ω' is not in the intersection
+        rw [Set.indicator_of_notMem h]
+        -- At least one indicator is 0
+        simp only [Set.mem_iInter, Set.mem_preimage, not_forall] at h
+        obtain ⟨i, hi⟩ := h
+        symm
+        apply Finset.prod_eq_zero (Finset.mem_univ i)
+        rw [Set.indicator_of_notMem hi]
+    -- The RHS factors as product of CEs at coordinate 0
+    -- The key is that 1_{ω' 0 ∈ s}(ω') = 1_s(ω' 0) for ω' : Ω[α]
+    have h_integrands_eq : ∀ i, (fun ω' : Ω[α] => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i)
+        (1 : Ω[α] → ℝ) ω') = (fun ω' => fs i (ω' 0)) := by
+      intro i
+      ext ω'
+      -- Both are indicator functions that evaluate to 1 iff ω' 0 ∈ sets i
+      simp only [fs]
+      rfl
+    have h_rhs_eq : (fun ω => ∏ i : Fin m,
+        μ[(fun ω' => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI] ω)
+        = (fun ω => ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω) := by
+      ext ω
+      apply Finset.prod_congr rfl
+      intro i _
+      simp only [h_integrands_eq i]
+    -- Combine using h_fact
+    rw [h_prod_eq, h_rhs_eq]
+    exact h_fact
+
+/-! ### Transfer to General Spaces
+
+The path-space result `conditionallyIID_of_contractable` can be transferred to general
+random sequences `X : ℕ → Ω → α` via the pushforward measure.
+
+**Key insight**: For `X : ℕ → Ω → α`, the pushforward measure `μ.map (fun ω i => X i ω)`
+on path space satisfies the contractability hypothesis if `X` is contractable.
 -/
 
-/-! ### Exchangeable implies ConditionallyIID
+/-- Transfer path-space contractability to the pushforward of a general sequence.
 
-This theorem shows the complete logical chain from exchangeability to ConditionallyIID,
-assuming the `indicator_product_bridge` lemma. The bridge lemma itself requires
-conditional independence, which must come from ergodic theory or martingale theory.
+Given `X : ℕ → Ω → α` that is contractable, the pushforward measure on `Ω[α] = ℕ → α`
+satisfies the path-space contractability hypothesis. -/
+lemma pathSpace_contractable_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+      Measure.map (fun ω i => ω (k i)) (μ.map (fun ω' i => X i ω')) =
+      Measure.map (fun ω (i : Fin m) => ω i.val) (μ.map (fun ω' i => X i ω')) := by
+  intro m k hk
+  -- The path-space map is the pushforward of the original contractability
+  have hφ_meas : Measurable (fun ω' i => X i ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas i)
+  have hk_meas : Measurable (fun (ω : Ω[α]) i => ω (k i)) :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+  have hid_meas : Measurable (fun (ω : Ω[α]) (i : Fin m) => ω i.val) :=
+    measurable_pi_lambda _ (fun i => measurable_pi_apply i.val)
+  -- Rewrite using composition
+  rw [Measure.map_map hk_meas hφ_meas, Measure.map_map hid_meas hφ_meas]
+  -- The compositions give the original contractability
+  have h1 : (fun ω i => ω (k i)) ∘ (fun ω' i => X i ω') = fun ω' i => X (k i) ω' := rfl
+  have h2 : (fun ω (i : Fin m) => ω i.val) ∘ (fun ω' i => X i ω') = fun ω' i => X i.val ω' := rfl
+  rw [h1, h2]
+  exact hContract m k hk
 
-**Proof strategy:**
-1. Start with exchangeability → contractability (proven in Contractability.lean)
-2. Use contractability to get measure-preserving shift
-3. Construct ν via regular conditional distribution (rcdKernel)
-4. Apply indicator_product_bridge to get the bridge condition
-5. Use CommonEnding.conditional_iid_from_directing_measure to conclude
+/-- Shifting coordinates by +1 preserves the pushforward measure for contractable sequences.
+
+This is the key measure-theoretic step for shift-preservation: if X is contractable,
+then μ.map(i ↦ X(i+1)) = μ.map(i ↦ X i).
+
+**Proof outline:**
+1. Contractability gives finite-dimensional marginal equality
+2. For each n, the marginal on {0,...,n-1} of μ.map(i ↦ X(i+1)) equals
+   the marginal of μ.map(i ↦ X i) (by contractability with k(i) = i+1)
+3. Apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality
+-/
+lemma measure_map_shift_eq_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    Measure.map (fun ω' i => X (i + 1) ω') μ = Measure.map (fun ω' i => X i ω') μ := by
+  -- Both measures are probability measures
+  have hφ_meas : Measurable (fun ω' i => X i ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas i)
+  have hφ1_meas : Measurable (fun ω' i => X (i + 1) ω') :=
+    measurable_pi_lambda _ (fun i => hX_meas (i + 1))
+  haveI h1 : IsProbabilityMeasure (Measure.map (fun ω' i => X (i + 1) ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ1_meas.aemeasurable
+  haveI h2 : IsProbabilityMeasure (Measure.map (fun ω' i => X i ω') μ) :=
+    Measure.isProbabilityMeasure_map hφ_meas.aemeasurable
+  -- Use measure_eq_of_fin_marginals_eq_prob: two probability measures agree iff
+  -- their finite marginals agree
+  apply Exchangeability.measure_eq_of_fin_marginals_eq_prob (α := α)
+  intro n S hS
+  -- Need: marginal on first n coords of μ.map(i ↦ X(i+1)) = marginal of μ.map(i ↦ X i)
+  -- LHS marginal: μ.map(i < n ↦ X(i+1))
+  -- RHS marginal: μ.map(i < n ↦ X i)
+  -- By contractability with k(i) = i+1 (strictly monotone): these are equal
+  have hk : StrictMono (fun i : Fin n => (i.val + 1 : ℕ)) := by
+    intro i j hij
+    exact Nat.add_lt_add_right hij 1
+  -- The marginal projection
+  have h_proj_L : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X (i + 1) ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X (i.val + 1) ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ1_meas]
+    rfl
+  have h_proj_R : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X i ω') μ)
+      = Measure.map (fun ω' (i : Fin n) => X i.val ω') μ := by
+    rw [Measure.map_map (Exchangeability.measurable_prefixProj (α := α)) hφ_meas]
+    rfl
+  rw [h_proj_L, h_proj_R]
+  -- Now apply contractability: hContract gives measure equality
+  have h_eq := hContract n (fun i => i.val + 1) hk
+  -- Extract the set-wise equality from measure equality
+  rw [h_eq]
+
+/-- Shift-preservation transfers to the pushforward measure.
+
+If `X` is contractable, the pushforward measure is shift-preserving. -/
+lemma pathSpace_shift_preserving_of_contractable
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hContract : Contractable μ X) :
+    MeasurePreserving shift (μ.map (fun ω' i => X i ω')) (μ.map (fun ω' i => X i ω')) := by
+  constructor
+  · exact shift_measurable
+  · -- Use contractability with k(i) = i + 1
+    have hφ_meas : Measurable (fun ω' i => X i ω') :=
+      measurable_pi_lambda _ (fun i => hX_meas i)
+    rw [Measure.map_map shift_measurable hφ_meas]
+    -- shift ∘ φ = (fun ω i => X (i+1) ω)
+    have h_comp : shift ∘ (fun ω' i => X i ω') = fun ω' i => X (i + 1) ω' := by
+      ext ω i
+      simp [shift]
+    rw [h_comp]
+    -- Apply the helper lemma
+    exact measure_map_shift_eq_of_contractable X hX_meas hContract
+
+/-- ConditionallyIID transfers between path space and original space.
+
+If `μ_path = μ.map φ` where `φ ω = (fun i => X i ω)`, then
+`ConditionallyIID μ_path id ↔ ConditionallyIID μ X`
+where `id` on path space is `fun i ω => ω i`. -/
+lemma conditionallyIID_transfer
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
+    (hCIID_path : Exchangeability.ConditionallyIID
+        (μ.map (fun ω' i => X i ω')) (fun i (ω : Ω[α]) => ω i)) :
+    Exchangeability.ConditionallyIID μ X := by
+  -- Extract the directing measure from path-space result
+  obtain ⟨ν_path, hν_prob, hν_meas, h_bind⟩ := hCIID_path
+  -- Define the directing measure on original space via composition
+  let φ : Ω → Ω[α] := fun ω' i => X i ω'
+  have hφ_meas : Measurable φ := measurable_pi_lambda _ (fun i => hX_meas i)
+  -- The directing measure on Ω is ν_path ∘ φ
+  let ν : Ω → Measure α := fun ω => ν_path (φ ω)
+  use ν
+  refine ⟨?_, ?_, ?_⟩
+  · -- ν(ω) is a probability measure
+    intro ω
+    exact hν_prob (φ ω)
+  · -- Measurability of ν
+    intro B hB
+    have : (fun ω => ν ω B) = (fun ω => ν_path (φ ω) B) := rfl
+    rw [this]
+    exact (hν_meas B hB).comp hφ_meas
+  · -- The bind formula
+    intro m k hk
+    -- LHS: μ.map (fun ω => fun i => X (k i) ω)
+    -- This equals (μ.map φ).map (fun ω => fun i => ω (k i))
+    have h_lhs : Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ =
+        Measure.map (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) (μ.map φ) := by
+      have hk_meas : Measurable (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) :=
+        measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+      -- Use map_map forward: map f (map g μ) = map (f ∘ g) μ
+      rw [Measure.map_map hk_meas hφ_meas]
+      -- The composition (fun ω i => ω (k i)) ∘ φ = (fun ω i => X (k i) ω)
+      rfl
+    -- RHS: μ.bind (fun ω => Measure.pi (fun _ => ν ω))
+    -- This equals (μ.map φ).bind (fun ω => Measure.pi (fun _ => ν_path ω))
+    have h_rhs : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) =
+        (μ.map φ).bind (fun ω => Measure.pi fun _ : Fin m => ν_path ω) := by
+      simp only [Measure.bind, ν]
+      have h_pi_meas : Measurable (fun ω' : Ω[α] => Measure.pi fun _ : Fin m => ν_path ω') := by
+        apply measurable_measure_pi
+        · intro ω; exact hν_prob ω
+        · intro s hs; exact hν_meas s hs
+      rw [Measure.map_map h_pi_meas hφ_meas]
+      rfl
+    rw [h_lhs, h_rhs]
+    -- Now apply the path-space bind formula
+    exact h_bind m k hk
+
+/-! ### Bridge from Contractability to ConditionallyIID
+
+The bridge from contractability to the bind-based `Exchangeability.ConditionallyIID` requires
+extending from StrictMono indices (which contractability gives) to arbitrary Injective indices
+(which `CommonEnding.conditional_iid_from_directing_measure` needs).
+
+The key insight is that any injective function can be sorted to a StrictMono one, and products
+are commutative. So for injective k : Fin m → ℕ:
+1. Sort k to get sorted : Fin m → ℕ which is StrictMono
+2. k = sorted ∘ σ for some permutation σ of Fin m
+3. Use contractability with sorted to reduce to consecutive indices
+4. Use product commutativity to handle the σ reordering
 -/
 
-end Exchangeability.DeFinetti.ViaKoopman
+/-- Bridge condition for contractable measures: extends from StrictMono to Injective.
+
+This is the key technical step connecting contractability to `conditional_iid_from_directing_measure`.
+The proof uses that any injective function on Fin m can be sorted to a StrictMono one.
+Then contractability reduces to consecutive indices, and product commutativity handles reordering.
+
+**Proof sketch**:
+1. Sort k to get ρ : Fin m → ℕ (StrictMono) and σ : Fin m ≃ Fin m with k = ρ ∘ σ
+2. ∏ i, indicator(B i)(ω(k i)) = ∏ j, indicator(B(σ⁻¹ j))(ω(ρ j))  (reorder)
+3. By contractability: ∫ ... dμ at ρ-indices = ∫ ... dμ at consecutive indices
+4. By condexp_product_factorization_contractable: = ∫ ∏ j, (∫ indicator(B(σ⁻¹ j)) dν) dμ
+5. = ∫ ∏ i, ν(B i) dμ  (by product commutativity)
+-/
+lemma indicator_product_bridge_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
+    (m : ℕ) (k : Fin m → ℕ) (hk : Function.Injective k) (B : Fin m → Set α)
+    (hB_meas : ∀ i, MeasurableSet (B i)) :
+    ∫⁻ ω, ∏ i : Fin m, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ i : Fin m, (ν (μ := μ) ω) (B i) ∂μ := by
+  classical
+  -- Handle m = 0 trivially (empty products are 1)
+  rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+  · simp only [Finset.univ_eq_empty, Finset.prod_empty]
+  -- For m > 0, we proceed by sorting k
+  -- Step 1: Get σ : Perm (Fin m) such that ρ := fun i => k (σ i) is StrictMono
+  obtain ⟨σ, hρ_mono⟩ := injective_implies_strictMono_perm k hk
+  -- Define ρ := k ∘ σ (the sorted version of k)
+  let ρ : Fin m → ℕ := fun i => k (σ i)
+  -- Step 2: Product reindexing lemmas (k i = ρ (σ⁻¹ i) by definition)
+  have h_lhs_reindex : ∀ ω : Ω[α],
+      ∏ i, (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)) =
+      ∏ j, (B (σ j)).indicator (fun _ => (1 : ℝ)) (ω (ρ j)) := fun ω =>
+    (Equiv.prod_comp σ (fun i => (B i).indicator (fun _ => (1 : ℝ)) (ω (k i)))).symm
+  have h_rhs_reindex : ∀ ω : Ω[α],
+      ∏ i, (ν (μ := μ) ω) (B i) = ∏ j, (ν (μ := μ) ω) (B (σ j)) := fun ω =>
+    (Equiv.prod_comp σ (fun i => (ν (μ := μ) ω) (B i))).symm
+  -- Step 3: Use contractability to reduce from ρ-indices to consecutive indices
+  have h_contr_ρ := hContract m ρ hρ_mono
+  -- Step 4: For consecutive indices, apply the existing factorization
+  let fs_σ : Fin m → α → ℝ := fun j => (B (σ j)).indicator (fun _ => 1)
+  have hfs_meas : ∀ j, Measurable (fs_σ j) := fun j =>
+    Measurable.indicator measurable_const (hB_meas (σ j))
+  have hfs_bd : ∀ j, ∃ C, ∀ x, |fs_σ j x| ≤ C := fun j => ⟨1, fun x => by
+    by_cases h : x ∈ B (σ j) <;> simp [fs_σ, h]⟩
+  -- Use conditional expectation factorization
+  have h_ν_eq_ce : ∀ j, (fun ω => ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+      μ[fun ω' => fs_σ j (ω' 0) | mSI] := by
+    intro j
+    have hfj_int : Integrable (fun ω' => fs_σ j (ω' 0)) μ := by
+      obtain ⟨C, hC⟩ := hfs_bd j
+      apply Integrable.of_bound
+        ((hfs_meas j).comp (measurable_pi_apply 0)).aestronglyMeasurable C
+      exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).trans_le (hC (ω 0)))
+    have h_ce := condExp_ae_eq_integral_condExpKernel (shiftInvariantSigma_le (α := α)) hfj_int
+    filter_upwards [h_ce] with ω hω
+    calc ∫ x, fs_σ j x ∂(ν (μ := μ) ω)
+        = ∫ y, fs_σ j (y 0) ∂(condExpKernel μ mSI ω) := integral_ν_eq_integral_condExpKernel ω (hfs_meas j)
+      _ = μ[fun ω' => fs_σ j (ω' 0) | mSI] ω := hω.symm
+  have h_prod_ae : (fun ω => ∏ j : Fin m, ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) =ᵐ[μ]
+      (fun ω => ∏ j : Fin m, μ[fun ω' => fs_σ j (ω' 0) | mSI] ω) := by
+    have h_all := ae_all_iff.mpr h_ν_eq_ce
+    filter_upwards [h_all] with ω hω
+    exact Finset.prod_congr rfl (fun j _ => hω j)
+  have h_fact := condexp_product_factorization_contractable hσ hContract fs_σ hfs_meas hfs_bd
+  -- Tower property and consecutive-index result
+  have h_consec : ∫ ω, (∏ j : Fin m, fs_σ j (ω j.val)) ∂μ =
+      ∫ ω, (∏ j : Fin m, ∫ x, fs_σ j x ∂(ν (μ := μ) ω)) ∂μ := by
+    have h_lhs_tower : ∫ ω, (∏ j : Fin m, fs_σ j (ω j.val)) ∂μ =
+        ∫ ω, μ[(fun ω' => ∏ j : Fin m, fs_σ j (ω' j.val)) | mSI] ω ∂μ := by
+      symm; apply integral_condExp (shiftInvariantSigma_le (α := α))
+    rw [h_lhs_tower]
+    apply integral_congr_ae
+    filter_upwards [h_fact, h_prod_ae] with ω h_fact_ω h_prod_ω
+    rw [h_fact_ω, ← h_prod_ω]
+  have h_ind_integral : ∀ j ω, ∫ x, fs_σ j x ∂(ν (μ := μ) ω) = ((ν (μ := μ) ω) (B (σ j))).toReal :=
+    fun j ω => integral_indicator_one (hB_meas (σ j))
+  -- Step 5: Integral at ρ-indices equals integral at consecutive indices
+  have h_ρ_to_consec : ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
+    have hρ_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω (ρ j)) :=
+      measurable_pi_lambda _ (fun j => measurable_pi_apply (ρ j))
+    have hconsec_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω j.val) :=
+      measurable_pi_lambda _ (fun j => measurable_pi_apply j.val)
+    have hg_meas : Measurable (fun ω' : Fin m → α => ∏ j, fs_σ j (ω' j)) :=
+      Finset.measurable_prod Finset.univ (fun j _ => (hfs_meas j).comp (measurable_pi_apply j))
+    calc ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ
+        = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω (ρ j)) μ) := by
+            rw [integral_map hρ_meas.aemeasurable hg_meas.aestronglyMeasurable]
+      _ = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω j.val) μ) := by
+            rw [h_contr_ρ]
+      _ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
+            rw [integral_map hconsec_meas.aemeasurable hg_meas.aestronglyMeasurable]
+  -- Define auxiliary functions for lintegral conversion
+  let F_ρ : Ω[α] → ℝ := fun ω => ∏ j, fs_σ j (ω (ρ j))
+  let G : Ω[α] → ℝ := fun ω => ∏ j, ((ν (μ := μ) ω) (B (σ j))).toReal
+  have hF_nonneg : ∀ ω, 0 ≤ F_ρ ω := fun ω =>
+    Finset.prod_nonneg (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)
+  have hF_bd : ∀ ω, F_ρ ω ≤ 1 := fun ω => by
+    apply Finset.prod_le_one (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)
+    intro j _
+    by_cases h : ω (ρ j) ∈ B (σ j)
+    · simp only [Set.indicator_of_mem h]; norm_num
+    · simp only [Set.indicator_of_notMem h]; norm_num
+  have hF_int : Integrable F_ρ μ := by
+    apply Integrable.of_bound (C := 1)
+    · exact (Finset.measurable_prod Finset.univ (fun j _ =>
+        (hfs_meas j).comp (measurable_pi_apply (ρ j)))).aestronglyMeasurable
+    · exact ae_of_all μ (fun ω => by simp [Real.norm_eq_abs, abs_of_nonneg (hF_nonneg ω), hF_bd ω])
+  have hG_nonneg : ∀ ω, 0 ≤ G ω := fun ω =>
+    Finset.prod_nonneg (fun j _ => ENNReal.toReal_nonneg)
+  have hG_bd : ∀ ω, G ω ≤ 1 := fun ω => by
+    apply Finset.prod_le_one (fun j _ => ENNReal.toReal_nonneg)
+    intro j _
+    haveI : IsProbabilityMeasure (ν (μ := μ) ω) := ν_isProbabilityMeasure (μ := μ) ω
+    exact ENNReal.toReal_le_of_le_ofReal (by linarith : (0 : ℝ) ≤ 1)
+      (prob_le_one.trans_eq ENNReal.ofReal_one.symm)
+  have hG_int : Integrable G μ := by
+    apply Integrable.of_bound (C := 1)
+    · exact (Finset.measurable_prod Finset.univ (fun j _ =>
+        (ν_eval_measurable (hB_meas (σ j))).ennreal_toReal)).aestronglyMeasurable
+    · exact ae_of_all μ (fun ω => by simp [Real.norm_eq_abs, abs_of_nonneg (hG_nonneg ω), hG_bd ω])
+  -- Chain of equalities
+  calc ∫⁻ ω, ∏ i, ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (ω (k i))) ∂μ
+      = ∫⁻ ω, ∏ j, ENNReal.ofReal ((B (σ j)).indicator (fun _ => (1 : ℝ)) (ω (ρ j))) ∂μ := by
+          congr 1; funext ω
+          rw [← ENNReal.ofReal_prod_of_nonneg (fun i _ =>
+            Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+          rw [← ENNReal.ofReal_prod_of_nonneg (fun j _ =>
+            Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+          congr 1
+          exact h_lhs_reindex ω
+    _ = ∫⁻ ω, ENNReal.ofReal (F_ρ ω) ∂μ := by
+          congr 1; funext ω
+          rw [ENNReal.ofReal_prod_of_nonneg (fun j _ => Set.indicator_nonneg (fun _ _ => zero_le_one) _)]
+    _ = ENNReal.ofReal (∫ ω, F_ρ ω ∂μ) :=
+          (ofReal_integral_eq_lintegral_ofReal hF_int (ae_of_all μ hF_nonneg)).symm
+    _ = ENNReal.ofReal (∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ) := by rw [h_ρ_to_consec]
+    _ = ENNReal.ofReal (∫ ω, G ω ∂μ) := by
+          congr 1
+          rw [h_consec]
+          apply integral_congr_ae
+          filter_upwards with ω
+          simp only [G]; congr 1; ext j; exact h_ind_integral j ω
+    _ = ∫⁻ ω, ENNReal.ofReal (G ω) ∂μ :=
+          ofReal_integral_eq_lintegral_ofReal hG_int (ae_of_all μ hG_nonneg)
+    _ = ∫⁻ ω, ∏ j, ENNReal.ofReal (((ν (μ := μ) ω) (B (σ j))).toReal) ∂μ := by
+          congr 1; funext ω
+          rw [ENNReal.ofReal_prod_of_nonneg (fun j _ => ENNReal.toReal_nonneg)]
+    _ = ∫⁻ ω, ∏ j, (ν (μ := μ) ω) (B (σ j)) ∂μ := by
+          congr 1; funext ω; congr 1; ext j
+          haveI : IsProbabilityMeasure (ν (μ := μ) ω) := ν_isProbabilityMeasure (μ := μ) ω
+          exact ENNReal.ofReal_toReal (measure_ne_top _ _)
+    _ = ∫⁻ ω, ∏ i, (ν (μ := μ) ω) (B i) ∂μ := by
+          congr 1; funext ω; conv_rhs => rw [h_rhs_reindex ω]
+
+/-- Bridge from contractable to bind-based ConditionallyIID on path space.
+
+This is the key lemma connecting contractability to `Exchangeability.ConditionallyIID`.
+It uses `CommonEnding.conditional_iid_from_directing_measure` with the bridge condition
+proved by `indicator_product_bridge_contractable`. -/
+lemma conditionallyIID_bind_of_contractable
+    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
+    (hσ : MeasurePreserving shift μ μ)
+    (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ) :
+    Exchangeability.ConditionallyIID μ (fun i (ω : Ω[α]) => ω i) := by
+  -- Apply CommonEnding.conditional_iid_from_directing_measure
+  apply CommonEnding.conditional_iid_from_directing_measure
+  -- 1. Coordinates are measurable
+  · exact fun i => measurable_pi_apply i
+  -- 2. ν is a probability measure at each point
+  · intro ω
+    exact ν_isProbabilityMeasure (μ := μ) ω
+  -- 3. ν ω s is measurable in ω for each measurable set s
+  · intro s hs
+    exact ν_eval_measurable hs
+  -- 4. Bridge condition: indicator products equal kernel products
+  · intro m k hk B hB_meas
+    exact indicator_product_bridge_contractable hσ hContract m k hk B hB_meas
+
+end Exchangeability.DeFinetti

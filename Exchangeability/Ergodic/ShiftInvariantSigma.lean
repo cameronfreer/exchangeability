@@ -104,8 +104,7 @@ lemma shiftInvariantSigma_le :
   exact hs.1
 
 lemma mem_shiftInvariantSigma_iff {s : Set (Ω[α])} :
-    @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s := by
-  rfl
+    @MeasurableSet _ shiftInvariantSigma s ↔ isShiftInvariant (α := α) s := Iff.rfl
 
 /-- Shift-invariant measurability forces pointwise invariance under the shift map. -/
 lemma shiftInvariantSigma_measurable_shift_eq

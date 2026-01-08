@@ -47,10 +47,7 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 /-- Projection onto the first coordinate. -/
 def π0 : Ω[α] → α := fun ω => ω 0
 
-lemma measurable_pi0 : Measurable (π0 (α := α)) := by
-  classical
-  simpa using (measurable_pi_apply (0 : ℕ) :
-    Measurable fun ω : Ω[α] => ω 0)
+lemma measurable_pi0 : Measurable (π0 (α := α)) := measurable_pi_apply 0
 
 /-! ## Regular conditional distribution kernel -/
 

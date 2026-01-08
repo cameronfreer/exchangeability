@@ -254,12 +254,9 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
       ext ω i; exact h_seq1 ω i
     rw [hcomp0, hcomp1]
     -- Both φ₀ and φ₁ are strictly increasing, so by contractability equal distribution
-    have heq := hContr.allStrictMono_eq k
-      (fun i : Fin k => phi0 r m i.val)
-      (fun i : Fin k => phi1 r m i.val)
-      (fun i j hij => phi0_strictMono r m hr hij)
-      (fun i j hij => phi1_strictMono r m hr hij)
-    exact congrArg (· S) heq
+    exact congrArg (· S) (hContr.allStrictMono_eq k
+      (fun i : Fin k => phi0 r m i.val) (fun i : Fin k => phi1 r m i.val)
+      (fun i j hij => phi0_strictMono r m hr hij) (fun i j hij => phi1_strictMono r m hr hij))
 
   -- Measures on ℕ → α are equal by π-system uniqueness (need probability instances)
   haveI : IsProbabilityMeasure (Measure.map seq0 μ) := Measure.isProbabilityMeasure_map hseq0_meas.aemeasurable

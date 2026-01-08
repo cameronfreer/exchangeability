@@ -7,7 +7,7 @@ import Exchangeability.DeFinetti.ViaKoopman.BlockInjection
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
 import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
 import Exchangeability.Contractability
-import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
+import Exchangeability.Util.ProductBounds
 
 /-!
 # Block Averages for Contractable Factorization
@@ -244,20 +244,10 @@ lemma blockAvg_tendsto_condExp
           apply Finset.measurable_sum
           intro j _
           exact hf.comp (measurable_pi_apply j)
-        -- Y is the conditional expectation, which is mSI-strongly measurable
-        -- Use the same pattern as line 179 in this file
-        have hY_meas_mSI : Measurable[mSI] Y := stronglyMeasurable_condExp.measurable
-        -- Convert mSI-measurable to full measurable via shiftInvariantSigma_le
+        -- Y is the conditional expectation, measurable via shiftInvariantSigma_le
         have hY_meas : Measurable Y :=
-          hY_meas_mSI.mono (shiftInvariantSigma_le (α := α)) le_rfl
-        -- The difference is measurable
-        have hDiff_meas : Measurable (fun ω => A n ω - Y ω) := hA_meas.sub hY_meas
-        -- The absolute value of a measurable real function is measurable
-        -- Use continuous_abs.measurable.comp pattern
-        have hAbs_meas : Measurable (fun ω => |A n ω - Y ω|) :=
-          continuous_abs.measurable.comp hDiff_meas
-        -- Convert Measurable to StronglyMeasurable (for real-valued functions on standard Borel)
-        exact hAbs_meas.stronglyMeasurable
+          stronglyMeasurable_condExp.measurable.mono (shiftInvariantSigma_le (α := α)) le_rfl
+        exact (continuous_abs.measurable.comp (hA_meas.sub hY_meas)).stronglyMeasurable
       -- Rewrite using integral_map_of_stronglyMeasurable
       rw [← integral_map_of_stronglyMeasurable h_pres.measurable h_smeas, h_pres.map_eq]
     rw [h1, h2, h3]

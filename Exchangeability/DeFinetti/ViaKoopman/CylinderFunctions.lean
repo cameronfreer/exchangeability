@@ -45,8 +45,7 @@ def productCylinder {m : ℕ} (fs : Fin m → α → ℝ) : (ℕ → α) → ℝ
 
 omit [MeasurableSpace α] in
 lemma productCylinder_eq_cylinder {m : ℕ} (fs : Fin m → α → ℝ) :
-    productCylinder fs = cylinderFunction (fun coords => ∏ k, fs k (coords k)) := by
-  rfl
+    productCylinder fs = cylinderFunction (fun coords => ∏ k, fs k (coords k)) := rfl
 
 /-- Measurability of cylinder functions. -/
 lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
