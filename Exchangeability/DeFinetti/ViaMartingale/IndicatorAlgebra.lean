@@ -102,15 +102,11 @@ lemma indProd_nonneg_le_one (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set
 
 /-- indProd of zero coordinates is identically 1. -/
 @[simp] lemma indProd_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
-    indProd X 0 C = fun _ => 1 := by
-  funext ω
-  simp [indProd]
+    indProd X 0 C = fun _ => 1 := funext fun _ => by simp [indProd]
 
 /-- indProd on the universal sets is identically 1. -/
 lemma indProd_univ (X : ℕ → Ω → α) (r : ℕ) :
-    indProd X r (fun _ => Set.univ) = fun _ => 1 := by
-  funext ω
-  simp [indProd, Set.indicator]
+    indProd X r (fun _ => Set.univ) = fun _ => 1 := funext fun _ => by simp [indProd, Set.indicator]
 
 /-- indProd is measurable when coordinates are measurable. -/
 @[measurability, fun_prop]
