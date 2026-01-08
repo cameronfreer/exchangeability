@@ -7,7 +7,7 @@ import Exchangeability.DeFinetti.ViaKoopman.BlockInjection
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
 import Exchangeability.DeFinetti.ViaKoopman.DirectingKernel
 import Exchangeability.Contractability
-import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
+import Exchangeability.Util.ProductBounds
 
 /-!
 # Block Averages for Contractable Factorization

@@ -89,7 +89,7 @@ lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC
     simp only [B', abs_div, abs_of_pos hC]
     exact div_le_one_of_le₀ (hB i) (le_of_lt hC)
   -- Apply abs_prod_sub_prod_le to normalized functions
-  have h_norm := Exchangeability.DeFinetti.ViaL2.abs_prod_sub_prod_le A' B' hA' hB'
+  have h_norm := Exchangeability.Util.abs_prod_sub_prod_le A' B' hA' hB'
   -- Relate normalized products to original products
   have h_prod_A : ∏ i, A' i = (∏ i, A i) / C^m := by
     simp only [A', Finset.prod_div_distrib, Finset.prod_const, Finset.card_fin]
