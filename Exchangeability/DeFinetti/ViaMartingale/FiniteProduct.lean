@@ -214,8 +214,7 @@ lemma finite_product_formula_id
     ∀ s ∈ Rectangles,
       (Measure.map (fun ω => fun i : Fin m => X i ω) μ) s
         = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) s := by
-    intro s hs
-    rcases hs with ⟨C, hC, rfl⟩
+    rintro s ⟨C, hC, rfl⟩
 
     -- LHS: map-measure on a rectangle = integral of the product indicator
     have hL :
