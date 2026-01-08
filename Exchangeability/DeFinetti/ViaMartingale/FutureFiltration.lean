@@ -125,11 +125,8 @@ lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace �
   -- X (m + k) = X (m + 1 + (k-1)) = π_{k-1} ∘ shiftRV X (m+1)
   -- where π_n projects to the n-th coordinate
   simp only [futureFiltration]
-  have : X (m + k) = (fun f : ℕ → α => f (k - 1)) ∘ shiftRV X (m + 1) := by
-    funext ω
-    simp [shiftRV]
-    congr 1
-    omega
+  have : X (m + k) = (fun f : ℕ → α => f (k - 1)) ∘ shiftRV X (m + 1) :=
+    funext fun ω => by simp [shiftRV]; congr 1; omega
   rw [this, Set.preimage_comp]
   exact ⟨(fun f : ℕ → α => f (k - 1)) ⁻¹' A, (measurable_pi_apply (k - 1)) hA, rfl⟩
 

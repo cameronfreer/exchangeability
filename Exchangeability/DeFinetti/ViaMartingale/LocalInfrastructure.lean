@@ -186,9 +186,9 @@ lemma condDistrib_factor_indicator_agree
 
   -- Comap measurable spaces are sub-σ-algebras of ambient space
   have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
+    rintro s ⟨t, ht, rfl⟩; exact hη ht
   have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
+    rintro s ⟨t, ht, rfl⟩; exact hζ ht
 
   -- Apply the tower/projection property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
   exact condExp_project_of_le

@@ -248,10 +248,10 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     rw [Measure.map_map (measurable_prefixProj (α := α)) hseq0_meas,
         Measure.map_map (measurable_prefixProj (α := α)) hseq1_meas]
     -- prefixProj k ∘ seq0 = fun ω i => X (φ₀ i) ω
-    have hcomp0 : prefixProj (α := α) k ∘ seq0 = fun ω (i : Fin k) => X (phi0 r m i) ω := by
-      ext ω i; exact h_seq0 ω i
-    have hcomp1 : prefixProj (α := α) k ∘ seq1 = fun ω (i : Fin k) => X (phi1 r m i) ω := by
-      ext ω i; exact h_seq1 ω i
+    have hcomp0 : prefixProj (α := α) k ∘ seq0 = fun ω (i : Fin k) => X (phi0 r m i) ω :=
+      funext fun ω => funext fun i => h_seq0 ω i
+    have hcomp1 : prefixProj (α := α) k ∘ seq1 = fun ω (i : Fin k) => X (phi1 r m i) ω :=
+      funext fun ω => funext fun i => h_seq1 ω i
     rw [hcomp0, hcomp1]
     -- Both φ₀ and φ₁ are strictly increasing, so by contractability equal distribution
     exact congrArg (· S) (hContr.allStrictMono_eq k

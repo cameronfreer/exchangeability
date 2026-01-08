@@ -264,15 +264,11 @@ lemma optionB_Step3b_L2_to_L1
   -- Step 3: lower bound is always `0 ≤ ∫ |B n - Y|`
   have h_lower_ev :
       ∀ᶠ n in atTop, 0 ≤ ∫ ω, |B n ω - Y ω| ∂μ :=
-    Eventually.of_forall (by
-      intro n; exact integral_nonneg (by intro ω; exact abs_nonneg _))
+    Eventually.of_forall (fun _ => integral_nonneg (fun _ => abs_nonneg _))
 
   -- Step 4: squeeze between 0 and the L²-norm difference (which → 0)
-  apply tendsto_of_tendsto_of_tendsto_of_le_of_le'
-  · exact tendsto_const_nhds
-  · exact hL2_norm
-  · exact h_lower_ev
-  · exact h_upper_ev
+  exact tendsto_of_tendsto_of_tendsto_of_le_of_le'
+    tendsto_const_nhds hL2_norm h_lower_ev h_upper_ev
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
@@ -499,12 +495,10 @@ lemma optionB_Step4c_triangle
     -- pointwise triangle: |(A-B)+(B-Y)| ≤ |A-B| + |B-Y|
     have hpt :
         ∀ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ≤
-              |A n ω - B n ω| + |B n ω - Y ω| := by
-      intro ω; exact abs_add_le (A n ω - B n ω) (B n ω - Y ω)
+              |A n ω - B n ω| + |B n ω - Y ω| := fun ω => abs_add_le _ _
     -- rewrite the LHS inside the absolute value
     have hre : (fun ω => |A n ω - Y ω|) =
-               (fun ω => |(A n ω - B n ω) + (B n ω - Y ω)|) := by
-      funext ω; ring_nf
+               (fun ω => |(A n ω - B n ω) + (B n ω - Y ω)|) := funext fun _ => by ring_nf
     -- both RHS summands are integrable
     have hint1 : Integrable (fun ω => |A n ω - B n ω|) μ := by
       obtain ⟨Cg, hCg⟩ := hg_bd

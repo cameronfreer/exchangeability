@@ -187,14 +187,12 @@ private theorem h_tower_of_lagConst_from_one
             integrable_of_bounded_measurable
               (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1))))
         exact h_sum.smul (1 / (m : ℝ))
-      have hfA_int : Integrable (fun ω => f (ω 0) * A' (n + 1) ω) μ := by
-        refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA'_int (n + 1) (Nat.succ_pos n))
-        · exact hf_meas.comp (measurable_pi_apply 0)
-        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
-      have hfY_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
-        refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
-        · exact hf_meas.comp (measurable_pi_apply 0)
-        · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+      have hfA_int : Integrable (fun ω => f (ω 0) * A' (n + 1) ω) μ :=
+        integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ (hA'_int (n + 1) (Nat.succ_pos n))
+      have hfY_int : Integrable (fun ω => f (ω 0) * Y ω) μ :=
+        integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+          ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ integrable_condExp
       -- CE Lipschitz
       have h1 : ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
                     - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
@@ -210,10 +208,9 @@ private theorem h_tower_of_lagConst_from_one
         have hdiff_int : Integrable (fun ω => A' (n + 1) ω - Y ω) μ :=
           (hA'_int (n + 1) (Nat.succ_pos n)).sub integrable_condExp
         have hint_lhs : Integrable (fun ω => |f (ω 0)| * |A' (n + 1) ω - Y ω|) μ := by
-          have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A' (n + 1) ω - Y ω|) μ := by
-            apply AEStronglyMeasurable.mul
-            · exact (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable
-            · exact continuous_abs.comp_aestronglyMeasurable hdiff_int.aestronglyMeasurable
+          have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A' (n + 1) ω - Y ω|) μ :=
+            (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable.mul
+              (continuous_abs.comp_aestronglyMeasurable hdiff_int.aestronglyMeasurable)
           -- Use norm = abs for real numbers, and |a * b| = |a| * |b| for a, b ≥ 0
           have hpt_norm : ∀ᵐ ω ∂μ, ‖|f (ω 0)| * |A' (n + 1) ω - Y ω|‖ ≤ Cf * |A' (n + 1) ω - Y ω| := by
             filter_upwards [hpt] with ω hω
@@ -347,10 +344,9 @@ lemma condexp_pair_factorization_MET
     obtain ⟨Cg, hCg⟩ := hg_bd
     have hZ_bd : ∃ C, ∀ᵐ ω ∂μ, |Z ω| ≤ C := by
       use Cg
-      have hg_int : Integrable (fun ω => g (ω 0)) μ := by
-        constructor
-        · exact (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-        · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))
+      have hg_int : Integrable (fun ω => g (ω 0)) μ :=
+        ⟨(hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable,
+         HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))⟩
       have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg (Classical.choice ‹Nonempty α›))
       have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
         filter_upwards with ω
@@ -359,10 +355,9 @@ lemma condexp_pair_factorization_MET
       have := ae_bdd_condExp_of_ae_bdd (m := mSI) hCg_ae'
       filter_upwards [this] with ω hω; rwa [Real.coe_toNNReal _ hCg_nn] at hω
     obtain ⟨Cf, hCf⟩ := hf_bd
-    have hY_int : Integrable (fun ω => f (ω 0)) μ := by
-      constructor
-      · exact (hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable
-      · exact HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCf (ω 0)))
+    have hY_int : Integrable (fun ω => f (ω 0)) μ :=
+      ⟨(hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable,
+       HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCf (ω 0)))⟩
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
     calc μ[(fun ω => f (ω 0) * Z ω) | mSI]
         =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | mSI] := by

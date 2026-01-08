@@ -286,10 +286,10 @@ lemma integral_prod_reindex_of_contractable
   -- Use contractability: μ ∘ (ω ↦ (ω(k(0)), ..., ω(k(m-1)))) = μ ∘ (ω ↦ (ω₀, ..., ω_{m-1}))
   have h_map := hContract m k hk
   -- The measurable function for mapping to Fin m → α
-  have h_meas_orig : Measurable (fun ω (i : Fin m) => ω i.val : Ω[α] → (Fin m → α)) := by
-    rw [measurable_pi_iff]; intro i; exact measurable_pi_apply _
-  have h_meas_reindex : Measurable (fun ω i => ω (k i) : Ω[α] → (Fin m → α)) := by
-    rw [measurable_pi_iff]; intro i; exact measurable_pi_apply _
+  have h_meas_orig : Measurable (fun ω (i : Fin m) => ω i.val : Ω[α] → (Fin m → α)) :=
+    measurable_pi_iff.mpr fun _ => measurable_pi_apply _
+  have h_meas_reindex : Measurable (fun ω i => ω (k i) : Ω[α] → (Fin m → α)) :=
+    measurable_pi_iff.mpr fun _ => measurable_pi_apply _
   -- The integrand on Fin m → α
   let F : (Fin m → α) → ℝ := fun ω' => ∏ i, fs i (ω' i)
   have hF_meas_base : Measurable F := by
@@ -354,9 +354,7 @@ lemma integral_prod_eq_integral_blockAvg
     -- Define k(i) = blockInjection m n j i for i : Fin m
     let k : Fin m → ℕ := fun i => blockInjection m n j i.val
     -- k is strictly monotone (restriction of strictly monotone function to Fin m)
-    have hk_mono : StrictMono k := by
-      intro i i' hii'
-      exact h_mono hii'
+    have hk_mono : StrictMono k := fun _ _ hii' => h_mono hii'
     -- Apply contractability
     exact integral_prod_reindex_of_contractable hContract fs hfs_meas hfs_bd hk_mono
 

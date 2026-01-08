@@ -281,9 +281,9 @@ lemma condexp_indicator_drop_info_of_pair_law
   -- Direct proof via tower property for sub-σ-algebras
   -- Establish σ-algebra inequalities
   have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hη ht
+    rintro s ⟨t, ht, rfl⟩; exact hη ht
   have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    intro s hs; obtain ⟨t, ht, rfl⟩ := hs; exact hζ ht
+    rintro s ⟨t, ht, rfl⟩; exact hζ ht
   -- Apply tower property
   exact condExp_project_of_le
     (MeasurableSpace.comap η inferInstance)

@@ -127,12 +127,10 @@ def shiftℤInv (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n - 1)
     shiftℤInv (α := α) ω n = ω (n - 1) := rfl
 
 @[simp] lemma shiftℤ_comp_shiftℤInv (ω : Ωℤ[α]) :
-    shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by
-  funext n; simp [shiftℤ, shiftℤInv]
+    shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
 
 @[simp] lemma shiftℤInv_comp_shiftℤ (ω : Ωℤ[α]) :
-    shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by
-  funext n; simp [shiftℤ, shiftℤInv]
+    shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
 
 /-- Restrict a bi-infinite path to its nonnegative coordinates. -/
 def restrictNonneg (ω : Ωℤ[α]) : Ω[α] := fun n => ω (Int.ofNat n)
@@ -149,25 +147,18 @@ def extendByZero (ω : Ω[α]) : Ωℤ[α] :=
   | Int.negSucc _ => ω 0
 
 @[simp] lemma restrictNonneg_extendByZero (ω : Ω[α]) :
-    restrictNonneg (α := α) (extendByZero (α := α) ω) = ω := by
-  funext n
-  simp [extendByZero]
+    restrictNonneg (α := α) (extendByZero (α := α) ω) = ω := by ext; simp [extendByZero]
 
 @[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
-    extendByZero (α := α) ω (Int.ofNat n) = ω n := by
-  simp [extendByZero]
+    extendByZero (α := α) ω (Int.ofNat n) = ω n := by simp [extendByZero]
 
 lemma restrictNonneg_shiftℤ (ω : Ωℤ[α]) :
     restrictNonneg (α := α) (shiftℤ (α := α) ω)
-      = shift (restrictNonneg (α := α) ω) := by
-  funext n
-  simp [restrictNonneg, shiftℤ, shift]
+      = shift (restrictNonneg (α := α) ω) := by ext; simp [restrictNonneg, shiftℤ, shift]
 
 lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
     restrictNonneg (α := α) (shiftℤInv (α := α) ω)
-      = fun n => ω (Int.ofNat n - 1) := by
-  funext n
-  simp [restrictNonneg, shiftℤInv]
+      = fun n => ω (Int.ofNat n - 1) := by ext; simp [restrictNonneg, shiftℤInv]
 
 @[measurability, fun_prop]
 lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) := by
@@ -295,11 +286,7 @@ lemma ae_comp_of_pushforward
 lemma indicator_preimage_comp {B : Set Ω} (K : Ω → ℝ) :
     (Set.indicator (g ⁻¹' B) (K ∘ g))
   = (fun x' => Set.indicator B K (g x')) := by
-  classical
-  funext x'
-  by_cases hx : g x' ∈ B
-  · simp [Set.indicator, hx]
-  · simp [Set.indicator, hx]
+  ext x'; by_cases hx : g x' ∈ B <;> simp [Set.indicator, hx]
 
 end Helpers
 
@@ -519,27 +506,18 @@ lemma integrable_of_ae_bound
 
 /-- Norm/abs bound for indicators (ℝ and general normed targets). -/
 lemma abs_indicator_le_abs_self {Ω} (s : Set Ω) (f : Ω → ℝ) :
-    ∀ x, |s.indicator f x| ≤ |f x| := by
-  intro x
-  by_cases hx : x ∈ s
-  · simp [Set.indicator_of_mem hx]
-  · simp [Set.indicator_of_notMem hx, abs_nonneg]
+    ∀ x, |s.indicator f x| ≤ |f x| := fun x => by
+  by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx, abs_nonneg]
 
 lemma norm_indicator_le_norm_self
     {Ω E} [SeminormedAddCommGroup E] (s : Set Ω) (f : Ω → E) :
-    ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := by
-  intro x
-  by_cases hx : x ∈ s
-  · simp [Set.indicator_of_mem hx]
-  · simp [Set.indicator_of_notMem hx]
+    ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := fun x => by
+  by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx]
 
 /-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
 lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
     s.indicator f = fun x => f x * s.indicator (fun _ => (1 : ℝ)) x := by
-  funext x
-  by_cases hx : x ∈ s
-  · simp [Set.indicator_of_mem hx]
-  · simp [Set.indicator_of_notMem hx]
+  ext x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx]
 
 lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
     (s : Set Ω) (f : Ω → ℝ) :
