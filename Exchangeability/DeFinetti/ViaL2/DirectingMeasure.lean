@@ -3198,9 +3198,37 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
   have h_limit_aesm : AEStronglyMeasurable
       (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ :=
     aestronglyMeasurable_of_tendsto_ae Filter.atTop hφ_aesm_ambient (ae_of_all μ h_int_tendsto)
-  -- Need: tail-AESM. The function IS tail-measurable by construction (pointwise limit of tail-meas).
-  -- For now, leave as sorry and fill later with proper measurable_of_tendsto argument.
-  sorry
+  -- Strategy: Use StronglyMeasurable.limUnder on tail-SM representatives.
+  -- Get the tail-SM ae-representatives for each ∫ φ_n dν(·)
+  let g_n (n : ℕ) : Ω → ℝ := (hφ_aesm n).mk (fun ω => ∫ x, φ n x
+      ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+  have hg_n_sm : ∀ n, @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) (g_n n) :=
+    fun n => (hφ_aesm n).stronglyMeasurable_mk
+  have hg_n_ae : ∀ n, (fun ω => ∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
+      =ᶠ[ae μ] g_n n := fun n => (hφ_aesm n).ae_eq_mk
+  -- g_n converge ae to ∫ f dν(·) (since ∫ φ_n dν(·) → ∫ f dν(·) pointwise and ∫ φ_n dν(·) =ᵐ g_n)
+  have h_g_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => g_n n ω) Filter.atTop
+      (nhds (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) := by
+    have h_ae_eq_all : ∀ᵐ ω ∂μ, ∀ n, g_n n ω = ∫ x, φ n x
+        ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+      rw [ae_all_iff]
+      intro n
+      exact (hg_n_ae n).symm
+    filter_upwards [h_ae_eq_all] with ω h_eq
+    simp_rw [h_eq]
+    exact h_int_tendsto ω
+  -- Use limUnder which is the pointwise limit - StronglyMeasurable.limUnder shows
+  -- that the pointwise limit of tail-SM functions is tail-SM
+  let g_tail : Ω → ℝ := fun ω => limUnder atTop (fun n => g_n n ω)
+  have hg_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) g_tail :=
+    @StronglyMeasurable.limUnder ℕ Ω ℝ (TailSigma.tailSigma X) _ _ _ atTop _
+      (fun n => g_n n) _ hg_n_sm
+  -- g_tail equals ∫ f dν(·) ae (since g_n → ∫ f dν(·) ae, and limUnder captures this limit)
+  have hg_tail_eq : g_tail =ᶠ[ae μ]
+      (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+    filter_upwards [h_g_tendsto] with ω hω
+    exact hω.limUnder_eq
+  exact ⟨g_tail, hg_tail_sm, hg_tail_eq.symm⟩
 
 /-- **Set integral equality for Iic indicators.**
 
