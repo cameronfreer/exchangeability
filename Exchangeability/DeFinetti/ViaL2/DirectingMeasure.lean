@@ -2844,15 +2844,21 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
                 ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
                 = directing_measure X hX_contract hX_meas hX_L2 ω (f i) := by
               intro i
-              have h_norm_eq : (fun a => ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ) =
-                  (f i).indicator (fun _ => (1 : ENNReal)) := by
-                ext a; simp only [Set.indicator, Real.enorm_eq_ofReal_abs]; split_ifs <;> simp
-              rw [h_norm_eq, lintegral_indicator _ (hf i).1]
-              simp
+              have h1 : ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+                    ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+                  = ∫⁻ a, (f i).indicator 1 a
+                    ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                apply lintegral_congr; intro a
+                simp only [Set.indicator, Real.enorm_eq_ofReal_abs, Pi.one_apply]
+                split_ifs <;> simp
+              rw [h1, lintegral_indicator_one (hf i).1]
             simp_rw [h_eq_meas]
+            -- For disjoint measurable sets, sum = measure of union
+            have hdisj' : Pairwise (Function.onFun Disjoint f) := fun i j hij => hdisj i j hij
+            have hmeas : ∀ i, MeasurableSet (f i) := fun i => (hf i).1
             calc ∑' i, directing_measure X hX_contract hX_meas hX_L2 ω (f i)
-                ≤ directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i) :=
-                  measure_iUnion_le f
+                = directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i) :=
+                  (measure_iUnion hdisj' hmeas).symm
               _ ≤ 1 := prob_le_one
           exact ne_top_of_le_ne_top ENNReal.one_ne_top h_le_one
       -- Now show the AEStronglyMeasurable property
@@ -2863,9 +2869,26 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
       have h_partial_aesm : ∀ N, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
           (partialSum N) μ := by
         intro N
-        apply Finset.aestronglyMeasurable_sum
-        intro n _
-        exact (hf n).2
+        -- Use induction on N to build up the sum
+        induction N with
+        | zero =>
+          -- partialSum 0 = 0, which is a constant
+          have h_zero : partialSum 0 = fun _ => 0 := by
+            funext ω
+            show ∑ n ∈ Finset.range 0, _ = 0
+            simp only [Finset.range_zero, Finset.sum_empty]
+          rw [h_zero]
+          exact aestronglyMeasurable_const
+        | succ n ih =>
+          -- partialSum (n+1) = partialSum n + (term at n)
+          have h_succ : partialSum (n + 1) = fun ω => partialSum n ω +
+              ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+            funext ω
+            show ∑ k ∈ Finset.range (n + 1), _ = ∑ k ∈ Finset.range n, _ + _
+            simp only [Finset.sum_range_succ]
+          rw [h_succ]
+          exact ih.add (hf n).2
       -- Partial sums converge pointwise to the full sum
       have h_tendsto : ∀ ω, Filter.Tendsto (fun N => partialSum N ω) Filter.atTop
           (nhds (∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
@@ -2903,11 +2926,16 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
                       rw [Finset.sum_eq_single m]
                       · simp [Set.indicator_of_mem hxm]
                       · intro n hn hn_ne
-                        simp [Set.indicator_of_not_mem (hdisj m n hn_ne |>.symm.ne_of_mem hxm)]
+                        have hne : m ≠ n := Ne.symm hn_ne
+                        have hdisj_mn := hdisj m n hne
+                        rw [Set.indicator_of_notMem]
+                        exact Set.disjoint_left.mp hdisj_mn hxm
                       · intro hm_not; exact absurd hm_mem hm_not
                     · push_neg at hx
-                      simp_rw [Set.indicator_of_not_mem (hx _)]
-                      simp
+                      have h_zero : ∀ n ∈ Finset.range N, (f n).indicator (fun _ => (1:ℝ)) x = 0 :=
+                        fun n hn => Set.indicator_of_notMem (hx n hn) _
+                      rw [Finset.sum_eq_zero h_zero]
+                      exact zero_le_one
                   exact this
             _ = 1 := by simp [measureReal_univ_eq_one]
         have h_summable : Summable (fun n => ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
@@ -2919,7 +2947,65 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
           (nhds (∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) :=
         ae_of_all _ h_tendsto
-      have h_tsum_aesm := aestronglyMeasurable_of_tendsto_ae Filter.atTop h_partial_aesm h_ae_tendsto
+      -- Construct AEStronglyMeasurable directly using exists_stronglyMeasurable_limit_of_tendsto_ae
+      -- Each partialSum n has a tail-strongly measurable ae-representative
+      have h_exists_lim : ∃ g : Ω → ℝ, @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) g ∧
+          ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => partialSum n ω) Filter.atTop (nhds (g ω)) := by
+        -- Get ae-representatives for each partial sum
+        have h_ae_exists : ∀ᵐ ω ∂μ, ∃ l, Filter.Tendsto (fun n => partialSum n ω) Filter.atTop (nhds l) := by
+          filter_upwards with ω
+          exact ⟨_, h_tendsto ω⟩
+        -- Use exists_stronglyMeasurable_limit_of_tendsto_ae with the ambient instance
+        -- and extract the tail-strongly measurable witness
+        choose g_n hg_n_sm hg_n_ae using fun n => (h_partial_aesm n).ae_eq_mk
+        -- Define g_lim as the pointwise limit of the tail-SM functions
+        -- Since g_n are tail-SM and converge ae to the tsum, the limit is tail-SM
+        -- We use that partialSum n =ᶠ[ae μ] g_n and partialSum n → tsum ae
+        -- So g_n → tsum ae
+        -- Define the limit function using the ae-convergent representatives
+        let g_lim : Ω → ℝ := fun ω => ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+        -- Show g_lim is tail-strongly measurable by constructing from the g_n limit
+        -- Each g_n is tail-SM, and g_n ω converges to g_lim ω for ae ω
+        have h_g_n_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => g_n n ω) Filter.atTop (nhds (g_lim ω)) := by
+          filter_upwards [ae_all_iff.mpr hg_n_ae] with ω h_ae
+          simp only [Filter.EventuallyEq] at h_ae
+          have h_eq_ae : ∀ n, g_n n ω = partialSum n ω := fun n => (h_ae n).symm
+          simp_rw [h_eq_ae]
+          exact h_tendsto ω
+        -- Use stronglyMeasurable_of_tendsto for tail σ-algebra
+        -- Note: This requires pointwise convergence, but we only have ae convergence
+        -- Instead, construct the witness using AEStronglyMeasurable.mk
+        have h_g_lim_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g_lim μ := by
+          -- Use the ambient aestronglyMeasurable_of_tendsto_ae, then extract the witness
+          have h_partial_ambient : ∀ n, AEStronglyMeasurable (partialSum n) μ := by
+            intro n
+            -- partialSum n is a finite sum of functions that are ambient-AEStronglyMeasurable
+            induction n with
+            | zero =>
+              have h_zero : partialSum 0 = fun _ => 0 := by
+                ext ω; simp only [Finset.range_zero, Finset.sum_empty]
+              rw [h_zero]; exact aestronglyMeasurable_const
+            | succ m ih =>
+              have h_succ : partialSum (m + 1) = fun ω => partialSum m ω +
+                  ∫ x, (f m).indicator (fun _ => (1:ℝ)) x
+                    ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                ext ω; simp only [Finset.sum_range_succ]
+              rw [h_succ]
+              exact ih.add ((hf m).2.mono_ac TailSigma.ae_mono)
+          exact aestronglyMeasurable_of_tendsto_ae Filter.atTop h_partial_ambient h_ae_tendsto
+        -- From h_g_lim_aesm, extract the tail-SM witness
+        exact ⟨h_g_lim_aesm.mk g_lim, h_g_lim_aesm.stronglyMeasurable_mk,
+          h_ae_tendsto.mono fun ω hω => hω.congr (eventually_of_forall fun n => rfl)
+            (h_g_lim_aesm.ae_eq_mk.symm.mono fun ω' hω' => hω'.symm ▸ rfl)⟩
+      obtain ⟨g_lim, hg_sm, hg_tendsto⟩ := h_exists_lim
+      have h_tsum_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+            (fun ω => ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+        refine ⟨g_lim, hg_sm, ?_⟩
+        -- g_lim is the limit of partialSum, which equals the tsum
+        filter_upwards [hg_tendsto] with ω hω
+        exact tendsto_nhds_unique hω (h_tendsto ω)
       exact AEStronglyMeasurable.congr h_tsum_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
   -- Step 3: Apply π-λ theorem
@@ -2966,10 +3052,8 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
     intro ω
     haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
     -- φ is integrable on any probability measure (simple functions are bounded)
-    have h_int : Integrable (⇑φ) (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-      apply SimpleFunc.integrable
-      intro c _
-      exact measure_ne_top _ _
+    have h_int : Integrable (⇑φ) (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+      SimpleFunc.integrable_of_isFiniteMeasure φ
     exact SimpleFunc.integral_eq_sum φ h_int
 
   -- Rewrite using h_eq
