@@ -117,7 +117,7 @@ lemma lintegral_prod_prob_eq_ofReal_integral
         ENNReal.one_ne_top).mpr h1
     calc f ω ≤ ∏ _i : Fin m, (1 : ℝ) :=
             Finset.prod_le_prod (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
-      _ = 1 := by simp
+      _ = 1 := Finset.prod_const_one
   -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
   symm
   exact ofReal_integral_eq_lintegral_ofReal h_integrable h_nonneg
@@ -297,10 +297,7 @@ lemma finite_product_formula_id
             =ᵐ[μ] (fun ω => (ν ω (C i)).toReal) :=
         fun i => (hν_law 0 (C i) (hC i)).symm
       -- Combine using Finset.prod over a.e. equal functions
-      -- The product of a.e. equal functions is a.e. equal
-      have h_all := ae_all_iff.mpr h_each
-      filter_upwards [h_all] with ω hω
-      -- Both sides are products over Fin m, equal pointwise
+      filter_upwards [ae_all_iff.mpr h_each] with ω hω
       exact Finset.prod_congr rfl (fun i _ => hω i)
 
     -- RHS (mixture) on rectangle:
