@@ -158,9 +158,7 @@ lemma bind_apply_univ_pi
           Measure.bind_apply h_rect_meas h_aemeas
     _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
           -- Step 2: Use measure_pi_univ_pi to convert the product measure on a rectangle
-          congr 1
-          funext ω
-          exact measure_pi_univ_pi (fun _ => ν ω) C
+          congr 1; funext ω; exact measure_pi_univ_pi (fun _ => ν ω) C
 
 /-- **Finite product formula for the first m coordinates** (identity case).
 
