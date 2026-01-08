@@ -30,7 +30,7 @@ import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
 import Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers
 import Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation
 import Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence
-import Exchangeability.DeFinetti.ViaKoopman.KernelIndependence
+import Exchangeability.DeFinetti.ViaKoopman.KernelIndependence_Unfinished
 import Exchangeability.Probability.IntegrationHelpers
 
 open Filter MeasureTheory
@@ -246,18 +246,9 @@ Assuming conditional independence of coordinates given the tail σ-algebra,
 the conditional expectation of a product equals the product of integrals
 against the conditional distribution ν.
 
-**Proof structure note** (218 lines, lines 4977-5194):
-The proof body is commented out and delegated to `condexp_product_factorization_consecutive`.
-The commented-out proof shows the intended inductive structure:
-- Base case: m = 0 (trivial)
-- Inductive step: split product into (first m factors) * (last factor)
-  - Apply IH to first m factors
-  - Use `condexp_coordinate_via_ν` for last factor
-  - Combine using conditional independence
-
-This proof is blocked on finishing the conditional independence machinery.
-Once `hciid` is properly implemented (currently `True`), the proof can be uncommented
-and refined. No immediate subdivision needed - the inductive structure is natural.
+**Note**: This theorem depends on `condexp_product_factorization_consecutive` from
+KernelIndependence_Unfinished.lean, which has sorries. For a complete proof, use
+`deFinetti_viaKoopman_contractable` from ViaKoopmanContractable.lean instead.
 -/
 theorem condexp_product_factorization
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α] [Nonempty α]
@@ -536,10 +527,8 @@ in a standard Borel space α, then there exists a regular conditional distributi
 4. Prove conditional independence via factorization (condexp_cylinder_factorizes)
 5. Apply monotone class theorem to extend from cylinders to full σ-algebra
 
-**Current status**: Main infrastructure in place, remaining gaps:
-- Conditional independence establishment (needs `Kernel.iIndepFun` development)
-- Shift-invariance circularity resolution
-- Several large proofs requiring mathlib additions
+**Current status**: Has sorries (via KernelIndependence_Unfinished.lean).
+For a complete proof, use `deFinetti_viaKoopman_contractable` from ViaKoopmanContractable.lean.
 
 **References**:
 - Kallenberg (2005), "Probabilistic Symmetries and Invariance Principles", Theorem 1.1
