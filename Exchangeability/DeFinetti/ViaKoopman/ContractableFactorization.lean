@@ -83,11 +83,9 @@ lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC
   let B' : Fin m → ℝ := fun i => B i / C
   -- Show normalized functions are bounded by 1
   have hA' : ∀ i, |A' i| ≤ 1 := fun i => by
-    simp only [A', abs_div, abs_of_pos hC]
-    exact div_le_one_of_le₀ (hA i) (le_of_lt hC)
+    simp only [A', abs_div, abs_of_pos hC]; exact div_le_one_of_le₀ (hA i) (le_of_lt hC)
   have hB' : ∀ i, |B' i| ≤ 1 := fun i => by
-    simp only [B', abs_div, abs_of_pos hC]
-    exact div_le_one_of_le₀ (hB i) (le_of_lt hC)
+    simp only [B', abs_div, abs_of_pos hC]; exact div_le_one_of_le₀ (hB i) (le_of_lt hC)
   -- Apply abs_prod_sub_prod_le to normalized functions
   have h_norm := Exchangeability.Util.abs_prod_sub_prod_le A' B' hA' hB'
   -- Relate normalized products to original products
@@ -147,13 +145,9 @@ lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
       -- Both products are 0, so LHS = |0 - 0| = 0 ≤ RHS
       simp only [hA0, hB0, sub_self, abs_zero, Finset.prod_const, Finset.card_fin, zero_pow hm.ne']
       -- Goal: 0 ≤ m * C^(m-1) * sup'(...)(fun _ => 0)
-      -- The sup' of the constant function 0 is 0
-      have h_sup_zero : Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun _ : Fin m => (0 : ℝ)) = 0 := by
-        apply le_antisymm
-        · apply Finset.sup'_le
-          intro i _
-          exact le_refl 0
-        · exact Finset.le_sup'_of_le (fun _ => (0 : ℝ)) (Finset.mem_univ ⟨0, hm⟩) (le_refl 0)
+      have h_sup_zero : Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun _ : Fin m => (0 : ℝ)) = 0 :=
+        le_antisymm (Finset.sup'_le _ _ fun _ _ => le_refl 0)
+          (Finset.le_sup'_of_le (fun _ => (0 : ℝ)) (Finset.mem_univ ⟨0, hm⟩) (le_refl 0))
       simp only [h_sup_zero, mul_zero, le_refl]
     -- Case C > 0: Use abs_prod_sub_prod_le_general
     have hC_pos : 0 < C := lt_of_le_of_ne hC (Ne.symm hC')
@@ -162,10 +156,8 @@ lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
     have h_sum_le_m_max : ∑ i : Fin m, |A i - B i| ≤
         m * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
       calc ∑ i : Fin m, |A i - B i|
-        _ ≤ ∑ _i : Fin m, Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
-            apply Finset.sum_le_sum
-            intro i hi
-            exact Finset.le_sup' (fun i => |A i - B i|) hi
+        _ ≤ ∑ _i : Fin m, Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) :=
+            Finset.sum_le_sum fun i hi => Finset.le_sup' (fun i => |A i - B i|) hi
         _ = Finset.card (Finset.univ : Finset (Fin m)) •
               Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
             rw [Finset.sum_const]
@@ -265,14 +257,12 @@ lemma product_blockAvg_L1_convergence
     -- Sum of limits = limit of sums
     have h_sum_zero : (∑ _ : Fin m, (0 : ℝ)) = 0 := Finset.sum_const_zero
     rw [← h_sum_zero]
-    apply tendsto_finset_sum
-    intro i _
-    exact blockAvg_tendsto_condExp hσ m i (hfs_meas i) ⟨C, fun x => hC_bd i x⟩
+    exact tendsto_finset_sum _ fun i _ =>
+      blockAvg_tendsto_condExp hσ m i (hfs_meas i) ⟨C, fun x => hC_bd i x⟩
 
   -- Apply squeeze theorem
   apply squeeze_zero
-  · intro n
-    exact integral_nonneg (fun _ => abs_nonneg _)
+  · exact fun n => integral_nonneg (fun _ => abs_nonneg _)
   · intro n
     -- Need: ∫ |∏ blockAvg - ∏ CE| ≤ upper n = C^{m-1} * ∑_i ∫ |blockAvg_i - CE_i|
     --
@@ -308,9 +298,8 @@ lemma product_blockAvg_L1_convergence
     let B : Fin m → Ω[α] → ℝ := fun i ω => μ[(fun ω' => fs i (ω' 0)) | mSI] ω
 
     -- Bound on block averages (everywhere)
-    have hA_bd : ∀ i ω, |A i ω| ≤ C := by
-      intro i ω
-      exact blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
+    have hA_bd : ∀ i ω, |A i ω| ≤ C := fun i ω =>
+      blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
 
     -- Bound on conditional expectations (a.e.)
     -- Uses ae_bdd_condExp_of_ae_bdd: bounded f implies bounded condexp
@@ -375,20 +364,12 @@ lemma product_blockAvg_L1_convergence
 
     -- Integrate the pointwise bound
     calc ∫ ω, |∏ i, A i ω - ∏ i, B i ω| ∂μ
-      _ ≤ ∫ ω, C^(m - 1) * ∑ i, |A i ω - B i ω| ∂μ := by
-          apply integral_mono_ae
-          · exact (hprodA_int.sub hprodB_int).abs
-          · apply Integrable.const_mul
-            apply integrable_finset_sum
-            intro i _
-            exact (hAB_diff_int i).abs
-          · exact h_pointwise
+      _ ≤ ∫ ω, C^(m - 1) * ∑ i, |A i ω - B i ω| ∂μ :=
+          integral_mono_ae (hprodA_int.sub hprodB_int).abs
+            ((integrable_finset_sum _ fun i _ => (hAB_diff_int i).abs).const_mul _) h_pointwise
       _ = C^(m - 1) * ∫ ω, ∑ i, |A i ω - B i ω| ∂μ := integral_const_mul _ _
       _ = C^(m - 1) * ∑ i, ∫ ω, |A i ω - B i ω| ∂μ := by
-          congr 1
-          rw [integral_finset_sum]
-          intro i _
-          exact (hAB_diff_int i).abs
+          congr 1; exact integral_finset_sum _ fun i _ => (hAB_diff_int i).abs
       _ = upper n := rfl
   · exact h_upper_tendsto
 
@@ -440,9 +421,8 @@ lemma measure_map_reindexBlock_eq_of_contractable
 
   -- The key: use contractability with k := fun i : Fin N => blockInjection m n j i.val
   -- This k is strictly monotone since blockInjection is strictly monotone
-  have hk_mono : StrictMono (fun i : Fin N => blockInjection m n j i.val) := by
-    intro i₁ i₂ hi
-    exact blockInjection_strictMono m n hn j hi
+  have hk_mono : StrictMono (fun i : Fin N => blockInjection m n j i.val) :=
+    fun i₁ i₂ hi => blockInjection_strictMono m n hn j hi
 
   -- Apply contractability
   have hMarg := hContract N (fun i : Fin N => blockInjection m n j i.val) hk_mono
@@ -854,10 +834,9 @@ theorem condexp_product_factorization_contractable
         apply Integrable.of_bound h_meas_n.aestronglyMeasurable (C^(Fintype.card (Fin m)))
         filter_upwards with ω
         rw [Real.norm_eq_abs, Finset.abs_prod]
-        have : ∏ i : Fin m, |blockAvg m (n + 1) i (fs i) ω| ≤ ∏ _i : Fin m, C := by
-          apply Finset.prod_le_prod (fun i _ => abs_nonneg _)
-          intro i _
-          exact blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
+        have : ∏ i : Fin m, |blockAvg m (n + 1) i (fs i) ω| ≤ ∏ _i : Fin m, C :=
+          Finset.prod_le_prod (fun i _ => abs_nonneg _) fun i _ =>
+            blockAvg_abs_le i (le_of_lt hC_pos) (fun x => hC_bd i x) ω
         calc ∏ i, |blockAvg m (n + 1) i (fs i) ω|
           _ ≤ ∏ _i : Fin m, C := this
           _ = C ^ Fintype.card (Fin m) := by rw [Finset.prod_const, Finset.card_univ]
@@ -868,10 +847,8 @@ theorem condexp_product_factorization_contractable
       -- We need to convert between them for the final bound
       have h_eq_integrands : (fun ω => |blockAvgProd n ω - g ω|) =
           (fun ω => |∏ i : Fin m, blockAvg m (n + 1) i (fs i) ω -
-                    ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω|) := by
-        ext ω
-        congr 1
-        rw [hg_apply ω]
+                    ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω|) :=
+        funext fun ω => congrArg (|·|) (congrArg (blockAvgProd n ω - ·) (hg_apply ω))
       -- The key bound: |∫_s (fₙ - g)| ≤ ∫_s |fₙ - g| ≤ ∫ |fₙ - g| < ε
       calc |∫ ω in s, blockAvgProd n ω ∂μ - ∫ ω in s, g ω ∂μ|
         _ = |∫ ω in s, (blockAvgProd n ω - g ω) ∂μ| := by
@@ -898,9 +875,8 @@ theorem condexp_product_factorization_contractable
     exact tendsto_nhds_unique h_setIntegral_conv h_const_tendsto
 
   -- g is integrable on mSI-sets of finite measure
-  have hg_int_finite : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ → IntegrableOn g s μ := by
-    intro s _ _
-    exact hg_int.integrableOn
+  have hg_int_finite : ∀ s, MeasurableSet[mSI] s → μ s < ⊤ → IntegrableOn g s μ :=
+    fun _ _ _ => hg_int.integrableOn
 
   -- Apply uniqueness of conditional expectation
   -- ae_eq_condExp_of_forall_setIntegral_eq gives: g =ᵐ μ[f | mSI]

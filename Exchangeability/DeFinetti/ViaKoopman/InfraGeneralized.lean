@@ -49,18 +49,8 @@ lemma comap_restrictNonneg_shiftInvariantSigma_le :
   rcases ht with ⟨s, hs, rfl⟩
   -- hs : isShiftInvariant s, i.e., MeasurableSet s ∧ shift⁻¹' s = s
   constructor
-  · -- Measurability: restrictNonneg⁻¹' s is measurable
-    exact measurable_restrictNonneg hs.1
-  · -- Shift-invariance: shiftℤ⁻¹' (restrictNonneg⁻¹' s) = restrictNonneg⁻¹' s
-    ext ω
-    simp only [Set.mem_preimage]
-    -- Goal: shiftℤ ω ∈ restrictNonneg⁻¹' s ↔ ω ∈ restrictNonneg⁻¹' s
-    -- i.e., restrictNonneg (shiftℤ ω) ∈ s ↔ restrictNonneg ω ∈ s
-    rw [restrictNonneg_shiftℤ]
-    -- Now: shift (restrictNonneg ω) ∈ s ↔ restrictNonneg ω ∈ s
-    -- This follows from s being shift-invariant
-    have h_inv : shift ⁻¹' s = s := hs.2
-    rw [← Set.mem_preimage, h_inv]
+  · exact measurable_restrictNonneg hs.1
+  · ext ω; simp only [Set.mem_preimage]; rw [restrictNonneg_shiftℤ, ← Set.mem_preimage, hs.2]
 
 /-- Pulling an almost-everywhere equality back along the natural extension.
 
@@ -104,18 +94,12 @@ lemma condexp_precomp_iterate_eq_twosided
     -- f ∘ shiftℤ^[k+1] = (f ∘ shiftℤ^[k]) ∘ shiftℤ
     have h_comp : (fun ω => f ((shiftℤ (α := α))^[k+1] ω)) =
         (fun ω => f ((shiftℤ (α := α))^[k] ω)) ∘ (shiftℤ (α := α)) := by
-      ext ω
-      simp only [Function.comp_apply]
-      -- Goal: f (shiftℤ^[k+1] ω) = f (shiftℤ^[k] (shiftℤ ω))
-      -- Use: shiftℤ^[k+1] ω = shiftℤ^[k] (shiftℤ ω) by iterate_succ_apply
-      rw [Function.iterate_succ_apply]
+      ext ω; simp only [Function.comp_apply, Function.iterate_succ_apply]
     -- shiftℤ^[k] is measure-preserving
     have hσ_k : MeasurePreserving ((shiftℤ (α := α))^[k]) μhat μhat := hσ.iterate k
     -- f ∘ shiftℤ^[k] is integrable
-    have hf_k : Integrable (fun ω => f ((shiftℤ (α := α))^[k] ω)) μhat := by
-      have : (fun ω => f ((shiftℤ (α := α))^[k] ω)) = f ∘ ((shiftℤ (α := α))^[k]) := rfl
-      rw [this, hσ_k.integrable_comp hf.aestronglyMeasurable]
-      exact hf
+    have hf_k : Integrable (fun ω => f ((shiftℤ (α := α))^[k] ω)) μhat :=
+      (hσ_k.integrable_comp hf.aestronglyMeasurable).mpr hf
     -- Use uniqueness of conditional expectation for the base step
     have h_base : μhat[(fun ω => f ((shiftℤ (α := α))^[k] ω)) ∘ (shiftℤ (α := α))
         | shiftInvariantSigmaℤ (α := α)]
@@ -125,11 +109,9 @@ lemma condexp_precomp_iterate_eq_twosided
       apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
         (shiftInvariantSigmaℤ_le (α := α))
       -- Integrability of f ∘ shiftℤ^[k] ∘ shiftℤ
-      · rw [hσ.integrable_comp hf_k.aestronglyMeasurable]
-        exact hf_k
+      · exact (hσ.integrable_comp hf_k.aestronglyMeasurable).mpr hf_k
       -- IntegrableOn for the condExp
-      · intro s _ _
-        exact MeasureTheory.integrable_condExp.integrableOn
+      · exact fun _ _ _ => MeasureTheory.integrable_condExp.integrableOn
       -- Set integral equality: ∫_s E[g|m] = ∫_s g ∘ T when T⁻¹' s = s
       · intro s hs hμs
         -- First use setIntegral_condExp: ∫_s E[g|m] dμ = ∫_s g dμ
@@ -206,16 +188,13 @@ lemma condexp_precomp_shiftℤInv_eq
       rw [← hs.2]
       simp [h]
   -- Now prove the main result using ae_eq_condExp_of_forall_setIntegral_eq
-  have hf_inv : Integrable (fun ω => f (shiftℤInv (α := α) ω)) μhat := by
-    exact (hσInv.integrable_comp hf.aestronglyMeasurable).mpr hf
+  have hf_inv : Integrable (fun ω => f (shiftℤInv (α := α) ω)) μhat :=
+    (hσInv.integrable_comp hf.aestronglyMeasurable).mpr hf
   symm
   apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
     (shiftInvariantSigmaℤ_le (α := α))
-  -- Integrability
-  · exact hf_inv
-  -- IntegrableOn for the condExp
-  · intro s _ _
-    exact MeasureTheory.integrable_condExp.integrableOn
+  · exact hf_inv  -- Integrability
+  · exact fun _ _ _ => MeasureTheory.integrable_condExp.integrableOn  -- IntegrableOn for the condExp
   -- Set integral equality
   · intro s hs hμs
     rw [MeasureTheory.setIntegral_condExp (shiftInvariantSigmaℤ_le (α := α)) hf hs]
@@ -274,19 +253,10 @@ private lemma integrable_of_bounded_mul_helper
   classical
   obtain ⟨Cφ, hCφ⟩ := hφ_bd
   obtain ⟨Cψ, hCψ⟩ := hψ_bd
-  have hCφ_nonneg : 0 ≤ Cφ := by
-    have h := hCφ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have hCψ_nonneg : 0 ≤ Cψ := by
-    have h := hCψ (Classical.arbitrary Ω)
-    exact (abs_nonneg _).trans h
-  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := by
-    intro ω
-    have hφ := hCφ ω
-    have hψ := hCψ ω
-    have hmul :=
-      mul_le_mul hφ hψ (abs_nonneg _) hCφ_nonneg
-    simpa [abs_mul] using hmul
+  have hCφ_nonneg : 0 ≤ Cφ := (abs_nonneg _).trans (hCφ (Classical.arbitrary Ω))
+  have hCψ_nonneg : 0 ≤ Cψ := (abs_nonneg _).trans (hCψ (Classical.arbitrary Ω))
+  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := fun ω => by
+    simpa [abs_mul] using mul_le_mul (hCφ ω) (hCψ ω) (abs_nonneg _) hCφ_nonneg
   have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
   exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 

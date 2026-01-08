@@ -151,20 +151,12 @@ private lemma shift_iterate_apply (j n : ℕ) (ξ : ℕ → α) :
   induction j generalizing n with
   | zero => simp
   | succ j ih =>
-    simp only [Function.iterate_succ', Function.comp_apply, shift_apply]
-    rw [ih]
-    congr 1
-    omega
+    simp only [Function.iterate_succ', Function.comp_apply, shift_apply, ih]; ring_nf
 
 private lemma shift_iterate_reindex_swap_eq (k m : ℕ) (hm : k + 1 < m) (ω : ℕ → α) :
     shift^[m] (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) = shift^[m] ω := by
-  ext n
-  rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply]
-  -- Need to show: ω (swap k (k+1) (n + m)) = ω (n + m)
-  -- Since n + m ≥ m > k + 1, we have n + m ≠ k and n + m ≠ k + 1
-  have h1 : n + m ≠ k := by omega
-  have h2 : n + m ≠ k + 1 := by omega
-  rw [Equiv.swap_apply_of_ne_of_ne h1 h2]
+  ext n; rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply,
+    Equiv.swap_apply_of_ne_of_ne (by omega : n + m ≠ k) (by omega : n + m ≠ k + 1)]
 
 /-- Preimages of shift-invariant sets under reindex (swap k (k+1)) are the same set.
 
@@ -422,15 +414,9 @@ when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
     (fun ω => f (ω 0) * g (ω (k + 1))) ∘ Exchangeability.reindex (Equiv.swap k (k + 1))
     = fun ω => f (ω 0) * g (ω k) := by
-  ext ω
-  simp only [Function.comp_apply, Exchangeability.reindex_apply]
-  congr 1
-  · -- Show: ω (swap k (k+1) 0) = ω 0
-    have h1 : (0 : ℕ) ≠ k := by omega
-    have h2 : (0 : ℕ) ≠ k + 1 := by omega
-    rw [Equiv.swap_apply_of_ne_of_ne h1 h2]
-  · -- Show: ω (swap k (k+1) (k+1)) = ω k
-    rw [Equiv.swap_apply_right]
+  ext ω; simp only [Function.comp_apply, Exchangeability.reindex_apply,
+    Equiv.swap_apply_of_ne_of_ne (by omega : (0 : ℕ) ≠ k) (by omega : (0 : ℕ) ≠ k + 1),
+    Equiv.swap_apply_right]
 
 end LagConstancyProof
 
