@@ -133,9 +133,7 @@ lemma preimage_rect_future
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
-      have : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C := hC
-      simp only at this
-      exact this i
+      simpa only using (hC : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C) i
   · rcases h with ⟨hB, hC⟩
     refine ⟨?_, ?_⟩
     · simpa [ψ]
@@ -346,9 +344,7 @@ lemma measure_ext_of_future_rectangles
                   · simp [h]; exact hf
                   · simp [h]
                 · intro hf
-                  have := hf ⟨i, Nat.lt_succ_self i⟩
-                  simp at this
-                  exact this
+                  simpa using hf ⟨i, Nat.lt_succ_self i⟩
               rw [h_eq]
               apply MeasurableSpace.measurableSet_generateFrom
               exact ⟨r, C, hC_meas, rfl⟩
