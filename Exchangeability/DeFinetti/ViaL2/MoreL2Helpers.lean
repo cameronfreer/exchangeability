@@ -10,6 +10,7 @@ import Exchangeability.DeFinetti.ViaL2.DirectingMeasure
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.Util.StrictMono
+import Exchangeability.Util.ProductBounds
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
 import Mathlib.Data.Finset.Sort
 import Mathlib.Analysis.SpecialFunctions.Choose
@@ -1738,54 +1739,6 @@ For Route B, we need: if each factor converges in L¹, then the product converge
 (under boundedness assumptions).
 -/
 
-/-- Helper: |∏ f| ≤ 1 when all |f i| ≤ 1. -/
-lemma abs_prod_le_one {n : ℕ} (f : Fin n → ℝ) (hf : ∀ i, |f i| ≤ 1) : |∏ i, f i| ≤ 1 := by
-  rw [Finset.abs_prod]
-  have h1 : ∏ i, |f i| ≤ ∏ _i : Fin n, (1 : ℝ) := by
-    apply Finset.prod_le_prod
-    · intro i _; exact abs_nonneg _
-    · intro i _; exact hf i
-  simp at h1
-  exact h1
-
-/-- Telescoping bound: |∏ f - ∏ g| ≤ ∑ |f_j - g_j| when factors are bounded by 1.
-
-This is proved by induction using the identity:
-  a*b - c*d = a*(b-d) + (a-c)*d
--/
-lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
-    (hf : ∀ i, |f i| ≤ 1) (hg : ∀ i, |g i| ≤ 1) :
-    |∏ i, f i - ∏ i, g i| ≤ ∑ i, |f i - g i| := by
-  induction m with
-  | zero => simp
-  | succ n ih =>
-    rw [Fin.prod_univ_succ, Fin.prod_univ_succ, Fin.sum_univ_succ]
-    let P_f := ∏ i : Fin n, f i.succ
-    let P_g := ∏ i : Fin n, g i.succ
-    -- Use identity: a*b - c*d = a*(b-d) + (a-c)*d
-    have h1 : f 0 * P_f - g 0 * P_g = f 0 * (P_f - P_g) + (f 0 - g 0) * P_g := by ring
-    have hPg : |P_g| ≤ 1 := abs_prod_le_one (fun i => g i.succ) (fun i => hg i.succ)
-    calc |f 0 * P_f - g 0 * P_g|
-        = |f 0 * (P_f - P_g) + (f 0 - g 0) * P_g| := by rw [h1]
-      _ ≤ |f 0 * (P_f - P_g)| + |(f 0 - g 0) * P_g| := abs_add_le _ _
-      _ = |f 0| * |P_f - P_g| + |f 0 - g 0| * |P_g| := by rw [abs_mul, abs_mul]
-      _ ≤ 1 * |P_f - P_g| + |f 0 - g 0| * 1 := by
-          apply add_le_add
-          · exact mul_le_mul_of_nonneg_right (hf 0) (abs_nonneg _)
-          · exact mul_le_mul_of_nonneg_left hPg (abs_nonneg _)
-      _ = |P_f - P_g| + |f 0 - g 0| := by ring
-      _ ≤ (∑ i : Fin n, |f i.succ - g i.succ|) + |f 0 - g 0| := by
-          apply add_le_add_right
-          exact ih (fun i => f i.succ) (fun i => g i.succ)
-                   (fun i => hf i.succ) (fun i => hg i.succ)
-      _ = |f 0 - g 0| + ∑ i : Fin n, |f i.succ - g i.succ| := by ring
-
-/-- Helper: |a - b| ≤ |a| + |b|. -/
-lemma abs_sub_le_abs_add (a b : ℝ) : |a - b| ≤ |a| + |b| := by
-  calc |a - b| = |a + (-b)| := by ring_nf
-    _ ≤ |a| + |-b| := abs_add_le a (-b)
-    _ = |a| + |b| := by rw [abs_neg]
-
 /-- Product of L¹-convergent bounded sequences converges in L¹.
 
 If f_n(i) → g(i) in L¹ for each i, and all functions are bounded by 1,
@@ -1811,7 +1764,7 @@ lemma prod_tendsto_L1_of_L1_tendsto
   -- Step 1: Pointwise bound from abs_prod_sub_prod_le
   have h_pointwise : ∀ n ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω|
       ≤ ∑ i : Fin m, |f n i ω - g i ω| := fun n ω =>
-    abs_prod_sub_prod_le (fun i => f n i ω) (fun i => g i ω)
+    Exchangeability.Util.abs_prod_sub_prod_le (fun i => f n i ω) (fun i => g i ω)
       (fun i => hf_bdd n i ω) (fun i => hg_bdd i ω)
 
   -- Step 2: Sum of L¹ norms tends to 0
@@ -1830,7 +1783,7 @@ lemma prod_tendsto_L1_of_L1_tendsto
     · apply ae_of_all μ
       intro ω
       calc ‖f n i ω - g i ω‖ = |f n i ω - g i ω| := Real.norm_eq_abs _
-        _ ≤ |f n i ω| + |g i ω| := abs_sub_le_abs_add _ _
+        _ ≤ |f n i ω| + |g i ω| := Exchangeability.Util.abs_sub_le_abs_add _ _
         _ ≤ 1 + 1 := add_le_add (hf_bdd n i ω) (hg_bdd i ω)
         _ = 2 := by ring
 

@@ -934,7 +934,7 @@ The key insight is:
 This bridge is needed to complete the sorry at line 178 of TheoremViaKoopman.lean,
 which proves `Contractable μ X → Exchangeable μ X ∧ ConditionallyIID μ X`.
 
-**Status**: Incomplete. The path-space proof in `ViaKoopmanContractable.lean` is complete;
+**Status**: Incomplete. The path-space proof in `ViaKoopman.lean` is complete;
 the original-space bridge requires additional work to match the `ConditionallyIID`
 definition's bind-based formula.
 -/
