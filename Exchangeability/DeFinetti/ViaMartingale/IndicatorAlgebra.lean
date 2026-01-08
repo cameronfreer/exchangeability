@@ -83,9 +83,7 @@ lemma indProd_integrable [MeasurableSpace Ω] [MeasurableSpace α]
   -- indProd X r C is the indicator of firstRCylinder X r C
   rw [indProd_eq_firstRCylinder_indicator]
   -- Indicator functions of measurable sets are integrable under finite measures
-  apply Integrable.indicator
-  · exact integrable_const 1
-  · exact firstRCylinder_measurable_ambient X r C hX hC
+  exact Integrable.indicator (integrable_const 1) (firstRCylinder_measurable_ambient X r C hX hC)
 
 /-- indProd is strongly measurable when coordinates and sets are measurable. -/
 @[measurability, fun_prop]

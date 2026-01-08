@@ -71,18 +71,16 @@ lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
   -- Both are infima of antitone sequences: ⨅ n, revFiltration X (n+1) vs ⨅ n, revFiltration X n
   -- These are equal because shifting by 1 doesn't change infimum of antitone sequence
   simp only [tailSigmaFuture, tailSigma, futureFiltration_eq_rev_succ]
-  apply le_antisymm
-  · exact iInf_mono fun n => revFiltration_antitone X (Nat.le_succ n)
-  · exact le_iInf fun n => iInf_le _ (n + 1)
+  exact le_antisymm (iInf_mono fun n => revFiltration_antitone X (Nat.le_succ n))
+    (le_iInf fun n => iInf_le _ (n + 1))
 
 /-! ### Helper lemmas for tail σ-algebra -/
 
 /-- The tail σ-algebra is a sub-σ-algebra of the ambient σ-algebra. -/
 lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    tailSigma X ≤ (inferInstance : MeasurableSpace Ω) := by
-  refine iInf_le_of_le 0 ?_
-  exact revFiltration_le X hX 0
+    tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
+  iInf_le_of_le 0 (revFiltration_le X hX 0)
 
 /-- Tail σ-algebra is sub-σ-algebra of future filtration. -/
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -93,9 +91,8 @@ lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [Measur
 /-- Indicators of tail-measurable sets are tail-measurable functions. -/
 lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (A : Set Ω) (hA : MeasurableSet[tailSigma X] A) :
-    StronglyMeasurable[tailSigma X] (A.indicator (fun _ => (1 : ℝ))) := by
-  refine StronglyMeasurable.indicator ?_ hA
-  exact stronglyMeasurable_const
+    StronglyMeasurable[tailSigma X] (A.indicator (fun _ => (1 : ℝ))) :=
+  StronglyMeasurable.indicator stronglyMeasurable_const hA
 
 /-- If each coordinate is measurable, then the tail σ-algebra is sigma-finite
 when the base measure is finite.
