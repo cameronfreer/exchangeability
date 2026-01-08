@@ -6,7 +6,7 @@ Authors: Cameron Freer
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
-import Exchangeability.DeFinetti.ViaL2.DirectingMeasure
+import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
 import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 
 /-!
