@@ -7,7 +7,7 @@ import Exchangeability.DeFinetti.ViaL2.Clip01
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
-import Exchangeability.DeFinetti.ViaL2.DirectingMeasure
+import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.Util.StrictMono
