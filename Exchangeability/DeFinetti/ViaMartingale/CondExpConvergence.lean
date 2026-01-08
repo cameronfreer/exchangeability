@@ -144,7 +144,7 @@ lemma extreme_members_equal_on_tail
   -- Preimage formulation to match KallenbergChain API
   have h_pre : ∀ n, Set.indicator B (fun _ => (1 : ℝ)) ∘ X n =
       Set.indicator (X n ⁻¹' B) (fun _ => (1 : ℝ)) := fun n => by
-    ext ω; simp only [Function.comp_apply, Set.indicator]; congr 1
+    ext ω; simp only [Function.comp_apply, Set.indicator]; rfl
   simp only [h_pre]
   -- CE(X_k | rev (m+1)) = CE(X_k | tail) via Kallenberg chain + convergence
   have h_m := condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.lt_succ_self m) hB

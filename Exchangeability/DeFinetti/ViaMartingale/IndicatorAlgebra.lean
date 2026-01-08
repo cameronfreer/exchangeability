@@ -54,12 +54,8 @@ lemma indProd_as_indicator (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set 
         = ∏ i : Fin r, (1 : ℝ) := by congr 1; ext i; simp [Set.indicator, h i]
       _ = 1 := Finset.prod_const_one
   · -- ω doesn't satisfy all conditions
-    by_cases hr : ∃ i : Fin r, X i ω ∉ C i
-    · obtain ⟨i, hi⟩ := hr
-      have : Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω) = 0 := if_neg hi
-      rw [Finset.prod_eq_zero (Finset.mem_univ i) this]
-    · simp only [not_exists, not_not] at hr
-      exact absurd hr h
+    obtain ⟨i, hi⟩ := not_forall.mp h
+    exact Finset.prod_eq_zero (Finset.mem_univ i) (if_neg hi)
 
 /-- Connection between `indProd` and `firstRCylinder`: the product indicator
 equals the indicator of the first-`r` cylinder. -/
