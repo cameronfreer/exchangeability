@@ -296,9 +296,8 @@ lemma contractable_triple_pushforward
     have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) :=
       Measurable.prodMk (by measurability) (Measurable.prodMk (hX_meas r) (by measurability))
     -- The rectangle is measurable
-    have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) := by
-      show MeasurableSet ((Set.univ.pi A) ×ˢ (B ×ˢ (Set.univ.pi C)))
-      exact (MeasurableSet.univ_pi hA).prod (hB.prod (MeasurableSet.univ_pi hC))
+    have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) :=
+      (MeasurableSet.univ_pi hA).prod (hB.prod (MeasurableSet.univ_pi hC))
     -- Apply Measure.map_apply and rewrite using preimage equalities
     calc Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))
         = μ ((fun ω => (Z_r ω, X r ω, Y_future ω)) ⁻¹' ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C))) := by
