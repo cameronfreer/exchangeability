@@ -2837,21 +2837,24 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         rw [integral_tsum]
         · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
         · -- Show ∑' i, ∫⁻ ‖1_{fi}‖ dν ≠ ⊤
-          apply ne_top_of_le_ne_top ENNReal.one_ne_top
-          calc ∑' i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+          -- Each indicator has norm at most 1, and disjoint sets sum to at most 1
+          have h_le_one : ∑' i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω) ≤ 1 := by
+            have h_eq_meas : ∀ i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
                 ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
-              = ∑' i, ∫⁻ a, (f i).indicator (fun _ => (1:ℝ≥0∞)) a
-                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-                  congr 1; ext i; congr 1; ext a
-                  simp only [Set.indicator, enorm_eq_ofReal, Real.norm_eq_abs]
-                  split_ifs <;> simp
-              _ = ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω (f i)) := by
-                  congr 1; ext i
-                  rw [lintegral_indicator _ (hf i).1]
-                  simp
-              _ ≤ (directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i)) :=
-                  measure_iUnion_le (f := f)
+                = directing_measure X hX_contract hX_meas hX_L2 ω (f i) := by
+              intro i
+              have h_norm_eq : (fun a => ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ) =
+                  (f i).indicator (fun _ => (1 : ENNReal)) := by
+                ext a; simp only [Set.indicator, Real.enorm_eq_ofReal_abs]; split_ifs <;> simp
+              rw [h_norm_eq, lintegral_indicator _ (hf i).1]
+              simp
+            simp_rw [h_eq_meas]
+            calc ∑' i, directing_measure X hX_contract hX_meas hX_L2 ω (f i)
+                ≤ directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i) :=
+                  measure_iUnion_le f
               _ ≤ 1 := prob_le_one
+          exact ne_top_of_le_ne_top ENNReal.one_ne_top h_le_one
       -- Now show the AEStronglyMeasurable property
       -- Key: partial sums ∑_{i<N} ∫ 1_{fi} dν are tail-AESM, converge to tsum
       let partialSum (N : ℕ) (ω : Ω) : ℝ := ∑ n ∈ Finset.range N,
