@@ -128,21 +128,15 @@ lemma shift_contractable {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (m : ℕ) : Contractable μ (shiftProcess X m) := by
   intro n k hk_mono
   let k' : Fin n → ℕ := fun i => m + k i
-  have hk'_mono : StrictMono k' := by
-    intro i j hij
-    simp only [k']
-    exact Nat.add_lt_add_left (hk_mono hij) m
+  have hk'_mono : StrictMono k' := fun i j hij => Nat.add_lt_add_left (hk_mono hij) m
   let j : Fin n → ℕ := fun i => m + i
-  have hj_mono : StrictMono j := by
-    intro i₁ i₂ h
-    simp only [j]
-    exact Nat.add_lt_add_left h m
+  have hj_mono : StrictMono j := fun i₁ i₂ h => Nat.add_lt_add_left h m
   have h1 := hX n k' hk'_mono
   have h2 := hX n j hj_mono
   calc Measure.map (fun ω i => shiftProcess X m (k i) ω) μ
-      = Measure.map (fun ω i => X (k' i) ω) μ := by congr
+      = Measure.map (fun ω i => X (k' i) ω) μ := rfl
     _ = Measure.map (fun ω i => X i.val ω) μ := h1
     _ = Measure.map (fun ω i => X (j i) ω) μ := h2.symm
-    _ = Measure.map (fun ω i => shiftProcess X m i.val ω) μ := by congr
+    _ = Measure.map (fun ω i => shiftProcess X m i.val ω) μ := rfl
 
 end Exchangeability.DeFinetti.ViaMartingale

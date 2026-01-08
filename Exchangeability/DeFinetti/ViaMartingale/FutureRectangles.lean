@@ -363,8 +363,7 @@ lemma measure_ext_of_future_rectangles
 
       calc (inferInstance : MeasurableSpace (α × (ℕ → α)))
           = MeasurableSpace.comap Prod.fst inferInstance
-            ⊔ MeasurableSpace.comap Prod.snd inferInstance := by
-              rfl
+            ⊔ MeasurableSpace.comap Prod.snd inferInstance := rfl
         _ ≤ MeasurableSpace.generateFrom S :=
               sup_le h_fst_comap h_snd_comap
     · apply MeasurableSpace.generateFrom_le
