@@ -422,15 +422,13 @@ lemma ce_lipschitz_convergence
     integrable_of_bounded_measurable
       (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
 
-  have hZ_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := fun n => by
-    refine integrable_mul_of_ae_bdd_left ?_ ?_ (hA_int n)
-    · exact hf_meas.comp (measurable_pi_apply 0)
-    · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+  have hZ_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := fun n =>
+    integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ (hA_int n)
 
-  have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ := by
-    refine integrable_mul_of_ae_bdd_left ?_ ?_ integrable_condExp
-    · exact hf_meas.comp (measurable_pi_apply 0)
-    · exact ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩
+  have hW_int : Integrable (fun ω => f (ω 0) * Y ω) μ :=
+    integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))
+      ⟨Cf, ae_of_all μ (fun ω => hCf (ω 0))⟩ integrable_condExp
 
   have h₁ : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
                      - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
@@ -450,10 +448,9 @@ lemma ce_lipschitz_convergence
         filter_upwards with ω
         rw [Real.norm_eq_abs, abs_mul, abs_abs, abs_abs]
         exact mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _)
-      have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A n ω - Y ω|) μ := by
-        apply AEStronglyMeasurable.mul
-        · exact (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable
-        · exact continuous_abs.comp_aestronglyMeasurable ((hA_int n).sub integrable_condExp).aestronglyMeasurable
+      have h_asm : AEStronglyMeasurable (fun ω => |f (ω 0)| * |A n ω - Y ω|) μ :=
+        (continuous_abs.measurable.comp (hf_meas.comp (measurable_pi_apply 0))).aestronglyMeasurable.mul
+          (continuous_abs.comp_aestronglyMeasurable ((hA_int n).sub integrable_condExp).aestronglyMeasurable)
       exact Integrable.mono' hint_rhs h_asm h_bd_by_rhs
     calc ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ
         = ∫ ω, |f (ω 0)| * |A n ω - Y ω| ∂μ := by congr 1; ext ω; exact h_eq ω
@@ -475,9 +472,7 @@ lemma ce_lipschitz_convergence
        - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ := fun n =>
     integral_nonneg (fun ω => abs_nonneg _)
 
-  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero ?_ ?_
-  · exact h_nonneg
-  · exact h_upper
+  exact tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_bound_to_zero h_nonneg h_upper
 
 end CesaroL1Bounded
 

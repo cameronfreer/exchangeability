@@ -267,11 +267,8 @@ lemma optionB_Step3b_L2_to_L1
     Eventually.of_forall (fun _ => integral_nonneg (fun _ => abs_nonneg _))
 
   -- Step 4: squeeze between 0 and the L²-norm difference (which → 0)
-  apply tendsto_of_tendsto_of_tendsto_of_le_of_le'
-  · exact tendsto_const_nhds
-  · exact hL2_norm
-  · exact h_lower_ev
-  · exact h_upper_ev
+  exact tendsto_of_tendsto_of_tendsto_of_le_of_le'
+    tendsto_const_nhds hL2_norm h_lower_ev h_upper_ev
 
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
