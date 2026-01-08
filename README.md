@@ -91,6 +91,9 @@ Exchangeability/
 
 ## Documentation
 
+- **Status**: [`STATUS.md`](STATUS.md) - Current project status and sorry counts
+- **History**: [`DEVELOPMENT_CHRONOLOGY.md`](DEVELOPMENT_CHRONOLOGY.md) - Project development history
+- **Paper Planning**: [`paper/`](paper/) - AFM paper materials and planning
 - **Blueprint**: [`blueprint/`](blueprint/) - Mathematical blueprint
 - **Work Plans**: [`WorkPlans/`](WorkPlans/) - Development notes and roadmaps
 

@@ -2,11 +2,13 @@
 
 This directory contains active work plans, progress tracking, and development resources for the exchangeability formalization project.
 
+**Last Updated:** January 2026
+
 ## Active Documents
 
-### Current Analysis
-- **[AXIOMS_REPORT.md](AXIOMS_REPORT.md)** - Detailed analysis of axioms and sorry statements (updated Oct 6, 2025)
-- **[AXIOMS_SUMMARY.md](AXIOMS_SUMMARY.md)** - Summary of axiom usage across the codebase (updated Oct 6, 2025)
+### Analysis (Oct 2025)
+- **[AXIOMS_REPORT.md](AXIOMS_REPORT.md)** - Detailed analysis of axioms and sorry statements
+- **[AXIOMS_SUMMARY.md](AXIOMS_SUMMARY.md)** - Summary of axiom usage across the codebase
 
 ### Development Roadmap
 - **[L2Proof_ROADMAP.md](L2Proof_ROADMAP.md)** - Roadmap for the L² proof approach (ViaL2.lean)
@@ -16,24 +18,34 @@ This directory contains active work plans, progress tracking, and development re
 
 ## Deprecated Documents
 
-Historical work plans and completed task summaries have been moved to [`Deprecated/`](Deprecated/):
-- Completed task reports (circularity solution, projection lemma)
-- Old session notes and progress reports
-- Superseded implementation plans
+Historical work plans, session notes, and superseded documents have been moved to [`Deprecated/`](Deprecated/):
+- ViaKoopman planning documents
+- DeFinetti-specific session notes
+- Proof exploration notes
+- Old implementation guides
 
 See [`Deprecated/README.md`](Deprecated/README.md) for details.
 
-## Current Project Structure
+## Current Project Status
 
-After the recent refactor (Oct 7, 2025):
-- **Module naming**: `Exchangeability.Core` (was `Exchangeability.Exchangeability`)
-- **Proof organization**: `ViaL2`, `ViaKoopman`, `ViaMartingale` (idiomatic multiple-proof pattern)
+**As of January 2026:**
+
+| Proof | Status | Sorries |
+|-------|--------|---------|
+| **ViaMartingale** | **COMPLETE** | 0 |
+| ViaL2 | ~90% | 5 |
+| ViaKoopman | ~80% | 11 |
+
+- **Module naming**: `Exchangeability.Core`
+- **Proof organization**: `ViaL2`, `ViaKoopman`, `ViaMartingale`
 - **Public API**: `Exchangeability/DeFinetti/Theorem.lean` provides canonical `deFinetti` theorem
 
-## Using This Directory
+## Key Links
 
-- For **current axiom status**: See AXIOMS_REPORT.md
-- For **mathlib resources**: See MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md
-- For **historical context**: See Deprecated/
-- For **project overview**: See main [README](../README.md)
-- For **formal blueprint**: See [blueprint/](../blueprint/)
+| Resource | Location |
+|----------|----------|
+| Project status | [STATUS.md](../STATUS.md) |
+| Project overview | [README.md](../README.md) |
+| Development history | [DEVELOPMENT_CHRONOLOGY.md](../DEVELOPMENT_CHRONOLOGY.md) |
+| AFM paper planning | [paper/](../paper/) |
+| Formal blueprint | [blueprint/](../blueprint/) |
