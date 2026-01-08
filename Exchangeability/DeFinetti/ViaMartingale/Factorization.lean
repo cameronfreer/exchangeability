@@ -199,11 +199,10 @@ lemma finite_level_factorization
   | zero =>
     -- r = 0: empty product is 1
     -- Both indProd X 0 C and the RHS product are constant 1
-    have h_ind : indProd X 0 C = fun _ => 1 := by
-      funext ω; simp [indProd]
+    have h_ind : indProd X 0 C = fun _ => 1 := funext fun _ => by simp [indProd]
     have h_rhs : (fun ω => ∏ i : Fin 0,
-        μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) = fun _ => 1 := by
-      funext ω; simp
+        μ[Set.indicator (C i) (fun _ => (1:ℝ)) ∘ (X 0) | futureFiltration X m] ω) = fun _ => 1 :=
+      funext fun _ => by simp
     -- μ[indProd X 0 C | F] = μ[1 | F] = 1 = RHS (all definitional)
     conv_lhs => rw [h_ind]
     rw [condExp_const (futureFiltration_le X m hX_meas), h_rhs]
@@ -419,8 +418,7 @@ lemma tail_factorization_from_future
               (𝓝 (∏ i : Fin r,
                   μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)) := by
     -- Product of tendsto gives tendsto of product (finitely many factors)
-    have h_ae := ae_all_iff.mpr h_rev
-    filter_upwards [h_ae] with ω hω
+    filter_upwards [ae_all_iff.mpr h_rev] with ω hω
     exact tendsto_finset_prod _ (fun i _ => hω i)
 
   -- Both LHS and RHS converge, and they're equal at each finite level for large m

@@ -51,18 +51,12 @@ lemma indProd_as_indicator (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set 
   split_ifs with h
   · -- ω satisfies all conditions: product equals 1
     calc ∏ i : Fin r, Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω)
-        = ∏ i : Fin r, (1 : ℝ) := by
-          congr 1
-          ext i
-          simp only [Set.indicator]
-          rw [if_pos (h i)]
+        = ∏ i : Fin r, (1 : ℝ) := by congr 1; ext i; simp [Set.indicator, h i]
       _ = 1 := Finset.prod_const_one
   · -- ω doesn't satisfy all conditions
     by_cases hr : ∃ i : Fin r, X i ω ∉ C i
     · obtain ⟨i, hi⟩ := hr
-      have : Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω) = 0 := by
-        simp only [Set.indicator]
-        rw [if_neg hi]
+      have : Set.indicator (C i) (fun _ => (1 : ℝ)) (X i ω) = 0 := if_neg hi
       rw [Finset.prod_eq_zero (Finset.mem_univ i) this]
     · simp only [not_exists, not_not] at hr
       exact absurd hr h
@@ -102,15 +96,11 @@ lemma indProd_nonneg_le_one (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set
 
 /-- indProd of zero coordinates is identically 1. -/
 @[simp] lemma indProd_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
-    indProd X 0 C = fun _ => 1 := by
-  funext ω
-  simp [indProd]
+    indProd X 0 C = fun _ => 1 := funext fun _ => by simp [indProd]
 
 /-- indProd on the universal sets is identically 1. -/
 lemma indProd_univ (X : ℕ → Ω → α) (r : ℕ) :
-    indProd X r (fun _ => Set.univ) = fun _ => 1 := by
-  funext ω
-  simp [indProd, Set.indicator]
+    indProd X r (fun _ => Set.univ) = fun _ => 1 := funext fun _ => by simp [indProd, Set.indicator]
 
 /-- indProd is measurable when coordinates are measurable. -/
 @[measurability, fun_prop]
@@ -123,13 +113,9 @@ lemma indProd_measurable [MeasurableSpace Ω] [MeasurableSpace α]
 /-- indProd product equals multiplication of indProds. -/
 lemma indProd_mul (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
     indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
-  simp only [indProd]
-  rw [← Finset.prod_mul_distrib]
-  congr 1
-  funext i
+  simp only [indProd]; rw [← Finset.prod_mul_distrib]; congr 1; funext i
   simp only [Set.indicator]
-  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;>
-    simp [hC, hD, Set.mem_inter_iff]
+  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;> simp [hC, hD, Set.mem_inter_iff]
 
 /-- indProd on intersection via firstRCylinder. -/
 lemma indProd_inter_eq (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :

@@ -55,12 +55,8 @@ lemma contractable_dist_eq_on_first_r_tail
     intro i j hij
     have hij' : i.1 < j.1 := (Fin.lt_iff_val_lt_val).1 hij
     have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
-    simp only [f]
-    omega
-  have hm_lt : ∀ i, m < f i := by
-    intro i
-    simp only [f]
-    omega
+    simp only [f]; omega
+  have hm_lt : ∀ i, m < f i := fun i => by simp only [f]; omega
   have hk_lt : ∀ i, k < f i := fun i => lt_of_le_of_lt hk (hm_lt i)
   let s₁ : Fin (r+1) → ℕ := Fin.cases m f
   let s₂ : Fin (r+1) → ℕ := Fin.cases k f
@@ -386,10 +382,7 @@ lemma measure_ext_of_future_rectangles
     ext ⟨a, f⟩
     simp only [Bseq, Set.mem_prod, Set.mem_univ, true_and, MartingaleHelpers.cylinder]
     simp
-  have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := by
-    intro n
-    simp only [Bseq]
-    exact measure_ne_top μ Set.univ
+  have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := fun n => by simp only [Bseq]; exact measure_ne_top μ Set.univ
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree

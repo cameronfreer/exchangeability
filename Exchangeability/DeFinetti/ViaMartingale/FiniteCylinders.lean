@@ -53,8 +53,7 @@ lemma finFutureSigma_le_ambient
     finFutureSigma X m k ≤ (inferInstance : MeasurableSpace Ω) := by
   intro s hs
   obtain ⟨t, ht, rfl⟩ := hs
-  have : Measurable (fun ω => fun i : Fin k => X (m + 1 + i.val) ω) := by measurability
-  exact this ht
+  measurability
 
 omit [MeasurableSpace Ω] in
 lemma finFutureSigma_le_futureFiltration
@@ -75,12 +74,8 @@ lemma finFutureSigma_le_futureFiltration
     ext ω i
     simp only [Function.comp_apply, proj, shiftRV]
 
-  -- Since proj is measurable, proj ⁻¹' t is measurable in (ℕ → α)
-  have h_proj_meas : Measurable proj := by measurability
-  have h_proj_t_meas : MeasurableSet (proj ⁻¹' t) := h_proj_meas ht
-
   -- Provide witness for comap: s ∈ futureFiltration means ∃ t', s = (shiftRV X (m+1)) ⁻¹' t'
-  refine ⟨proj ⁻¹' t, h_proj_t_meas, ?_⟩
+  refine ⟨proj ⁻¹' t, (by measurability : Measurable proj) ht, ?_⟩
 
   -- Show s = (shiftRV X (m+1)) ⁻¹' (proj ⁻¹' t)
   rw [← Set.preimage_comp, ← h_factor]
