@@ -175,14 +175,9 @@ lemma optionB_Step3b_L2_to_L1
         AEMeasurable
           (fun ω =>
             birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
-            - condexpL2 (μ := μ) fL2 ω) μ := by
-      -- Both terms are Lp elements, so AEStronglyMeasurable when coerced
-      apply AEMeasurable.sub
-      · -- birkhoffAverage ... fL2 is an Lp element
-        -- When coerced to Ω → ℝ, it's AEStronglyMeasurable → AEMeasurable
-        exact (Lp.aestronglyMeasurable _).aemeasurable
-      · -- condexpL2 fL2 is an Lp element
-        exact (Lp.aestronglyMeasurable _).aemeasurable
+            - condexpL2 (μ := μ) fL2 ω) μ :=
+      AEMeasurable.sub (Lp.aestronglyMeasurable _).aemeasurable
+        (Lp.aestronglyMeasurable _).aemeasurable
 
     -- L¹ ≤ L² via Hölder/Cauchy-Schwarz on a probability space
     have h_le :
@@ -319,13 +314,9 @@ lemma optionB_Step4b_AB_close
           calc |S|
               ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
                 exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (Finset.range n).sum (fun j => Cg) := by
-                apply Finset.sum_le_sum
-                intro j _
-                exact hCg_bd (ω j)
-            _ = n * Cg := by
-                rw [Finset.sum_const, Finset.card_range]
-                ring
+            _ ≤ (Finset.range n).sum (fun j => Cg) :=
+                Finset.sum_le_sum fun j _ => hCg_bd (ω j)
+            _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
       _ = 2 * Cg / (↑n + 1) := by field_simp; ring
   -- Integrate the pointwise bound and squeeze to 0
   have h_upper : ∀ n > 0,
@@ -403,9 +394,8 @@ lemma optionB_Step4b_AB_close
       _ = 2 * Cg / (n + 1) := by simp
 
   -- Lower bound: integrals of nonnegative functions are ≥ 0.
-  have h_lower : ∀ n, 0 ≤ ∫ ω, |A n ω - B n ω| ∂μ := by
-    intro n
-    exact integral_nonneg (fun ω => abs_nonneg _)
+  have h_lower : ∀ n, 0 ≤ ∫ ω, |A n ω - B n ω| ∂μ :=
+    fun n => integral_nonneg fun ω => abs_nonneg _
 
   -- Upper bound eventually: use your bound `h_upper` from Step 4b/4c
   have h_upper' :
@@ -464,11 +454,10 @@ lemma optionB_Step4c_triangle
           rw [hB_def]
           simp [hn]
           -- |(1/n) * ∑ g(ω j)| ≤ (1/n) * ∑ |g(ω j)| ≤ (1/n) * n*Cg = Cg
-          have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg := by
+          have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg :=
             calc |Finset.sum (Finset.range n) (fun j => g (ω j))|
                 ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
-              _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
-                  gcongr with j _; exact hCg _
+              _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by gcongr with j _; exact hCg _
               _ = (n : ℝ) * Cg := by simp
           calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
             _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
@@ -517,11 +506,10 @@ lemma optionB_Step4c_triangle
           have hA_bd : |A n ω| ≤ Cg := by
             rw [hA_def]
             simp
-            have hsum : |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| ≤ ((n : ℝ) + 1) * Cg := by
+            have hsum : |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))| ≤ ((n : ℝ) + 1) * Cg :=
               calc |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
                   ≤ Finset.sum (Finset.range (n + 1)) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
-                _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by
-                    gcongr with j _; exact hCg _
+                _ ≤ Finset.sum (Finset.range (n + 1)) (fun j => Cg) := by gcongr with j _; exact hCg _
                 _ = ((n : ℝ) + 1) * Cg := by simp
             have : |((n : ℝ) + 1)|⁻¹ = ((n : ℝ) + 1)⁻¹ := by rw [abs_of_nonneg]; positivity
             calc |((n : ℝ) + 1)|⁻¹ * |Finset.sum (Finset.range (n + 1)) (fun j => g (ω j))|
@@ -531,11 +519,10 @@ lemma optionB_Step4c_triangle
           have hB_bd : |B n ω| ≤ Cg := by
             rw [hB_def]
             simp [hn]
-            have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg := by
+            have hsum : |Finset.sum (Finset.range n) (fun j => g (ω j))| ≤ (n : ℝ) * Cg :=
               calc |Finset.sum (Finset.range n) (fun j => g (ω j))|
                   ≤ Finset.sum (Finset.range n) (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
-                _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by
-                    gcongr with j _; exact hCg _
+                _ ≤ Finset.sum (Finset.range n) (fun j => Cg) := by gcongr with j _; exact hCg _
                 _ = (n : ℝ) * Cg := by simp
             calc (n : ℝ)⁻¹ * |Finset.sum (Finset.range n) (fun j => g (ω j))|
               _ ≤ (n : ℝ)⁻¹ * ((n : ℝ) * Cg) := by gcongr
@@ -700,17 +687,13 @@ theorem optionB_L1_convergence_bounded
           (fun ω => G (shift^[k] ω)) := by
         exact hk_pres.quasiMeasurePreserving.ae_eq_comp hfL2_eq
       -- Now use iterate_shift_eval0': shift^[k] ω 0 = ω k
-      have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) := by
-        apply ae_of_all; intro ω
-        simp only [G]
-        exact congr_arg g (iterate_shift_eval0' k ω)
+      have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) :=
+        ae_of_all _ fun ω => congr_arg g (iterate_shift_eval0' k ω)
       exact hpull.trans heval
 
     -- Pass 3: Combine summands and unfold birkhoffAverage
     have hterms : ∀ k, (fun ω => ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]
-        (fun ω => g (ω k)) := by
-      intro k
-      exact (h1_k k).trans (h2_k k)
+        (fun ω => g (ω k)) := fun k => (h1_k k).trans (h2_k k)
 
     -- Combine finite a.e. conditions for the sum
     have hsum : (fun ω => ∑ k ∈ Finset.range n, ((koopman shift hσ)^[k] fL2) ω) =ᵐ[μ]

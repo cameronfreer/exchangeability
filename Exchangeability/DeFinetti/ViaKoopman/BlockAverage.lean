@@ -93,10 +93,7 @@ lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measura
   by_cases hn : n = 0
   · simp only [hn, ↓reduceDIte, measurable_const]
   · simp only [hn, ↓reduceDIte]
-    apply Measurable.const_mul
-    apply Finset.measurable_sum
-    intro j _
-    exact hf.comp (measurable_pi_apply _)
+    exact (Finset.measurable_sum _ fun j _ => hf.comp (measurable_pi_apply _)).const_mul _
 
 /-- Block averages of bounded functions are bounded.
 
@@ -175,9 +172,9 @@ lemma blockAvg_tendsto_condExp
     rfl
 
   -- Key fact 2: Y is shift-invariant (CE w.r.t. mSI is constant on shift orbits)
-  have hf_int : Integrable (fun ω : Ω[α] => f (ω 0)) μ := by
-    obtain ⟨C, hC⟩ := hf_bd
-    exact integrable_of_bounded_measurable (hf.comp (measurable_pi_apply 0)) C (fun ω => hC (ω 0))
+  have hf_int : Integrable (fun ω : Ω[α] => f (ω 0)) μ :=
+    let ⟨C, hC⟩ := hf_bd
+    integrable_of_bounded_measurable (hf.comp (measurable_pi_apply 0)) C fun ω => hC (ω 0)
 
   have h_Y_shift_inv : ∀ p : ℕ, (fun ω => Y (shift^[p] ω)) =ᵐ[μ] Y := by
     intro p
@@ -279,7 +276,7 @@ lemma integral_prod_reindex_of_contractable
         Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m') => ω i.val) μ)
     {m : ℕ} (fs : Fin m → α → ℝ)
     (hfs_meas : ∀ i, Measurable (fs i))
-    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
+    (_hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C)
     {k : Fin m → ℕ} (hk : StrictMono k) :
     ∫ ω, (∏ i : Fin m, fs i (ω i.val)) ∂μ =
     ∫ ω, (∏ i : Fin m, fs i (ω (k i))) ∂μ := by
@@ -292,10 +289,8 @@ lemma integral_prod_reindex_of_contractable
     measurable_pi_iff.mpr fun _ => measurable_pi_apply _
   -- The integrand on Fin m → α
   let F : (Fin m → α) → ℝ := fun ω' => ∏ i, fs i (ω' i)
-  have hF_meas_base : Measurable F := by
-    apply Finset.measurable_prod
-    intro i _
-    exact (hfs_meas i).comp (measurable_pi_apply i)
+  have hF_meas_base : Measurable F :=
+    Finset.measurable_prod _ fun i _ => (hfs_meas i).comp (measurable_pi_apply i)
   have hF_meas : AEStronglyMeasurable F (Measure.map (fun ω (i : Fin m) => ω i.val) μ) :=
     hF_meas_base.aestronglyMeasurable
   -- Rewrite both sides using integral_map
@@ -318,7 +313,7 @@ This is proved by:
 2. Sum over all j and divide by n^m to get block averages
 -/
 lemma integral_prod_eq_integral_blockAvg
-    (hσ : MeasurePreserving shift μ μ)
+    (_hσ : MeasurePreserving shift μ μ)
     (hContract : ∀ (m' : ℕ) (k : Fin m' → ℕ), StrictMono k →
         Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m') => ω i.val) μ)
     {m n : ℕ} (hn : 0 < n)
@@ -374,7 +369,7 @@ lemma integral_prod_eq_integral_blockAvg
   -- Step 3: LHS is constant in j, so equals average over all j
   -- Since h_each_j says LHS = RHS(j) for each j, and LHS doesn't depend on j:
   --   n^m * LHS = ∑_j LHS = ∑_j RHS(j)
-  have h_card : Fintype.card (Fin m → Fin n) = n^m := by simp [Fintype.card_fun, Fintype.card_fin]
+  have h_card : Fintype.card (Fin m → Fin n) = n^m := by simp [Fintype.card_fin]
 
   -- Case n = 0: vacuously true (no choice functions exist)
   -- Case m = 0: both sides are ∫ 1 dμ = 1
@@ -451,7 +446,7 @@ lemma integral_prod_eq_integral_blockAvg
   simp_rw [h_prod_blockAvg_eq]
 
   -- ∫ (1/n^m) * ∑_j ... = (1/n^m) * ∫ ∑_j ...
-  rw [integral_mul_left]
+  rw [integral_const_mul]
 
   -- ∫ ∑_j ... = ∑_j ∫ ... (Fubini for finite sum)
   rw [integral_finset_sum]
