@@ -138,9 +138,7 @@ lemma preimage_rect_future
     refine ⟨?_, ?_⟩
     · simpa [ψ]
     · intro i
-      have : X (m + 1 + i.1) ω ∈ C i := hC i
-      simp only [ψ, shiftRV]
-      exact this
+      simpa only [ψ, shiftRV] using hC i
 
 /-- **Finite-dimensional equality on future rectangles with standard cylinders.**
 For `k ≤ m` and measurable `B`, the measures of
