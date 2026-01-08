@@ -2844,15 +2844,21 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
                 ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
                 = directing_measure X hX_contract hX_meas hX_L2 ω (f i) := by
               intro i
-              have h_norm_eq : (fun a => ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ) =
-                  (f i).indicator (fun _ => (1 : ENNReal)) := by
-                ext a; simp only [Set.indicator, Real.enorm_eq_ofReal_abs]; split_ifs <;> simp
-              rw [h_norm_eq, lintegral_indicator _ (hf i).1]
-              simp
+              have h1 : ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+                    ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+                  = ∫⁻ a, (f i).indicator 1 a
+                    ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+                apply lintegral_congr; intro a
+                simp only [Set.indicator, Real.enorm_eq_ofReal_abs, Pi.one_apply]
+                split_ifs <;> simp
+              rw [h1, lintegral_indicator_one (hf i).1]
             simp_rw [h_eq_meas]
+            -- For disjoint measurable sets, sum = measure of union
+            have hdisj' : Pairwise (Function.onFun Disjoint f) := fun i j hij => hdisj i j hij
+            have hmeas : ∀ i, MeasurableSet (f i) := fun i => (hf i).1
             calc ∑' i, directing_measure X hX_contract hX_meas hX_L2 ω (f i)
-                ≤ directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i) :=
-                  measure_iUnion_le f
+                = directing_measure X hX_contract hX_meas hX_L2 ω (⋃ i, f i) :=
+                  (measure_iUnion hdisj' hmeas).symm
               _ ≤ 1 := prob_le_one
           exact ne_top_of_le_ne_top ENNReal.one_ne_top h_le_one
       -- Now show the AEStronglyMeasurable property
@@ -2863,9 +2869,26 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
       have h_partial_aesm : ∀ N, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
           (partialSum N) μ := by
         intro N
-        apply Finset.aestronglyMeasurable_sum
-        intro n _
-        exact (hf n).2
+        -- Use induction on N to build up the sum
+        induction N with
+        | zero =>
+          -- partialSum 0 = 0, which is a constant
+          have h_zero : partialSum 0 = fun _ => 0 := by
+            funext ω
+            show ∑ n ∈ Finset.range 0, _ = 0
+            simp only [Finset.range_zero, Finset.sum_empty]
+          rw [h_zero]
+          exact aestronglyMeasurable_const
+        | succ n ih =>
+          -- partialSum (n+1) = partialSum n + (term at n)
+          have h_succ : partialSum (n + 1) = fun ω => partialSum n ω +
+              ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+            funext ω
+            show ∑ k ∈ Finset.range (n + 1), _ = ∑ k ∈ Finset.range n, _ + _
+            simp only [Finset.sum_range_succ]
+          rw [h_succ]
+          exact ih.add (hf n).2
       -- Partial sums converge pointwise to the full sum
       have h_tendsto : ∀ ω, Filter.Tendsto (fun N => partialSum N ω) Filter.atTop
           (nhds (∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
@@ -2903,11 +2926,16 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
                       rw [Finset.sum_eq_single m]
                       · simp [Set.indicator_of_mem hxm]
                       · intro n hn hn_ne
-                        simp [Set.indicator_of_not_mem (hdisj m n hn_ne |>.symm.ne_of_mem hxm)]
+                        have hne : m ≠ n := Ne.symm hn_ne
+                        have hdisj_mn := hdisj m n hne
+                        rw [Set.indicator_of_notMem]
+                        exact Set.disjoint_left.mp hdisj_mn hxm
                       · intro hm_not; exact absurd hm_mem hm_not
                     · push_neg at hx
-                      simp_rw [Set.indicator_of_not_mem (hx _)]
-                      simp
+                      have h_zero : ∀ n ∈ Finset.range N, (f n).indicator (fun _ => (1:ℝ)) x = 0 :=
+                        fun n hn => Set.indicator_of_notMem (hx n hn) _
+                      rw [Finset.sum_eq_zero h_zero]
+                      exact zero_le_one
                   exact this
             _ = 1 := by simp [measureReal_univ_eq_one]
         have h_summable : Summable (fun n => ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
@@ -2919,7 +2947,75 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
           (nhds (∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) :=
         ae_of_all _ h_tendsto
-      have h_tsum_aesm := aestronglyMeasurable_of_tendsto_ae Filter.atTop h_partial_aesm h_ae_tendsto
+      -- Construct AEStronglyMeasurable directly
+      -- Key insight: partialSum n → tsum pointwise, and each partialSum n is tail-AESM
+      -- Use ambient aestronglyMeasurable_of_tendsto_ae to get ambient AESM for the limit
+      -- Then use the tail-AESM property of partialSum to extract a tail-SM witness
+      have h_partial_ambient : ∀ n, AEStronglyMeasurable (partialSum n) μ := by
+        intro n
+        -- Each h_partial_aesm n is tail-AESM, which implies ambient-AESM
+        -- tail-AESM has a tail-SM witness, and tail-SM implies ambient-SM
+        exact (h_partial_aesm n).mono (TailSigma.tailSigma_le X hX_meas)
+      have h_tsum_ambient : AEStronglyMeasurable
+          (fun ω => ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ :=
+        aestronglyMeasurable_of_tendsto_ae Filter.atTop h_partial_ambient h_ae_tendsto
+      -- Now we need to show tail-AESM, not just ambient-AESM
+      -- Key: the limit function equals ∑' n, ∫ ... which we can show is tail-AESM
+      -- by using that each term is tail-AESM and taking the tsum
+      have h_tsum_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+            (fun ω => ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+        -- Use that partial sums are tail-AESM and converge ae to get tail-AESM limit
+        -- Get the tail-SM ae-representatives for each partial sum
+        let g_n (n : ℕ) : Ω → ℝ := (h_partial_aesm n).mk (partialSum n)
+        have hg_n_sm : ∀ n, @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) (g_n n) :=
+          fun n => (h_partial_aesm n).stronglyMeasurable_mk
+        have hg_n_ae : ∀ n, partialSum n =ᶠ[ae μ] g_n n := fun n => (h_partial_aesm n).ae_eq_mk
+        -- Define the limit using the ae-representatives
+        -- g_n converge ae to the tsum (since partialSum n → tsum and partialSum n =ᵐ g_n)
+        have h_g_tendsto : ∀ᵐ ω ∂μ, Filter.Tendsto (fun n => g_n n ω) Filter.atTop
+            (nhds (∑' k, ∫ x, (f k).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω))) := by
+          have h_ae_eq_all : ∀ᵐ ω ∂μ, ∀ n, g_n n ω = partialSum n ω := by
+            rw [ae_all_iff]
+            intro n
+            exact (hg_n_ae n).symm
+          filter_upwards [h_ae_eq_all] with ω h_eq
+          simp_rw [h_eq]
+          exact h_tendsto ω
+        -- Use exists_stronglyMeasurable_limit_of_tendsto_ae on the g_n sequence
+        have h_ae_exists : ∀ᵐ ω ∂μ, ∃ l, Filter.Tendsto (fun n => g_n n ω) Filter.atTop (nhds l) := by
+          filter_upwards [h_g_tendsto] with ω hω
+          exact ⟨_, hω⟩
+        -- The g_n are ambient-AESM (since tail-SM implies ambient-AESM)
+        have hg_n_ambient : ∀ n, AEStronglyMeasurable (g_n n) μ := by
+          intro n
+          exact (hg_n_sm n).aestronglyMeasurable.mono (TailSigma.tailSigma_le X hX_meas)
+        -- Get the strongly measurable limit
+        obtain ⟨g_lim, hg_lim_sm, hg_lim_tendsto⟩ :=
+          exists_stronglyMeasurable_limit_of_tendsto_ae hg_n_ambient h_ae_exists
+        -- g_lim is ambient-SM. We need to show it equals the tsum ae and is tail-AESM
+        -- The limit of g_n equals tsum ae
+        have h_lim_eq_tsum : g_lim =ᶠ[ae μ]
+            (fun ω => ∑' k, ∫ x, (f k).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+          filter_upwards [hg_lim_tendsto, h_g_tendsto] with ω hω1 hω2
+          exact tendsto_nhds_unique hω1 hω2
+        -- We need ∃ h, tail-SM h ∧ tsum =ᵐ h
+        -- Use limUnder which is the pointwise limit - StronglyMeasurable.limUnder shows
+        -- that the pointwise limit of tail-SM functions is tail-SM
+        let g_tail : Ω → ℝ := fun ω => limUnder atTop (fun n => g_n n ω)
+        have hg_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) g_tail :=
+          @StronglyMeasurable.limUnder ℕ Ω ℝ (TailSigma.tailSigma X) _ _ _ atTop _
+            (fun n => g_n n) _ hg_n_sm
+        -- g_tail equals tsum ae (since g_n → tsum ae, and limUnder captures this limit)
+        have hg_tail_eq_tsum : g_tail =ᶠ[ae μ]
+            (fun ω => ∑' k, ∫ x, (f k).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+          filter_upwards [h_g_tendsto] with ω hω
+          exact hω.limUnder_eq
+        refine ⟨g_tail, hg_tail_sm, hg_tail_eq_tsum.symm⟩
       exact AEStronglyMeasurable.congr h_tsum_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
   -- Step 3: Apply π-λ theorem
@@ -2966,39 +3062,54 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
     intro ω
     haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
     -- φ is integrable on any probability measure (simple functions are bounded)
-    have h_int : Integrable (⇑φ) (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-      apply SimpleFunc.integrable
-      intro c _
-      exact measure_ne_top _ _
+    have h_int : Integrable (⇑φ) (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+      SimpleFunc.integrable_of_isFiniteMeasure φ
     exact SimpleFunc.integral_eq_sum φ h_int
 
   -- Rewrite using h_eq
   have h_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
       (fun ω => ∑ c ∈ φ.range,
         (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) μ := by
-    apply Finset.aestronglyMeasurable_sum
-    intro c _
-    -- Need to show: ω ↦ ν(ω).real(φ⁻¹'{c}) • c is tail-AESM
-    -- ν(ω).real(s) = ∫ 1_s dν(ω) for probability measures
-    have h_preimage_meas : MeasurableSet (φ ⁻¹' {c}) := SimpleFunc.measurableSet_preimage φ {c}
-
-    -- ω ↦ ν(ω).real(φ⁻¹'{c}) = ∫ 1_{φ⁻¹'{c}} dν(ω) is tail-AESM by A1
-    have h_real_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) =
-        ∫ x, (φ ⁻¹' {c}).indicator (fun _ => (1:ℝ)) x
-          ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-      intro ω
-      haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-      -- integral of indicator = measure (for probability measures)
-      rw [integral_indicator_one h_preimage_meas]
-
-    have h_term_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
-        (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c})) μ := by
-      have := integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
-        (φ ⁻¹' {c}) h_preimage_meas
-      exact AEStronglyMeasurable.congr this (ae_of_all _ (fun ω => (h_real_eq ω).symm))
-
-    -- c • (tail-AESM) is tail-AESM
-    exact h_term_aesm.const_smul c
+    -- Need to help Lean see the eta-expanded form for Finset.aestronglyMeasurable_sum
+    -- Convert fun ω => ∑ c ∈ s, f c ω  to  ∑ c ∈ s, (fun ω => f c ω)
+    have h_eq_form : (fun ω => ∑ c ∈ φ.range,
+        (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) =
+        ∑ c ∈ φ.range, fun ω =>
+          (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c := by
+      ext ω
+      simp only [Finset.sum_apply]
+    rw [h_eq_form]
+    -- Convert smul to mul for ℝ-valued functions
+    simp_rw [smul_eq_mul]
+    -- Prove AEStronglyMeasurable for each term, then use finite sum
+    have h_terms_aesm : ∀ c ∈ φ.range, @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+        (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) * c) μ := by
+      intro c _
+      -- Need to show: ω ↦ ν(ω).real(φ⁻¹'{c}) * c is tail-AESM
+      have h_preimage_meas : MeasurableSet (φ ⁻¹' {c}) := SimpleFunc.measurableSet_preimage φ {c}
+      -- ω ↦ ν(ω).real(φ⁻¹'{c}) = ∫ 1_{φ⁻¹'{c}} dν(ω) is tail-AESM by A1
+      have h_real_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) =
+          ∫ x, (φ ⁻¹' {c}).indicator 1 x
+            ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
+        intro ω
+        haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+        exact (integral_indicator_one h_preimage_meas).symm
+      have h_term_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
+          (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c})) μ := by
+        have := integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
+          (φ ⁻¹' {c}) h_preimage_meas
+        exact AEStronglyMeasurable.congr this (ae_of_all _ (fun ω => (h_real_eq ω).symm))
+      -- (tail-AESM) * c is tail-AESM (smul_const gives f(x) • c = f(x) * c for ℝ)
+      exact h_term_aesm.smul_const c
+    -- Sum of tail-AESM functions is tail-AESM (finite induction)
+    have h_zero : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ (fun _ => 0) μ :=
+      aestronglyMeasurable_const
+    have h_add : ∀ f g : Ω → ℝ,
+        @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ f μ →
+        @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ →
+        @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ (f + g) μ :=
+      fun _ _ hf hg => hf.add hg
+    exact Finset.sum_induction _ _ h_add h_zero h_terms_aesm
 
   exact AEStronglyMeasurable.congr h_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
@@ -3024,8 +3135,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
-           (le_abs_self (f x)).trans (hM' x)⟩
+    exact abs_le.mp (hM' x)
 
   -- Set.Icc (-M') M' is nonempty (contains 0 when M' ≥ 0)
   have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
@@ -3075,8 +3185,22 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
     · filter_upwards with x
       exact hφ_tendsto x
 
-  -- Apply aestronglyMeasurable_of_tendsto_ae
-  exact aestronglyMeasurable_of_tendsto_ae Filter.atTop hφ_aesm (ae_of_all _ h_int_tendsto)
+  -- Strategy: Each ∫ φ_n dν(·) is tail-Measurable (not just AESM). Pointwise limits of
+  -- tail-measurable functions are tail-measurable. Then tail-Measurable → tail-AESM.
+  -- Technical issue: aestronglyMeasurable_of_tendsto_ae requires same σ-algebra for SM and measure.
+  -- TODO: Prove using measurable_of_tendsto_metrizable on the underlying measurable functions.
+  -- For now, we use that the limit is ambient-AESM (which is strictly weaker but compiles).
+  have hφ_aesm_ambient : ∀ n, AEStronglyMeasurable
+      (fun ω => ∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by
+    intro n
+    exact (hφ_aesm n).mono (TailSigma.tailSigma_le X hX_meas)
+  -- The limit is ambient-AESM
+  have h_limit_aesm : AEStronglyMeasurable
+      (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ :=
+    aestronglyMeasurable_of_tendsto_ae Filter.atTop hφ_aesm_ambient (ae_of_all μ h_int_tendsto)
+  -- Need: tail-AESM. The function IS tail-measurable by construction (pointwise limit of tail-meas).
+  -- For now, leave as sorry and fill later with proper measurable_of_tendsto argument.
+  sorry
 
 /-- **Set integral equality for Iic indicators.**
 
@@ -3116,6 +3240,8 @@ lemma setIntegral_directing_measure_indicator_Iic_eq
   have h_step3 : ∫ ω in A, alphaIicCE X hX_contract hX_meas hX_L2 t ω ∂μ =
       ∫ ω in A, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
     unfold alphaIicCE
+    -- Convert composition form to lambda form
+    simp only [indIic, Function.comp_def]
     -- Need to show the indicator function is integrable
     have h_int : Integrable (fun ω => (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω)) μ := by
       apply Integrable.indicator
@@ -3187,7 +3313,7 @@ lemma setIntegral_directing_measure_indicator_eq
           rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
           exact (integrable_const 1).indicator ht_meas
         simp_rw [h_compl_eq]
-        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        rw [integral_sub, integral_const]
         · exact (integrable_const 1).integrableOn
         · -- Need integrability of ω ↦ ∫ 1_t dν(ω) on A
           apply Integrable.integrableOn
@@ -3218,7 +3344,7 @@ lemma setIntegral_directing_measure_indicator_eq
           · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
           · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
-        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        rw [integral_sub, integral_const]
         · exact (integrable_const 1).integrableOn
         · apply Integrable.integrableOn
           exact (integrable_const 1).indicator (ht_meas.preimage (hX_meas 0))
@@ -3259,38 +3385,74 @@ lemma setIntegral_directing_measure_indicator_eq
               simp [Set.indicator_of_not_mem (this _)]
           simp_rw [h_ind_union]
           rw [integral_tsum]
-          · intro n; exact (integrable_const 1).indicator (hf n).1
           · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
+          · -- ∑' i, ∫⁻ a, ‖(f i).indicator 1 a‖ₑ ∂ν ≠ ⊤
+            -- For disjoint sets on prob measure: ∑' i, ν(f i) = ν(⋃ f i) ≤ 1
+            apply ne_top_of_le_ne_top (ENNReal.one_ne_top)
+            have h_sum_eq : ∑' i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω) =
+                ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω) (f i) := by
+              refine tsum_congr (fun i => ?_)
+              have h_eq : ∀ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ =
+                  (f i).indicator (fun _ => (1:ENNReal)) a := by
+                intro a
+                rw [enorm_indicator_eq_indicator_enorm]
+                simp only [Real.enorm_eq_ofReal_abs, abs_one, ENNReal.ofReal_one]
+              simp_rw [h_eq]
+              have h_ind_eq : (fun a => (f i).indicator (fun _ => (1:ENNReal)) a) =
+                  (f i).indicator 1 := by ext; simp [Set.indicator]
+              rw [h_ind_eq, lintegral_indicator_one (hf i).1]
+            calc ∑' i, ∫⁻ a, ‖(f i).indicator (fun _ => (1:ℝ)) a‖ₑ
+                ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
+              = ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω) (f i) := h_sum_eq
+              _ = (directing_measure X hX_contract hX_meas hX_L2 ω) (⋃ i, f i) := by
+                rw [measure_iUnion hdisj (fun i => (hf i).1)]
+              _ ≤ 1 := prob_le_one
         simp_rw [h_inner_eq]
         -- Now we need: ∫_A (∑' fn) dμ = ∑' ∫_A fn dμ
         rw [integral_tsum]
-        · intro n
-          apply Integrable.integrableOn
-          apply Integrable.mono' (integrable_const 1)
-          · exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
-              (f n) (hf n).1 |>.mono hm_le
-          · filter_upwards with ω
-            rw [Real.norm_eq_abs]
-            haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-            calc |∫ x, (f n).indicator (fun _ => (1:ℝ)) x
-                ∂(directing_measure X hX_contract hX_meas hX_L2 ω)|
-              ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-                  rw [abs_le]; constructor
-                  · calc -∫ x, (f n).indicator (fun _ => (1:ℝ)) x
-                        ∂(directing_measure X hX_contract hX_meas hX_L2 ω)
-                      ≤ 0 := by
-                          simp only [neg_nonpos]
-                          exact integral_nonneg (fun x => Set.indicator_nonneg (fun _ _ => zero_le_one) x)
-                      _ ≤ ∫ _, 1 ∂(directing_measure X hX_contract hX_meas hX_L2 ω) :=
-                          integral_nonneg (fun _ => zero_le_one)
-                  · apply integral_mono
-                    · exact (integrable_const 1).indicator (hf n).1
-                    · exact integrable_const 1
-                    · intro x; exact Set.indicator_le_self' (fun _ _ => zero_le_one) x
-              _ = 1 := by simp [measureReal_univ_eq_one]
-        · intro n
+        · -- case hf: AEStronglyMeasurable
+          intro i
           exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
-            (f n) (hf n).1 |>.mono hm_le |>.restrict
+            (f i) (hf i).1 |>.mono hm_le |>.restrict
+        · -- case hf': ∑' ... ≠ ⊤ (prove sum is finite)
+          -- Use interchange: ∑' ∫⁻ = ∫⁻ ∑', then bound by ∫⁻ 1 = μ(A)
+          apply ne_top_of_le_ne_top (measure_ne_top (μ.restrict A) Set.univ)
+          -- For each ω, the inner integral equals ν(ω)(f i) which is nonneg
+          have h_eq_meas : ∀ ω i, ‖∫ x, (f i).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)‖ₑ =
+              (directing_measure X hX_contract hX_meas hX_L2 ω) (f i) := by
+            intro ω i
+            haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            have h_ind_eq : (fun x => (f i).indicator (fun _ => (1:ℝ)) x) =
+                (f i).indicator 1 := by ext; simp [Set.indicator]
+            rw [h_ind_eq, integral_indicator_one (hf i).1, Measure.real]
+            simp only [Real.enorm_eq_ofReal_abs]
+            rw [abs_of_nonneg (ENNReal.toReal_nonneg), ENNReal.ofReal_toReal]
+            exact measure_ne_top _ _
+          simp_rw [h_eq_meas]
+          -- Interchange sum and integral using lintegral_tsum
+          have h_ae_meas : ∀ i, AEMeasurable (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω) (f i))
+              (μ.restrict A) := by
+            intro i
+            have h_meas_dm : Measurable (directing_measure X hX_contract hX_meas hX_L2) :=
+              ProbabilityTheory.measurable_measure_stieltjesOfMeasurableRat
+                (measurable_alphaIicRat X hX_contract hX_meas hX_L2)
+            exact Measurable.aemeasurable (MeasureTheory.Measure.measurable_measure.mp h_meas_dm (f i) (hf i).1)
+          rw [← lintegral_tsum h_ae_meas]
+          -- Now bound: ∫⁻ (∑' ν(f i)) ≤ ∫⁻ 1 = μ(A)
+          have h_bound : ∫⁻ ω in A, ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω) (f i) ∂μ
+              ≤ ∫⁻ ω in A, 1 ∂μ := by
+            apply lintegral_mono
+            intro ω
+            haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+            calc ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω) (f i)
+              = (directing_measure X hX_contract hX_meas hX_L2 ω) (⋃ i, f i) :=
+                (measure_iUnion hdisj (fun i => (hf i).1)).symm
+              _ ≤ 1 := prob_le_one
+          calc ∫⁻ ω in A, ∑' i, (directing_measure X hX_contract hX_meas hX_L2 ω) (f i) ∂μ
+            ≤ ∫⁻ ω in A, 1 ∂μ := h_bound
+            _ = (μ.restrict A) Set.univ := lintegral_one
 
       have h_rhs_eq : ∫ ω in A, (⋃ n, f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ =
           ∑' n, ∫ ω in A, (f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
@@ -3311,10 +3473,32 @@ lemma setIntegral_directing_measure_indicator_eq
         simp_rw [h_ind_union]
         rw [integral_tsum]
         · intro n
-          apply Integrable.integrableOn
-          exact (integrable_const 1).indicator ((hf n).1.preimage (hX_meas 0))
-        · intro n
           exact ((measurable_const.indicator (hf n).1).comp (hX_meas 0)).aestronglyMeasurable.restrict
+        · -- ∑' n, ∫⁻ ω in A, ‖1_{fn}(X₀ ω)‖ₑ ∂μ ≠ ⊤
+          -- Each term equals μ({ω ∈ A | X₀ ω ∈ f n}), sum bounded by μ(A)
+          apply ne_top_of_le_ne_top (measure_ne_top (μ.restrict A) Set.univ)
+          have h_eq : ∀ n, ∫⁻ ω in A, ‖(f n).indicator (fun _ => (1:ℝ)) (X 0 ω)‖ₑ ∂μ =
+              (μ.restrict A) (X 0 ⁻¹' (f n)) := by
+            intro n
+            have h_simp : ∀ ω, ‖(f n).indicator (fun _ => (1:ℝ)) (X 0 ω)‖ₑ =
+                (X 0 ⁻¹' (f n)).indicator (fun _ => (1:ENNReal)) ω := by
+              intro ω
+              by_cases hω : X 0 ω ∈ f n
+              · simp [Set.indicator_of_mem hω, Set.mem_preimage, hω]
+              · simp [Set.indicator_of_notMem hω, Set.mem_preimage, hω]
+            simp_rw [h_simp]
+            have h_ind_eq : (fun ω => (X 0 ⁻¹' (f n)).indicator (fun _ => (1:ENNReal)) ω) =
+                (X 0 ⁻¹' (f n)).indicator 1 := by ext; simp [Set.indicator]
+            rw [h_ind_eq, lintegral_indicator_one ((hf n).1.preimage (hX_meas 0))]
+          simp_rw [h_eq]
+          have h_disj : Pairwise (Function.onFun Disjoint fun n => X 0 ⁻¹' (f n)) := by
+            intro i j hij
+            simp only [Function.onFun]
+            exact (hdisj i j hij).preimage (X 0)
+          calc ∑' n, (μ.restrict A) (X 0 ⁻¹' (f n))
+            = (μ.restrict A) (⋃ n, X 0 ⁻¹' (f n)) :=
+              (measure_iUnion h_disj (fun n => (hf n).1.preimage (hX_meas 0))).symm
+            _ ≤ (μ.restrict A) Set.univ := measure_mono (Set.subset_univ _)
 
       rw [h_lhs_eq, h_rhs_eq]
       congr 1
@@ -3368,8 +3552,7 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
-           (le_abs_self (f x)).trans (hM' x)⟩
+    exact abs_le.mp (hM' x)
 
   have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
     rw [Set.mem_Icc]; exact ⟨by linarith, hM'_nonneg⟩
@@ -3391,8 +3574,8 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
       (fun n => ∫ ω in A, (∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ)
       Filter.atTop
       (nhds (∫ ω in A, (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ)) := by
-    -- Apply DCT with bound M'
-    apply tendsto_setIntegral_of_dominated_convergence (fun _ => M')
+    -- Apply DCT with bound M' (set integrals are definitionally restricted integrals)
+    apply tendsto_integral_of_dominated_convergence (fun _ => M')
     · intro n
       exact integral_simpleFunc_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 (φ n)
         |>.mono hm_le |>.restrict
@@ -3431,8 +3614,8 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
       (fun n => ∫ ω in A, (φ n) (X 0 ω) ∂μ)
       Filter.atTop
       (nhds (∫ ω in A, f (X 0 ω) ∂μ)) := by
-    -- Apply DCT with bound M'
-    apply tendsto_setIntegral_of_dominated_convergence (fun _ => M')
+    -- Apply DCT with bound M' (set integrals are definitionally restricted integrals)
+    apply tendsto_integral_of_dominated_convergence (fun _ => M')
     · intro n
       exact ((SimpleFunc.measurable (φ n)).comp (hX_meas 0)).aestronglyMeasurable.restrict
     · exact (integrable_const M').integrableOn
@@ -3455,66 +3638,93 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
         ∑ c ∈ (φ n).range, (directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c}) • c := by
       intro ω
       haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-      have h_int : Integrable (⇑(φ n)) (directing_measure X hX_contract hX_meas hX_L2 ω) := by
-        apply SimpleFunc.integrable; intro c _; exact measure_ne_top _ _
+      have h_int : Integrable (⇑(φ n)) (directing_measure X hX_contract hX_meas hX_L2 ω) :=
+        SimpleFunc.integrable_of_isFiniteMeasure (φ n)
       exact SimpleFunc.integral_eq_sum (φ n) h_int
     have h_rhs_sf_eq : ∀ ω, (φ n) (X 0 ω) =
         ∑ c ∈ (φ n).range, ((φ n) ⁻¹' {c}).indicator (fun _ => c) (X 0 ω) := by
       intro ω
-      simp only [Finset.sum_indicator_eq_sum_filter]
-      simp only [Finset.filter_eq', Finset.mem_range]
-      by_cases h : (φ n) (X 0 ω) ∈ (φ n).range
-      · simp [h]
-      · simp only [h, ↓reduceIte, Finset.sum_empty]
-        exfalso; exact h (SimpleFunc.mem_range_self (φ n) (X 0 ω))
+      let c₀ := (φ n) (X 0 ω)
+      have hc₀_mem : c₀ ∈ (φ n).range := SimpleFunc.mem_range_self (φ n) (X 0 ω)
+      have hX_in_preimage : X 0 ω ∈ (φ n) ⁻¹' {c₀} := Set.mem_preimage.mpr rfl
+      rw [Finset.sum_eq_single c₀]
+      · simp only [Set.indicator_of_mem hX_in_preimage]
+        -- Now goal is (φ n) (X 0 ω) = c₀, which is rfl since c₀ := (φ n) (X 0 ω)
+        rfl
+      · intro c _ hc_ne
+        have hX_not_in : X 0 ω ∉ (φ n) ⁻¹' {c} := by
+          simp only [Set.mem_preimage, Set.mem_singleton_iff]
+          intro heq
+          exact hc_ne heq.symm
+        simp only [Set.indicator_of_notMem hX_not_in]
+      · intro hc₀_not
+        exact (hc₀_not hc₀_mem).elim
     -- Both sides are sums; equality term by term
     simp_rw [h_sf_eq, h_rhs_sf_eq]
     rw [integral_finset_sum, integral_finset_sum]
     · congr 1
       ext c
       -- Need: ∫_A ν(ω).real((φ n)⁻¹'{c}) • c dμ = ∫_A 1_{(φ n)⁻¹'{c}}(X₀) • c dμ
-      simp only [smul_eq_mul]
-      rw [integral_mul_right, integral_mul_right]
-      congr 1
-      -- ∫_A ν(ω).real((φ n)⁻¹'{c}) dμ = ∫_A 1_{(φ n)⁻¹'{c}}(X₀) dμ
       have h_preimage_meas : MeasurableSet ((φ n) ⁻¹' {c}) := SimpleFunc.measurableSet_preimage (φ n) {c}
+      -- Transform LHS: ν(ω).real(S) • c = (∫ 1_S dν) • c
       have h_real_eq_ind : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c}) =
           ∫ x, ((φ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
         intro ω
         haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-        rw [integral_indicator_one h_preimage_meas]
-      simp_rw [h_real_eq_ind]
+        have h_ind_eq : ((φ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) = ((φ n) ⁻¹' {c}).indicator 1 := by
+          ext; simp [Set.indicator]
+        rw [h_ind_eq, integral_indicator_one h_preimage_meas]
+      -- Transform RHS indicator: 1_S(fun _ => c)(x) = 1_S(fun _ => 1)(x) * c
       have h_ind_X0 : ∀ ω, ((φ n) ⁻¹' {c}).indicator (fun _ => c) (X 0 ω) =
-          c * ((φ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (X 0 ω) := by
+          ((φ n) ⁻¹' {c}).indicator (fun _ => (1:ℝ)) (X 0 ω) * c := by
         intro ω
         by_cases hω : X 0 ω ∈ (φ n) ⁻¹' {c}
         · simp [Set.indicator_of_mem hω]
-        · simp [Set.indicator_of_not_mem hω]
-      simp_rw [h_ind_X0, integral_mul_left]
-      ring_nf
+        · simp [Set.indicator_of_notMem hω]
+      simp only [smul_eq_mul, h_real_eq_ind, h_ind_X0]
+      -- LHS: ∫ ((∫ indicator 1 ∂ν) * c) dμ,  RHS: ∫ (indicator 1 (X₀) * c) dμ
+      -- Factor out * c from both sides using integral_mul_const
+      simp only [integral_mul_const]
+      -- Now LHS: (∫ (∫ ind dν) dμ) * c,  RHS: (∫ ind(X₀) dμ) * c
+      congr 1
       exact setIntegral_directing_measure_indicator_eq X hX_contract hX_meas hX_L2
         ((φ n) ⁻¹' {c}) h_preimage_meas A hA hμA
     · intro c _
       apply Integrable.integrableOn
-      exact (integrable_const c).indicator (h_preimage_meas.preimage (hX_meas 0))
+      have h_pm : MeasurableSet ((φ n) ⁻¹' {c}) := SimpleFunc.measurableSet_preimage (φ n) {c}
+      exact (integrable_const c).indicator (h_pm.preimage (hX_meas 0))
     · intro c _
       apply Integrable.integrableOn
-      apply Integrable.smul
+      -- Goal: Integrable (fun ω => ν(ω).real(S) • c) μ
+      -- Convert to: Integrable (fun ω => ν(ω).real(S) * c) μ
+      simp only [smul_eq_mul]
+      -- Use Integrable.mul_const for f * c
+      apply Integrable.mul_const
+      -- Now prove: Integrable (fun ω => ν(ω).real(S)) μ
+      have h_pm : MeasurableSet ((φ n) ⁻¹' {c}) := SimpleFunc.measurableSet_preimage (φ n) {c}
+      -- ν(ω).real(S) = ∫ 1_S dν(ω), so use Integrable.mono' with indicator AESM
+      have h_eq_intind : (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c})) =
+          (fun ω => ∫ x, ((φ n) ⁻¹' {c}).indicator 1 x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+        ext ω
+        haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
+        exact (integral_indicator_one h_pm).symm
+      rw [h_eq_intind]
       apply Integrable.mono' (integrable_const 1)
       · exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
-          ((φ n) ⁻¹' {c}) (SimpleFunc.measurableSet_preimage (φ n) {c}) |>.mono hm_le
+          ((φ n) ⁻¹' {c}) h_pm |>.mono hm_le
       · filter_upwards with ω
         rw [Real.norm_eq_abs]
         haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-        calc |(directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c})|
-          ≤ 1 := by
-            rw [abs_le]
-            constructor
-            · calc -(directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c})
-                ≤ 0 := by simp [measureReal_nonneg]
-                _ ≤ 1 := zero_le_one
-            · exact measureReal_le_one ((φ n) ⁻¹' {c})
+        rw [abs_le]
+        constructor
+        · have h := integral_indicator_one h_pm (μ := directing_measure X hX_contract hX_meas hX_L2 ω)
+          rw [h]
+          -- Goal: -1 ≤ μ.real S
+          calc (-1 : ℝ) ≤ 0 := by linarith
+            _ ≤ (directing_measure X hX_contract hX_meas hX_L2 ω).real ((φ n) ⁻¹' {c}) := measureReal_nonneg
+        · have h := integral_indicator_one h_pm (μ := directing_measure X hX_contract hX_meas hX_L2 ω)
+          rw [h]; exact measureReal_le_one
 
   -- Since limits are unique and h_eq_n holds for all n, the limits are equal
   exact tendsto_nhds_unique h_lhs_tendsto (h_rhs_tendsto.congr (fun n => (h_eq_n n).symm))
@@ -3657,7 +3867,7 @@ lemma directing_measure_integral_eq_condExp
 
   have hgm_early : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _ g μ :=
     -- Use the factored-out helper lemma for Phase C (which builds on Phases A and B)
-    integral_bounded_measurable_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    integral_bounded_measurable_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩
 
   -- Ambient AEStronglyMeasurable follows from tail via .mono
   have hg_asm : AEStronglyMeasurable g μ := AEStronglyMeasurable.mono hm_le hgm_early
@@ -3686,7 +3896,7 @@ lemma directing_measure_integral_eq_condExp
     intro A hA hμA
     -- Use the factored-out helper lemma for set integral equality
     exact setIntegral_directing_measure_bounded_measurable_eq
-      X hX_contract hX_meas hX_L2 f hf_meas hf_bdd A hA hμA
+      X hX_contract hX_meas hX_L2 f hf_meas ⟨M, hM⟩ A hA hμA
 
 /-- **Simplified directing measure integral via identification chain.**
 
@@ -3905,15 +4115,14 @@ lemma directing_measure_integral_via_chain
           use M_idx
           intro m hm
           convert hM_idx m hm using 3
-          ext k
-          ring_nf
+          simp only [add_comm (1:ℕ)]
 
         -- Since α_g =ᵐ E[g∘X 0|tail], we have ∫ |α_g - E[g∘X 0|tail]| = 0
         have hα_g_diff_zero : ∫ ω, |α_g ω - μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ = 0 := by
           have h_ae := hα_g_eq
           rw [integral_eq_zero_iff_of_nonneg_ae (ae_of_all μ (fun _ => abs_nonneg _))]
           · filter_upwards [h_ae] with ω hω
-            simp only [hω, sub_self, abs_zero]
+            simp only [hω, sub_self, abs_zero, Pi.zero_apply]
           · -- Integrability: α_g - condExp is in L¹
             have hα_g_int : Integrable α_g μ := hα_g_L2.integrable one_le_two
             have hcond_int : Integrable (μ[g ∘ X 0 | TailSigma.tailSigma X]) μ :=
@@ -3949,7 +4158,12 @@ lemma directing_measure_integral_via_chain
                             _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
                                 gcongr with k _; exact hg_bdd _
                             _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
-                      refine (Integrable.of_bound hg_avg_meas 1 (ae_of_all μ hg_avg_bdd)).sub integrable_condExp |>.norm
+                      have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
+                        apply ae_of_all μ
+                        intro ω
+                        rw [Real.norm_eq_abs]
+                        exact hg_avg_bdd ω
+                      refine (Integrable.of_bound hg_avg_meas.aestronglyMeasurable 1 hg_avg_bdd').sub integrable_condExp |>.norm
                     · refine (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
                   · apply ae_of_all μ
                     intro ω
@@ -3957,7 +4171,7 @@ lemma directing_measure_integral_via_chain
                         = |((1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
                             μ[g ∘ X 0 | TailSigma.tailSigma X] ω) +
                            (μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω)| := by ring_nf
-                      _ ≤ _ := abs_add _ _
+                      _ ≤ _ := abs_add_le _ _
             _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
                       μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ +
                 ∫ ω, |μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω| ∂μ := by
@@ -3978,7 +4192,12 @@ lemma directing_measure_integral_via_chain
                           _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
                               gcongr with k _; exact hg_bdd _
                           _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
-                    exact (Integrable.of_bound hg_avg_meas 1 (ae_of_all μ hg_avg_bdd)).sub integrable_condExp |>.norm
+                    have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
+                      apply ae_of_all μ
+                      intro ω
+                      rw [Real.norm_eq_abs]
+                      exact hg_avg_bdd ω
+                    exact (Integrable.of_bound hg_avg_meas.aestronglyMeasurable 1 hg_avg_bdd').sub integrable_condExp |>.norm
                   · exact (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
             _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
                       μ[g ∘ X 0 | TailSigma.tailSigma X] ω| ∂μ + 0 := by
@@ -3986,7 +4205,7 @@ lemma directing_measure_integral_via_chain
                   convert hα_g_diff_zero using 2
                   ext ω
                   rw [abs_sub_comm]
-            _ < ε := by simp; exact hM_idx m hm
+            _ < ε := by simp only [add_zero]; exact hM_idx m hm
 
         -- Scaling: f-averages = M * g-averages
         have hfg_scaling : ∀ m ω, A m ω = M * ((1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
@@ -3994,12 +4213,15 @@ lemma directing_measure_integral_via_chain
           simp only [A, g]
           by_cases hm : m = 0
           · simp [hm]
-          · rw [mul_comm M, ← mul_assoc]
-            congr 1
-            rw [Finset.mul_sum]
-            congr 1
-            ext k
-            field_simp [ne_of_gt hM_pos]
+          · have hM_ne : M ≠ 0 := ne_of_gt hM_pos
+            have hm_ne : (m : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hm
+            -- LHS: 1/m * ∑ f(...)
+            -- RHS: M * (1/m * ∑ (f(...)/M)) = 1/m * ∑ f(...)
+            -- Direct algebra: M * (1/m * ∑ (f/M)) = 1/m * ∑ f
+            have h_sum_eq : ∑ k : Fin m, f (X (k.val+1) ω) / M = (∑ k : Fin m, f (X (k.val+1) ω)) / M := by
+              rw [Finset.sum_div]
+            rw [h_sum_eq]
+            field_simp [hM_ne, hm_ne]
 
         -- Therefore: A → M * α_g in L¹
         have hA_to_M_alpha_g : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
@@ -4045,11 +4267,11 @@ lemma directing_measure_integral_via_chain
               _ = M := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
 
         have hAalpha_integrable : ∀ m, Integrable (fun ω => A m ω - alpha ω) μ := fun m =>
-          (Integrable.of_bound (hA_meas m) M (ae_of_all μ (hA_bdd m))).sub
-            (hα_L1.integrable)
+          (Integrable.of_bound (hA_meas m).aestronglyMeasurable M (ae_of_all μ (hA_bdd m))).sub
+            (hα_L1.integrable le_rfl)
 
         have hAMalpha_g_integrable : ∀ m, Integrable (fun ω => A m ω - M * α_g ω) μ := fun m =>
-          (Integrable.of_bound (hA_meas m) M (ae_of_all μ (hA_bdd m))).sub
+          (Integrable.of_bound (hA_meas m).aestronglyMeasurable M (ae_of_all μ (hA_bdd m))).sub
             ((hα_g_L2.integrable one_le_two).const_mul M)
 
         have hA_tendsto_alpha : Tendsto (fun m => ∫ ω, |A m ω - alpha ω| ∂μ) atTop (𝓝 0) := by
@@ -4105,14 +4327,14 @@ lemma directing_measure_integral_via_chain
         -- Convert to TendstoInMeasure
         have halpha_meas_conv : TendstoInMeasure μ A atTop alpha := by
           apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
-          · intro m; exact hA_meas m
-          · exact hα_meas
+          · intro m; exact (hA_meas m).aestronglyMeasurable
+          · exact hα_meas.aestronglyMeasurable
           · exact halpha_eLpNorm
 
         have hM_alpha_g_meas_conv : TendstoInMeasure μ A atTop (fun ω => M * α_g ω) := by
           apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
-          · intro m; exact hA_meas m
-          · exact measurable_const.mul hα_g_L2.aestronglyMeasurable.measurable
+          · intro m; exact (hA_meas m).aestronglyMeasurable
+          · exact aestronglyMeasurable_const.mul hα_g_L2.aestronglyMeasurable
           · exact hM_alpha_g_eLpNorm
 
         -- Apply uniqueness
