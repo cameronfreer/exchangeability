@@ -2955,7 +2955,7 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         intro n
         -- Each h_partial_aesm n is tail-AESM, which implies ambient-AESM
         -- tail-AESM has a tail-SM witness, and tail-SM implies ambient-SM
-        exact (h_partial_aesm n).mono (TailSigma.tailSigma_le X)
+        exact (h_partial_aesm n).mono (TailSigma.tailSigma_le X hX_meas)
       have h_tsum_ambient : AEStronglyMeasurable
           (fun ω => ∑' n, ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ :=
@@ -2991,7 +2991,7 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         -- The g_n are ambient-AESM (since tail-SM implies ambient-AESM)
         have hg_n_ambient : ∀ n, AEStronglyMeasurable (g_n n) μ := by
           intro n
-          exact (hg_n_sm n).aestronglyMeasurable.mono (TailSigma.tailSigma_le X)
+          exact (hg_n_sm n).aestronglyMeasurable.mono (TailSigma.tailSigma_le X hX_meas)
         -- Get the strongly measurable limit
         obtain ⟨g_lim, hg_lim_sm, hg_lim_tendsto⟩ :=
           exists_stronglyMeasurable_limit_of_tendsto_ae hg_n_ambient h_ae_exists
@@ -3002,21 +3002,19 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
               ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
           filter_upwards [hg_lim_tendsto, h_g_tendsto] with ω hω1 hω2
           exact tendsto_nhds_unique hω1 hω2
-        -- Since g_lim equals tsum ae and tsum has ambient-SM limit, construct tail-AESM
-        -- Actually, use the structure: we need ∃ h, tail-SM h ∧ tsum =ᵐ h
-        -- g_lim is only ambient-SM, not necessarily tail-SM
-        -- But h_tsum_ambient has a tail-SM ae-representative? No, it's only ambient.
-        -- The key is that we already have tail-AESM for each partialSum n
-        -- We need a theorem saying: if ∀ n, tail-AESM (f n) and f n → g ae, then tail-AESM g
-        -- This is essentially aestronglyMeasurable_of_tendsto_ae but for tail σ-algebra
-        -- Since the standard lemma uses ambient, we construct directly:
-        -- Use h_tsum_ambient.mk which is ambient-SM
-        -- But we need tail-SM. Use the fact that the construction can be done with tail.
-        -- Actually, the simplest approach: use that each h_partial_aesm n has a tail-SM witness
-        -- and the ambient limit's witness should be refinable to tail-SM
-        -- For now, use the explicit construction
-        refine ⟨h_tsum_ambient.mk _, h_tsum_ambient.stronglyMeasurable_mk.mono ?_, h_tsum_ambient.ae_eq_mk⟩
-        exact TailSigma.tailSigma_le X
+        -- We need ∃ h, tail-SM h ∧ tsum =ᵐ h
+        -- Use limUnder which is the pointwise limit - StronglyMeasurable.limUnder shows
+        -- that the pointwise limit of tail-SM functions is tail-SM
+        let g_tail : Ω → ℝ := fun ω => limUnder atTop (fun n => g_n n ω)
+        have hg_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) g_tail :=
+          @StronglyMeasurable.limUnder ℕ Ω ℝ _ _ _ _ atTop _ (fun n => g_n n) _ hg_n_sm
+        -- g_tail equals tsum ae (since g_n → tsum ae, and limUnder captures this limit)
+        have hg_tail_eq_tsum : g_tail =ᶠ[ae μ]
+            (fun ω => ∑' k, ∫ x, (f k).indicator (fun _ => (1:ℝ)) x
+              ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
+          filter_upwards [h_g_tendsto] with ω hω
+          exact limUnder_eq hω
+        refine ⟨g_tail, hg_tail_sm, hg_tail_eq_tsum.symm⟩
       exact AEStronglyMeasurable.congr h_tsum_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
   -- Step 3: Apply π-λ theorem
