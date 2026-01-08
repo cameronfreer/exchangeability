@@ -3,7 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2.MainConvergence
+import Exchangeability.DeFinetti.ViaL2.AlphaIic
 import Exchangeability.Probability.IntegrationHelpers
 
 /-!
@@ -15,10 +15,7 @@ of Cesàro averages via Carathéodory extension.
 
 ## Main definitions
 
-* `indIic`: Indicator of `(-∞, t]` as a bounded measurable function
-* `alphaIic`: Raw CDF at level t (clipped L¹ limit)
-* `alphaIicRat`: Rational restriction for `stieltjesOfMeasurableRat`
-* `alphaIicCE`: Canonical conditional expectation version
+* `alphaIicCE`: Canonical conditional expectation version of the CDF
 * `cdf_from_alpha`: The regularized CDF via Stieltjes extension
 * `directing_measure`: The directing measure built from the CDF
 
@@ -61,117 +58,6 @@ The construction proceeds via the Carathéodory extension theorem:
 
 This is the "lightest path" mentioned in the original plan.
 -/
-
-/-- Indicator of `(-∞, t]` as a bounded measurable function ℝ → ℝ. -/
-private def indIic (t : ℝ) : ℝ → ℝ :=
-  (Set.Iic t).indicator (fun _ => (1 : ℝ))
-
-@[fun_prop]
-private lemma indIic_measurable (t : ℝ) : Measurable (indIic t) := by
-  simpa [indIic] using (measurable_const.indicator measurableSet_Iic)
-
-private lemma indIic_bdd (t : ℝ) : ∀ x, |indIic t x| ≤ 1 := by
-  intro x; by_cases hx : x ≤ t <;> simp [indIic, hx, abs_of_nonneg]
-
-/-- Raw "CDF" at level t: the L¹-limit α_{1_{(-∞,t]}} produced by Step 2,
-clipped to [0,1] to ensure pointwise bounds.
-
-The clipping preserves measurability and a.e. equality (hence L¹ properties) since
-the underlying limit is a.e. in [0,1] anyway (being the limit of averages in [0,1]).
--/
-noncomputable def alphaIic
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (t : ℝ) : Ω → ℝ :=
-  fun ω => max 0 (min 1 ((weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-      (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
-
-/-- Measurability of the raw α_{Iic t}. -/
-lemma alphaIic_measurable
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (t : ℝ) :
-    Measurable (alphaIic X hX_contract hX_meas hX_L2 t) := by
-  -- alphaIic is max 0 (min 1 limit) where limit is measurable
-  unfold alphaIic
-  have h_limit_meas : Measurable (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose := by
-    exact (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.1
-  -- max and min preserve measurability: max 0 (min 1 limit)
-  -- Build: min limit 1, then max 0 result
-  refine Measurable.max measurable_const ?_
-  refine Measurable.min measurable_const h_limit_meas
-
-/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1].
-
-DESIGN NOTE: This lemma requires pointwise bounds on alphaIic, but alphaIic is defined
-as an L¹ limit witness via .choose, which only determines the function up to a.e. equivalence.
-
-The mathematically standard resolution is one of:
-1. Modify alphaIic's definition to explicitly take a representative in [0,1]:
-   `alphaIic t ω := max 0 (min 1 (original_limit t ω))`
-   This preserves measurability and a.e. equality, hence L¹ properties.
-
-2. Strengthen weighted_sums_converge_L1 to provide a witness with pointwise bounds
-   when the input function is bounded (requires modifying the existential).
-
-3. Accept as a property of the construction: Since each Cesàro average
-   (1/m) Σ_{i<m} indIic(X_i ω) ∈ [0,1] pointwise, and these converge in L¹ to alphaIic,
-   we can choose a representative of the equivalence class that is in [0,1] pointwise.
-
-For the proof to proceed, we adopt approach (3) as an axiom of the construction.
--/
-lemma alphaIic_bound
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (t : ℝ) (ω : Ω) :
-    0 ≤ alphaIic X hX_contract hX_meas hX_L2 t ω
-    ∧ alphaIic X hX_contract hX_meas hX_L2 t ω ≤ 1 := by
-  -- alphaIic is defined as max 0 (min 1 limit), so bounds are immediate
-  unfold alphaIic
-  constructor
-  · -- 0 ≤ max 0 (min 1 ...)
-    exact le_max_left 0 _
-  · -- max 0 (min 1 ...) ≤ 1
-    -- Since min 1 x ≤ 1 for any x, and max a b ≤ c when both a ≤ c and b ≤ c
-    -- We have max 0 (min 1 x) ≤ 1 since 0 ≤ 1 and min 1 x ≤ 1
-    apply max_le
-    · linarith
-    · exact min_le_left 1 _
-
-/-!
-### Rational restriction of alphaIic for stieltjesOfMeasurableRat
-
-We restrict `alphaIic` to rationals to use mathlib's `stieltjesOfMeasurableRat` construction,
-which patches the null set where pointwise CDF axioms fail.
--/
-
-/-- Restrict α_{Iic} to rationals for use with stieltjesOfMeasurableRat. -/
-noncomputable def alphaIicRat
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    Ω → ℚ → ℝ :=
-  fun ω q => alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω
-
-/-- `alphaIicRat` is measurable, which is required for `stieltjesOfMeasurableRat`. -/
-lemma measurable_alphaIicRat
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    Measurable (alphaIicRat X hX_contract hX_meas hX_L2) := by
-  refine measurable_pi_iff.2 ?_
-  intro q
-  exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
 
 /-!
 ### Canonical conditional expectation version of alphaIic
