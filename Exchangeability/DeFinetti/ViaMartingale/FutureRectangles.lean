@@ -55,12 +55,8 @@ lemma contractable_dist_eq_on_first_r_tail
     intro i j hij
     have hij' : i.1 < j.1 := (Fin.lt_iff_val_lt_val).1 hij
     have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
-    simp only [f]
-    omega
-  have hm_lt : ∀ i, m < f i := by
-    intro i
-    simp only [f]
-    omega
+    simp only [f]; omega
+  have hm_lt : ∀ i, m < f i := fun i => by simp only [f]; omega
   have hk_lt : ∀ i, k < f i := fun i => lt_of_le_of_lt hk (hm_lt i)
   let s₁ : Fin (r+1) → ℕ := Fin.cases m f
   let s₂ : Fin (r+1) → ℕ := Fin.cases k f
@@ -93,18 +89,10 @@ lemma contractable_dist_eq_on_first_r_tail
       ext v; simp [A, Set.mem_iInter]
     rw [this]
     exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
-  have hφ₁ : Measurable (fun ω i => X (s₁ i) ω) := by
-    apply measurable_pi_lambda
-    intro i
-    cases i using Fin.cases with
-    | zero => exact hX_meas m
-    | succ j => simp only [s₁, f]; exact hX_meas (m + (j.1 + 1))
-  have hφ₂ : Measurable (fun ω i => X (s₂ i) ω) := by
-    apply measurable_pi_lambda
-    intro i
-    cases i using Fin.cases with
-    | zero => exact hX_meas k
-    | succ j => simp only [s₂, f]; exact hX_meas (m + (j.1 + 1))
+  have hφ₁ : Measurable (fun ω i => X (s₁ i) ω) := measurable_pi_lambda _ fun i =>
+    i.cases (hX_meas m) fun j => by simp only [s₁, f]; exact hX_meas (m + (j.1 + 1))
+  have hφ₂ : Measurable (fun ω i => X (s₂ i) ω) := measurable_pi_lambda _ fun i =>
+    i.cases (hX_meas k) fun j => by simp only [s₂, f]; exact hX_meas (m + (j.1 + 1))
   calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ ((fun ω i => X (s₁ i) ω) ⁻¹' A) := by rw [hpre₁]
     _ = (Measure.map (fun ω i => X (s₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
@@ -386,10 +374,7 @@ lemma measure_ext_of_future_rectangles
     ext ⟨a, f⟩
     simp only [Bseq, Set.mem_prod, Set.mem_univ, true_and, MartingaleHelpers.cylinder]
     simp
-  have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := by
-    intro n
-    simp only [Bseq]
-    exact measure_ne_top μ Set.univ
+  have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := fun n => by simp only [Bseq]; exact measure_ne_top μ Set.univ
 
   exact Measure.ext_of_generateFrom_of_iUnion
     S Bseq h_gen h_pi h1B h2B hμB h_agree

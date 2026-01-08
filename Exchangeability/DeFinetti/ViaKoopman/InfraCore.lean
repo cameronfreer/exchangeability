@@ -117,24 +117,29 @@ notation "Ωℤ[" α "]" => Ωℤ α
 /-- The two-sided shift on bi-infinite sequences. -/
 def shiftℤ (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n + 1)
 
+omit [MeasurableSpace α] in
 @[simp] lemma shiftℤ_apply (ω : Ωℤ[α]) (n : ℤ) :
     shiftℤ (α := α) ω n = ω (n + 1) := rfl
 
 /-- The inverse shift on bi-infinite sequences. -/
 def shiftℤInv (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n - 1)
 
+omit [MeasurableSpace α] in
 @[simp] lemma shiftℤInv_apply (ω : Ωℤ[α]) (n : ℤ) :
     shiftℤInv (α := α) ω n = ω (n - 1) := rfl
 
+omit [MeasurableSpace α] in
 @[simp] lemma shiftℤ_comp_shiftℤInv (ω : Ωℤ[α]) :
     shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
 
+omit [MeasurableSpace α] in
 @[simp] lemma shiftℤInv_comp_shiftℤ (ω : Ωℤ[α]) :
     shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
 
 /-- Restrict a bi-infinite path to its nonnegative coordinates. -/
 def restrictNonneg (ω : Ωℤ[α]) : Ω[α] := fun n => ω (Int.ofNat n)
 
+omit [MeasurableSpace α] in
 @[simp] lemma restrictNonneg_apply (ω : Ωℤ[α]) (n : ℕ) :
     restrictNonneg (α := α) ω n = ω (Int.ofNat n) := rfl
 
@@ -146,26 +151,27 @@ def extendByZero (ω : Ω[α]) : Ωℤ[α] :=
   | Int.ofNat n => ω n
   | Int.negSucc _ => ω 0
 
+omit [MeasurableSpace α] in
 @[simp] lemma restrictNonneg_extendByZero (ω : Ω[α]) :
     restrictNonneg (α := α) (extendByZero (α := α) ω) = ω := by ext; simp [extendByZero]
 
+omit [MeasurableSpace α] in
 @[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
     extendByZero (α := α) ω (Int.ofNat n) = ω n := by simp [extendByZero]
 
+omit [MeasurableSpace α] in
 lemma restrictNonneg_shiftℤ (ω : Ωℤ[α]) :
     restrictNonneg (α := α) (shiftℤ (α := α) ω)
       = shift (restrictNonneg (α := α) ω) := by ext; simp [restrictNonneg, shiftℤ, shift]
 
+omit [MeasurableSpace α] in
 lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
     restrictNonneg (α := α) (shiftℤInv (α := α) ω)
       = fun n => ω (Int.ofNat n - 1) := by ext; simp [restrictNonneg, shiftℤInv]
 
 @[measurability, fun_prop]
-lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) := by
-  apply measurable_pi_lambda
-  intro n
-  simp only [restrictNonneg]
-  exact measurable_pi_apply (Int.ofNat n)
+lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) :=
+  measurable_pi_lambda _ fun n => measurable_pi_apply (Int.ofNat n)
 
 @[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
@@ -282,6 +288,7 @@ lemma ae_comp_of_pushforward
     exact hsubset this
   exact measure_mono_null hsub this
 
+omit [MeasurableSpace Ω] [MeasurableSpace Ω'] in
 /-- Indicator pulls through a preimage under composition. -/
 lemma indicator_preimage_comp {B : Set Ω} (K : Ω → ℝ) :
     (Set.indicator (g ⁻¹' B) (K ∘ g))
@@ -436,7 +443,7 @@ namespace MeasureTheory
 /-- CE is a.e.-strongly measurable w.r.t. the *sub* σ-algebra, with ambient locked. -/
 lemma aestronglyMeasurable_condExp'
     {Ω β} [mΩ : MeasurableSpace Ω] [NormedAddCommGroup β] [NormedSpace ℝ β] [CompleteSpace β]
-    {μ : Measure Ω} (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
+    {μ : Measure Ω} (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)
     (f : Ω → β) :
     AEStronglyMeasurable[m] (condExp m μ f) μ :=
   stronglyMeasurable_condExp.aestronglyMeasurable

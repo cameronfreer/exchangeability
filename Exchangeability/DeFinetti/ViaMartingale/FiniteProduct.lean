@@ -117,7 +117,7 @@ lemma lintegral_prod_prob_eq_ofReal_integral
         ENNReal.one_ne_top).mpr h1
     calc f ω ≤ ∏ _i : Fin m, (1 : ℝ) :=
             Finset.prod_le_prod (fun i _ => ENNReal.toReal_nonneg) (fun i _ => h_bound i)
-      _ = 1 := by simp
+      _ = 1 := Finset.prod_const_one
   -- Step 3: Apply ofReal_integral_eq_lintegral_ofReal
   symm
   exact ofReal_integral_eq_lintegral_ofReal h_integrable h_nonneg
@@ -158,9 +158,7 @@ lemma bind_apply_univ_pi
           Measure.bind_apply h_rect_meas h_aemeas
     _ = ∫⁻ ω, (∏ i : Fin m, ν ω (C i)) ∂μ := by
           -- Step 2: Use measure_pi_univ_pi to convert the product measure on a rectangle
-          congr 1
-          funext ω
-          exact measure_pi_univ_pi (fun _ => ν ω) C
+          congr 1; funext ω; exact measure_pi_univ_pi (fun _ => ν ω) C
 
 /-- **Finite product formula for the first m coordinates** (identity case).
 
@@ -299,10 +297,7 @@ lemma finite_product_formula_id
             =ᵐ[μ] (fun ω => (ν ω (C i)).toReal) :=
         fun i => (hν_law 0 (C i) (hC i)).symm
       -- Combine using Finset.prod over a.e. equal functions
-      -- The product of a.e. equal functions is a.e. equal
-      have h_all := ae_all_iff.mpr h_each
-      filter_upwards [h_all] with ω hω
-      -- Both sides are products over Fin m, equal pointwise
+      filter_upwards [ae_all_iff.mpr h_each] with ω hω
       exact Finset.prod_congr rfl (fun i _ => hω i)
 
     -- RHS (mixture) on rectangle:
@@ -379,15 +374,11 @@ lemma finite_product_formula_id
   have h1B : ⋃ n, Bseq n = Set.univ := by
     simp only [Bseq, Set.iUnion_const]
 
-  have h2B : ∀ n, Bseq n ∈ Rectangles := by
-    intro n
-    refine ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, ?_⟩
-    ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto
+  have h2B : ∀ n, Bseq n ∈ Rectangles := fun n =>
+    ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, by ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto⟩
 
-  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ := by
-    intro n
-    simp only [Bseq]
-    exact measure_ne_top _ Set.univ
+  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ :=
+    fun n => by simp only [Bseq]; exact measure_ne_top _ Set.univ
 
   -- Apply Measure.ext_of_generateFrom_of_iUnion
   exact Measure.ext_of_generateFrom_of_iUnion

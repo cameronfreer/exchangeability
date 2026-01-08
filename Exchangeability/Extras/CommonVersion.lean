@@ -10,10 +10,13 @@ import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Exchangeability.Probability.CondExp
 
 /-!
-# Common Version Lemma for Conditional Expectations
+# Common Version Lemma for Conditional Expectations (Alternative Approach)
 
-This file contains infrastructure lemmas and the main Common Version Lemma,
-which is fundamental to the martingale approach proof of de Finetti's theorem.
+**Note:** This file contains an alternative approach to the common version lemma that was
+developed during the martingale proof of de Finetti's theorem but has been superseded by
+the infrastructure in `Probability/TripleLawDropInfo/DropInfo.lean`. It is preserved here
+for educational reference as it demonstrates a direct proof of Doob-Dynkin factorization
+and integral transfer techniques.
 
 ## Main results
 
@@ -28,14 +31,13 @@ which is fundamental to the martingale approach proof of de Finetti's theorem.
 * `exists_clipped_version` - Clipping to get pointwise bounds
 * `integral_pair_transfer` - Topology-free integral transfer via pushforward measures
 
-These are extracted from ViaMartingale.lean to enable modular imports.
 -/
 
 noncomputable section
 open scoped MeasureTheory
 open MeasureTheory Filter
 
-namespace Exchangeability.DeFinetti.ViaMartingale
+namespace Exchangeability.Extras
 
 /-! ### Infrastructure for Common Version Lemma (Doob-Dynkin + Pushforward Uniqueness) -/
 
@@ -228,9 +230,8 @@ lemma common_version_condexp_bdd
     have hT'_meas : MeasurableSet[MeasurableSpace.comap W' inferInstance] T' := ⟨S, hS, rfl⟩
 
     calc ∫ y in S, v₁ y ∂(Measure.map W μ)
-        = ∫ ω in T, (v₁ ∘ W) ω ∂μ := by
-          -- Change of variables for set integral
-          rw [setIntegral_map hS hv₁_meas.aestronglyMeasurable hW.aemeasurable]
+        = ∫ ω in T, (v₁ ∘ W) ω ∂μ :=
+          setIntegral_map hS hv₁_meas.aestronglyMeasurable hW.aemeasurable
       _ = ∫ ω in T, V ω ∂μ := by
           -- V = v₁∘W a.e.
           refine setIntegral_congr_ae (hW hS) ?_
@@ -307,9 +308,8 @@ lemma common_version_condexp_bdd
           refine setIntegral_congr_ae (hW' hS) ?_
           filter_upwards [hV'_eq] with ω h_eq h_mem
           exact h_eq
-      _ = ∫ y in S, v₂ y ∂(Measure.map W' μ) := by
-          -- Change of variables back
-          rw [setIntegral_map hS hv₂_meas.aestronglyMeasurable hW'.aemeasurable]
+      _ = ∫ y in S, v₂ y ∂(Measure.map W' μ) :=
+          (setIntegral_map hS hv₂_meas.aestronglyMeasurable hW'.aemeasurable).symm
       _ = ∫ y in S, v₂ y ∂(Measure.map W μ) := by
           -- Law(W) = Law(W')
           rw [h_law_eq]
@@ -439,4 +439,4 @@ lemma common_version_condExp_with_props
   exact common_version_condexp_bdd (C := 1) (by norm_num) hZ hW hW' hψ hψ_int
     (by filter_upwards with ω; exact hψ_bdd (Z ω)) h_pair
 
-end Exchangeability.DeFinetti.ViaMartingale
+end Exchangeability.Extras

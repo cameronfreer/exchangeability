@@ -1,97 +1,36 @@
 /-
 Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Cameron Freer, Claude (Anthropic)
+Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Measure.MeasureSpace
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
-import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.Topology.Algebra.Module.Basic
-
--- Project-local imports
 import Exchangeability.Core
 import Exchangeability.Contractability
-import Exchangeability.Tail.TailSigma
-import Exchangeability.Probability.CondExp
-import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.PathSpace.Shift
 
 /-!
-# Bridge: Mean Ergodic Theorem to Cesàro-Conditional Expectation Convergence
+# Bridge: Path Space Measure and Shift Preservation
 
-This file bridges the abstract Mean Ergodic Theorem (MET) from `KoopmanMeanErgodic.lean`
-to the concrete L¹ convergence result needed in `ViaL2.lean`.
+This file provides the path space measure `μ_path` and proves that contractability
+implies the shift map is measure-preserving on path space.
 
-## The Four Bridges
+## Main definitions
 
-1. **Contractable → Shift Invariance**: Contractability of a process X implies the law
-   on path space is shift-invariant, making the shift a measure-preserving transformation.
+* `pathify X`: Factor map `ω ↦ (n ↦ X n ω)` from sample space to path space
+* `μ_path μ X`: Law of process X as a measure on path space
 
-2. **Fixed Space = Tail**: The fixed-point subspace of the Koopman operator for the shift
-   equals L²(tail σ-algebra), so the orthogonal projection is conditional expectation.
+## Main results
 
-3. **L² → L¹**: On a probability space, L² convergence implies L¹ convergence by
-   Hölder's inequality (‖Y‖₁ ≤ ‖Y‖₂).
-
-4. **Pullback**: Conditional expectation commutes with the factor map `pathify` that
-   sends ω ↦ (n ↦ X n ω).
-
-## Main Result
-
-`cesaro_to_condexp_L1`: For a contractable process X and bounded measurable f,
-the Cesàro averages `(1/m) ∑ᵢ f(Xᵢ)` converge to `𝔼[f(X₀) | tail(X)]` in L¹.
-
-This replaces the axiom of the same name in `ViaL2.lean`.
+* `contractable_shift_invariant_law`: Contractability implies shift-invariant law
+* `measurePreserving_shift_path`: Packages above as `MeasurePreserving` for MET
 -/
 
 noncomputable section
-open scoped BigOperators ENNReal
-open MeasureTheory Filter Topology
+open MeasureTheory
 
 namespace Exchangeability.Bridge
 
-/-! ## Helper: AE-Strong Measurability Across Comap -/
-
-/-- **Helper: Transport a.e.-strong measurability through a measurable map with comap.**
-
-If `h : β → ℝ` is a.e. strongly measurable w.r.t. `m'` under `Measure.map f μ`,
-then `h ∘ f : α → ℝ` is a.e. strongly measurable w.r.t. `comap f m'` under `μ`.
-
-This is the key technical lemma for proving conditional expectation commutes with
-pullback along factor maps. -/
-@[fun_prop]
-lemma aestronglyMeasurable_comp_comap
-    {α β : Type*} [MeasurableSpace α] {m₀ : MeasurableSpace β}
-    {μ : Measure α} (f : α → β) (hf : @Measurable α β _ m₀ f)
-    (m' : MeasurableSpace β) (_hm' : m' ≤ m₀)
-    {h : β → ℝ} :
-    AEStronglyMeasurable[m'] h (@Measure.map α β _ m₀ f μ) →
-    AEStronglyMeasurable[MeasurableSpace.comap f m'] (h ∘ f) μ := fun hh => by
-  classical
-  letI : MeasurableSpace β := m₀
-  have hf' : Measurable f := hf
-
-  -- Choose a strongly measurable representative (w.r.t. `m'`) for `h` under `ν = map f μ`.
-  obtain ⟨h', h'hSM, h_ae⟩ := hh
-
-  -- The composition h' ∘ f is strongly measurable w.r.t. comap f m'
-  have hSM_comp : StronglyMeasurable[MeasurableSpace.comap f m'] (h' ∘ f) := by
-    -- First prove f is measurable from (α, comap f m') to (β, m')
-    have hf_meas_comap : @Measurable α β (MeasurableSpace.comap f m') m' f := fun s hs => ⟨s, hs, rfl⟩
-    -- h' is StronglyMeasurable w.r.t. m', so compose with f
-    -- comp_measurable signature: {α β γ} [TopologicalSpace β] {_ : MeasurableSpace α} {_ : MeasurableSpace γ}
-    --   {f : α → β} {g : γ → α} (hf : StronglyMeasurable f) (hg : Measurable g) : StronglyMeasurable (f ∘ g)
-    -- We have: h' : β → ℝ is StronglyMeasurable w.r.t. m', f : α → β is Measurable w.r.t. comap f m'
-    -- So: α_lemma=β, β_lemma=ℝ, γ_lemma=α, f_lemma=h', g_lemma=f
-    exact @StronglyMeasurable.comp_measurable β ℝ α _ m' (MeasurableSpace.comap f m') h' f h'hSM hf_meas_comap
-
-  -- Transport the a.e. equality through the pushforward
-  have h_ae_comp : (h ∘ f) =ᵐ[μ] (h' ∘ f) := ae_of_ae_map hf'.aemeasurable h_ae
-
-  exact ⟨h' ∘ f, hSM_comp, h_ae_comp⟩
-
-/-! ## A. Path Space and Factor Map -/
+/-! ## Path Space and Factor Map -/
 
 -- Note: We use explicit parameters throughout to avoid variable scoping issues
 
@@ -208,19 +147,5 @@ lemma measurePreserving_shift_path {Ω : Type*} [MeasurableSpace Ω]
     MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) := by
   refine ⟨measurable_shift_real, ?_⟩
   exact contractable_shift_invariant_law μ hX hX_meas
-
-/-!
-## UNUSED SECTIONS BELOW
-
-The following sections (C, D, E, F) contain incomplete scaffolding for an alternative proof approach.
-They are not used by the current ViaKoopman proof and have various type errors related to
-variable scoping with the `Ω[ℝ]` notation.
-
-The key lemmas used by TheoremViaKoopman.lean are:
-- `μ_path`: The path space measure
-- `measurePreserving_shift_path`: Contractability implies MeasurePreserving shift
-
-These are defined above in sections A and B and work correctly.
--/
 
 end Exchangeability.Bridge

@@ -67,8 +67,7 @@ lemma tailRV_apply (t : Ω → ℕ → α) (ω : Ω) (n : ℕ) : tailRV t ω n =
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
-lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t) = t := by
-  funext ω n; rfl
+lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t) = t := rfl
 
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma shiftRV_apply (X : ℕ → Ω → α) (m ω n) :

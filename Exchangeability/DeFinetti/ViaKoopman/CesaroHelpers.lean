@@ -134,11 +134,7 @@ lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
   induction k generalizing n with
   | zero => simp
-  | succ k ih =>
-    rw [Function.iterate_succ_apply']
-    simp only [shift]
-    rw [ih]
-    ring_nf
+  | succ k ih => rw [Function.iterate_succ_apply']; simp only [shift, ih]; ring_nf
 
 
 lemma cesaro_ce_eq_condexp
@@ -176,27 +172,20 @@ lemma cesaro_ce_eq_condexp
         =ᵐ[μ]
       (fun ω =>
         (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
-    have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
-      intro j _
-      obtain ⟨Cg, hCg⟩ := hg_bd
-      exact integrable_of_bounded_measurable
+    have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := fun j _ =>
+      hg_bd.elim fun Cg hCg => integrable_of_bounded_measurable
         (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
     exact condExp_sum_finset (m := mSI) (_hm := hmSI)
-      (Finset.range (n + 1)) (fun j => fun ω => g (ω j)) hint
+      (Finset.range (n + 1)) (fun j ω => g (ω j)) hint
 
   -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
-  have h_term : ∀ j,
-      μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := by
-    intro j
-    have hg_0_int : Integrable (fun ω => g (ω 0)) μ := by
-      obtain ⟨Cg, hCg⟩ := hg_bd
-      exact integrable_of_bounded_measurable
+  have h_term : ∀ j, μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := fun j => by
+    have hg_0_int : Integrable (fun ω => g (ω 0)) μ :=
+      hg_bd.elim fun Cg hCg => integrable_of_bounded_measurable
         (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
-    have h := condexp_precomp_iterate_eq (μ := μ) hσ (k := j) (hf := hg_0_int)
     have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
-      ext ω; congr 1; rw [shift_iterate_apply]; simp
-    rw [← h_shift]
-    exact h
+      ext ω; simp only [shift_iterate_apply, zero_add]
+    rw [← h_shift]; exact condexp_precomp_iterate_eq hσ hg_0_int
 
   -- Sum of identical a.e.-terms = (n+1) · that term
   have h_sum_const :

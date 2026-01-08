@@ -96,10 +96,8 @@ lemma L1_cesaro_convergence
     exact abs_le.mpr ⟨by linarith, h2⟩
 
   -- Step 3: Each g_M is measurable
-  have hg_M_meas : ∀ M, Measurable (g_M M) := by
-    intro M
-    -- max (min (g x) M) (-M) = max (measurable) (const)
-    exact (hg_meas.min measurable_const).max measurable_const
+  have hg_M_meas : ∀ M, Measurable (g_M M) := fun M =>
+    (hg_meas.min measurable_const).max measurable_const
 
   -- Step 4: Apply bounded case to each g_M
   have h_bdd : ∀ M, Tendsto (fun (n : ℕ) =>
@@ -167,15 +165,12 @@ lemma L1_cesaro_convergence
       -- Eventually g_M M (ω 0) = g (ω 0), so |difference| = 0
       refine Tendsto.congr' (h_eq.mono fun M hM => ?_) tendsto_const_nhds
       simp [hM]
-    have h_int : Integrable (fun ω => 2 * |g (ω 0)|) μ := by
-      refine Integrable.const_mul ?_ 2
-      exact hg_int.norm
+    have h_int : Integrable (fun ω => 2 * |g (ω 0)|) μ :=
+      hg_int.norm.const_mul 2
     -- Apply dominated convergence theorem
-    have h_meas : ∀ M, AEStronglyMeasurable (fun ω => |g (ω 0) - g_M M (ω 0)|) μ := by
-      intro M
-      have h1 : Measurable (fun ω : ℕ → α => g (ω 0)) := hg_meas.comp (measurable_pi_apply 0)
-      have h2 : Measurable (fun ω : ℕ → α => g_M M (ω 0)) := (hg_M_meas M).comp (measurable_pi_apply 0)
-      exact (h1.sub h2).norm.aestronglyMeasurable
+    have h_meas : ∀ M, AEStronglyMeasurable (fun ω => |g (ω 0) - g_M M (ω 0)|) μ := fun M =>
+      ((hg_meas.comp (measurable_pi_apply 0)).sub
+        ((hg_M_meas M).comp (measurable_pi_apply 0))).norm.aestronglyMeasurable
     have h_dom' : ∀ M, (fun ω => ‖g (ω 0) - g_M M (ω 0)‖) ≤ᵐ[μ] (fun ω => 2 * ‖g (ω 0)‖) := by
       intro M
       filter_upwards [h_dom M] with ω h
@@ -211,9 +206,7 @@ lemma L1_cesaro_convergence
           obtain ⟨C, hC⟩ := hg_M_bd M
           refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω 0)⟩
           exact (hg_M_meas M).comp (measurable_pi_apply 0)
-        have := condExp_sub h_int_g h_int_gM mSI
-        simp only [Pi.sub_apply] at this ⊢
-        exact this
+        exact condExp_sub h_int_g h_int_gM mSI
       calc ∫ ω, |μ[(fun ω => g (ω 0)) | mSI] ω - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ
           = ∫ ω, |μ[(fun ω => g (ω 0) - g_M M (ω 0)) | mSI] ω| ∂μ := by
               refine integral_congr_ae ?_
@@ -391,6 +384,7 @@ lemma L1_cesaro_convergence
 
 Given that `A_n → CE[g(ω₀) | mSI]` in L¹ and f is bounded,
 proves that `CE[f·A_n | mSI] → CE[f·CE[g | mSI] | mSI]` in L¹. -/
+omit [StandardBorelSpace α] in
 lemma ce_lipschitz_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (f g : α → ℝ)
@@ -411,12 +405,10 @@ lemma ce_lipschitz_convergence
   obtain ⟨Cf, hCf⟩ := hf_bd
   obtain ⟨Cg, hCg⟩ := hg_bd
 
-  have hA_int : ∀ n, Integrable (A n) μ := fun n => by
-    have h_sum_int : Integrable (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j))) μ :=
-      integrable_finset_sum (Finset.range (n + 1)) (fun j _ =>
-        integrable_of_bounded_measurable
-          (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j)))
-    exact h_sum_int.smul (1 / ((n + 1) : ℝ))
+  have hA_int : ∀ n, Integrable (A n) μ := fun n =>
+    (integrable_finset_sum (Finset.range (n + 1)) fun j _ =>
+      integrable_of_bounded_measurable
+        (hg_meas.comp (measurable_pi_apply j)) Cg fun ω => hCg (ω j)).smul (1 / ((n + 1) : ℝ))
 
   have hg0_int : Integrable (fun ω => g (ω 0)) μ :=
     integrable_of_bounded_measurable

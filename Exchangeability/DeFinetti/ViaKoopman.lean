@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2025 The Exchangeability Contributors
+Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
@@ -307,6 +307,7 @@ on path space satisfies the contractability hypothesis if `X` is contractable.
 
 Given `X : ℕ → Ω → α` that is contractable, the pushforward measure on `Ω[α] = ℕ → α`
 satisfies the path-space contractability hypothesis. -/
+omit [StandardBorelSpace α] in
 lemma pathSpace_contractable_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -342,6 +343,7 @@ then μ.map(i ↦ X(i+1)) = μ.map(i ↦ X i).
    the marginal of μ.map(i ↦ X i) (by contractability with k(i) = i+1)
 3. Apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality
 -/
+omit [StandardBorelSpace α] in
 lemma measure_map_shift_eq_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -411,6 +413,7 @@ lemma pathSpace_shift_preserving_of_contractable
 If `μ_path = μ.map φ` where `φ ω = (fun i => X i ω)`, then
 `ConditionallyIID μ_path id ↔ ConditionallyIID μ X`
 where `id` on path space is `fun i ω => ω i`. -/
+omit [StandardBorelSpace α] in
 lemma conditionallyIID_transfer
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -489,6 +492,7 @@ Then contractability reduces to consecutive indices, and product commutativity h
 4. By condexp_product_factorization_contractable: = ∫ ∏ j, (∫ indicator(B(σ⁻¹ j)) dν) dμ
 5. = ∫ ∏ i, ν(B i) dμ  (by product commutativity)
 -/
+omit [StandardBorelSpace α] in
 lemma indicator_product_bridge_contractable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -638,6 +642,7 @@ lemma indicator_product_bridge_contractable
 This is the key lemma connecting contractability to `Exchangeability.ConditionallyIID`.
 It uses `CommonEnding.conditional_iid_from_directing_measure` with the bridge condition
 proved by `indicator_product_bridge_contractable`. -/
+omit [StandardBorelSpace α] in
 lemma conditionallyIID_bind_of_contractable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)

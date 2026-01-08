@@ -3,19 +3,17 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.ViaKoopman
 import Exchangeability.Bridge.CesaroToCondExp
 
 /-!
-# de Finetti's Theorem - Koopman/Ergodic Proof (TODO)
+# de Finetti's Theorem - Koopman/Ergodic Proof
 
-This file will provide the **completed Koopman proof** of de Finetti's theorem
-by combining:
-- `ViaKoopman`: Proves convergence via Mean Ergodic Theorem (to be implemented)
-- `CommonEnding`: Builds the kernel K from the map f ↦ α and completes the proof
+This file provides the **completed Koopman proof** of de Finetti's theorem
+using `ViaKoopman` which proves conditional i.i.d. via block averaging and
+the Mean Ergodic Theorem.
 
 This is **Kallenberg's "first proof"** (page 26), which uses the Mean Ergodic
 Theorem applied to the Koopman operator on L²(μ).

@@ -142,12 +142,8 @@ private theorem h_tower_of_lagConst_from_one
       -- Using integral_map: ∫ h d(μ.map shift) = ∫ (h ∘ shift) dμ
       -- Since hσ.map_eq : μ.map shift = μ, we get ∫ h dμ = ∫ (h ∘ shift) dμ
       have hh_asm : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) μ := by
-        have hA_meas : Measurable (A n) := by
-          apply Measurable.mul
-          · exact measurable_const
-          · apply Finset.measurable_sum
-            intro j _
-            exact hg_meas.comp (measurable_pi_apply j)
+        have hA_meas : Measurable (A n) :=
+          measurable_const.mul (Finset.measurable_sum _ fun j _ => hg_meas.comp (measurable_pi_apply j))
         have h_diff : AEStronglyMeasurable (fun ω => A n ω - Y ω) μ :=
           hA_meas.aestronglyMeasurable.sub integrable_condExp.aestronglyMeasurable
         exact continuous_abs.comp_aestronglyMeasurable h_diff
@@ -201,8 +197,8 @@ private theorem h_tower_of_lagConst_from_one
       -- Factor bound
       have h2 : ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ
               ≤ Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ := by
-        have h_eq : ∀ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| = |f (ω 0)| * |A' (n + 1) ω - Y ω| := by
-          intro ω; rw [← mul_sub, abs_mul]
+        have h_eq : ∀ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| = |f (ω 0)| * |A' (n + 1) ω - Y ω| :=
+          fun ω => by rw [← mul_sub, abs_mul]
         have hpt : ∀ᵐ ω ∂μ, |f (ω 0)| * |A' (n + 1) ω - Y ω| ≤ Cf * |A' (n + 1) ω - Y ω| :=
           ae_of_all μ (fun ω => mul_le_mul_of_nonneg_right (hCf (ω 0)) (abs_nonneg _))
         have hdiff_int : Integrable (fun ω => A' (n + 1) ω - Y ω) μ :=
@@ -257,10 +253,7 @@ private theorem h_tower_of_lagConst_from_one
                        = ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
                            - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ := by
         intro n
-        have h := h_const_is_target (n + 1) (Nat.succ_pos n)
-        refine integral_congr_ae ?_
-        filter_upwards [h] with ω hω
-        simp [hω]
+        exact integral_congr_ae ((h_const_is_target (n + 1) (Nat.succ_pos n)).mono fun ω hω => by simp [hω])
       -- The RHS → 0, so for any ε > 0, there exists N such that RHS < ε
       -- Since the LHS = RHS for all n, the LHS ≤ ε for all ε > 0, hence LHS = 0
       have h_le : ∀ ε > 0, ∫ ω, |μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
@@ -292,9 +285,7 @@ private theorem h_tower_of_lagConst_from_one
       (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_diff_int.abs).mp h_zero
     -- |X - Y| =ᵃᵉ 0 implies X - Y =ᵃᵉ 0, hence X =ᵃᵉ Y
     filter_upwards [h_abs_eq_zero] with ω hω
-    have : μ[(fun ω' => f (ω' 0) * g (ω' 1)) | mSI] ω
-         - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω = 0 := abs_eq_zero.mp hω
-    linarith
+    linarith [abs_eq_zero.mp hω]
 
   exact h_ae_eq
 
@@ -346,7 +337,7 @@ lemma condexp_pair_factorization_MET
       use Cg
       have hg_int : Integrable (fun ω => g (ω 0)) μ :=
         ⟨(hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable,
-         HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))⟩
+         .of_bounded (ae_of_all μ (fun ω => hCg (ω 0)))⟩
       have hCg_nn : 0 ≤ Cg := le_trans (abs_nonneg _) (hCg (Classical.choice ‹Nonempty α›))
       have hCg_ae' : ∀ᵐ ω ∂μ, |g (ω 0)| ≤ Cg.toNNReal := by
         filter_upwards with ω
@@ -357,7 +348,7 @@ lemma condexp_pair_factorization_MET
     obtain ⟨Cf, hCf⟩ := hf_bd
     have hY_int : Integrable (fun ω => f (ω 0)) μ :=
       ⟨(hf_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable,
-       HasFiniteIntegral.of_bounded (ae_of_all μ (fun ω => hCf (ω 0)))⟩
+       .of_bounded (ae_of_all μ (fun ω => hCf (ω 0)))⟩
     have h := condExp_mul_pullout hZ_meas hZ_bd hY_int
     calc μ[(fun ω => f (ω 0) * Z ω) | mSI]
         =ᵐ[μ] μ[(fun ω => Z ω * f (ω 0)) | mSI] := by

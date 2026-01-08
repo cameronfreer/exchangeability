@@ -3,6 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
+import Exchangeability.DeFinetti.ViaL2.BlockAvgDef
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
@@ -13,7 +14,7 @@ import Exchangeability.Probability.CenteredVariables
 import Exchangeability.Probability.SigmaAlgebraHelpers
 import Exchangeability.Util.FinsetHelpers
 import Exchangeability.Tail.TailSigma
-import Exchangeability.Tail.ShiftInvariance
+import Exchangeability.Tail.ShiftInvariantMeasure
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
@@ -69,71 +70,6 @@ This is the lightest-dependency route to de Finetti.
   - Lemma 1.2 (L² bound for exchangeable weighted sums)
   - "Second proof of Theorem 1.1" (the L² route to de Finetti)
 -/
-
-/-- **Block Cesàro average** of a function along a sequence.
-
-For a function `f : α → ℝ` and sequence `X : ℕ → Ω → α`, the block average
-starting at index `m` with length `n` is:
-
-  A_{m,n}(ω) := (1/n) ∑_{k=0}^{n-1} f(X_{m+k}(ω))
-
-This is the building block for Kallenberg's L² convergence proof. -/
-def blockAvg (f : α → ℝ) (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) : ℝ :=
-  (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))
-
-lemma blockAvg_measurable
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (f : α → ℝ) (X : ℕ → Ω → α)
-    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
-    (m n : ℕ) :
-    Measurable (fun ω => blockAvg f X m n ω) := by
-  classical
-  unfold blockAvg
-  -- sum of measurable terms
-  have hsum :
-      Measurable (fun ω =>
-        (Finset.range n).sum (fun k => f (X (m + k) ω))) :=
-    Finset.measurable_sum _ (by
-      intro k _
-      exact hf.comp (hX (m + k)))
-  -- multiply by a constant
-  simpa using (measurable_const.mul hsum : Measurable _)
-
-lemma blockAvg_abs_le_one
-    {Ω α : Type*} [MeasurableSpace Ω]
-    (f : α → ℝ) (X : ℕ → Ω → α)
-    (hf_bdd : ∀ x, |f x| ≤ 1)
-    (m n : ℕ) :
-    ∀ ω, |blockAvg f X m n ω| ≤ 1 := by
-  classical
-  intro ω
-  unfold blockAvg
-  have hsum_bound :
-      |(Finset.range n).sum (fun k => f (X (m + k) ω))| ≤ (n : ℝ) := by
-    -- |∑ a_k| ≤ ∑ |a_k| ≤ ∑ 1 = n
-    calc |(Finset.range n).sum (fun k => f (X (m + k) ω))|
-        ≤ (Finset.range n).sum (fun k => |f (X (m + k) ω)|) := by
-          exact Finset.abs_sum_le_sum_abs (fun k => f (X (m + k) ω)) (Finset.range n)
-      _ ≤ (Finset.range n).sum (fun _ => (1 : ℝ)) := by
-          apply Finset.sum_le_sum
-          intro k _
-          exact hf_bdd (X (m + k) ω)
-      _ = n := by
-          have : (Finset.range n).card = n := Finset.card_range n
-          simpa [this]
-  -- Now scale by n⁻¹
-  have hnonneg : 0 ≤ (n : ℝ)⁻¹ := by exact inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
-  calc
-    |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))|
-        = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (m + k) ω))|
-          := by simpa [abs_mul, abs_of_nonneg hnonneg]
-    _ ≤ (n : ℝ)⁻¹ * (n : ℝ)
-          := mul_le_mul_of_nonneg_left hsum_bound hnonneg
-    _ ≤ 1 := by
-          by_cases hn : n = 0
-          · simpa [hn]
-          · have : (n : ℝ) ≠ 0 := by simp [hn]
-            simp [this]
 
 /-- **Kallenberg's L² bound (Lemma 1.2)** - Core of the elementary proof.
 

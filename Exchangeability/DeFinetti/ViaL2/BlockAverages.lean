@@ -3,6 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
+import Exchangeability.DeFinetti.ViaL2.WindowMachinery
 import Exchangeability.DeFinetti.L2Helpers
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
@@ -12,7 +13,7 @@ import Exchangeability.Probability.LpNormHelpers
 import Exchangeability.Util.FinsetHelpers
 -- import Exchangeability.Probability.CesaroHelpers  -- TODO: Fix compilation errors
 import Exchangeability.Tail.TailSigma
-import Exchangeability.Tail.ShiftInvariance
+import Exchangeability.Tail.ShiftInvariantMeasure
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
@@ -90,87 +91,6 @@ open scoped BigOperators
 
 Covariance and Lp utility lemmas are now in L2Helpers.lean.
 -/
-
-/-!
-## Step 2: L² bound implies L¹ convergence of weighted sums (Kallenberg's key step)
--/
-
-/-- **Finite window of consecutive indices.**
-
-The window `{n+1, n+2, ..., n+k}` represented as a `Finset ℕ`.
-Used to express Cesàro averages: `(1/k) * ∑_{i ∈ window n k} f(X_i)`. -/
-def window (n k : ℕ) : Finset ℕ :=
-  (Finset.range k).image fun i => n + i + 1
-
-/-- The window contains exactly k elements. -/
-lemma window_card (n k : ℕ) : (window n k).card = k := by
-  classical
-  unfold window
-  refine (Finset.card_image_iff.mpr ?_).trans ?_
-  · intro a ha b hb h
-    have h' : n + a = n + b := by
-      apply Nat.succ.inj
-      simp only [Nat.succ_eq_add_one] at h ⊢
-      omega
-    exact Nat.add_left_cancel h'
-  · simp only [Finset.card_range]
-
-/-- Characterization of window membership. -/
-lemma mem_window_iff {n k t : ℕ} :
-    t ∈ window n k ↔ ∃ i : ℕ, i < k ∧ t = n + i + 1 := by
-  classical
-  unfold window
-  constructor
-  · intro ht
-    rcases Finset.mem_image.mp ht with ⟨i, hi, rfl⟩
-    refine ⟨i, ?_, rfl⟩
-    simpa using hi
-  · intro h
-    rcases h with ⟨i, hi, rfl⟩
-    refine Finset.mem_image.mpr ?_
-    refine ⟨i, ?_, rfl⟩
-    simpa using hi
-
-/-- Sum over a window of length `k` can be reindexed as a sum over `Fin k`. -/
-lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
-    (n k : ℕ) (g : ℕ → β) :
-    ∑ t ∈ window n k, g t = ∑ i : Fin k, g (n + i.val + 1) := by
-  classical
-  unfold window
-  -- Show the image map used to define the window is injective
-  have h_inj :
-      ∀ a ∈ Finset.range k, ∀ b ∈ Finset.range k,
-        (n + a + 1 = n + b + 1 → a = b) := by
-    intro a ha b hb h
-    have h' : a + 1 = b + 1 := by
-      have : n + (a + 1) = n + (b + 1) := by
-        omega
-      exact Nat.add_left_cancel this
-    exact Nat.succ.inj h'
-  -- Convert the window sum to a range sum via the image definition
-  have h_sum_range :
-      ∑ t ∈ Finset.image (fun i => n + i + 1) (Finset.range k), g t
-        = ∑ i ∈ Finset.range k, g (n + i + 1) :=
-    Finset.sum_image <| by
-      intro a ha b hb h
-      exact h_inj a ha b hb h
-  -- Replace the range sum with a sum over `Fin k`
-  have h_range_to_fin :
-      ∑ i ∈ Finset.range k, g (n + i + 1)
-        = ∑ i : Fin k, g (n + i.val + 1) := by
-    classical
-    refine (Finset.sum_bij (fun (i : Fin k) _ => i.val)
-        (fun i _ => by
-          simp [Finset.mem_range, i.is_lt])
-        (fun i hi j hj h => by
-          exact Fin.ext h)
-        (fun b hb => ?_)
-        (fun i _ => rfl)).symm
-    · rcases Finset.mem_range.mp hb with hb_lt
-      refine ⟨⟨b, hb_lt⟩, ?_, rfl⟩
-      simp
-  simpa using h_sum_range.trans h_range_to_fin
-
 
 /-!
 ### Covariance structure lemma
