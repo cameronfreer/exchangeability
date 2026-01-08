@@ -231,7 +231,6 @@ lemma common_version_condexp_bdd
         = ∫ ω in T, (v₁ ∘ W) ω ∂μ := by
           -- Change of variables for set integral
           rw [setIntegral_map hS hv₁_meas.aestronglyMeasurable hW.aemeasurable]
-          rfl
       _ = ∫ ω in T, V ω ∂μ := by
           -- V = v₁∘W a.e.
           refine setIntegral_congr_ae (hW hS) ?_
@@ -264,9 +263,7 @@ lemma common_version_condexp_bdd
               show Integrable (fun ω => (ψ ∘ Z) ω * (S.indicator (fun _ => 1) ∘ W) ω) μ
               -- Rewrite as indicator * ψ to match bdd_mul' signature
               suffices Integrable (fun ω => (S.indicator (fun _ => (1:ℝ)) ∘ W) ω * (ψ ∘ Z) ω) μ by
-                convert this using 1
-                ext ω
-                ring
+                convert this using 1; ext ω; ring
               -- Indicator function is bounded
               have hind_bdd : ∀ᵐ (ω : Ω) ∂μ, ‖(S.indicator (fun _ => (1:ℝ)) ∘ W) ω‖ ≤ 1 := by
                 filter_upwards with ω
@@ -313,7 +310,6 @@ lemma common_version_condexp_bdd
       _ = ∫ y in S, v₂ y ∂(Measure.map W' μ) := by
           -- Change of variables back
           rw [setIntegral_map hS hv₂_meas.aestronglyMeasurable hW'.aemeasurable]
-          rfl
       _ = ∫ y in S, v₂ y ∂(Measure.map W μ) := by
           -- Law(W) = Law(W')
           rw [h_law_eq]

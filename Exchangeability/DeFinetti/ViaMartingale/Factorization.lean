@@ -225,8 +225,7 @@ lemma finite_level_factorization
       funext ω
       simp only [indProd, Cinit, Clast]
       -- Split the product using Fin.prod_univ_castSucc
-      rw [Fin.prod_univ_castSucc]
-      rfl
+      rw [Fin.prod_univ_castSucc]; rfl
 
     -- Express the two factors as indicators of sets
     set A := firstRCylinder X r Cinit with hA_def
@@ -324,8 +323,7 @@ lemma finite_level_factorization
                    | futureFiltration X m] := by
           refine condExp_congr_ae (EventuallyEq.of_eq ?_)
           funext ω
-          rw [← hf_indicator, ← hg_indicator]
-          rfl
+          rw [← hf_indicator, ← hg_indicator]; rfl
         _ =ᵐ[μ] (fun ω => (μ[A.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)
                           * (μ[B.indicator (fun _ => (1:ℝ)) | futureFiltration X m] ω)) := hfactor
         _ =ᵐ[μ] (fun ω => (μ[indProd X r Cinit | futureFiltration X m] ω)

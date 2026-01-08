@@ -71,8 +71,7 @@ lemma indProd_as_indicator (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set 
 equals the indicator of the first-`r` cylinder. -/
 lemma indProd_eq_firstRCylinder_indicator (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
     indProd X r C = (firstRCylinder X r C).indicator (fun _ => (1 : ℝ)) := by
-  rw [indProd_as_indicator]
-  rfl
+  rw [indProd_as_indicator]; rfl
 
 /-- Basic integrability: `indProd` is an indicator of a measurable set, hence integrable
 under a finite measure. -/
