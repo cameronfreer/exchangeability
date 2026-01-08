@@ -266,8 +266,7 @@ lemma contractable_triple_pushforward
       ∀ {S} (hS : S ∈ Rectangles),
         Measure.map (fun ω => (Z_r ω, X r ω, Y_future ω)) μ S
           = Measure.map (fun ω => (Z_r ω, X r ω, Y_tail ω)) μ S := by
-    intro S hS
-    rcases hS with ⟨A, hA, B, hB, C, hC, rfl⟩
+    rintro S ⟨A, hA, B, hB, C, hC, rfl⟩
     -- Convert preimage of rectangle into the cylinder event.
     have h_pre_future :
         (fun ω => (Z_r ω, X r ω, Y_future ω)) ⁻¹'

@@ -118,8 +118,7 @@ lemma block_coord_condIndep
 
   -- For each H = (X r)⁻¹(B), prove the projection identity:
   -- μ[1_H | firstRSigma X r ⊔ futureFiltration X m] =ᵐ[μ] μ[1_H | futureFiltration X m]
-  intro H hH
-  rcases hH with ⟨B, hB, rfl⟩
+  rintro H ⟨B, hB, rfl⟩
 
   -- Translate to the form expected by condExp_Xr_indicator_eq_of_contractable
   -- The σ-algebras match definitionally:
