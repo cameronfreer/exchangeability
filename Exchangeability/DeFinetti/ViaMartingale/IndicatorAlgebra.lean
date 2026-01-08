@@ -98,9 +98,7 @@ lemma indProd_stronglyMeasurable [MeasurableSpace Ω] [MeasurableSpace α]
 lemma indProd_nonneg_le_one (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
     0 ≤ indProd X r C ω ∧ indProd X r C ω ≤ 1 := by
   rw [indProd_as_indicator]
-  by_cases h : ∀ i : Fin r, X i ω ∈ C i
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h]
+  by_cases h : ∀ i : Fin r, X i ω ∈ C i <;> simp [Set.indicator, h]
 
 /-- indProd of zero coordinates is identically 1. -/
 @[simp] lemma indProd_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
