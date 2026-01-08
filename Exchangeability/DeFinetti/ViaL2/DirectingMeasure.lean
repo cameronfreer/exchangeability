@@ -3071,8 +3071,14 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
       (fun ω => ∑ c ∈ φ.range,
         (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) μ := by
     -- Need to help Lean see the eta-expanded form for Finset.aestronglyMeasurable_sum
-    refine Finset.aestronglyMeasurable_sum φ.range
-        (f := fun c ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) ?_
+    -- Convert fun ω => ∑ c ∈ s, f c ω  to  ∑ c ∈ s, (fun ω => f c ω)
+    have h_eq_form : (fun ω => ∑ c ∈ φ.range,
+        (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) =
+        ∑ c ∈ φ.range, fun ω =>
+          (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c := by
+      ext ω; rfl
+    rw [h_eq_form]
+    refine Finset.aestronglyMeasurable_sum φ.range ?_
     intro c _
     -- Need to show: ω ↦ ν(ω).real(φ⁻¹'{c}) • c is tail-AESM
     -- ν(ω).real(s) = ∫ 1_s dν(ω) for probability measures
