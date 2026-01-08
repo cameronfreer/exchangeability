@@ -3007,13 +3007,14 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         -- that the pointwise limit of tail-SM functions is tail-SM
         let g_tail : Ω → ℝ := fun ω => limUnder atTop (fun n => g_n n ω)
         have hg_tail_sm : @StronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) g_tail :=
-          @StronglyMeasurable.limUnder ℕ Ω ℝ _ _ _ _ atTop _ (fun n => g_n n) _ hg_n_sm
+          @StronglyMeasurable.limUnder ℕ Ω ℝ (TailSigma.tailSigma X) _ _ _ atTop _
+            (fun n => g_n n) _ hg_n_sm
         -- g_tail equals tsum ae (since g_n → tsum ae, and limUnder captures this limit)
         have hg_tail_eq_tsum : g_tail =ᶠ[ae μ]
             (fun ω => ∑' k, ∫ x, (f k).indicator (fun _ => (1:ℝ)) x
               ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) := by
           filter_upwards [h_g_tendsto] with ω hω
-          exact limUnder_eq hω
+          exact hω.limUnder_eq
         refine ⟨g_tail, hg_tail_sm, hg_tail_eq_tsum.symm⟩
       exact AEStronglyMeasurable.congr h_tsum_aesm (ae_of_all _ (fun ω => (h_eq ω).symm))
 
@@ -3069,7 +3070,9 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
   have h_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
       (fun ω => ∑ c ∈ φ.range,
         (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) μ := by
-    apply Finset.aestronglyMeasurable_sum
+    -- Need to help Lean see the eta-expanded form for Finset.aestronglyMeasurable_sum
+    refine Finset.aestronglyMeasurable_sum φ.range
+        (f := fun c ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) ?_
     intro c _
     -- Need to show: ω ↦ ν(ω).real(φ⁻¹'{c}) • c is tail-AESM
     -- ν(ω).real(s) = ∫ 1_s dν(ω) for probability measures
@@ -3117,8 +3120,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
-           (le_abs_self (f x)).trans (hM' x)⟩
+    exact abs_le.mp (hM' x)
 
   -- Set.Icc (-M') M' is nonempty (contains 0 when M' ≥ 0)
   have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
@@ -3461,8 +3463,7 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
   have hf_range : ∀ x, f x ∈ Set.Icc (-M') M' := by
     intro x
     rw [Set.mem_Icc]
-    exact ⟨neg_abs_le (f x) |>.trans (by linarith [hM' x]),
-           (le_abs_self (f x)).trans (hM' x)⟩
+    exact abs_le.mp (hM' x)
 
   have h0_mem : (0 : ℝ) ∈ Set.Icc (-M') M' := by
     rw [Set.mem_Icc]; exact ⟨by linarith, hM'_nonneg⟩
