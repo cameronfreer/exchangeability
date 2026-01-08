@@ -3076,7 +3076,8 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
         (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c) =
         ∑ c ∈ φ.range, fun ω =>
           (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) • c := by
-      ext ω; rfl
+      ext ω
+      exact (Finset.sum_apply ω φ.range _).symm
     rw [h_eq_form]
     refine Finset.aestronglyMeasurable_sum φ.range ?_
     intro c _
@@ -3177,7 +3178,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
       exact hφ_tendsto x
 
   -- Apply aestronglyMeasurable_of_tendsto_ae
-  exact aestronglyMeasurable_of_tendsto_ae Filter.atTop hφ_aesm (ae_of_all _ h_int_tendsto)
+  exact aestronglyMeasurable_of_tendsto_ae (μ := μ) Filter.atTop hφ_aesm (ae_of_all μ h_int_tendsto)
 
 /-- **Set integral equality for Iic indicators.**
 
@@ -3217,6 +3218,8 @@ lemma setIntegral_directing_measure_indicator_Iic_eq
   have h_step3 : ∫ ω in A, alphaIicCE X hX_contract hX_meas hX_L2 t ω ∂μ =
       ∫ ω in A, (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
     unfold alphaIicCE
+    -- Convert composition form to lambda form
+    simp only [indIic, Function.comp_def]
     -- Need to show the indicator function is integrable
     have h_int : Integrable (fun ω => (Set.Iic t).indicator (fun _ => (1:ℝ)) (X 0 ω)) μ := by
       apply Integrable.indicator
@@ -3288,7 +3291,7 @@ lemma setIntegral_directing_measure_indicator_eq
           rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
           exact (integrable_const 1).indicator ht_meas
         simp_rw [h_compl_eq]
-        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        rw [integral_sub, integral_const]
         · exact (integrable_const 1).integrableOn
         · -- Need integrability of ω ↦ ∫ 1_t dν(ω) on A
           apply Integrable.integrableOn
@@ -3319,7 +3322,7 @@ lemma setIntegral_directing_measure_indicator_eq
           · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
           · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
-        rw [integral_sub, integral_const, Measure.restrict_apply_univ]
+        rw [integral_sub, integral_const]
         · exact (integrable_const 1).integrableOn
         · apply Integrable.integrableOn
           exact (integrable_const 1).indicator (ht_meas.preimage (hX_meas 0))
@@ -3360,11 +3363,14 @@ lemma setIntegral_directing_measure_indicator_eq
               simp [Set.indicator_of_not_mem (this _)]
           simp_rw [h_ind_union]
           rw [integral_tsum]
-          · intro n; exact (integrable_const 1).indicator (hf n).1
           · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
+          · intro n; exact (integrable_const 1).indicator (hf n).1
         simp_rw [h_inner_eq]
         -- Now we need: ∫_A (∑' fn) dμ = ∑' ∫_A fn dμ
         rw [integral_tsum]
+        · intro n
+          exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
+            (f n) (hf n).1 |>.mono hm_le |>.restrict
         · intro n
           apply Integrable.integrableOn
           apply Integrable.mono' (integrable_const 1)
@@ -3389,9 +3395,6 @@ lemma setIntegral_directing_measure_indicator_eq
                     · exact integrable_const 1
                     · intro x; exact Set.indicator_le_self' (fun _ _ => zero_le_one) x
               _ = 1 := by simp [measureReal_univ_eq_one]
-        · intro n
-          exact integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
-            (f n) (hf n).1 |>.mono hm_le |>.restrict
 
       have h_rhs_eq : ∫ ω in A, (⋃ n, f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ =
           ∑' n, ∫ ω in A, (f n).indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
@@ -3412,10 +3415,10 @@ lemma setIntegral_directing_measure_indicator_eq
         simp_rw [h_ind_union]
         rw [integral_tsum]
         · intro n
+          exact ((measurable_const.indicator (hf n).1).comp (hX_meas 0)).aestronglyMeasurable.restrict
+        · intro n
           apply Integrable.integrableOn
           exact (integrable_const 1).indicator ((hf n).1.preimage (hX_meas 0))
-        · intro n
-          exact ((measurable_const.indicator (hf n).1).comp (hX_meas 0)).aestronglyMeasurable.restrict
 
       rw [h_lhs_eq, h_rhs_eq]
       congr 1
@@ -3491,8 +3494,8 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
       (fun n => ∫ ω in A, (∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ)
       Filter.atTop
       (nhds (∫ ω in A, (∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) ∂μ)) := by
-    -- Apply DCT with bound M'
-    apply tendsto_setIntegral_of_dominated_convergence (fun _ => M')
+    -- Apply DCT with bound M' (set integrals are definitionally restricted integrals)
+    apply tendsto_integral_of_dominated_convergence (fun _ => M')
     · intro n
       exact integral_simpleFunc_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2 (φ n)
         |>.mono hm_le |>.restrict
@@ -3531,8 +3534,8 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
       (fun n => ∫ ω in A, (φ n) (X 0 ω) ∂μ)
       Filter.atTop
       (nhds (∫ ω in A, f (X 0 ω) ∂μ)) := by
-    -- Apply DCT with bound M'
-    apply tendsto_setIntegral_of_dominated_convergence (fun _ => M')
+    -- Apply DCT with bound M' (set integrals are definitionally restricted integrals)
+    apply tendsto_integral_of_dominated_convergence (fun _ => M')
     · intro n
       exact ((SimpleFunc.measurable (φ n)).comp (hX_meas 0)).aestronglyMeasurable.restrict
     · exact (integrable_const M').integrableOn
@@ -4205,14 +4208,14 @@ lemma directing_measure_integral_via_chain
         -- Convert to TendstoInMeasure
         have halpha_meas_conv : TendstoInMeasure μ A atTop alpha := by
           apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
-          · intro m; exact hA_meas m
-          · exact hα_meas
+          · intro m; exact (hA_meas m).aestronglyMeasurable
+          · exact hα_meas.aestronglyMeasurable
           · exact halpha_eLpNorm
 
         have hM_alpha_g_meas_conv : TendstoInMeasure μ A atTop (fun ω => M * α_g ω) := by
           apply tendstoInMeasure_of_tendsto_eLpNorm (p := 1) one_ne_zero
-          · intro m; exact hA_meas m
-          · exact measurable_const.mul hα_g_L2.aestronglyMeasurable.measurable
+          · intro m; exact (hA_meas m).aestronglyMeasurable
+          · exact aestronglyMeasurable_const.mul hα_g_L2.aestronglyMeasurable
           · exact hM_alpha_g_eLpNorm
 
         -- Apply uniqueness
