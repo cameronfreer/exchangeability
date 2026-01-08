@@ -177,8 +177,7 @@ lemma condexpL2_koopman_comm (f : Lp ℝ 2 μ) :
   have hPf_mem : P f ∈ S := by
     have : P f ∈ Set.range P := ⟨f, rfl⟩
     simpa [P, h_range] using this
-  have h_fix : ∀ g ∈ S, U g = g := by
-    intro g hg; exact (mem_fixedSubspace_iff (μ := μ) (α := α) hσ g).1 hg
+  have h_fix : ∀ g ∈ S, U g = g := fun g hg => (mem_fixedSubspace_iff (μ := μ) (α := α) hσ g).1 hg
   set r := f - P f
   -- Step 1: r = f - Pf is orthogonal to S
   have h_r_orth : ∀ g ∈ S, @inner ℝ (Lp ℝ 2 μ) _ r g = 0 := fun g hg =>
