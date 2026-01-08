@@ -208,8 +208,7 @@ abbrev fixedSubspace {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 /-- Functions in the fixed-point subspace are exactly those that are a.e. invariant under shift. -/
 lemma mem_fixedSubspace_iff {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
-    f ∈ fixedSubspace hσ ↔ koopman shift hσ f = f := by
-  rfl
+    f ∈ fixedSubspace hσ ↔ koopman shift hσ f = f := Iff.rfl
 
 /-- The orthogonal projection onto the fixed-point subspace exists (as a closed subspace). -/
 lemma fixedSubspace_closed {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]

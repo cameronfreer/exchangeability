@@ -7,7 +7,6 @@ import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.DeFinetti.ViaKoopman
-import Exchangeability.DeFinetti.ViaKoopmanContractable
 import Exchangeability.Bridge.CesaroToCondExp
 
 /-!

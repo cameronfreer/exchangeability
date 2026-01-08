@@ -122,8 +122,7 @@ def ExchangeableAt (μ : Measure Ω) (X : ℕ → Ω → α) (n : ℕ) : Prop :=
 
 /-- Exchangeability is equivalent to being exchangeable at every dimension. -/
 lemma exchangeable_iff_forall_exchangeableAt {μ : Measure Ω} {X : ℕ → Ω → α} :
-    Exchangeable μ X ↔ ∀ n, ExchangeableAt μ X n := by
-  rfl
+    Exchangeable μ X ↔ ∀ n, ExchangeableAt μ X n := Iff.rfl
 
 /--
 Full exchangeability implies exchangeability.

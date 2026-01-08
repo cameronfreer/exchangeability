@@ -1599,43 +1599,26 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
-/-- **Step 5 packaging:** packaged existence of a directing kernel
-with the pointwise identification for a given bounded measurable `f`.
-
-This provides the L¹ limit α and the directing measure ν such that
-α(ω) = ∫ f dν(ω) a.e.
-
-**Key change from original**: α is an OUTPUT (the L¹ limit of Cesàro averages),
-not an input. The original statement taking α as input was incorrect since
-it claimed α_n = ∫ f dν for ALL n, but the RHS is independent of n.
-
-**MOVED TO MoreL2Helpers.lean**: The complete version of this lemma is now
-available as `alpha_is_conditional_expectation_packaged` in
-`Exchangeability.DeFinetti.ViaL2.MoreL2Helpers`. Due to import structure
-(MoreL2Helpers imports BlockAverages), this file cannot use that version
-directly. Files that need this lemma should import MoreL2Helpers.
-
-This stub is kept for backward compatibility and documentation. -/
-@[deprecated "Use alpha_is_conditional_expectation_packaged from MoreL2Helpers"]
+/-- **Stub for directing kernel packaged result.**
+The complete proof is in MoreL2Helpers.lean. This stub is needed due to import structure
+(MoreL2Helpers imports MainConvergence which imports this file). -/
 lemma alpha_is_conditional_expectation_packaged
-  {Ω : Type*} [MeasurableSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (f : ℝ → ℝ) (hf_meas : Measurable f)
-  (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
-  ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
-    Measurable alpha ∧
-    MemLp alpha 1 μ ∧
-    (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-    (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
-    -- L¹ convergence: Cesàro averages converge to alpha
-    (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
-      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
-    -- Identification: alpha equals the integral against nu
-    (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
-  -- The complete proof is in MoreL2Helpers.lean
-  -- This stub uses sorry to avoid circular imports
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ) (hX_contract : Exchangeability.Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (f : ℝ → ℝ) (hf_meas : Measurable f)
+    (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
+    ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
+      Measurable alpha ∧
+      MemLp alpha 1 μ ∧
+      (∀ ω, IsProbabilityMeasure (nu ω)) ∧
+      (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
+      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
+        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
+      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
+  -- Stub: real proof in MoreL2Helpers.alpha_is_conditional_expectation_packaged
   sorry
+
 
