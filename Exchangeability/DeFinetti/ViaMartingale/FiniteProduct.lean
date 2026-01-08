@@ -202,12 +202,11 @@ lemma finite_product_formula_id
     constructor <;> (intro ⟨B, hB, hS⟩; refine ⟨B, hB, ?_⟩; rw [hS]; ext x; simp)
 
   -- 1) Rectangles form a π-system and generate the Π σ-algebra
-  have h_pi : IsPiSystem Rectangles := by
-    rw [Rectangles_def]; exact rectangles_isPiSystem (m := m) (α := α)
+  have h_pi : IsPiSystem Rectangles := Rectangles_def ▸ rectangles_isPiSystem (m := m) (α := α)
 
   have h_gen : (inferInstance : MeasurableSpace (Fin m → α))
-      = MeasurableSpace.generateFrom Rectangles := by
-    rw [Rectangles_def]; exact rectangles_generate_pi_sigma (m := m) (α := α)
+      = MeasurableSpace.generateFrom Rectangles :=
+    Rectangles_def ▸ rectangles_generate_pi_sigma (m := m) (α := α)
 
   -- 2) Show both measures agree on rectangles
   have h_agree :
@@ -347,7 +346,7 @@ lemma finite_product_formula_id
       have hme : Measurable (fun ω => fun i : Fin m => X i ω) := by
         fun_prop (disch := measurability)
       rw [Measure.map_apply hme MeasurableSet.univ]
-      have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := by ext; simp
+      have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := Set.preimage_univ
       rw [this]
       exact measure_univ
     haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
