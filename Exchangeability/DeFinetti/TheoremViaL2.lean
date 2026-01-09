@@ -44,12 +44,6 @@ For other proof approaches, see:
 - `TheoremViaKoopman.lean`: Proof via mean ergodic theorem
 - `TheoremViaMartingale.lean`: Proof via reverse martingale convergence
 
-## Current status
-
-**Implementation note**: The actual completion that calls CommonEnding is
-currently in ViaL2.lean itself (lines 1547-1563) as a sorry. Once those
-sorries are filled, this file will provide the complete, fully-formal proof.
-
 ## References
 
 * Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*,
