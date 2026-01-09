@@ -7,10 +7,10 @@ import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.InfiniteProduct
 import Exchangeability.Probability.CondExp
 
--- de Finetti theorem (martingale proof is default)
-import Exchangeability.DeFinetti.Theorem
--- Note: TheoremViaL2 and TheoremViaKoopman have naming conflicts with Theorem
--- Import them directly if you need a specific proof approach
+-- de Finetti theorem - all three proof approaches
+import Exchangeability.DeFinetti.Theorem         -- Default (re-exports martingale proof)
+import Exchangeability.DeFinetti.TheoremViaL2     -- L² proof (suffix: _viaL2)
+import Exchangeability.DeFinetti.TheoremViaKoopman -- Koopman proof (suffix: _viaKoopman)
 
 /-!
 # Exchangeability

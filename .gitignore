@@ -29,3 +29,10 @@ depgraph.json
 *.png
 paranoia_report.json
 *-report.json
+
+# Blueprint build artifacts
+blueprint/lean_decls
+blueprint/src/web.paux
+blueprint/src/print.paux
+blueprint/web/
+blueprint/print/

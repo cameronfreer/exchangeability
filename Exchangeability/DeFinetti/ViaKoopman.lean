@@ -16,7 +16,7 @@ Kallenberg's "first proof" which uses disjoint-block averaging rather than permu
 
 ## Main results
 
-* `deFinetti_viaKoopman`: de Finetti's theorem from contractability.
+* `deFinetti_viaKoopman_path`: de Finetti's theorem from contractability (path-space version).
   For a contractable sequence on a standard Borel space, there exists a kernel ν
   such that the coordinates are conditionally i.i.d. given ν.
 
@@ -109,7 +109,7 @@ The proof uses disjoint-block averaging (see `ContractableFactorization.lean`):
 4. The product factorization gives kernel independence
 5. The kernel ν is constructed from the conditional expectation
 -/
-theorem deFinetti_viaKoopman
+private theorem deFinetti_viaKoopman_path
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
@@ -174,7 +174,7 @@ This theorem provides the **standard form** of conditionally i.i.d.:
 2. The conditional expectation of the indicator of a cylinder set factors as
    a product of conditional expectations of single-coordinate indicators
 -/
-theorem conditionallyIID_of_contractable
+private theorem conditionallyIID_of_contractable_path
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
@@ -296,7 +296,7 @@ theorem conditionallyIID_of_contractable
 
 /-! ### Transfer to General Spaces
 
-The path-space result `conditionallyIID_of_contractable` can be transferred to general
+The path-space result `conditionallyIID_of_contractable_path` can be transferred to general
 random sequences `X : ℕ → Ω → α` via the pushforward measure.
 
 **Key insight**: For `X : ℕ → Ω → α`, the pushforward measure `μ.map (fun ω i => X i ω)`
