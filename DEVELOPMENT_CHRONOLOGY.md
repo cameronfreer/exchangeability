@@ -1,6 +1,6 @@
 # Development Chronology
 
-A narrative history of this Lean 4 formalization, based on 3,989 commits (Sept 29, 2025 - Jan 8, 2026).
+A narrative history of this Lean 4 formalization, based on 4,024 commits (3,166 non-merge) from Sept 29, 2025 - Jan 8, 2026.
 
 ## Phase 0: Project Initialization (Sept 29 - Oct 1, 2025)
 
@@ -177,7 +177,7 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 
 | Proof Route | Approach | Status |
 |-------------|----------|--------|
-| **ViaL2** | Elementary L² bounds | Primary, few documented sorries |
+| **ViaL2** | Elementary L² bounds | 1 sorry remaining |
 | **ViaKoopman** | Ergodic theory | **Complete** (Jan 1, 2026) |
 | **ViaMartingale** | Reverse martingale | **Complete** (Jan 1, 2026) |
 

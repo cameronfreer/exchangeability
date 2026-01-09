@@ -9,7 +9,9 @@ import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
 import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
 import Exchangeability.DeFinetti.L2Helpers
+import Exchangeability.DeFinetti.BridgeProperty
 import Exchangeability.Contractability
+import Exchangeability.Tail.CondExpShiftInvariance
 import Exchangeability.Util.StrictMono
 import Exchangeability.Util.ProductBounds
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
@@ -1575,7 +1577,6 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
         push_neg at hφ
         obtain ⟨i, j, heq, hne⟩ := hφ
         refine ⟨(i, j), ?_, heq⟩
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
         exact hne
 
       -- Each collision set has cardinality ≤ N^(m-1)
@@ -1758,7 +1759,7 @@ This is the key insight that makes the block-separated approach work:
 every selection is StrictMono, so contractability applies to EVERY term
 (no exchangeability required).
 -/
-lemma block_index_strictMono {m N : ℕ} (hN : 0 < N) (φ : Fin m → Fin N) :
+lemma block_index_strictMono {m N : ℕ} (_hN : 0 < N) (φ : Fin m → Fin N) :
     StrictMono (fun i : Fin m => i.val * N + (φ i).val) := by
   intro i j hij
   -- Need: i * N + φ(i) < j * N + φ(j)
@@ -1782,6 +1783,7 @@ This is the key property needed for complete_from_directing_measure.
 It follows from contractability and the fact that α_{𝟙_B} = ν(·)(B).
 -/
 lemma directing_measure_bridge
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
@@ -1795,41 +1797,46 @@ lemma directing_measure_bridge
   classical
   -- PROOF STRATEGY (using injective_implies_strictMono_perm + contractability):
   --
-  -- STEP 1: Reduce to the strictly monotone case
-  -- By injective_implies_strictMono_perm, ∃ σ : Perm (Fin m) with k ∘ σ strictly monotone.
-  -- Reindexing: ∏_i 1_{B_i}(X_{k_i}) = ∏_j 1_{B_{σ j}}(X_{(k∘σ) j})
-  -- (Same product, different enumeration of factors)
-  --
-  -- STEP 2: Apply contractability
-  -- Since k ∘ σ is strictly monotone, by Contractable.allStrictMono_eq:
-  --   E[f(X_{(k∘σ) 0}, ..., X_{(k∘σ)(m-1)})] = E[f(X_0, ..., X_{m-1})]
-  -- Applied to f = ∏_j 1_{B_{σ j}}:
-  --   E[∏_j 1_{B_{σ j}}(X_{(k∘σ) j})] = E[∏_j 1_{B_{σ j}}(X_j)]
-  --
-  -- STEP 3: Similarly for RHS
-  -- ∏_i ν(·)(B_i) = ∏_j ν(·)(B_{σ j}) (same product, reindexed)
-  --
-  -- STEP 4: Prove the identity case (k = id)
-  -- Need: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
-  -- This is the core reconstruction theorem requiring:
-  -- - Route B: U-statistic expansion with collision bound
-  -- - Or: Tower property with conditional independence
-  --
-  -- For now, we implement the reduction and leave the identity case as sorry.
-
-  -- Handle trivial case m = 0
-  cases m with
-  | zero => simp
-  | succ n =>
-    -- PROOF IN PROGRESS: This requires a complex U-statistic expansion argument
-    -- showing that products of indicator functions have the same expectation as
-    -- products of directing measure evaluations. The full proof involves:
-    -- 1. Reducing to strictly monotone indices via injective_implies_strictMono_perm
-    -- 2. Using contractability to equate shifted and reference averages
-    -- 3. Block-separated Cesàro averages with L² bounds
-    -- 4. Product convergence in L¹
-    -- See comments in the file for detailed proof structure.
-    sorry
+  -- Use shared bridge infrastructure from BridgeProperty.lean
+  -- Key: show directing_measure satisfies hν_law via condExp_shift_eq_condExp
+  let ν := directing_measure X hX_contract hX_meas hX_L2
+  have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
+    directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
+  have hν_meas : ∀ B : Set ℝ, MeasurableSet B → Measurable (fun ω => ν ω B) :=
+    directing_measure_measurable X hX_contract hX_meas hX_L2
+  -- Establish hν_law: (ν ω B).toReal =ᵐ E[1_B ∘ X n | tail] for all n
+  have hν_law : ∀ n B, MeasurableSet B →
+      (fun ω => (ν ω B).toReal) =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
+    intro n B hB
+    have h_tail_eq : ViaMartingale.tailSigma X = TailSigma.tailSigma X :=
+      ViaMartingale.tailSigma_eq_canonical X
+    have hf_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
+      measurable_const.indicator hB
+    -- Base case n=0: directing_measure_integral_eq_condExp gives ∫ 1_B dν =ᵐ E[1_B ∘ X 0 | tail]
+    have h_n0 : (fun ω => (ν ω B).toReal) =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := by
+      have h_eq := directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2
+        (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
+        ⟨1, fun x => by simp only [Set.indicator]; split_ifs <;> norm_num⟩
+      have h_integral : ∀ ω, ∫ x, Set.indicator B (fun _ => (1 : ℝ)) x ∂(ν ω) = (ν ω B).toReal := by
+        intro ω
+        have h1 : Set.indicator B (fun _ => (1 : ℝ)) = B.indicator 1 := by
+          ext x; simp only [Set.indicator, Pi.one_apply]
+        rw [h1, integral_indicator_one hB]; rfl
+      filter_upwards [h_eq] with ω hω; rw [← h_integral ω, hω]; rfl
+    -- Shift invariance: E[1_B ∘ X n | tail] =ᵐ E[1_B ∘ X 0 | tail]
+    have h_shift : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] :=
+      Exchangeability.Tail.ShiftInvariance.condExp_shift_eq_condExp X hX_contract hX_meas
+        (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
+        ((integrable_const 1).indicator (hX_meas 0 hB)) n
+    calc (fun ω => (ν ω B).toReal) =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := h_n0
+      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] := h_shift.symm
+      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
+          rw [h_tail_eq]
+  exact indicator_product_bridge X hX_contract hX_meas ν hν_prob hν_meas hν_law k hk B hB
 
 /-! ### Original proof structure (commented out due to incomplete lemmas)
 
@@ -1857,6 +1864,7 @@ This theorem packages all the directing measure properties needed by
 This enables the final step of the L² proof of de Finetti's theorem.
 -/
 theorem directing_measure_satisfies_requirements
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_contract : Contractable μ X)
