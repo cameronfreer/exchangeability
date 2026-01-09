@@ -1577,7 +1577,6 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
         push_neg at hφ
         obtain ⟨i, j, heq, hne⟩ := hφ
         refine ⟨(i, j), ?_, heq⟩
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
         exact hne
 
       -- Each collision set has cardinality ≤ N^(m-1)
@@ -1760,7 +1759,7 @@ This is the key insight that makes the block-separated approach work:
 every selection is StrictMono, so contractability applies to EVERY term
 (no exchangeability required).
 -/
-lemma block_index_strictMono {m N : ℕ} (hN : 0 < N) (φ : Fin m → Fin N) :
+lemma block_index_strictMono {m N : ℕ} (_hN : 0 < N) (φ : Fin m → Fin N) :
     StrictMono (fun i : Fin m => i.val * N + (φ i).val) := by
   intro i j hij
   -- Need: i * N + φ(i) < j * N + φ(j)
