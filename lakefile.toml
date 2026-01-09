@@ -1,0 +1,22 @@
+name = "exchangeability"
+version = "0.1.0"
+defaultTargets = ["exchangeability"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.24.0"
+
+[[require]]
+name = "checkdecls"
+git = "https://github.com/PatrickMassot/checkdecls.git"
+
+[[lean_lib]]
+name = "ForMathlib"
+
+[[lean_lib]]
+name = "Exchangeability"
+
+[[lean_exe]]
+name = "exchangeability"
+root = "Main"
