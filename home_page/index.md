@@ -1,8 +1,6 @@
 ---
 ---
 
-# Exchangeability in Lean 4
-
 A formalization of **de Finetti's theorem** and the **de Finetti--Ryll-Nardzewski equivalence** for infinite sequences on Borel spaces.
 
 ## Main Result

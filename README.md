@@ -16,17 +16,17 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 1. **Martingale Approach** ✅ **COMPLETE** (Default)
    - Kallenberg's "third proof" (after Aldous)
    - Elegant probabilistic argument using reverse martingales
-   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (14 files)
+   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (13 files)
 
 2. **L² Approach** ✅ **COMPLETE**
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
-   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (13 files)
+   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (12 files)
 
 3. **Koopman Approach** ✅ **COMPLETE**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (19 files)
+   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (18 files)
 
 ## Quick Start
 

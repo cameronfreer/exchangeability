@@ -166,6 +166,8 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 \begin{lemma}[L$^2$ contractability bound]
   \label{lem:l2_bound}
+  \lean{Exchangeability.DeFinetti.L2Approach.l2_contractability_bound}
+  \leanok
   \uses{def:contractable}
   For contractable sequences, certain L$^2$ norms of block averages are bounded.
 \end{lemma}
@@ -200,7 +202,7 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   \uses{def:blockAvg}
   For a shift-invariant measure, block averages converge \emph{in $L^1$} to the conditional
   expectation given the shift-invariant $\sigma$-algebra:
-  $\int |\bar{A}_{m,n,k}(f) - \mathbb{E}[f \circ \pi_0 \mid \mathcal{I}]| \, d\mu \to 0$
+  $\int |A_{m,n,k}(f) - \mathbb{E}[f \circ \pi_0 \mid \mathcal{I}]| \, d\mu \to 0$
   as $n \to \infty$.
 \end{lemma}
 
