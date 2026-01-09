@@ -101,7 +101,7 @@ What happened:
 3. Local infrastructure created with TODO markers
 4. Proof completed while infrastructure can be upstreamed later
 
-Result: 3,765 LOC (smallest), completed January 1, 2026.
+Result: 3,765 LOC (smallest), completed December 26, 2025.
 
 **Vignette 3: ViaKoopman Golfing Commits**
 
@@ -116,43 +116,44 @@ Indicates: The proof worked mathematically but struggled with Lean automation.
 
 ## Storyline 2: Koopman "Project Then Average" Reformulation
 
-### The Original Plan (Abandoned)
+### The Original Plan (Textbook Approach)
 
-Follow Kallenberg's "first proof" directly using Mean Ergodic Theorem:
+Follow Kallenberg's "first proof" using full Koopman operator theory:
 
 ```
-Traditional approach:
+Textbook approach:
 1. Define Koopman operator U : L²(μ) → L²(μ) by Uf = f ∘ T
-2. Show U is an isometry
+2. Show U is an isometry (requires spectral theory)
 3. Apply von Neumann Mean Ergodic Theorem
 4. Birkhoff averages (1/n)Σ U^k f → Pf (projection to invariants)
-5. Use Pf to construct directing measure
+5. Show Pf = E[f | shift-invariant σ-algebra]
+6. Use factorization E[∏fᵢ | m] = ∏E[fᵢ | m] via Koopman theory
 ```
 
-**Blocked by**: Type-level mismatch between Koopman operator (ambient L²) and conditional expectation (sub-σ-algebra).
+**Challenge**: Step 5-6 require heavy Koopman operator infrastructure (spectral decomposition, projection characterization).
 
 ### The Reformulation (Used)
+
+ViaKoopman **still uses Mean Ergodic Theorem** for Cesàro convergence (via `birkhoffAverage` and `condexpL2` in `CesaroL2ToL1.lean`). The key simplification is in the **factorization step**.
 
 **Key insight**: For shift-invariant σ-algebras, conditional expectation commutes with shift:
 
 ```lean
--- If m is shift-invariant, then:
+-- If m is shift-invariant (pseudocode):
 E[f ∘ shift | m] =ᵐ[μ] E[f | m]
 ```
 
-**Consequence**: Birkhoff averages become **constant** after projection:
+**Consequence for factorization**: Instead of proving `E[∏fᵢ | m] = ∏E[fᵢ | m]` via Koopman spectral theory, use **contractability directly**:
+1. Block averaging gives strictly monotone indices
+2. Contractability applies to strictly monotone selections
+3. Telescoping L¹ bounds give convergence
+4. Factorization follows from contractability, not Koopman theory
 
-```
-E[(1/n)Σ f ∘ shift^k | m] = (1/n)Σ E[f ∘ shift^k | m]
-                          = (1/n)Σ E[f | m]           -- by commutativity
-                          = E[f | m]                  -- constant sequence!
-```
-
-Constant sequences trivially converge, **bypassing Mean Ergodic Theorem entirely**.
+This **bypasses the Koopman-to-CE bridge** (Step 5-6 above), not MET itself.
 
 ### Implementation in Lean
 
-From `ContractableFactorization.lean`:
+From `ContractableFactorization.lean` (illustrative signatures):
 
 ```lean
 -- Step 1: Block injection gives strictly monotone indices
@@ -174,21 +175,22 @@ lemma condexp_product_factorization_contractable {m : ℕ} (fs : Fin m → α �
 
 ### Quantified Impact
 
-| Aspect | Original Plan | Actual Implementation |
-|--------|--------------|----------------------|
-| **Infrastructure** | Koopman isometry, spectral theory, MET | CE properties only |
-| **Dependencies** | Full ergodic theory | Conditional expectation |
-| **Core proof LOC** | ~500 (estimated) | ~90 (self-contained) |
-| **Status** | Blocked | Complete |
+| Aspect | Textbook Approach | Actual Implementation |
+|--------|------------------|----------------------|
+| **MET usage** | L² convergence | L² convergence (same) |
+| **Factorization** | Koopman spectral theory | Contractability + telescoping |
+| **Dependencies** | Koopman isometry, projection characterization | CE properties + contractability |
+| **Core factorization LOC** | ~500 (estimated) | ~90 (self-contained) |
+| **Status** | Would need spectral infrastructure | Complete |
 
 ### Formalization-Driven Discovery
 
 This reformulation was discovered **because** of the type mismatch:
-- Lean's type system made the Koopman approach impossible
-- Forced exploration of alternatives
-- Found simpler path that works in practice
+- Lean's type system made the full Koopman approach difficult (ambient L² vs. sub-σ-algebra)
+- Forced exploration of alternatives for the factorization step
+- Found that contractability gives factorization directly, avoiding Koopman-to-CE bridge
 
-**Lesson**: Type systems can guide toward better proofs, not just verify existing ones.
+**Lesson**: Type systems can guide toward simpler proof structures, not just verify existing ones.
 
 ---
 
@@ -213,29 +215,28 @@ Each step is "obvious to experts" but:
 
 | Step | Math Justification | Lean Lemma | Signature |
 |------|-------------------|------------|-----------|
-| (1.2a)→(1.2b) | Tower property | `MeasureTheory.condexp_condexp_of_le` | `m₁ ≤ m₂ → μ[μ[f\|m₂]\|m₁] =ᵐ[μ] μ[f\|m₁]` |
+| (1.2a)→(1.2b) | Tower property | `MeasureTheory.condExp_condExp_of_le` | `m₁ ≤ m₂ → μ[μ[f\|m₂]\|m₁] =ᵐ[μ] μ[f\|m₁]` |
 | (1.2b)→(1.2c) | α defined as CE | (definition unfolding) | - |
-| (1.2c)→(1.2d) | Measurable ⟹ fixed point | `MeasureTheory.condexp_of_stronglyMeasurable` | `StronglyMeasurable[m] f → μ[f\|m] =ᵐ[μ] f` |
+| (1.2c)→(1.2d) | Measurable ⟹ fixed point | `MeasureTheory.condExp_of_stronglyMeasurable` | `StronglyMeasurable[m] f → μ[f\|m] =ᵐ[μ] f` |
 
 ### Concrete Example from ViaKoopman
 
-From `ContractableFactorization.lean:154-162`:
+From `ViaKoopman.lean:553-555`:
 
 ```lean
--- "Tower property collapses nested conditional expectations"
-have h_lhs_tower : ∫ ω, (∏ j, fs_σ j (ω j.val)) ∂μ =
-    ∫ ω, μ[(fun ω' => ∏ j, fs_σ j (ω' j.val)) | mSI] ω ∂μ := by
-  symm
-  apply integral_condExp (shiftInvariantSigma_le (α := α))
-  -- Uses: integral_condExp from Mathlib
-  -- Requires: mSI ≤ ambient MeasurableSpace
+-- "Tower property: integral of f equals integral of CE[f|m]"
+have h_lhs_tower : ∫ ω, (∏ j : Fin m, fs_σ j (ω j.val)) ∂μ =
+    ∫ ω, μ[(fun ω' => ∏ j : Fin m, fs_σ j (ω' j.val)) | mSI] ω ∂μ := by
+  symm; apply integral_condExp (shiftInvariantSigma_le (α := α))
+  -- Uses: MeasureTheory.integral_condExp from Mathlib
+  -- Requires: mSI ≤ ambient MeasurableSpace (shift-invariant is sub-σ-algebra)
 ```
 
 ### The "Certified Explanation" Concept
 
 **Before formalization**: "Apply tower property" (reader must know what this means)
 
-**After formalization**: `condexp_condexp_of_le` with explicit:
+**After formalization**: `condExp_condExp_of_le` with explicit:
 - Preconditions: `m₁ ≤ m₂ ≤ m₀`, integrability
 - Conclusion: exact a.e. equality
 - Proof: verified by type checker
@@ -289,7 +290,7 @@ variable {m : MeasurableSpace Ω} (hm : m ≤ m0)  -- explicit reference to m0
 lemma correct (hm : m ≤ m0) (f : Ω → ℝ) :
     μ[f | m] =ᵐ[μ] f := by
   -- hm is now: m ≤ m0 (the actual sub-σ-algebra relationship)
-  exact condexp_of_stronglyMeasurable m hm ...
+  exact condExp_of_stronglyMeasurable m hm ...
 ```
 
 ### Scope: Where This Pattern Applies
@@ -324,7 +325,7 @@ This issue affects any "ambient + sub-structure" pattern in Lean 4:
 | `exchangeable_iff_fullyExchangeable` | Core.lean:689 | Finite ⟺ infinite exchangeability | Yes | High |
 | `blockInjection_strictMono` | ContractableFactorization.lean | Block averaging | Yes | Medium |
 | `integral_condExp` | (Mathlib) | Tower property | No | - |
-| `condexp_of_stronglyMeasurable` | (Mathlib) | CE fixed point | No | - |
+| `condExp_of_stronglyMeasurable` | (Mathlib) | CE fixed point | No | - |
 
 ### Why Each Is Reusable
 
