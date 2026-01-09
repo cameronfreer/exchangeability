@@ -8,6 +8,7 @@ These documents capture ideas, techniques, and plans generated during active dev
 
 | File | Description | Status |
 |------|-------------|--------|
+| `MATHLIB_GAPS_HISTORICAL.md` | Expected mathlib gaps (bypassed) | Archived |
 | `PUBLICATION_IDEAS.md` | Original AFM paper planning | Superseded by `paper/` |
 | `MATHLIB_PR_CANDIDATES.md` | Lemmas identified for mathlib contribution | Active reference |
 | `LEAN_LESSONS_LEARNED.md` | Technical patterns and gotchas discovered | Active reference |

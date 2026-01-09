@@ -1,13 +1,18 @@
-/-
-Copyright (c) 2025 Cameron Freer. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Claude (Anthropic), Cameron Freer
+# Historical Document: Mathlib Gaps (Oct 2025)
 
-This file documents what needs to be added to mathlib to complete the de Finetti
-theorem formalization via the Koopman/ergodic theory approach.
--/
+> **Note**: This document is historical. It describes infrastructure that was *expected* to be
+> needed for the Koopman proof but was ultimately **bypassed** via the contractability-based
+> reformulation. The ViaKoopman proof is now complete without requiring Choquet's theorem
+> or full ergodic decomposition. See `paper/NOTES.md` Storyline 2 for how this was achieved.
 
-/-!
+---
+
+<!--
+Original file: Exchangeability/DeFinetti/MathlibGaps.lean
+Moved: Jan 2026 (after proof completion)
+-->
+
+#
 # Mathlib Gaps for de Finetti Theorem (Ergodic Approach)
 
 This document catalogs the ergodic theory and measure theory results that are **missing from mathlib**
@@ -224,6 +229,5 @@ other results in:
 - Optimal transport
 
 **Note (Jan 2026)**: This assessment is historical. All three proofs are now complete.
-The infrastructure described above was built locally rather than waiting for mathlib PRs.
-
--/
+The Koopman proof succeeded by using contractability-based factorization instead of
+full ergodic decomposition, bypassing most of the infrastructure described above.
