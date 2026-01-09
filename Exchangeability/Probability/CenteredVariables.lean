@@ -169,7 +169,7 @@ lemma centered_uniform_covariance
     -- From h_int_eq: ∫ f(X i) = ∫ f(X 0) = m
     -- So ∫ f(X i) - m = m - m = 0
     rw [h_int_eq, hm_def, integral_const]
-    simp [measure_univ]
+    simp
 
   -- Step 5: Show uniform covariance via contractability
   -- For i ≠ j, E[Z_i Z_j] = E[Z_0 Z_1]
@@ -196,9 +196,9 @@ lemma centered_uniform_covariance
 
       -- Product measurability
       have h_prod_ij : AEMeasurable (fun ω => (Z i ω, Z j ω)) μ :=
-        hZi_meas.prod_mk hZj_meas
+        hZi_meas.prodMk hZj_meas
       have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
-        hZ0_meas.prod_mk hZ1_meas
+        hZ0_meas.prodMk hZ1_meas
 
       -- Apply integral_map
       rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable]
@@ -231,9 +231,9 @@ lemma centered_uniform_covariance
 
       -- Product measurability
       have h_prod_ji : AEMeasurable (fun ω => (Z j ω, Z i ω)) μ :=
-        hZj_meas.prod_mk hZi_meas
+        hZj_meas.prodMk hZi_meas
       have h_prod_01 : AEMeasurable (fun ω => (Z 0 ω, Z 1 ω)) μ :=
-        hZ0_meas.prod_mk hZ1_meas
+        hZ0_meas.prodMk hZ1_meas
 
       -- Apply integral_map and symmetry
       rw [h_sym_ij]
