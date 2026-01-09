@@ -166,6 +166,8 @@ This is Kallenberg's ``second proof'' and has the lightest dependencies.
 
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via L$^2$)]
   \label{thm:conditionallyIID_of_contractable_L2}
+  \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2}
+  \leanok
   \uses{def:contractable, def:conditionallyIID, lem:l2_bound}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
 \end{theorem}
@@ -174,11 +176,46 @@ This is Kallenberg's ``second proof'' and has the lightest dependencies.
 \section{Via Koopman (Mean Ergodic Theorem)}
 
 The Koopman approach uses the Mean Ergodic Theorem via the shift operator on L$^2$.
-This is Kallenberg's ``first proof'' and has the heaviest dependencies (ergodic theory).
+This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
+
+\begin{definition}[Block average]
+  \label{def:blockAvg}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.blockAvg}
+  \leanok
+  The \emph{block average} $A_{n,m,k}(f)(\omega) = \frac{1}{n} \sum_{j=0}^{n-1} f(\omega_{mn+k+j})$
+  averages $f$ over the $k$-th block of size $n$ starting at position $mn$.
+\end{definition}
+
+\begin{lemma}[Block averages converge to conditional expectation]
+  \label{lem:blockAvg_tendsto}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.blockAvg_tendsto_condExp}
+  \leanok
+  \uses{def:blockAvg}
+  For a shift-invariant measure, block averages converge a.e.\ to the conditional
+  expectation given the shift-invariant $\sigma$-algebra.
+\end{lemma}
+
+\begin{lemma}[Integral product equals block average product]
+  \label{lem:integral_prod_blockAvg}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.integral_prod_eq_integral_blockAvg}
+  \leanok
+  \uses{def:blockAvg, def:contractable}
+  For contractable sequences, integrals of products factor through block averages.
+\end{lemma}
+
+\begin{lemma}[Bridge from contractability]
+  \label{lem:indicator_product_bridge_contractable}
+  \lean{Exchangeability.DeFinetti.indicator_product_bridge_contractable}
+  \leanok
+  \uses{def:contractable}
+  For contractable sequences, indicator products satisfy the bridge condition.
+\end{lemma}
 
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Koopman)]
   \label{thm:conditionallyIID_of_contractable_Koopman}
-  \uses{def:contractable, def:conditionallyIID}
+  \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman}
+  \leanok
+  \uses{def:contractable, def:conditionallyIID, lem:blockAvg_tendsto, lem:integral_prod_blockAvg, lem:indicator_product_bridge_contractable}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
   This proof uses the Mean Ergodic Theorem via the Koopman operator on L$^2$.
 \end{theorem}
