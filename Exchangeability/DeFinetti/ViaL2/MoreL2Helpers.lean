@@ -1779,8 +1779,9 @@ lemma block_index_strictMono {m N : ℕ} (_hN : 0 < N) (φ : Fin m → Fin N) :
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
-This is the key property needed for complete_from_directing_measure.
-It follows from contractability and the fact that α_{𝟙_B} = ν(·)(B).
+This is the key property needed for `complete_from_directing_measure`.
+Uses `indicator_product_bridge` from `BridgeProperty.lean`, establishing that
+the directing measure satisfies `hν_law` via shift invariance of conditional expectations.
 -/
 lemma directing_measure_bridge
     [StandardBorelSpace Ω]
@@ -1795,10 +1796,7 @@ lemma directing_measure_bridge
       = ∫⁻ ω, ∏ i : Fin m,
         directing_measure X hX_contract hX_meas hX_L2 ω (B i) ∂μ := by
   classical
-  -- PROOF STRATEGY (using injective_implies_strictMono_perm + contractability):
-  --
-  -- Use shared bridge infrastructure from BridgeProperty.lean
-  -- Key: show directing_measure satisfies hν_law via condExp_shift_eq_condExp
+  -- Apply indicator_product_bridge after showing directing_measure satisfies hν_law
   let ν := directing_measure X hX_contract hX_meas hX_L2
   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
     directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
