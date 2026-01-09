@@ -22,3 +22,9 @@ lean_lib «Exchangeability» where
 @[default_target]
 lean_exe «exchangeability» where
   root := `Main
+
+require checkdecls from git "https://github.com/PatrickMassot/checkdecls.git"
+
+meta if get_config? env = some "dev" then
+require «doc-gen4» from git
+  "https://github.com/leanprover/doc-gen4" @ "main"
