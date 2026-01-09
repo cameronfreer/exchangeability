@@ -57,9 +57,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz libgraphviz-dev texlive-latex-extra texlive-fonts-recommended
+
       - name: Install blueprint dependencies
         run: |
-          pip install leanblueprint
+          pip install pygraphviz leanblueprint
 
       - name: Build blueprint
         run: |
@@ -75,10 +80,16 @@ jobs:
         run: |
           ~/.elan/bin/lake exe checkdecls blueprint/lean_decls
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: home_page
+
       - name: Build homepage
         run: |
           cd home_page
-          bundle install
           bundle exec jekyll build --baseurl "/exchangeability"
           cd ..
           cp -r home_page/_site/* docs/
