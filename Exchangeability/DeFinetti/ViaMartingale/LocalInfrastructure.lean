@@ -73,7 +73,7 @@ end PiFiniteProjections
 
 section ProbabilityMeasureHelpers
 
-/-- **[TODO: Mathlib.MeasureTheory.Integral.Bochner]**
+/-- **[Mathlib candidate:MeasureTheory.Integral.Bochner]**
 
 On a probability space, a bounded measurable function is integrable.
 
@@ -135,7 +135,7 @@ end ProbabilityMeasureHelpers
 
 section CondDistribUniqueness
 
-/-- **[TODO: Mathlib.Probability.Kernel.CondDistrib]**
+/-- **[Mathlib candidate:Probability.Kernel.CondDistrib]**
 
 Indicator version of conditional distribution uniqueness under factorization.
 
@@ -248,7 +248,7 @@ end CondDistribUniqueness
 
 section ConditionalIndependence
 
-/-- **[TODO: Mathlib.Probability.Independence.Conditional]**
+/-- **[Mathlib candidate:Probability.Independence.Conditional]**
 
 **Conditional expectation projection property:** If Y and Z are conditionally
 independent given W, then conditioning on (Z, W) gives the same result as

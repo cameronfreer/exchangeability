@@ -112,7 +112,7 @@ structure DirectingMeasure (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ 
   is_markov : ProbabilityTheory.IsMarkovKernel kernel
   -- Tail measurability would be expressed as:
   -- is_tail_measurable : @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ kernel ω) μ
-  -- TODO: Add this once we have proper tail σ-algebra infrastructure
+  -- Note: tail measurability constraint would be added with proper tail σ-algebra infrastructure
 
 /-- The empirical measure of the first `n` terms of the process `X`.
 

@@ -26,6 +26,7 @@ We formalize **all three proofs** from Kallenberg (2005):
 ## Links
 
 * [Blueprint]({{ site.url }}/blueprint/) - Proof structure with Lean links
+* [Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html) - Interactive visualization
 * [GitHub Repository](https://github.com/cameronfreer/exchangeability)
 
 ## References

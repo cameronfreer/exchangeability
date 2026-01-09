@@ -11,7 +11,6 @@ import Exchangeability.Probability.CondExp
 import Exchangeability.Probability.IntegrationHelpers
 import Exchangeability.Probability.LpNormHelpers
 import Exchangeability.Util.FinsetHelpers
--- import Exchangeability.Probability.CesaroHelpers  -- TODO: Fix compilation errors
 import Exchangeability.Tail.TailSigma
 import Exchangeability.Tail.ShiftInvariantMeasure
 import Mathlib.MeasureTheory.Function.L2Space

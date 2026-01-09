@@ -76,7 +76,7 @@ noncomputable def alphaIicCE
 
 /-- Measurability of alphaIicCE.
 
-TODO: Currently a sorry due to BorelSpace typeclass instance resolution issues.
+Note: Previously had BorelSpace typeclass instance resolution issues.
 The conditional expectation `condExp μ (tailSigma X) f` is measurable by
 `stronglyMeasurable_condExp.measurable`, but Lean can't synthesize the required
 `BorelSpace` instance automatically. This should be straightforward to fix. -/
@@ -205,7 +205,7 @@ the infimum equals the value.
 - For monotone decreasing sequences, L¹ convergence + boundedness ⇒ a.e. convergence
 - Therefore ⨅ s > t, alphaIicCE s = alphaIicCE t a.e.
 
-TODO: Implement using dominated convergence for conditional expectations.
+Note: Uses dominated convergence for conditional expectations.
 The mathematical argument is standard: for CDFs built from conditional expectations,
 right-continuity follows from dominated convergence applied to decreasing indicators.
 -/

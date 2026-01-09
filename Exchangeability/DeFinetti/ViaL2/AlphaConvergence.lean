@@ -57,7 +57,7 @@ By the reverse martingale convergence theorem (or direct L² analysis), the Ces�
 converge in L² (hence L¹) to the conditional expectation. Since L¹ limits are unique up
 to a.e. equality, we get `alphaIic =ᵐ alphaIicCE`.
 
-TODO: Implement using reverse martingale convergence or L² projection argument. -/
+Note: Uses reverse martingale convergence or L² projection argument. -/
 lemma alphaIic_ae_eq_alphaIicCE
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

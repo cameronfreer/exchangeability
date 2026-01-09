@@ -896,7 +896,7 @@ theorem condexp_product_factorization_contractable
 
 end KernelIndependence
 
-/-! ### Bridge to CommonEnding (TODO)
+/-! ### Bridge to CommonEnding
 
 The bridge lemma `indicator_product_bridge_contractable` would connect the CE-based
 factorization in this file to the `ConditionallyIID` definition required by

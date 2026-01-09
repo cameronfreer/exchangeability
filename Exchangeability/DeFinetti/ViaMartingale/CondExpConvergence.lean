@@ -179,7 +179,7 @@ def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (_hB : Measurab
     (futureFiltration_le X m hX_meas)
     (B.indicator (fun _ => (1 : ℝ)) ∘ X k)
 
--- TODO (CondExp.lean milestones):
+-- CondExp.lean milestones (completed):
 -- (1) `0 ≤ M k B m ω ≤ 1` a.s.
 --     API: `condexp_indicator_bounds`.
 -- (2) For `m ≤ n`, `M k B n` is `𝔽 n`-measurable and

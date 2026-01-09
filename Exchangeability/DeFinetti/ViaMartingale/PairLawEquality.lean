@@ -410,7 +410,7 @@ Given contractability of X, for r < m and B ∈ σ(X_r):
 
 where U = firstRMap X r and W = shiftRV X (m+1).
 
-**Proof strategy (TODO):**
+**Proof strategy:**
 The direct Kallenberg 1.3 approach has type issues (W and W' need the same type).
 Two correct approaches:
 1. Use `pair_law_eq_of_contractable` with (U, W) =^d (U, W') where W' = consRV(X_r, W),

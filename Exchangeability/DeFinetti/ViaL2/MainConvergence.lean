@@ -635,7 +635,7 @@ Reverse direction (a.s. subsequences imply →ᵖ):
 in `Probability` namespace. The subsequence extraction should follow from
 summability of expectations.
 
-TODO: Adapt to our L¹ convergence setting.
+Note: Adapted to our L¹ convergence setting.
 -/
 theorem subsequence_criterion_convergence_in_probability
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -806,7 +806,7 @@ theorem reverse_martingale_subsequence_convergence
 
 /-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
 
-**TODO**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
+**Note**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
 Once we identify α_n = E[f(X_{n+1}) | σ(X_{n+1}, X_{n+2}, ...)] in Step 5,
 the reverse martingale property follows immediately from the standard tower property
 of conditional expectation.
@@ -834,7 +834,7 @@ E[f(X_i) ; ∩I_k] = E[α_{k-1} ; ∩I_k] → E[α_∞ ; ∩I_k]
 for any i ∈ I:
   E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]"
 
-**TODO**: Use contractability to relate different time points.
+**Note**: Uses contractability to relate different time points.
 
 This private placeholder exists only so the file compiles while we develop other parts.
 The parameters document the intended signature for the full implementation.

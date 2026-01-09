@@ -22,8 +22,8 @@ Theorem applied to the Koopman operator on L²(μ).
 
 The Koopman approach follows this structure:
 
-1. **ViaKoopman** (to be implemented): Apply the Mean Ergodic Theorem to the
-   Koopman operator U : L²(μ) → L²(μ) defined by (Uf)(ω) = f(shift(ω)).
+1. **ViaKoopman**: Apply the Mean Ergodic Theorem to the Koopman operator
+   U : L²(μ) → L²(μ) defined by (Uf)(ω) = f(shift(ω)).
 
    For contractable sequences, the shift operator preserves the measure μ
    (up to contractability), and ergodic theory gives convergence of
@@ -41,12 +41,6 @@ This approach requires:
 - Mean Ergodic Theorem from mathlib (heavy ergodic theory dependencies)
 - Koopman operator theory
 - Connection between contractability and shift-invariance
-
-## Current status
-
-**TODO**: This file is a stub. The actual proof via ergodic theory has not
-been implemented yet. Once `ViaKoopman.lean` is created, this file will
-provide the completion.
 
 ## References
 

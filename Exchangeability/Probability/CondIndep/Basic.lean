@@ -116,7 +116,7 @@ This is the key property that makes independence "pass through" conditioning:
 knowing W provides no information about X when X ⊥ W.
 -/
 /-
-TODO: Add idempotence helper once correct lemma name is identified.
+Note: Idempotence helper pending identification of correct mathlib lemma name.
 
 /-- Idempotence of conditional expectation on the target sub-σ-algebra.
 If f is m-measurable, then E[f|m] = f almost everywhere.

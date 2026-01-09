@@ -852,7 +852,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
   -- Strategy: Each ∫ φ_n dν(·) is tail-Measurable (not just AESM). Pointwise limits of
   -- tail-measurable functions are tail-measurable. Then tail-Measurable → tail-AESM.
   -- Technical issue: aestronglyMeasurable_of_tendsto_ae requires same σ-algebra for SM and measure.
-  -- TODO: Prove using measurable_of_tendsto_metrizable on the underlying measurable functions.
+  -- Note: could prove using measurable_of_tendsto_metrizable on underlying measurable functions.
   -- For now, we use that the limit is ambient-AESM (which is strictly weaker but compiles).
   have hφ_aesm_ambient : ∀ n, AEStronglyMeasurable
       (fun ω => ∫ x, φ n x ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) μ := by

@@ -1095,7 +1095,7 @@ private lemma cesaro_cauchy_rho_lt
     --   = n * n' * (∑ i, p i * ξ i - ∑ i, q i * ξ i)
     -- Step 6: Convert both sides to use sums over Fin m with indicators, then simplify
     -- This is straightforward algebra but requires careful tactic sequencing
-    -- TODO: Complete this algebraic manipulation
+    -- Note: algebraic manipulation to complete
     -- The goal is to show:
     -- (∑ k ∈ range n, Z k ω) / n - (∑ k ∈ range n', Z k ω) / n'
     --   = ∑ i : Fin m, p i * ξ i ω - ∑ i : Fin m, q i * ξ i ω
@@ -2448,7 +2448,7 @@ lemma cesaro_to_condexp_L2
     --   Search mathlib for a direct "Cauchy in L² metric implies convergence" result
     --   that doesn't require the specific bound sequence format.
     --
-    -- TODO: Implement one of these approaches
+    -- Note: implement one of these approaches
 
     -- IMPLEMENTATION: Option A (CompleteSpace approach)
     -- Work in Lp ℝ 2 μ throughout, use completeness directly

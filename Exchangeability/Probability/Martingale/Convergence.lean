@@ -120,6 +120,6 @@ See `PROOF_PLAN_condExp_tendsto_iInf.md` for detailed mathematical strategy.
 - ✅ `Filtration`: Filtration structure (used)
 - ✅ `condExp_condExp_of_le`: Tower property (used)
 - ❌ Reverse martingale convergence: Not available (proving it here)
-- TODO: Upcrossing inequality, Vitali convergence, de la Vallée-Poussin -/
+- Future work: Upcrossing inequality, Vitali convergence, de la Vallée-Poussin -/
 
 end Exchangeability.Probability

@@ -92,7 +92,7 @@ variable {Ω : Type*} [MeasurableSpace Ω]
 
 -- Product measure setup will need specific API from mathlib
 -- For now we work with abstract measure-preserving assumptions
--- lemma measurePreserving_shift_pi : ... (TODO: requires Measure.pi API)
+-- lemma measurePreserving_shift_pi : ... (requires Measure.pi API)
 
 /--
 The Koopman operator: composition with a measure-preserving transformation.

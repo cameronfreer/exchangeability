@@ -86,7 +86,7 @@ For exchangeable sequences:
 The directing measure ν constructed in de Finetti proofs is tail-measurable (almost invariant).
 This is essential for showing that ν defines a proper conditional kernel.
 
-TODO: Formalize tail σ-algebra for sequences and prove it equals the shift-invariant σ-field.
+Note: Formalizing tail σ-algebra equality with shift-invariant σ-field is future work.
 -/
 
 -- NOTE: shift operator, IsShiftInvariant, and related lemmas are imported from PathSpace.Shift
@@ -126,7 +126,7 @@ def IsTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
 if it differs from a tail-measurable function on a μ-null set.
 By FMP 10.4, this is equivalent to measurability w.r.t. the μ-completion of the invariant σ-field.
 
-TODO: Formalize this properly using measure completion. -/
+Note: A more complete formalization would use measure completion. -/
 def IsAlmostTailMeasurable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure (ℕ → α)) (f : (ℕ → α) → β) : Prop :=
   ∃ g : (ℕ → α) → β, IsTailMeasurable g ∧ f =ᵐ[μ] g
