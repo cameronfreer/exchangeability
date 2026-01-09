@@ -55,4 +55,4 @@ lake env lean -c 'import Exchangeability; #print axioms deFinetti_viaMartingale'
 
 - [Development Chronology](DEVELOPMENT_CHRONOLOGY.md) - Project history
 - [Paper Planning](paper/README.md) - AFM paper materials
-- [Mathlib Contributions](MATHLIB_CONTRIBUTIONS.md) - PR opportunities
+- [Mathlib Contributions](WorkPlans/Deprecated/MATHLIB_CONTRIBUTIONS.md) - Historical gap analysis

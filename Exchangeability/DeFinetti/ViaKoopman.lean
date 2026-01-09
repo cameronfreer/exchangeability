@@ -47,14 +47,6 @@ The proof proceeds as follows:
 6. **Kernel construction**: The product factorization gives kernel independence,
    from which we construct the directing measure ν.
 
-## Comparison with ViaKoopmanExchangeable_Unfinished.lean
-
-The alternative proof in `ViaKoopmanExchangeable_Unfinished.lean` uses exchangeability, which requires:
-- Extending strictly monotone maps to permutations (`exists_perm_extending_strictMono`)
-- Proving exchangeability implies contractability
-
-This file avoids that step entirely, working directly with contractability.
-
 ## References
 
 * Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Chapter 1

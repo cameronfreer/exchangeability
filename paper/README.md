@@ -71,5 +71,5 @@ See `../NotesForLater/PUBLICATION_IDEAS.md` for the comprehensive original plann
 
 - [Main README](../README.md)
 - [Development Chronology](../DEVELOPMENT_CHRONOLOGY.md)
-- [Mathlib Contributions](../MATHLIB_CONTRIBUTIONS.md)
+- [Mathlib Contributions](../WorkPlans/Deprecated/MATHLIB_CONTRIBUTIONS.md)
 - [Proof-specific docs](../Exchangeability/DeFinetti/)
