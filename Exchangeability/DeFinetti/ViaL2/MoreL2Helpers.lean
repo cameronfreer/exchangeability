@@ -1797,115 +1797,46 @@ lemma directing_measure_bridge
   classical
   -- PROOF STRATEGY (using injective_implies_strictMono_perm + contractability):
   --
-  -- STEP 1: Reduce to the strictly monotone case
-  -- By injective_implies_strictMono_perm, ∃ σ : Perm (Fin m) with k ∘ σ strictly monotone.
-  -- Reindexing: ∏_i 1_{B_i}(X_{k_i}) = ∏_j 1_{B_{σ j}}(X_{(k∘σ) j})
-  -- (Same product, different enumeration of factors)
-  --
-  -- STEP 2: Apply contractability
-  -- Since k ∘ σ is strictly monotone, by Contractable.allStrictMono_eq:
-  --   E[f(X_{(k∘σ) 0}, ..., X_{(k∘σ)(m-1)})] = E[f(X_0, ..., X_{m-1})]
-  -- Applied to f = ∏_j 1_{B_{σ j}}:
-  --   E[∏_j 1_{B_{σ j}}(X_{(k∘σ) j})] = E[∏_j 1_{B_{σ j}}(X_j)]
-  --
-  -- STEP 3: Similarly for RHS
-  -- ∏_i ν(·)(B_i) = ∏_j ν(·)(B_{σ j}) (same product, reindexed)
-  --
-  -- STEP 4: Prove the identity case (k = id)
-  -- Need: E[∏_j 1_{B_j}(X_j)] = E[∏_j ν(·)(B_j)]
-  -- This is the core reconstruction theorem requiring:
-  -- - Route B: U-statistic expansion with collision bound
-  -- - Or: Tower property with conditional independence
-  --
-  -- For now, we implement the reduction and leave the identity case as sorry.
-
-  -- Use the shared bridge infrastructure from BridgeProperty.lean
-  -- The key is showing that directing_measure satisfies hν_law for all n.
-  --
-  -- Step 1: directing_measure satisfies hν_law for n=0 via directing_measure_integral_eq_condExp
-  -- Step 2: condExp_shift_eq_condExp extends this to all n
-  -- Step 3: Apply indicator_product_bridge
-
-  -- Define ν := directing_measure
+  -- Use shared bridge infrastructure from BridgeProperty.lean
+  -- Key: show directing_measure satisfies hν_law via condExp_shift_eq_condExp
   let ν := directing_measure X hX_contract hX_meas hX_L2
-
-  -- Show directing_measure satisfies all requirements for indicator_product_bridge
   have hν_prob : ∀ ω, IsProbabilityMeasure (ν ω) :=
-    fun ω => directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-
+    directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
   have hν_meas : ∀ B : Set ℝ, MeasurableSet B → Measurable (fun ω => ν ω B) :=
-    fun B hB => directing_measure_measurable X hX_contract hX_meas hX_L2 B hB
-
-  -- The key: establish hν_law for all n using condExp_shift_eq_condExp
+    directing_measure_measurable X hX_contract hX_meas hX_L2
+  -- Establish hν_law: (ν ω B).toReal =ᵐ E[1_B ∘ X n | tail] for all n
   have hν_law : ∀ n B, MeasurableSet B →
       (fun ω => (ν ω B).toReal) =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | Exchangeability.DeFinetti.ViaMartingale.tailSigma X] := by
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
     intro n B hB
-    -- For n=0: use directing_measure_integral_eq_condExp
-    -- For n>0: use condExp_shift_eq_condExp to reduce to n=0
-
-    -- First, establish for n=0
-    -- directing_measure_integral_eq_condExp gives:
-    --   ∫ f dν(ω) =ᵐ E[f(X₀) | TailSigma.tailSigma X]
-    -- For f = 1_B, this is: (ν ω B).toReal =ᵐ E[1_B(X₀) | tail]
-
-    -- The tailSigma definitions are equal:
-    -- ViaMartingale.tailSigma X = Tail.tailProcess X = TailSigma.tailSigma X
-    have h_tail_eq : Exchangeability.DeFinetti.ViaMartingale.tailSigma X =
-        TailSigma.tailSigma X := by
-      rw [Exchangeability.DeFinetti.ViaMartingale.tailSigma_eq_canonical]
-      rfl
-
-    -- For the base case (n=0), use setIntegral_directing_measure_indicator_eq
-    -- which establishes set-integral equality, implying ae equality via condexp uniqueness
+    have h_tail_eq : ViaMartingale.tailSigma X = TailSigma.tailSigma X :=
+      ViaMartingale.tailSigma_eq_canonical X
+    have hf_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
+      measurable_const.indicator hB
+    -- Base case n=0: directing_measure_integral_eq_condExp gives ∫ 1_B dν =ᵐ E[1_B ∘ X 0 | tail]
     have h_n0 : (fun ω => (ν ω B).toReal) =ᵐ[μ]
         μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := by
-      -- The directing measure satisfies: ∫ 1_B dν(ω) = E[1_B(X₀) | tail](ω) a.e.
-      -- This follows from directing_measure_integral_eq_condExp applied to 1_B
-      have hf_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
-        measurable_const.indicator hB
       have h_eq := directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2
         (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
         ⟨1, fun x => by simp only [Set.indicator]; split_ifs <;> norm_num⟩
-      -- h_eq : (fun ω => ∫ x, 1_B(x) dν(ω)) =ᵐ μ[1_B ∘ X 0 | tail]
-      -- And ∫ 1_B dν(ω) = (ν ω B).toReal
-      have h_integral_eq : ∀ ω, ∫ x, Set.indicator B (fun _ => (1 : ℝ)) x ∂(ν ω)
-          = (ν ω B).toReal := by
+      have h_integral : ∀ ω, ∫ x, Set.indicator B (fun _ => (1 : ℝ)) x ∂(ν ω) = (ν ω B).toReal := by
         intro ω
-        -- B.indicator 1 = B.indicator (fun _ => 1) by Pi.one_apply
         have h1 : Set.indicator B (fun _ => (1 : ℝ)) = B.indicator 1 := by
           ext x; simp only [Set.indicator, Pi.one_apply]
-        rw [h1, integral_indicator_one hB]
-        -- Measure.real s = (μ s).toReal by definition
-        rfl
-      filter_upwards [h_eq] with ω hω
-      rw [← h_integral_eq ω, hω]
-      -- Show (fun ω => f (X 0 ω)) = f ∘ X 0 for condexp
-      rfl
-
-    -- For general n, use condExp_shift_eq_condExp
+        rw [h1, integral_indicator_one hB]; rfl
+      filter_upwards [h_eq] with ω hω; rw [← h_integral ω, hω]; rfl
+    -- Shift invariance: E[1_B ∘ X n | tail] =ᵐ E[1_B ∘ X 0 | tail]
     have h_shift : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := by
-      -- Apply condExp_shift_eq_condExp
-      have hf_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
-        measurable_const.indicator hB
-      have h_int : Integrable ((Set.indicator B (fun _ => (1 : ℝ))) ∘ X 0) μ := by
-        apply Integrable.indicator
-        · exact integrable_const 1
-        · exact hX_meas 0 hB
-      exact Exchangeability.Tail.ShiftInvariance.condExp_shift_eq_condExp X hX_contract hX_meas
-        (Set.indicator B (fun _ => (1 : ℝ))) hf_meas h_int n
-
-    -- Chain: (ν ω B).toReal =ᵐ E[1_B(X₀)|tail] =ᵐ E[1_B(Xₙ)|tail]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] :=
+      Exchangeability.Tail.ShiftInvariance.condExp_shift_eq_condExp X hX_contract hX_meas
+        (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
+        ((integrable_const 1).indicator (hX_meas 0 hB)) n
     calc (fun ω => (ν ω B).toReal) =ᵐ[μ]
         μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := h_n0
       _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] := h_shift.symm
-      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) |
-          Exchangeability.DeFinetti.ViaMartingale.tailSigma X] := by rw [h_tail_eq]
-
-  -- Apply the shared bridge lemma
-  exact Exchangeability.DeFinetti.indicator_product_bridge X hX_contract hX_meas ν hν_prob hν_meas
-    hν_law k hk B hB
+      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
+          rw [h_tail_eq]
+  exact indicator_product_bridge X hX_contract hX_meas ν hν_prob hν_meas hν_law k hk B hB
 
 /-! ### Original proof structure (commented out due to incomplete lemmas)
 
