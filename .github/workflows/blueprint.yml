@@ -1,3 +1,14 @@
+# Custom workflow for blueprint + homepage deployment.
+#
+# TODO: When upgrading to Lean 4.26.0+, switch to docgen-action:
+#   uses: leanprover-community/docgen-action@main
+#   with:
+#     blueprint: true
+#     homepage: home_page
+#
+# The docgen-action `:docs` facet doesn't work with Lean 4.24.0 but works
+# with 4.26.0 (see brownian-motion project for working example).
+
 name: Compile blueprint
 
 on:
