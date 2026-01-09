@@ -4,13 +4,13 @@
 \chapter{Introduction}
 
 This blueprint documents the formalization of \textbf{de Finetti's theorem} and the
-\textbf{de Finetti--Ryll-Nardzewski equivalence} for infinite sequences on Borel spaces.
+\textbf{de Finetti--Ryll-Nardzewski equivalence} for infinite sequences on \emph{standard Borel spaces}.
 
 The main result establishes a three-way equivalence between:
 \begin{itemize}
   \item \textbf{Contractable}: All strictly increasing subsequences of equal length have the same distribution
   \item \textbf{Exchangeable}: Distribution invariant under finite permutations
-  \item \textbf{Conditionally i.i.d.}: Coordinates are independent and identically distributed given the tail $\sigma$-algebra
+  \item \textbf{Conditionally i.i.d.}: There exists a probability kernel such that finite marginals equal mixtures of product measures
 \end{itemize}
 
 We formalize \emph{all three proofs} from Kallenberg (2005):
@@ -51,8 +51,9 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
   \lean{Exchangeability.ConditionallyIID}
   \leanok
   A sequence $(X_n)_{n \in \mathbb{N}}$ is \emph{conditionally i.i.d.}\ with respect to
-  measure $\mu$ if the coordinates are conditionally independent and identically distributed
-  given the tail $\sigma$-algebra $\mathcal{T}$.
+  measure $\mu$ if there exists a probability kernel $\nu : \Omega \to \mathrm{Measure}(\alpha)$
+  such that for any strictly monotone $k : \mathrm{Fin}(m) \to \mathbb{N}$, the joint distribution
+  of $(X_{k(0)}, \ldots, X_{k(m-1)})$ equals the mixture $\mu.\mathrm{bind}(\omega \mapsto \nu(\omega)^{\otimes m})$.
 \end{definition}
 
 \begin{definition}[Tail $\sigma$-algebra]
@@ -158,6 +159,9 @@ This is the deep direction of de Finetti's theorem. We formalize three independe
 The L$^2$ approach uses elementary contractability bounds on block averages.
 This is Kallenberg's ``second proof'' and has the lightest dependencies.
 
+\textbf{Note:} This proof applies to \emph{real-valued} sequences ($X : \mathbb{N} \to \Omega \to \mathbb{R}$)
+with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
+
 \begin{lemma}[L$^2$ contractability bound]
   \label{lem:l2_bound}
   \uses{def:contractable}
@@ -182,17 +186,20 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   \label{def:blockAvg}
   \lean{Exchangeability.DeFinetti.ViaKoopman.blockAvg}
   \leanok
-  The \emph{block average} $A_{n,m,k}(f)(\omega) = \frac{1}{n} \sum_{j=0}^{n-1} f(\omega_{mn+k+j})$
-  averages $f$ over the $k$-th block of size $n$ starting at position $mn$.
+  The \emph{block average} $A_{m,n,k}(f)(\omega) = \frac{1}{n} \sum_{j=0}^{n-1} f(\omega_{k \cdot n + j})$
+  averages $f$ over the $k$-th block of size $n$ (indices $[kn, kn+n)$).
+  For $n = 0$, the block average is defined as $0$.
 \end{definition}
 
-\begin{lemma}[Block averages converge to conditional expectation]
+\begin{lemma}[Block averages converge in $L^1$]
   \label{lem:blockAvg_tendsto}
   \lean{Exchangeability.DeFinetti.ViaKoopman.blockAvg_tendsto_condExp}
   \leanok
   \uses{def:blockAvg}
-  For a shift-invariant measure, block averages converge a.e.\ to the conditional
-  expectation given the shift-invariant $\sigma$-algebra.
+  For a shift-invariant measure, block averages converge \emph{in $L^1$} to the conditional
+  expectation given the shift-invariant $\sigma$-algebra:
+  $\int |\bar{A}_{m,n,k}(f) - \mathbb{E}[f \circ \pi_0 \mid \mathcal{I}]| \, d\mu \to 0$
+  as $n \to \infty$.
 \end{lemma}
 
 \begin{lemma}[Integral product equals block average product]
@@ -250,7 +257,7 @@ via a monotone class argument.
   \leanok
   \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale}
   For an infinite sequence $(X_n)_{n \in \mathbb{N}}$ of random variables taking values
-  in a Borel space, the following are equivalent:
+  in a \emph{standard Borel space} $\alpha$ (with $\alpha$ nonempty), the following are equivalent:
   \begin{enumerate}
     \item $(X_n)$ is contractable
     \item $(X_n)$ is exchangeable

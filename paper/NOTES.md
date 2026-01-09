@@ -1,268 +1,472 @@
 # Technical Lessons & Mathematical Insights
 
-Content extracted and updated from `NotesForLater/PUBLICATION_IDEAS.md`.
+Detailed storylines for the AFM paper on formalizing de Finetti's theorem.
 
 ---
 
-## Technical Lessons Learned
+## Storyline 1: Three-Proof Comparative Study
 
-### Lesson 1: Type Class Resolution is Fragile with Multiple Structures
+### Quantitative Comparison
 
-**What happened:**
-- Anonymous instance notation `‹_›` resolved incorrectly in `m ≤ ‹_›`
-- Led to vacuous hypothesis `m ≤ m` instead of `m ≤ m₀`
-- Blocked 4 critical proofs for hours
+| Metric | ViaL2 | ViaKoopman | ViaMartingale |
+|--------|-------|------------|---------------|
+| **Total LOC** | 12,458 | 6,899 | 3,765 |
+| **Submodule count** | 12 files | 18 files | 13 files |
+| **Largest module** | CesaroConvergence (3,326) | ContractableFactorization (918) | PairLawEquality (603) |
+| **Mathematical depth** | Elementary | Deep (ergodic) | Medium (martingale) |
+| **Dependencies** | Lightest | Heavy | Medium |
 
-**Why it matters:**
-- Common pattern in probability: ambient space + sub-σ-algebra
-- Affects filtrations, adapted processes, conditional independence
-- Not documented in Lean 4 references
+### Dependency Analysis
 
-**Publication angle:**
-- Case study in type class design
-- Proposals for better diagnostics
-- Pattern documentation for future work
+**ViaL2** (Lightest):
+- No ergodic theory imports
+- No martingale machinery
+- Pure L² space operations + Cesàro convergence
+- Self-contained probability infrastructure
+
+**ViaKoopman** (Heaviest):
+- Imports `Ergodic/KoopmanMeanErgodic.lean`
+- Shift-invariant σ-algebras (`InvariantSigma.lean`)
+- Block injection and disjoint averaging
+- Originally planned: full Koopman operator theory
+
+**ViaMartingale** (Medium):
+- Reverse filtration infrastructure
+- Conditional independence (`CondIndep/` - 5 files)
+- Future σ-algebras and rectangles
+- Kernel theory (local infrastructure)
+
+### Dependency Graph (Mermaid)
+
+```mermaid
+graph TD
+    subgraph "ViaL2 (12,458 LOC)"
+        L2[ViaL2.lean] --> BA[BlockAverages]
+        L2 --> CC[CesaroConvergence]
+        L2 --> MC[MainConvergence]
+        L2 --> DM[DirectingMeasure]
+        CC --> L2H[L2Helpers]
+    end
+
+    subgraph "ViaKoopman (6,899 LOC)"
+        VK[ViaKoopman.lean] --> CF[ContractableFactorization]
+        VK --> DK[DirectingKernel]
+        CF --> CH[CesaroHelpers]
+        CF --> IC[InfraCore]
+        VK --> KME[KoopmanMeanErgodic]
+    end
+
+    subgraph "ViaMartingale (3,765 LOC)"
+        VM[ViaMartingale.lean] --> PLE[PairLawEquality]
+        VM --> FP[FiniteProduct]
+        VM --> FAC[Factorization]
+        VM --> FR[FutureRectangles]
+        VM --> RF[RevFiltration]
+    end
+
+    subgraph "Common"
+        Core[Core.lean]
+        Contr[Contractability.lean]
+        CIID[ConditionallyIID.lean]
+    end
+
+    L2 --> Core
+    VK --> Core
+    VM --> Core
+    L2 --> Contr
+    VK --> Contr
+    VM --> Contr
+```
+
+### Proof Friction Vignettes
+
+**Vignette 1: ViaL2 Verbosity Paradox**
+
+The "elementary" L² proof is the **largest** at 12,458 LOC. Why?
+
+The issue: Cesàro convergence requires extensive infrastructure:
+- `CesaroConvergence.lean` alone is 3,326 lines
+- Telescoping bounds need careful L¹/L² norm management
+- "Elementary" mathematically ≠ "simple" in formalization
+
+Specific friction point: `alphaIicCE_right_continuous_at` required Dominated Convergence Theorem machinery that took multiple iterations to get the measurability hypotheses correct.
+
+**Vignette 2: ViaMartingale Completion Paradox**
+
+ViaMartingale was **completed first** despite initial assessment that kernel theory blockers would make it hardest.
+
+What happened:
+1. Initial blockers identified (kernel uniqueness, disintegration)
+2. "Unblock-first, upstream-second" strategy applied
+3. Local infrastructure created with TODO markers
+4. Proof completed while infrastructure can be upstreamed later
+
+Result: 3,765 LOC (smallest), completed January 1, 2026.
+
+**Vignette 3: ViaKoopman Golfing Commits**
+
+Multiple commits (`515cc0f7`, `e7679e0c`, `09fd6832`) show proof "golfing":
+- Original proofs verbose and hard to maintain
+- Systematic conversion to term mode
+- `ext`, `rintro`, `simp` pattern simplifications
+
+Indicates: The proof worked mathematically but struggled with Lean automation.
 
 ---
 
-### Lesson 2: Proof Approach Affects Formalization Effort Dramatically
+## Storyline 2: Koopman "Project Then Average" Reformulation
 
-**What happened:**
-- L² approach: Elementary bounds, minimal dependencies
-- Ergodic approach: Requires Koopman operator theory, heavy imports
-- Martingale approach: Blocked by missing kernel theory in mathlib
+### The Original Plan (Abandoned)
 
-**Why it matters:**
-- Choice of proof significantly impacts formalization difficulty
-- "Conceptual" proofs may be harder to formalize than "computational" ones
-- Mathlib gaps can completely block approaches
+Follow Kallenberg's "first proof" directly using Mean Ergodic Theorem:
 
-**Update (Jan 2026):** ViaMartingale eventually completed first despite initial blockers!
+```
+Traditional approach:
+1. Define Koopman operator U : L²(μ) → L²(μ) by Uf = f ∘ T
+2. Show U is an isometry
+3. Apply von Neumann Mean Ergodic Theorem
+4. Birkhoff averages (1/n)Σ U^k f → Pf (projection to invariants)
+5. Use Pf to construct directing measure
+```
 
----
+**Blocked by**: Type-level mismatch between Koopman operator (ambient L²) and conditional expectation (sub-σ-algebra).
 
-### Lesson 3: Proof Restructuring for Reusability
+### The Reformulation (Used)
 
-**What happened:**
-- L¹ uniqueness lemma initially had inline boundedness proofs
-- Abstract helper couldn't prove specific properties of `alphaIicCE`
-- 30+ lines of duplicated calc-chain proofs
+**Key insight**: For shift-invariant σ-algebras, conditional expectation commutes with shift:
 
-**The restructuring:**
 ```lean
--- Before: Try to prove everything inside the helper
-lemma h_L1_uniqueness (f g : Ω → ℝ) ... := by
-  sorry  -- Can't prove f is bounded without unfolding definition!
-
--- After: Pass boundedness as hypotheses
-lemma h_L1_uniqueness (f g : Ω → ℝ)
-    (hf_bdd : ∀ᵐ ω ∂μ, ‖f ω‖ ≤ 1) ... := by
-  exact Integrable.of_bound hf 1 hf_bdd
-
--- Prove specific bounds at call site
-apply h_L1_uniqueness
-· exact alphaIicCE_nonneg_le_one  -- Reuse existing lemma!
+-- If m is shift-invariant, then:
+E[f ∘ shift | m] =ᵐ[μ] E[f | m]
 ```
 
-**Why it matters:**
-- Generic helpers should take properties as hypotheses
-- Prove specific properties where you have definition access
-- Enables reuse across different instantiations
+**Consequence**: Birkhoff averages become **constant** after projection:
 
----
-
-### Lesson 4: Integration Theory Has Surprising Gaps
-
-**What happened:**
-- L² → L¹ convergence for bounded functions: Not in mathlib!
-- Needed custom `L2_tendsto_implies_L1_tendsto_of_bounded`
-- Cauchy-Schwarz specialized to L² not readily available
-- Pushforward integral lemmas required boilerplate elimination
-
-**Why it matters:**
-- Even "elementary" probability needs infrastructure
-- Integration theory still developing in mathlib
-- Opportunity for contributions
-
----
-
-### Lesson 5: Avoiding Heavy Infrastructure via Reformulation
-
-**What happened:**
-- ViaKoopman initially needed full Koopman operator theory on L²
-- Heavy infrastructure: operator algebras, spectral theory, Mean Ergodic Theorem
-- Discovered clever reformulation: "project first, then average" approach
-
-**The insight:**
-For T-invariant σ-algebras, conditional expectation commutes with shift:
 ```
-E[f ∘ T | m] = E[f | m]
+E[(1/n)Σ f ∘ shift^k | m] = (1/n)Σ E[f ∘ shift^k | m]
+                          = (1/n)Σ E[f | m]           -- by commutativity
+                          = E[f | m]                  -- constant sequence!
 ```
 
-This means Birkhoff averages become **constant sequences** after projection - trivially converge!
+Constant sequences trivially converge, **bypassing Mean Ergodic Theorem entirely**.
 
-**Why it matters:**
-- Reduced dependency from "full ergodic theory" to "conditional expectation properties"
-- Proof from ~500 lines (with heavy infrastructure) to ~90 lines (self-contained)
-- Formalization-driven proof discovery
+### Implementation in Lean
 
----
+From `ContractableFactorization.lean`:
 
-### Lesson 6: Type-Level Mismatches Can Block Entire Approaches
-
-**What happened:**
-- ViaKoopman initially planned to use general Mean Ergodic Theorem (MET)
-- Koopman operator defined for **ambient** MeasurableSpace
-- Our theorem needs conditional expectation on **sub-σ-algebra** `m`
-- Type-level mismatch: cannot connect Koopman machinery to sub-σ-algebra
-
-**Why shift-specific version worked:**
-- `shiftInvariantSigma` IS the ambient σ-algebra in that construction
-- No type mismatch because we constructed the space that way
-- But can't generalize to arbitrary (T, m) pairs
-
-**Solution chosen:** "project first, then average" reformulation
-
-**Effort estimates for alternatives (from analysis):**
-- Generalize Koopman: 1-2 weeks
-- Restriction lemma: 3-5 days
-- Direct MET proof: 2-3 weeks
-- Clever reformulation: 1 day ✓ (chosen)
-
----
-
-### Lesson 7: "Unblock-First, Upstream-Second" Strategy (NEW)
-
-**What happened:**
-- Identified 3 critical blockers in ViaMartingale proof
-- Created local infrastructure lemmas to unblock immediately
-- Marked them with TODO for future mathlib contribution
-- Proof proceeds while infrastructure can be upstreamed later
-
-**The pattern:**
 ```lean
-/-! ## Local Infrastructure (TODO: Contribute to mathlib) -/
+-- Step 1: Block injection gives strictly monotone indices
+lemma blockInjection_strictMono {n m : ℕ} (j : Fin m → Fin n) :
+    StrictMono (fun i => block_index m n (j i) + index_within_block m n (j i))
 
--- TODO: Contribute to Mathlib.Probability.Kernel.CondDistrib
-lemma condDistrib_factor_indicator_agree ... := by sorry
+-- Step 2: Contractability applies to any strictly monotone selection
+-- (This is the definition of Contractable)
 
--- Application site uses the infrastructure immediately
-exact condDistrib_factor_indicator_agree h_law h_le
+-- Step 3: Telescoping L¹ bounds via block averaging
+lemma product_blockAvg_L1_convergence {m : ℕ} (fs : Fin m → α → ℝ) ... :
+    Tendsto (fun n => ∫ ω, |∏ i, blockAvg n (fs i) ω - ∏ i, μ[fs i | mSI] ω| ∂μ)
+            atTop (nhds 0)
+
+-- Step 4: Conditional expectation factorizes products
+lemma condexp_product_factorization_contractable {m : ℕ} (fs : Fin m → α → ℝ) ... :
+    μ[∏ i, fs i | mSI] =ᵐ[μ] ∏ i, μ[fs i | mSI]
 ```
 
-**Results:**
-- 3 application blockers → 0 application blockers
-- 0 infrastructure sorries → 3 infrastructure sorries
-- File compiles ✓
-- Clear roadmap for mathlib contributions
+### Quantified Impact
+
+| Aspect | Original Plan | Actual Implementation |
+|--------|--------------|----------------------|
+| **Infrastructure** | Koopman isometry, spectral theory, MET | CE properties only |
+| **Dependencies** | Full ergodic theory | Conditional expectation |
+| **Core proof LOC** | ~500 (estimated) | ~90 (self-contained) |
+| **Status** | Blocked | Complete |
+
+### Formalization-Driven Discovery
+
+This reformulation was discovered **because** of the type mismatch:
+- Lean's type system made the Koopman approach impossible
+- Forced exploration of alternatives
+- Found simpler path that works in practice
+
+**Lesson**: Type systems can guide toward better proofs, not just verify existing ones.
 
 ---
 
-## Mathematical Insights
+## Storyline 3: Equation Archeology
 
-### Insight 1: Kallenberg's "Three Proofs" Have Different Formalization Profiles
+### The Problem: Unexplained Calculation Chains
 
-**Mathematical observation:**
-- First proof (Koopman): Deepest connection to ergodic theory
-- Second proof (L²): Most elementary, fewest dependencies
-- Third proof (Martingale): Most probabilistic, requires kernel theory
+Kallenberg (2005) presents calculation chains like:
 
-**Formalization reveals:**
-- L² proof appeared easiest to formalize initially
-- Martingale proof completed first despite initial blockers!
-- Koopman proof requires substantial ergodic theory infrastructure
+```
+E[f(X_{n+1}) | X_1,...,X_n] = E[E[f(X_{n+1}) | σ(X_1,X_2,...)] | X_1,...,X_n]  (1.2a)
+                            = E[α(X_1,X_2,...) | X_1,...,X_n]                   (1.2b)
+                            = α(X_1,...,X_n)                                    (1.2c)
+```
 
-**Publication angle:**
-- Formalization as a lens for understanding proof complexity
-- Different notions of "elementary" in math vs. formalization
+Each step is "obvious to experts" but:
+- No justification provided
+- General principle unstated
+- Conditions for validity implicit
 
----
+### The Solution: Formalized Lemmas as Explanations
 
-### Insight 2: The π-System Approach Generalizes Naturally
+| Step | Math Justification | Lean Lemma | Signature |
+|------|-------------------|------------|-----------|
+| (1.2a)→(1.2b) | Tower property | `MeasureTheory.condexp_condexp_of_le` | `m₁ ≤ m₂ → μ[μ[f\|m₂]\|m₁] =ᵐ[μ] μ[f\|m₁]` |
+| (1.2b)→(1.2c) | α defined as CE | (definition unfolding) | - |
+| (1.2c)→(1.2d) | Measurable ⟹ fixed point | `MeasureTheory.condexp_of_stronglyMeasurable` | `StronglyMeasurable[m] f → μ[f\|m] =ᵐ[μ] f` |
 
-**Mathematical observation:**
-- Cylinder sets form a π-system generating the product σ-algebra
-- Measures determined by finite marginals via π-system uniqueness
+### Concrete Example from ViaKoopman
 
-**Formalization reveals:**
-- Pattern works beautifully for infinite products
-- Generalizes beyond ℕ → α to arbitrary countable products
-- Key to proving exchangeable ⟺ fully exchangeable
+From `ContractableFactorization.lean:154-162`:
 
----
+```lean
+-- "Tower property collapses nested conditional expectations"
+have h_lhs_tower : ∫ ω, (∏ j, fs_σ j (ω j.val)) ∂μ =
+    ∫ ω, μ[(fun ω' => ∏ j, fs_σ j (ω' j.val)) | mSI] ω ∂μ := by
+  symm
+  apply integral_condExp (shiftInvariantSigma_le (α := α))
+  -- Uses: integral_condExp from Mathlib
+  -- Requires: mSI ≤ ambient MeasurableSpace
+```
 
-### Insight 3: Contractability is the "Right" Definition
+### The "Certified Explanation" Concept
 
-**Mathematical observation:**
-- Three equivalent definitions: contractable, exchangeable, conditionally i.i.d.
-- Contractability is least known but most structured
+**Before formalization**: "Apply tower property" (reader must know what this means)
 
-**Formalization reveals:**
-- Contractability → exchangeability is easy (permutation extension)
-- Exchangeability → conditionally i.i.d. is deep (all three proofs needed)
-- Conditionally i.i.d. → contractability is direct (kernel factorization)
+**After formalization**: `condexp_condexp_of_le` with explicit:
+- Preconditions: `m₁ ≤ m₂ ≤ m₀`, integrability
+- Conclusion: exact a.e. equality
+- Proof: verified by type checker
 
----
+**Meta-principle**: The formalized lemma name **is** the explanation.
 
-## Formalization Methodologies
-
-### Methodology 1: Multiple Proof Approaches as Risk Mitigation
-
-**What we did:**
-- Started formalizing all three proofs simultaneously
-- Discovered ViaL2 was most tractable initially
-- ViaMartingale completed first despite late start on blockers
-- Kept all three for completeness and comparison
-
-**Why it worked:**
-- Mathlib gaps could have blocked any single approach
-- Comparison revealed formalization difficulty early
-- Provides multiple verification paths for the theorem
+Benefits:
+1. **Precision**: Exact conditions stated
+2. **Generality**: Same lemma applies wherever the pattern appears
+3. **Verification**: Not textbook hand-waving
+4. **Reusability**: Cite lemma instead of re-explaining
 
 ---
 
-### Methodology 2: Tactic Modernization as Refactoring
+## Storyline 4: condExpWith Pattern / Typeclass Fragility
 
-**What we did:**
-- Systematically applied modern `fun_prop` tactic across codebase
-- Replaced manual measurability composition proofs
-- Added `@[fun_prop]` attributes to enable automation
+### The Problem: Anonymous Instance Resolution
 
-**Why it worked:**
-- Reduced proof brittleness
-- Improved readability
-- Made proofs more maintainable for future mathlib updates
+```lean
+-- Setup: ambient space m₀, sub-σ-algebra m
+variable [m0 : MeasurableSpace Ω] {m : MeasurableSpace Ω}
+
+-- Intended: state that m is a sub-σ-algebra of m₀
+-- Using anonymous instance notation:
+example (hm : m ≤ ‹_›) : ... := ...
+
+-- BUG: ‹_› resolves to m (the nearest MeasurableSpace), not m₀!
+-- Result: hm : m ≤ m (trivially true, useless)
+```
+
+### Minimal Reproducible Example
+
+```lean
+-- This compiles but is WRONG:
+variable [m0 : MeasurableSpace Ω] {m : MeasurableSpace Ω}
+
+lemma broken (hm : m ≤ ‹MeasurableSpace Ω›) (f : Ω → ℝ) :
+    μ[f | m] =ᵐ[μ] f := by
+  -- hm is actually: m ≤ m (not m ≤ m0!)
+  -- Proof proceeds with vacuous hypothesis
+  sorry
+```
+
+### The Corrected Pattern
+
+```lean
+-- CORRECT: Name the ambient space explicitly
+variable [m0 : MeasurableSpace Ω] (μ : Measure Ω)
+variable {m : MeasurableSpace Ω} (hm : m ≤ m0)  -- explicit reference to m0
+
+lemma correct (hm : m ≤ m0) (f : Ω → ℝ) :
+    μ[f | m] =ᵐ[μ] f := by
+  -- hm is now: m ≤ m0 (the actual sub-σ-algebra relationship)
+  exact condexp_of_stronglyMeasurable m hm ...
+```
+
+### Scope: Where This Pattern Applies
+
+This issue affects any "ambient + sub-structure" pattern in Lean 4:
+
+| Domain | Ambient | Sub-structure | Affected Operations |
+|--------|---------|---------------|---------------------|
+| Measure theory | MeasurableSpace Ω | Sub-σ-algebra m | Conditional expectation |
+| Stochastic processes | Filtration ℱ | ℱ_t for t ≤ s | Adapted processes |
+| Probability | σ-algebra | Generated σ-algebras | Independence |
+| Topology | TopologicalSpace | Subspace topology | Continuity |
+
+### Impact on This Project
+
+- **Blocked**: 4 critical proofs for hours
+- **Root cause**: Took systematic debugging to identify
+- **Solution**: Systematic refactoring to explicit parameters
+- **Prevention**: Pattern now documented for future work
 
 ---
 
-### Methodology 3: Pattern Discovery Through Debugging
+## Storyline 5: Infrastructure Contributions for Mathlib
 
-**What we did:**
-- Hit type class errors in CondExp
-- Debugged systematically to find root cause
-- Discovered `condExpWith` as canonical pattern
-- Documented for future use
+### Curated Lemma List
 
-**Why it worked:**
-- Deep understanding of problem led to general solution
-- Pattern applies beyond immediate need
-- Created reusable knowledge
+| Lemma | Location | Purpose | Novel? | Reusable? |
+|-------|----------|---------|--------|-----------|
+| `exists_perm_extending_strictMono` | Contractability.lean:313 | Extend strictly mono to permutation | Yes | High |
+| `measure_eq_of_fin_marginals_eq` | Core.lean:330 | Measures by finite marginals | Yes | High |
+| `prefixProj` / `prefixCylinder` | Core.lean | π-system for products | Yes | High |
+| `exchangeable_iff_fullyExchangeable` | Core.lean:689 | Finite ⟺ infinite exchangeability | Yes | High |
+| `blockInjection_strictMono` | ContractableFactorization.lean | Block averaging | Yes | Medium |
+| `integral_condExp` | (Mathlib) | Tower property | No | - |
+| `condexp_of_stronglyMeasurable` | (Mathlib) | CE fixed point | No | - |
+
+### Why Each Is Reusable
+
+**`exists_perm_extending_strictMono`**:
+- Any strictly monotone k : Fin m → ℕ extends to a full permutation
+- Uses `Equiv.extendSubtype` from mathlib
+- Applicable to: combinatorics, sequence rearrangements, sampling theory
+
+**`measure_eq_of_fin_marginals_eq`**:
+- Measures on ℕ → α determined by projections to Fin n → α
+- Generalizes: Kolmogorov extension, infinite product measures
+- Foundation for: stochastic process characterization
+
+**`prefixCylinder` π-system**:
+- Cylinder sets form a π-system generating product σ-algebra
+- Key technique for: measure uniqueness on infinite products
+- Reusable for: Markov chains, branching processes, any ℕ-indexed process
+
+### PR Roadmap
+
+**Phase 1: Low-hanging Fruit**
+1. `exists_perm_extending_strictMono` → `Mathlib.GroupTheory.Perm.Extend`
+   - Clean, self-contained
+   - Builds on existing `Equiv.extendSubtype`
+   - Expected: 1-2 weeks review
+
+2. `prefixCylinder` lemmas → `Mathlib.MeasureTheory.Constructions.Pi`
+   - π-system uniqueness for countable products
+   - Expected: 2-3 weeks (needs coordination with existing Pi files)
+
+**Phase 2: After Phase 1 Merged**
+3. `measure_eq_of_fin_marginals_eq` → `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`
+   - Depends on prefixCylinder infrastructure
+   - Expected: 3-4 weeks
+
+**Phase 3: New Probability Module**
+4. Exchangeability/Contractability → new `Mathlib.Probability.Exchangeability`
+   - Definitions + basic equivalences
+   - Would be first probability-specific symmetry module
+   - Expected: 2-3 months (new file, more scrutiny)
 
 ---
 
-## Course Corrections (Dec-Jan 2026)
+## Storyline 6: Contractability as the "Right" Definition
 
-### 1. Kallenberg Identification Chain (Dec 3-10)
-- Shifted from abstract functional analysis to Kallenberg's precise argument
-- Created DirectingMeasure.lean infrastructure
-- More concrete distributional arguments
+### The Three Definitions
 
-### 2. Kallenberg-Faithful Martingale Refactor (Dec 31)
-- Recognized Aldous's approach needed reframing
-- Introduced reverse filtration machinery
-- Explicit chain lemma connecting revFiltration to tailSigma
+```lean
+-- Exchangeable: finite permutation invariance
+def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ n (σ : Equiv.Perm (Fin n)),
+    Measure.map (fun ω i => X (σ i) ω) μ =
+      Measure.map (fun ω i => X i ω) μ
 
-### 3. Proof Completion Sprint (Jan 1-3)
-- ViaKoopmanContractable achieved zero sorries (Jan 1)
-- ViaMartingale stabilized
-- ViaL2 addressed final DCT obstacles
+-- Contractable: strictly monotone subsequence invariance
+def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ m (k : Fin m → ℕ), StrictMono k →
+    Measure.map (fun ω i => X (k i) ω) μ =
+      Measure.map (fun ω i => X i.val ω) μ
+
+-- ConditionallyIID: mixture of i.i.d. with random directing measure
+def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∃ ν : Ω → Measure α,
+    (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
+    ∀ m (k : Fin m → ℕ), StrictMono k →
+      Measure.map (fun ω i => X (k i) ω) μ =
+        μ.bind (fun ω => Measure.pi fun _ => ν ω)
+```
+
+### The Equivalence Chain
+
+```
+                    easy (permutation extension)
+Exchangeable ←――――――――――――――――――――――――――――――――――→ Contractable
+                                                      ↓
+                                                      ↓ hard (3 proofs)
+                                                      ↓
+                    easy (kernel factorization)       ↓
+Exchangeable ←――――――――――――――――――――――――――――――――― ConditionallyIID
+```
+
+Key theorems:
+- `contractable_of_exchangeable` (Contractability.lean:486) - uses `exists_perm_extending_strictMono`
+- `exchangeable_of_conditionallyIID` (ConditionallyIID.lean:243) - direct from i.i.d. symmetry
+- `conditionallyIID_of_contractable` - **the hard direction** (3 independent proofs)
+
+### Why Contractability is "Right" for Formalization
+
+**1. Simpler Quantification**
+
+Exchangeable quantifies over all permutations σ : Equiv.Perm (Fin n):
+- Permutation group structure
+- Need to handle composition, identity, inverses
+- Potentially complex reasoning about group actions
+
+Contractable quantifies over strictly monotone functions k : Fin m → ℕ:
+- Just a function with a property
+- No group structure needed
+- StrictMono is a simple predicate
+
+**2. Direct Connection to Subsequences**
+
+Contractability directly states: "all strictly increasing subsequences have the same distribution"
+
+This matches:
+- Statistical sampling (select items 1, 3, 5, ... vs. 2, 4, 6, ...)
+- Thinning of point processes
+- Subsampling in time series
+
+Exchangeability requires translating through permutations.
+
+**3. The Easy Direction is Easy**
+
+Proving `contractable_of_exchangeable`:
+```lean
+theorem contractable_of_exchangeable (hX : Exchangeable μ X) : Contractable μ X := by
+  intro m k hk
+  -- Any strictly monotone k extends to a permutation σ
+  obtain ⟨σ, hσ⟩ := exists_perm_extending_strictMono k hk ...
+  -- Apply exchangeability to σ
+  exact hX ...
+```
+
+The key lemma `exists_perm_extending_strictMono` does all the work, and it's a clean combinatorial fact.
+
+**4. Avoids Infinite Permutation Groups**
+
+FullyExchangeable uses `Equiv.Perm ℕ` (infinite permutations):
+- More complex mathematical object
+- Harder to work with in Lean
+- `Equiv.Perm ℕ` has different properties than `Equiv.Perm (Fin n)`
+
+Contractability only uses finite selections, avoiding this entirely.
+
+### The Conceptual Insight
+
+De Finetti's theorem is really about **subsequence consistency**:
+- If you pick any strictly increasing subsequence, it looks the same
+- This consistency implies a deeper structure (conditional i.i.d.)
+
+Contractability makes this insight **explicit** in the definition.
+Exchangeability **encodes** it through permutation invariance.
+
+The formalization reveals: Contractability is the natural statement; Exchangeability is a convenient equivalent.
