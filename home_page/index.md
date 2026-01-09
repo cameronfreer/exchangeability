@@ -1,7 +1,7 @@
 ---
 ---
 
-A formalization of **de Finetti's theorem** and the **de Finetti--Ryll-Nardzewski equivalence** for infinite sequences on Borel spaces.
+A formalization of **de Finetti's theorem** for infinite sequences on standard Borel spaces.
 
 ## Main Result
 

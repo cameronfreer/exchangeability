@@ -12,77 +12,40 @@ P[ξ_k ∈ B | θ_m ξ] = P[ξ_k ∈ B | θ_n ξ]   (a.s.)
 ```
 where θ_m ξ = (ξ_m, ξ_{m+1}, ...) is the m-shifted sequence.
 
-## Two Proof Routes for `extreme_members_equal_on_tail`
+### Proof Strategy
 
-The central lemma `P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]` has two proofs with very different infrastructure costs:
+The central lemma `P[X_m ∈ B | tail] = P[X_0 ∈ B | tail]` combines:
 
-### 1. Tower Property Route (`extreme_members_equal_on_tail_via_tower`)
+1. **Contractability:** `CE(X_m | fut) = CE(X_0 | fut)` for the future filtration
+2. **Reverse martingale convergence:** `CE(X_k | rev n) → CE(X_k | tail)` as n → ∞
+3. **Chain lemma:** `CE(X_k | rev m) = CE(X_k | rev n)` for k < m ≤ n
 
-**File:** `CondExpConvergence.lean`
-
-```
-CE(X_m | fut) = CE(X_0 | fut)           [contractability]
-CE(CE(· | fut) | tail) = CE(· | tail)   [tower property]
-⟹ CE(X_m | tail) = CE(X_0 | tail)
-```
-
-**Infrastructure cost:** ~0 lines (uses mathlib's `condExp_condExp_of_le` directly)
-
-### 2. Kallenberg Route (`extreme_members_equal_on_tail`) — Default
-
-**Files:** `KallenbergChain.lean`, `CondExpConvergence.lean`
-
-```
-CE(X_k | rev m) = CE(X_k | rev n)     [chain lemma, k < m ≤ n]
-CE(X_k | rev n) → CE(X_k | tail)      [reverse martingale convergence]
-⟹ CE(X_k | rev m) = CE(X_k | tail)    [constant sequence = limit]
-```
-
-Then combine:
-```
-CE(X_m | tail) = CE(X_m | rev(m+1))    [convergence lemma]
-              = CE(X_0 | rev(m+1))      [contractability]
-              = CE(X_0 | tail)          [convergence lemma]
-```
-
-**Infrastructure cost:** ~1600 lines
-
-| Component | Lines | Purpose |
-|-----------|-------|---------|
-| `KallenbergChain.lean` | 380 | Chain lemma + convergence to tail |
-| `Martingale/Crossings.lean` | 963 | Upcrossing bounds, UI, limit identification |
-| `Martingale/Convergence.lean` | 125 | `condExp_tendsto_iInf` wrapper |
-| `Martingale/Reverse.lean` | 94 | Reverse filtration packaging |
-| `Martingale/OrderDual.lean` | 68 | OrderDual helpers |
-
-### Why Keep Both?
-
-The **tower route** is simpler and self-contained—it proves the same result with zero additional local infrastructure.
-
-The **Kallenberg route** is the default because:
-1. It's more faithful to Kallenberg's page-28 presentation
-2. It explicitly demonstrates reverse martingale convergence (Lévy's downward theorem)
-3. The martingale convergence machinery (`condExp_tendsto_iInf`) is mathematically interesting infrastructure that may be useful for other proofs
-
-## Key Lemmas
-
-### KallenbergChain.lean
-
-| Lemma | Description |
-|-------|-------------|
-| `pair_law_shift_eq_of_contractable` | (X_k, θ_m X) =^d (X_k, θ_n X) for k < m ≤ n |
-| `condExp_indicator_revFiltration_eq_of_le` | CE constant along revFiltration chain |
-| `condExp_indicator_revFiltration_eq_tail` | CE on revFiltration equals CE on tail |
-
-### Supporting Files
+## File Structure
 
 | File | Purpose |
 |------|---------|
-| `RevFiltration.lean` | σ(θ_m ξ) = revFiltration X m |
-| `FutureFiltration.lean` | futureFiltration X m = revFiltration X (m+1) |
-| `ShiftOperations.lean` | Shift operator θ_m (shiftRV) |
+| `CondExpConvergence.lean` | Main convergence lemma combining contractability with tower/chain |
+| `KallenbergChain.lean` | Chain lemma and convergence to tail |
+| `PairLawEquality.lean` | Pair law equality from contractability |
+| `FiniteProduct.lean` | Finite product factorization |
+| `Factorization.lean` | Factorization infrastructure |
+| `FutureRectangles.lean` | Future rectangle sets |
+| `FiniteCylinders.lean` | Finite cylinder sets |
+| `LocalInfrastructure.lean` | Local definitions and helpers |
 | `DirectingMeasure.lean` | Directing measure construction |
-| `Factorization.lean` | Finite product factorization |
+| `FutureFiltration.lean` | Future filtration definitions |
+| `ShiftOperations.lean` | Shift operator θ_m (shiftRV) |
+| `RevFiltration.lean` | Reverse filtration σ(θ_m ξ) |
+| `IndicatorAlgebra.lean` | Indicator function algebra |
+
+## Key Lemmas
+
+| Lemma | Description |
+|-------|-------------|
+| `condexp_convergence` | CE equality at future level from contractability |
+| `extreme_members_equal_on_tail` | `P[X_m ∈ B \| tail] = P[X_0 ∈ B \| tail]` |
+| `condExp_indicator_revFiltration_eq_tail` | CE on revFiltration equals CE on tail |
+| `pair_law_shift_eq_of_contractable` | (X_k, θ_m X) =^d (X_k, θ_n X) for k < m ≤ n |
 
 ## Notation Correspondence
 
@@ -92,39 +55,6 @@ The **Kallenberg route** is the default because:
 | `revFiltration X m` | σ(θ_m ξ) |
 | `futureFiltration X m` | σ(θ_{m+1} ξ) |
 | `tailSigma X` | T_ξ = ⋂_m σ(θ_m ξ) |
-
-## Dependency Graph
-
-```
-                    mathlib
-                       │
-        ┌──────────────┴──────────────┐
-        │                             │
-        ▼                             ▼
-  condExp_condExp_of_le      Martingale/Crossings.lean (963 lines)
-        │                             │
-        │                             ▼
-        │                  Martingale/Convergence.lean
-        │                             │
-        │                             ▼
-        │                    KallenbergChain.lean (380 lines)
-        │                             │
-        ▼                             ▼
-  _via_tower (24 lines)     Kallenberg route (37 lines)
-        │                             │
-        └──────────────┬──────────────┘
-                       ▼
-              extreme_members_equal_on_tail
-                       │
-                       ▼
-              DirectingMeasure.lean
-                       │
-                       ▼
-               FiniteProduct.lean
-                       │
-                       ▼
-                ViaMartingale.lean
-```
 
 ## References
 

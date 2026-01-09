@@ -18,7 +18,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Exchangeability and de Finetti's theorems
+title: Exchangeability and de Finetti's theorem
 email: freer@mit.edu
 description: by Cameron Freer
 baseurl: "" # the subpath of your site, e.g. /blog
