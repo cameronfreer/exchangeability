@@ -47,8 +47,8 @@ import Exchangeability.DeFinetti.Theorem  -- Gets the martingale proof by defaul
 For a specific proof approach:
 ```lean
 import Exchangeability.DeFinetti.TheoremViaMartingale -- Martingale proof (complete)
-import Exchangeability.DeFinetti.TheoremViaL2         -- L² proof (in progress)
-import Exchangeability.DeFinetti.TheoremViaKoopman    -- Ergodic theory proof (future)
+import Exchangeability.DeFinetti.TheoremViaL2         -- L² proof (complete)
+import Exchangeability.DeFinetti.TheoremViaKoopman    -- Ergodic theory proof (complete)
 ```
 
 ## Main theorems (re-exported)

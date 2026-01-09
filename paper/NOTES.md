@@ -153,12 +153,12 @@ This **bypasses the Koopman-to-CE bridge** (Step 5-6 above), not MET itself.
 
 ### Implementation in Lean
 
-From `ContractableFactorization.lean` (illustrative signatures):
+Illustrative signatures from ViaKoopman infrastructure:
 
 ```lean
--- Step 1: Block injection gives strictly monotone indices
-lemma blockInjection_strictMono {n m : ℕ} (j : Fin m → Fin n) :
-    StrictMono (fun i => block_index m n (j i) + index_within_block m n (j i))
+-- Step 1: Block injection gives strictly monotone indices (BlockInjection.lean:75)
+lemma blockInjection_strictMono (m n : ℕ) (hn : 0 < n) (j : Fin m → Fin n) :
+    StrictMono (blockInjection m n j)
 
 -- Step 2: Contractability applies to any strictly monotone selection
 -- (This is the definition of Contractable)
@@ -270,13 +270,14 @@ example (hm : m ≤ ‹_›) : ... := ...
 ### Minimal Reproducible Example
 
 ```lean
--- This compiles but is WRONG:
+-- Pseudocode illustrating the bug (not compilable as-is):
 variable [m0 : MeasurableSpace Ω] {m : MeasurableSpace Ω}
+variable (μ : Measure Ω)
 
 lemma broken (hm : m ≤ ‹MeasurableSpace Ω›) (f : Ω → ℝ) :
     μ[f | m] =ᵐ[μ] f := by
-  -- hm is actually: m ≤ m (not m ≤ m0!)
-  -- Proof proceeds with vacuous hypothesis
+  -- BUG: hm is actually m ≤ m (not m ≤ m0!)
+  -- ‹MeasurableSpace Ω› resolves to the nearest instance, which is m
   sorry
 ```
 
@@ -323,8 +324,8 @@ This issue affects any "ambient + sub-structure" pattern in Lean 4:
 | `measure_eq_of_fin_marginals_eq` | Core.lean:330 | Measures by finite marginals | Yes | High |
 | `prefixProj` / `prefixCylinder` | Core.lean | π-system for products | Yes | High |
 | `exchangeable_iff_fullyExchangeable` | Core.lean:689 | Finite ⟺ infinite exchangeability | Yes | High |
-| `blockInjection_strictMono` | ContractableFactorization.lean | Block averaging | Yes | Medium |
-| `integral_condExp` | (Mathlib) | Tower property | No | - |
+| `blockInjection_strictMono` | BlockInjection.lean:75 | Block averaging | Yes | Medium |
+| `integral_condExp` | (Mathlib) | Integral of CE equals integral | No | - |
 | `condExp_of_stronglyMeasurable` | (Mathlib) | CE fixed point | No | - |
 
 ### Why Each Is Reusable

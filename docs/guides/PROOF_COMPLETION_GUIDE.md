@@ -23,7 +23,7 @@ This is the "change of base" for compProd when you compose the base measure with
 ### Option 1: Search for existing mathlib lemma
 
 ```bash
-cd /Users/freer/work/exch-repos/exchangeability-claude
+# From the project root:
 grep -r "compProd.*map" .lake/packages/mathlib/Mathlib/Probability/Kernel/
 ```
 

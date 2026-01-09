@@ -223,7 +223,7 @@ other results in:
 - Extreme value theory
 - Optimal transport
 
-**The formalization is ~80% complete**. The remaining 20% requires ~1500 lines of new mathlib
-infrastructure, representing 2-3 person-months of expert work.
+**Note (Jan 2026)**: This assessment is historical. All three proofs are now complete.
+The infrastructure described above was built locally rather than waiting for mathlib PRs.
 
 -/
