@@ -205,27 +205,19 @@ theorem deFinetti_viaKoopman
     (hX_exch : Exchangeable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     ConditionallyIID μ X := by
-  -- Step 1: Get contractability (needed for shift invariance)
+  -- Step 1: Get contractability from exchangeability
   have hContract := contractable_of_exchangeable hX_exch hX_meas
-  -- Step 2: Get MeasurePreserving shift on path space
-  have hσ : MeasurePreserving (shift (α := ℝ))
-             (μ_path μ X)
-             (μ_path μ X) :=
-    measurePreserving_shift_path μ X hContract hX_meas
-  -- Step 3: Get path exchangeability directly from exchangeability
-  have hPathExch : ∀ π : Equiv.Perm ℕ,
-      Measure.map (reindex π)
-        (μ_path μ X) =
-      μ_path μ X :=
-    exchangeable_path_of_exchangeable μ X hX_meas hX_exch
-  -- Step 4: Apply ViaKoopman's main theorem on path space
+  -- Step 2: Push contractability to path space
+  have hPathContract := pathSpace_contractable_of_contractable X hX_meas hContract
+  -- Step 3: Get shift-preservation on path space
+  have hσ := pathSpace_shift_preserving_of_contractable X hX_meas hContract
   haveI : IsProbabilityMeasure (μ_path μ X) :=
     Exchangeability.Bridge.isProbabilityMeasure_μ_path μ X hX_meas
-  have h_path_ciid : ConditionallyIID (μ_path μ X)
-                      (fun i (ω : ℕ → ℝ) => ω i) :=
-    Exchangeability.DeFinetti.ViaKoopman.exchangeable_implies_ciid_modulo_bridge (μ_path μ X) hσ hPathExch
+  -- Step 4: Apply conditionallyIID_bind_of_contractable
+  have h_path_ciid : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i) :=
+    conditionallyIID_bind_of_contractable hσ hPathContract
   -- Step 5: Transfer from path space to original space
-  exact conditionallyIID_of_path_ciid μ X hX_meas h_path_ciid
+  exact conditionallyIID_transfer X hX_meas h_path_ciid
 
 /-- **Contractable implies conditionally i.i.d.** (via Koopman).
 
