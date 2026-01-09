@@ -1,7 +1,222 @@
-% In this file you should put the actual content of the blueprint.
-% It will be used both by the web and the print version.
-% It should *not* include the \begin{document}
-%
-% If you want to split the blueprint content into several files then
-% the current file can be a simple sequence of \input. Otherwise It
-% can start with a \section or \chapter for instance.
+% Blueprint content for the Exchangeability formalization project
+% Structure follows Kallenberg (2005), Chapter 1, Theorem 1.1
+
+\chapter{Introduction}
+
+This blueprint documents the formalization of \textbf{de Finetti's theorem} and the
+\textbf{de Finetti--Ryll-Nardzewski equivalence} for infinite sequences on Borel spaces.
+
+The main result establishes a three-way equivalence between:
+\begin{itemize}
+  \item \textbf{Contractable}: All strictly increasing subsequences of equal length have the same distribution
+  \item \textbf{Exchangeable}: Distribution invariant under finite permutations
+  \item \textbf{Conditionally i.i.d.}: Coordinates are independent and identically distributed given the tail $\sigma$-algebra
+\end{itemize}
+
+We formalize \emph{all three proofs} from Kallenberg (2005):
+\begin{enumerate}
+  \item \textbf{Koopman/Ergodic approach} using the Mean Ergodic Theorem
+  \item \textbf{L$^2$ approach} using elementary contractability bounds
+  \item \textbf{Martingale approach} using reverse martingale convergence (after Aldous)
+\end{enumerate}
+
+
+\chapter{Foundations}
+
+\section{Core Definitions}
+
+\begin{definition}[Exchangeable sequence]
+  \label{def:exchangeable}
+  \lean{Exchangeability.Exchangeable}
+  \leanok
+  A sequence $(X_n)_{n \in \mathbb{N}}$ of random variables is \emph{exchangeable}
+  with respect to measure $\mu$ if for every $n \in \mathbb{N}$ and every permutation
+  $\sigma$ of $\{0, \ldots, n-1\}$, the joint distribution of $(X_{\sigma(0)}, \ldots, X_{\sigma(n-1)})$
+  equals that of $(X_0, \ldots, X_{n-1})$.
+\end{definition}
+
+\begin{definition}[Contractable sequence]
+  \label{def:contractable}
+  \lean{Exchangeability.Contractable}
+  \leanok
+  \uses{def:exchangeable}
+  A sequence $(X_n)_{n \in \mathbb{N}}$ is \emph{contractable} with respect to measure $\mu$
+  if for all $m \in \mathbb{N}$ and all strictly increasing functions $k, k' : \mathrm{Fin}(m) \to \mathbb{N}$,
+  the joint distribution of $(X_{k(0)}, \ldots, X_{k(m-1)})$ equals that of
+  $(X_{k'(0)}, \ldots, X_{k'(m-1)})$.
+\end{definition}
+
+\begin{definition}[Conditionally i.i.d.\ sequence]
+  \label{def:conditionallyIID}
+  \lean{Exchangeability.ConditionallyIID}
+  \leanok
+  A sequence $(X_n)_{n \in \mathbb{N}}$ is \emph{conditionally i.i.d.}\ with respect to
+  measure $\mu$ if the coordinates are conditionally independent and identically distributed
+  given the tail $\sigma$-algebra $\mathcal{T}$.
+\end{definition}
+
+\begin{definition}[Tail $\sigma$-algebra]
+  \label{def:tailSigma}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.tailSigma}
+  \leanok
+  The \emph{tail $\sigma$-algebra} of a sequence $(X_n)$ is
+  $\mathcal{T} = \bigcap_{n=0}^{\infty} \sigma(X_n, X_{n+1}, \ldots)$.
+\end{definition}
+
+
+\chapter{Easy Directions}
+
+\section{Exchangeable implies Contractable}
+
+\begin{lemma}[Permutation extension]
+  \label{lem:perm_extension}
+  \lean{Exchangeability.exists_perm_extending_strictMono}
+  \leanok
+  Any strictly increasing function $k : \mathrm{Fin}(m) \to \mathbb{N}$ with range
+  contained in $\{0, \ldots, n-1\}$ extends to a permutation of $\{0, \ldots, n-1\}$.
+\end{lemma}
+
+\begin{theorem}[Exchangeable implies Contractable]
+  \label{thm:contractable_of_exchangeable}
+  \lean{Exchangeability.contractable_of_exchangeable}
+  \leanok
+  \uses{def:exchangeable, def:contractable, lem:perm_extension}
+  If $(X_n)$ is exchangeable, then it is contractable.
+\end{theorem}
+
+\section{Conditionally i.i.d.\ implies Exchangeable}
+
+\begin{theorem}[Conditionally i.i.d.\ implies Exchangeable]
+  \label{thm:exchangeable_of_conditionallyIID}
+  \lean{Exchangeability.exchangeable_of_conditionallyIID}
+  \leanok
+  \uses{def:conditionallyIID, def:exchangeable}
+  If $(X_n)$ is conditionally i.i.d., then it is exchangeable.
+\end{theorem}
+
+
+\chapter{Main Implication: Contractable implies Conditionally i.i.d.}
+
+This is the deep direction of de Finetti's theorem. We formalize three independent proofs.
+
+\section{Via Martingale (Aldous' proof)}
+
+\begin{definition}[Future filtration]
+  \label{def:futureFiltration}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.futureFiltration}
+  \leanok
+  The \emph{future filtration} at level $m$ is $\mathcal{F}_m = \sigma(X_{m+1}, X_{m+2}, \ldots)$.
+\end{definition}
+
+\begin{lemma}[Pair law equality]
+  \label{lem:pair_law_eq}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.contractable_dist_eq}
+  \leanok
+  \uses{def:contractable, def:futureFiltration}
+  For a contractable sequence, the joint distribution of $(X_k, \theta_{m+1} X)$ equals
+  that of $(X_m, \theta_{m+1} X)$ for all $k \le m$, where $\theta_n$ is the shift operator.
+\end{lemma}
+
+\begin{lemma}[Kallenberg chain lemma]
+  \label{lem:kallenberg_chain}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.condExp_indicator_revFiltration_eq_tail}
+  \leanok
+  \uses{lem:pair_law_eq, def:tailSigma}
+  Conditional expectations of indicators given the reverse filtration
+  converge to conditional expectations given the tail $\sigma$-algebra.
+\end{lemma}
+
+\begin{lemma}[Conditional expectation convergence]
+  \label{lem:condexp_convergence}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.condexp_convergence}
+  \leanok
+  \uses{lem:pair_law_eq}
+  For $k \le m$ and measurable $B$:
+  $\mathbb{E}[\mathbf{1}_{X_m \in B} \mid \mathcal{F}_m] = \mathbb{E}[\mathbf{1}_{X_k \in B} \mid \mathcal{F}_m]$ a.s.
+\end{lemma}
+
+\begin{lemma}[Extreme members equal on tail]
+  \label{lem:extreme_members_equal}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.extreme_members_equal_on_tail}
+  \leanok
+  \uses{lem:condexp_convergence, lem:kallenberg_chain}
+  For any measurable $B$:
+  $\mathbb{E}[\mathbf{1}_{X_m \in B} \mid \mathcal{T}] = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}]$ a.s.
+\end{lemma}
+
+\begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Martingale)]
+  \label{thm:conditionallyIID_of_contractable_martingale}
+  \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable}
+  \leanok
+  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal}
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+\end{theorem}
+
+
+\section{Via L$^2$ (Elementary proof)}
+
+The L$^2$ approach uses elementary contractability bounds on block averages.
+This is Kallenberg's ``second proof'' and has the lightest dependencies.
+
+\begin{lemma}[L$^2$ contractability bound]
+  \label{lem:l2_bound}
+  \uses{def:contractable}
+  For contractable sequences, certain L$^2$ norms of block averages are bounded.
+\end{lemma}
+
+\begin{theorem}[Contractable implies Conditionally i.i.d.\ (via L$^2$)]
+  \label{thm:conditionallyIID_of_contractable_L2}
+  \uses{def:contractable, def:conditionallyIID, lem:l2_bound}
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+\end{theorem}
+
+
+\section{Via Koopman (Mean Ergodic Theorem)}
+
+The Koopman approach uses the Mean Ergodic Theorem via the shift operator on L$^2$.
+This is Kallenberg's ``first proof'' and has the heaviest dependencies (ergodic theory).
+
+\begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Koopman)]
+  \label{thm:conditionallyIID_of_contractable_Koopman}
+  \uses{def:contractable, def:conditionallyIID}
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+  This proof uses the Mean Ergodic Theorem via the Koopman operator on L$^2$.
+\end{theorem}
+
+
+\chapter{Common Ending}
+
+All three proofs converge to the same final step: extending from indicators to general sets
+via a monotone class argument.
+
+\begin{lemma}[$\pi$-system uniqueness]
+  \label{lem:pi_system}
+  \lean{Exchangeability.measure_eq_of_fin_marginals_eq}
+  \leanok
+  Measures on product spaces are determined by their finite-dimensional marginals.
+\end{lemma}
+
+\begin{theorem}[Conditional independence extension]
+  \label{thm:condIndep_extension}
+  \lean{Exchangeability.DeFinetti.CommonEnding.conditional_iid_from_directing_measure}
+  \leanok
+  \uses{lem:pi_system}
+  Conditional independence on indicators extends to the full product $\sigma$-algebra.
+\end{theorem}
+
+
+\chapter{Main Theorem}
+
+\begin{theorem}[de Finetti--Ryll-Nardzewski equivalence]
+  \label{thm:deFinetti}
+  \lean{Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence}
+  \leanok
+  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale}
+  For an infinite sequence $(X_n)_{n \in \mathbb{N}}$ of random variables taking values
+  in a Borel space, the following are equivalent:
+  \begin{enumerate}
+    \item $(X_n)$ is contractable
+    \item $(X_n)$ is exchangeable
+    \item $(X_n)$ is conditionally i.i.d.\ given the tail $\sigma$-algebra
+  \end{enumerate}
+\end{theorem}

@@ -303,11 +303,11 @@ random sequences `X : ℕ → Ω → α` via the pushforward measure.
 on path space satisfies the contractability hypothesis if `X` is contractable.
 -/
 
+omit [StandardBorelSpace α] in
 /-- Transfer path-space contractability to the pushforward of a general sequence.
 
 Given `X : ℕ → Ω → α` that is contractable, the pushforward measure on `Ω[α] = ℕ → α`
 satisfies the path-space contractability hypothesis. -/
-omit [StandardBorelSpace α] in
 lemma pathSpace_contractable_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -332,6 +332,7 @@ lemma pathSpace_contractable_of_contractable
   rw [h1, h2]
   exact hContract m k hk
 
+omit [StandardBorelSpace α] in
 /-- Shifting coordinates by +1 preserves the pushforward measure for contractable sequences.
 
 This is the key measure-theoretic step for shift-preservation: if X is contractable,
@@ -343,7 +344,6 @@ then μ.map(i ↦ X(i+1)) = μ.map(i ↦ X i).
    the marginal of μ.map(i ↦ X i) (by contractability with k(i) = i+1)
 3. Apply `measure_eq_of_fin_marginals_eq_prob` to conclude measure equality
 -/
-omit [StandardBorelSpace α] in
 lemma measure_map_shift_eq_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -408,12 +408,12 @@ lemma pathSpace_shift_preserving_of_contractable
     -- Apply the helper lemma
     exact measure_map_shift_eq_of_contractable X hX_meas hContract
 
+omit [StandardBorelSpace α] in
 /-- ConditionallyIID transfers between path space and original space.
 
 If `μ_path = μ.map φ` where `φ ω = (fun i => X i ω)`, then
 `ConditionallyIID μ_path id ↔ ConditionallyIID μ X`
 where `id` on path space is `fun i ω => ω i`. -/
-omit [StandardBorelSpace α] in
 lemma conditionallyIID_transfer
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -479,6 +479,7 @@ are commutative. So for injective k : Fin m → ℕ:
 4. Use product commutativity to handle the σ reordering
 -/
 
+omit [StandardBorelSpace α] in
 /-- Bridge condition for contractable measures: extends from StrictMono to Injective.
 
 This is the key technical step connecting contractability to `conditional_iid_from_directing_measure`.
@@ -492,7 +493,6 @@ Then contractability reduces to consecutive indices, and product commutativity h
 4. By condexp_product_factorization_contractable: = ∫ ∏ j, (∫ indicator(B(σ⁻¹ j)) dν) dμ
 5. = ∫ ∏ i, ν(B i) dμ  (by product commutativity)
 -/
-omit [StandardBorelSpace α] in
 lemma indicator_product_bridge_contractable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -637,12 +637,12 @@ lemma indicator_product_bridge_contractable
     _ = ∫⁻ ω, ∏ i, (ν (μ := μ) ω) (B i) ∂μ := by
           congr 1; funext ω; conv_rhs => rw [h_rhs_reindex ω]
 
+omit [StandardBorelSpace α] in
 /-- Bridge from contractable to bind-based ConditionallyIID on path space.
 
 This is the key lemma connecting contractability to `Exchangeability.ConditionallyIID`.
 It uses `CommonEnding.conditional_iid_from_directing_measure` with the bridge condition
 proved by `indicator_product_bridge_contractable`. -/
-omit [StandardBorelSpace α] in
 lemma conditionallyIID_bind_of_contractable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)

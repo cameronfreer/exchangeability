@@ -7,8 +7,10 @@ import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.InfiniteProduct
 import Exchangeability.Probability.CondExp
 
--- de Finetti theorem (default proof via L²)
+-- de Finetti theorem (martingale proof is default)
 import Exchangeability.DeFinetti.Theorem
+-- Note: TheoremViaL2 and TheoremViaKoopman have naming conflicts with Theorem
+-- Import them directly if you need a specific proof approach
 
 /-!
 # Exchangeability
@@ -62,7 +64,4 @@ To use a specific proof approach, import the corresponding module directly:
 * David Aldous (1983), *Exchangeability and related topics*
 -/
 
--- Note: Heavy-dependency modules are NOT imported by default:
--- - Exchangeability.Ergodic.KoopmanMeanErgodic (ergodic theory)
--- - Exchangeability.DeFinetti.ViaKoopman (requires ergodic theory)
--- Import these explicitly if needed.
+-- All three proof approaches are imported by default.

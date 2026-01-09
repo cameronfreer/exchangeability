@@ -380,11 +380,11 @@ lemma L1_cesaro_convergence
             _ < ε / 3 := this
     _ = ε := by ring
 
+omit [StandardBorelSpace α] in
 /-- **CE Lipschitz convergence**: Pull L¹ convergence through conditional expectation.
 
 Given that `A_n → CE[g(ω₀) | mSI]` in L¹ and f is bounded,
 proves that `CE[f·A_n | mSI] → CE[f·CE[g | mSI] | mSI]` in L¹. -/
-omit [StandardBorelSpace α] in
 lemma ce_lipschitz_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (f g : α → ℝ)
