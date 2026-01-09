@@ -13,20 +13,20 @@ This project formalizes the **de Finetti-Ryll-Nardzewski theorem** (Kallenberg's
 
 We implement **all three proofs** from Kallenberg (2005) of the key implication **contractable → conditionally i.i.d.**:
 
-1. **Martingale Approach** ✅ **COMPLETE** (Default)
+1. **Martingale Approach** (Default)
    - Kallenberg's "third proof" (after Aldous)
    - Elegant probabilistic argument using reverse martingales
-   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (14 files)
+   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (13 files)
 
-2. **L² Approach** ✅ **COMPLETE**
+2. **L² Approach**
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
-   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (13 files)
+   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (12 files)
 
-3. **Koopman Approach** ✅ **COMPLETE**
+3. **Koopman Approach**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (19 files)
+   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (18 files)
 
 ## Quick Start
 
@@ -76,9 +76,9 @@ Exchangeability/
 │   └── ...
 ├── DeFinetti/                   # Three proofs of de Finetti
 │   ├── Theorem.lean            # Public API (exports ViaMartingale)
-│   ├── ViaMartingale/          # Martingale proof ✅ (13 files)
+│   ├── ViaMartingale/          # Martingale proof (13 files)
 │   ├── ViaL2/                  # L² proof (12 files)
-│   ├── ViaKoopman/             # Ergodic proof ✅ (18 files)
+│   ├── ViaKoopman/             # Ergodic proof (18 files)
 │   ├── CommonEnding.lean       # Shared final step
 │   └── L2Helpers.lean          # L² contractability lemmas
 ├── Ergodic/                     # Ergodic theory (for Koopman)
