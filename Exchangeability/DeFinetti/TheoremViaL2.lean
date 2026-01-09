@@ -84,6 +84,7 @@ This is the completed three-way equivalence for real-valued sequences.
 **Reference**: Kallenberg (2005), Theorem 1.1 (pages 26-27), "Second proof".
 -/
 theorem deFinetti_RyllNardzewski_equivalence_viaL2
+    [StandardBorelSpace Ω]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
@@ -118,6 +119,7 @@ This is the standard statement of de Finetti's theorem for real-valued sequences
 **Reference**: Kallenberg (2005), Theorem 1.1.
 -/
 theorem deFinetti_viaL2
+    [StandardBorelSpace Ω]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X)
@@ -137,6 +139,7 @@ This is sometimes called the "contractable de Finetti" theorem.
 **Reference**: Kallenberg (2005), page 27, "Second proof".
 -/
 theorem conditionallyIID_of_contractable_viaL2
+    [StandardBorelSpace Ω]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X)
