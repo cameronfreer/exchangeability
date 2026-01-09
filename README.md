@@ -17,15 +17,15 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
    - Elegant probabilistic argument using reverse martingales
    - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
 
-2. **L² Approach** (5 sorries remaining)
+2. **L² Approach** (2 sorries remaining)
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
-   - File: [`Exchangeability/DeFinetti/ViaL2.lean`](Exchangeability/DeFinetti/ViaL2.lean)
+   - Directory: [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/)
 
-3. **Koopman Approach** (11 sorries remaining)
+3. **Koopman Approach** ✅ **COMPLETE**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - File: [`Exchangeability/DeFinetti/ViaKoopman.lean`](Exchangeability/DeFinetti/ViaKoopman.lean)
+   - Directory: [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/)
 
 ## Quick Start
 
@@ -75,9 +75,9 @@ Exchangeability/
 │   └── ...
 ├── DeFinetti/                   # Three proofs of de Finetti
 │   ├── Theorem.lean            # Public API (exports ViaMartingale)
-│   ├── ViaMartingale.lean      # Martingale proof ✅
-│   ├── ViaL2.lean              # L² proof
-│   ├── ViaKoopman.lean         # Ergodic proof
+│   ├── ViaMartingale/          # Martingale proof ✅ (13 files)
+│   ├── ViaL2/                  # L² proof (12 files)
+│   ├── ViaKoopman/             # Ergodic proof ✅ (18 files)
 │   ├── CommonEnding.lean       # Shared final step
 │   └── L2Helpers.lean          # L² contractability lemmas
 ├── Ergodic/                     # Ergodic theory (for Koopman)
