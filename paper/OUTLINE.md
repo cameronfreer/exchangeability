@@ -67,7 +67,7 @@
 - Case study: Kallenberg's equation chain (1.2)
 - How formalization reveals the "why" behind each step
 - Extracted general lemmas as certified explanations:
-  * Tower property: `condExp_condExp_le`
+  * Tower property: `condExp_condExp_of_le`
   * Fixed point property: `condExp_of_stronglyMeasurable`
 - Meta-principle: Formalized lemmas document mathematical reasoning
 - Benefit: Textbooks could cite formalized lemmas for justification

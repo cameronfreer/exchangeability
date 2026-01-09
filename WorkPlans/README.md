@@ -33,8 +33,8 @@ See [`Deprecated/README.md`](Deprecated/README.md) for details.
 | Proof | Status | Sorries |
 |-------|--------|---------|
 | **ViaMartingale** | **COMPLETE** | 0 |
-| ViaL2 | ~90% | 5 |
-| ViaKoopman | ~80% | 11 |
+| **ViaL2** | **COMPLETE** | 0 |
+| **ViaKoopman** | **COMPLETE** | 0 |
 
 - **Module naming**: `Exchangeability.Core`
 - **Proof organization**: `ViaL2`, `ViaKoopman`, `ViaMartingale`

@@ -17,7 +17,7 @@ direct probabilistic argument.
 
 ## Available proofs
 
-Three proofs of Kallenberg Theorem 1.1 are planned:
+Three proofs of Kallenberg Theorem 1.1 are available:
 
 1. **Martingale proof** ✅ **COMPLETE** (default, re-exported here):
    - `import Exchangeability.DeFinetti.TheoremViaMartingale`
@@ -25,13 +25,13 @@ Three proofs of Kallenberg Theorem 1.1 are planned:
    - Medium dependencies: conditional expectation, reverse martingale convergence
    - Reference: Kallenberg (2005), page 27-28, "Third proof" + Aldous (1983)
 
-2. **L² proof** (in progress):
+2. **L² proof** ✅ **COMPLETE**:
    - `import Exchangeability.DeFinetti.TheoremViaL2`
    - Uses elementary L² contractability bounds (Lemma 1.2)
    - **Lightest dependencies**: Only Lp spaces and basic measure theory
    - Reference: Kallenberg (2005), page 27, "Second proof"
 
-3. **Koopman/Ergodic proof** (future):
+3. **Koopman/Ergodic proof** ✅ **COMPLETE**:
    - `import Exchangeability.DeFinetti.TheoremViaKoopman`
    - Uses Mean Ergodic Theorem via Koopman operator
    - Heavy dependencies: ergodic theory

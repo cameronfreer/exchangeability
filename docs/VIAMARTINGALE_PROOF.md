@@ -191,7 +191,7 @@ time-reversal bound.
 
 - **Dependencies**: Heavy (ergodic theory, Koopman operator)
 - **Technique**: Mean Ergodic Theorem
-- **Status**: Nearly complete (4 technical sorries)
+- **Status**: Complete
 
 ### Martingale Approach (ViaMartingale.lean)
 
