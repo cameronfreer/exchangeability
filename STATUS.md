@@ -7,10 +7,10 @@
 | Proof Approach | Build | Status |
 |---------------|-------|--------|
 | **ViaMartingale** | Pass | **COMPLETE** |
-| **ViaL2** | Pass | 1 sorry (`directing_measure_bridge`) |
+| **ViaL2** | Pass | **COMPLETE** |
 | **ViaKoopman** | Pass | **COMPLETE** |
 
-**Two proofs complete. ViaL2 needs one more lemma (`directing_measure_bridge`).**
+**All three proofs complete.**
 
 ---
 

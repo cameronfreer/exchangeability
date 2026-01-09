@@ -177,9 +177,9 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 
 | Proof Route | Approach | Status |
 |-------------|----------|--------|
-| **ViaL2** | Elementary L² bounds | 1 sorry remaining |
+| **ViaL2** | Elementary L² bounds | **Complete** (Jan 8, 2026) |
 | **ViaKoopman** | Ergodic theory | **Complete** (Jan 1, 2026) |
-| **ViaMartingale** | Reverse martingale | **Complete** (Jan 1, 2026) |
+| **ViaMartingale** | Reverse martingale | **Complete** (Dec 26, 2025) |
 
 All three proofs demonstrate the core equivalence:
 ```
