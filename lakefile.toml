@@ -1,6 +1,6 @@
 name = "exchangeability"
 version = "0.1.0"
-defaultTargets = ["exchangeability"]
+defaultTargets = ["exchangeability", "Exchangeability", "ForMathlib"]
 
 [[require]]
 name = "mathlib"
