@@ -30,9 +30,15 @@ depgraph.json
 paranoia_report.json
 *-report.json
 
-# Blueprint build artifacts
+# Blueprint build artifacts (web/ and print/ are committed, rebuilt locally)
 blueprint/lean_decls
 blueprint/src/web.paux
 blueprint/src/print.paux
-blueprint/web/
-blueprint/print/
+blueprint/print/*.aux
+blueprint/print/*.fdb_latexmk
+blueprint/print/*.fls
+blueprint/print/*.log
+blueprint/print/*.out
+blueprint/print/*.synctex.gz
+# Exception: allow symbol-defs.svg in blueprint
+!blueprint/web/symbol-defs.svg

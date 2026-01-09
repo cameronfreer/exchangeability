@@ -1,0 +1,819 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dependency graph</title>
+  <meta name="generator" content="plasTeX" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles/theme-white.css" />
+  <link rel="stylesheet" href="styles/dep_graph.css" />
+  
+  <script type="text/x-mathjax-config">
+  
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+  
+  </script>
+
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">  </script>
+
+
+<link rel="stylesheet" href="styles/extra_styles.css" />
+
+</head>
+
+<body>
+<header>
+  <a class="toc" href="index.html">Home</a>
+  <h1 id="doc_title">Dependencies</h1>
+</header>
+<div class="wrapper">
+<div class="content">
+  <div id="Legend">
+    <span id="legend_title" class="title">Legend
+    <div class="btn">
+       <div class="bar"></div>
+       <div class="bar"></div>
+       <div class="bar"></div>
+    </div></span> 
+    <dl class="legend">
+      
+      <dt>Boxes</dt><dd>definitions</dd>
+      
+      <dt>Ellipses</dt><dd>theorems and lemmas</dd>
+      
+      <dt>Blue border</dt><dd>the <em>statement</em> of this result is ready to be formalized; all prerequisites are done</dd>
+      
+      <dt>Orange border</dt><dd>the <em>statement</em> of this result is not ready to be formalized; the blueprint needs more work</dd>
+      
+      <dt>Blue background</dt><dd>the <em>proof</em> of this result is ready to be formalized; all prerequisites are done</dd>
+      
+      <dt>Green border</dt><dd>the <em>statement</em> of this result is formalized</dd>
+      
+      <dt>Green background</dt><dd>the <em>proof</em> of this result is formalized</dd>
+      
+      <dt>Dark green background</dt><dd>the <em>proof</em> of this result and all its ancestors are formalized</dd>
+      
+      <dt>Dark green border</dt><dd>this is in Mathlib</dd>
+      
+    </dl>
+  </div>
+    <div id="graph"></div>
+<div id="statements">
+
+    
+    <div class="dep-modal-container" id="def:blockAvg_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:blockAvg" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">16</span><span class="definition_thmtitle">Block average</span></div>
+    <div class="thm_thmcontent"><p>   The <em>block average</em> \(A_{m,n,k}(f)(\omega ) = \frac{1}{n} \sum _{j=0}^{n-1} f(\omega _{k \cdot n + j})\) averages \(f\) over the \(k\)-th block of size \(n\) (indices \([kn, kn+n)\)). For \(n = 0\), the block average is defined as \(0\). </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#def:blockAvg">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaKoopman.blockAvg">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="def:conditionallyIID_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:conditionallyIID" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">3</span><span class="definition_thmtitle">Conditionally i.i.d. sequence</span></div>
+    <div class="thm_thmcontent"><p>   A sequence \((X_n)_{n \in \mathbb {N}}\) is <em>conditionally i.i.d.</em> with respect to measure \(\mu \) if there exists a probability kernel \(\nu : \Omega \to \mathrm{Measure}(\alpha )\) such that for any strictly monotone \(k : \mathrm{Fin}(m) \to \mathbb {N}\), the joint distribution of \((X_{k(0)}, \ldots , X_{k(m-1)})\) equals the mixture \(\mu .\mathrm{bind}(\omega \mapsto \nu (\omega )^{\otimes m})\). </p>
+</div>
+
+    <a class="latex_link" href="sect0002.html#def:conditionallyIID">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.ConditionallyIID">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="def:contractable_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:contractable" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">2</span><span class="definition_thmtitle">Contractable sequence</span></div>
+    <div class="thm_thmcontent"><p>    A sequence \((X_n)_{n \in \mathbb {N}}\) is <em>contractable</em> with respect to measure \(\mu \) if for all \(m \in \mathbb {N}\) and all strictly increasing functions \(k, k' : \mathrm{Fin}(m) \to \mathbb {N}\), the joint distribution of \((X_{k(0)}, \ldots , X_{k(m-1)})\) equals that of \((X_{k'(0)}, \ldots , X_{k'(m-1)})\). </p>
+</div>
+
+    <a class="latex_link" href="sect0002.html#def:contractable">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.Contractable">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="def:exchangeable_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:exchangeable" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">1</span><span class="definition_thmtitle">Exchangeable sequence</span></div>
+    <div class="thm_thmcontent"><p>   A sequence \((X_n)_{n \in \mathbb {N}}\) of random variables is <em>exchangeable</em> with respect to measure \(\mu \) if for every \(n \in \mathbb {N}\) and every permutation \(\sigma \) of \(\{ 0, \ldots , n-1\} \), the joint distribution of \((X_{\sigma (0)}, \ldots , X_{\sigma (n-1)})\) equals that of \((X_0, \ldots , X_{n-1})\). </p>
+</div>
+
+    <a class="latex_link" href="sect0002.html#def:exchangeable">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.Exchangeable">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="def:futureFiltration_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:futureFiltration" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">8</span><span class="definition_thmtitle">Future filtration</span></div>
+    <div class="thm_thmcontent"><p>   The <em>future filtration</em> at level \(m\) is \(\mathcal{F}_m = \sigma (X_{m+1}, X_{m+2}, \ldots )\). </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#def:futureFiltration">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.futureFiltration">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="def:tailSigma_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="def:tailSigma" style="display: none">
+    <div class="thm_thmheading">
+      <span class="definition_thmcaption">
+      Definition
+      </span>
+      <span class="definition_thmlabel">4</span><span class="definition_thmtitle">Tail \(\sigma \)-algebra</span></div>
+    <div class="thm_thmcontent"><p>   The <em>tail \(\sigma \)-algebra</em> of a sequence \((X_n)\) is \(\mathcal{T} = \bigcap _{n=0}^{\infty } \sigma (X_n, X_{n+1}, \ldots )\). </p>
+</div>
+
+    <a class="latex_link" href="sect0002.html#def:tailSigma">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.tailSigma">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:blockAvg_tendsto_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:blockAvg_tendsto" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">17</span><span class="lemma_thmtitle">Block averages converge in \(L^1\)</span></div>
+    <div class="thm_thmcontent"><p>    For a shift-invariant measure, block averages converge <em>in \(L^1\)</em> to the conditional expectation given the shift-invariant \(\sigma \)-algebra: \(\int |\bar{A}_{m,n,k}(f) - \mathbb {E}[f \circ \pi _0 \mid \mathcal{I}]| \,  d\mu \to 0\) as \(n \to \infty \). </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:blockAvg_tendsto">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaKoopman.blockAvg_tendsto_condExp">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:condexp_convergence_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:condexp_convergence" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">11</span><span class="lemma_thmtitle">Conditional expectation convergence</span></div>
+    <div class="thm_thmcontent"><p>    For \(k \le m\) and measurable \(B\): \(\mathbb {E}[\mathbf{1}_{X_m \in B} \mid \mathcal{F}_m] = \mathbb {E}[\mathbf{1}_{X_k \in B} \mid \mathcal{F}_m]\) a.s. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:condexp_convergence">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.condexp_convergence">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:extreme_members_equal_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:extreme_members_equal" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">12</span><span class="lemma_thmtitle">Extreme members equal on tail</span></div>
+    <div class="thm_thmcontent"><p>    For any measurable \(B\): \(\mathbb {E}[\mathbf{1}_{X_m \in B} \mid \mathcal{T}] = \mathbb {E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}]\) a.s. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:extreme_members_equal">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.extreme_members_equal_on_tail">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:indicator_product_bridge_contractable_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:indicator_product_bridge_contractable" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">19</span><span class="lemma_thmtitle">Bridge from contractability</span></div>
+    <div class="thm_thmcontent"><p>    For contractable sequences, indicator products satisfy the bridge condition. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:indicator_product_bridge_contractable">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.indicator_product_bridge_contractable">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:integral_prod_blockAvg_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:integral_prod_blockAvg" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">18</span><span class="lemma_thmtitle">Integral product equals block average product</span></div>
+    <div class="thm_thmcontent"><p>    For contractable sequences, integrals of products factor through block averages. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:integral_prod_blockAvg">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaKoopman.integral_prod_eq_integral_blockAvg">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:kallenberg_chain_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:kallenberg_chain" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">10</span><span class="lemma_thmtitle">Kallenberg chain lemma</span></div>
+    <div class="thm_thmcontent"><p>    Conditional expectations of indicators given the reverse filtration converge to conditional expectations given the tail \(\sigma \)-algebra. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:kallenberg_chain">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.condExp_indicator_revFiltration_eq_tail">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:l2_bound_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:l2_bound" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">14</span><span class="lemma_thmtitle">L\(^2\) contractability bound</span></div>
+    <div class="thm_thmcontent"><p>   For contractable sequences, certain L\(^2\) norms of block averages are bounded. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:l2_bound">LaTeX</a>
+    
+    
+  
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:pair_law_eq_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:pair_law_eq" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">9</span><span class="lemma_thmtitle">Pair law equality</span></div>
+    <div class="thm_thmcontent"><p>    For a contractable sequence, the joint distribution of \((X_k, \theta _{m+1} X)\) equals that of \((X_m, \theta _{m+1} X)\) for all \(k \le m\), where \(\theta _n\) is the shift operator. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#lem:pair_law_eq">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.ViaMartingale.contractable_dist_eq">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:perm_extension_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:perm_extension" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">5</span><span class="lemma_thmtitle">Permutation extension</span></div>
+    <div class="thm_thmcontent"><p>   Any strictly increasing function \(k : \mathrm{Fin}(m) \to \mathbb {N}\) with range contained in \(\{ 0, \ldots , n-1\} \) extends to a permutation of \(\{ 0, \ldots , n-1\} \). </p>
+</div>
+
+    <a class="latex_link" href="sect0003.html#lem:perm_extension">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.exists_perm_extending_strictMono">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="lem:pi_system_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="lem:pi_system" style="display: none">
+    <div class="thm_thmheading">
+      <span class="lemma_thmcaption">
+      Lemma
+      </span>
+      <span class="lemma_thmlabel">21</span><span class="lemma_thmtitle">\(\pi \)-system uniqueness</span></div>
+    <div class="thm_thmcontent"><p>   Measures on product spaces are determined by their finite-dimensional marginals. </p>
+</div>
+
+    <a class="latex_link" href="sect0005.html#lem:pi_system">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.measure_eq_of_fin_marginals_eq">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:condIndep_extension_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:condIndep_extension" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">22</span><span class="theorem_thmtitle">Conditional independence extension</span></div>
+    <div class="thm_thmcontent"><p>    Conditional independence on indicators extends to the full product \(\sigma \)-algebra. </p>
+</div>
+
+    <a class="latex_link" href="sect0005.html#thm:condIndep_extension">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.CommonEnding.conditional_iid_from_directing_measure">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:conditionallyIID_of_contractable_Koopman_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:conditionallyIID_of_contractable_Koopman" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">20</span><span class="theorem_thmtitle">Contractable implies Conditionally i.i.d. (via Koopman)</span></div>
+    <div class="thm_thmcontent"><p>    If \((X_n)\) is contractable, then it is conditionally i.i.d. This proof uses the Mean Ergodic Theorem via the Koopman operator on L\(^2\). </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#thm:conditionallyIID_of_contractable_Koopman">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:conditionallyIID_of_contractable_L2_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:conditionallyIID_of_contractable_L2" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">15</span><span class="theorem_thmtitle">Contractable implies Conditionally i.i.d. (via L\(^2\))</span></div>
+    <div class="thm_thmcontent"><p>    If \((X_n)\) is contractable, then it is conditionally i.i.d. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#thm:conditionallyIID_of_contractable_L2">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:conditionallyIID_of_contractable_martingale_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:conditionallyIID_of_contractable_martingale" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">13</span><span class="theorem_thmtitle">Contractable implies Conditionally i.i.d. (via Martingale)</span></div>
+    <div class="thm_thmcontent"><p>    If \((X_n)\) is contractable, then it is conditionally i.i.d. The directing kernel \(\nu (\omega )(B) = \mathbb {E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega )\) is constructed from the tail \(\sigma \)-algebra. </p>
+</div>
+
+    <a class="latex_link" href="sect0004.html#thm:conditionallyIID_of_contractable_martingale">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.conditionallyIID_of_contractable">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:contractable_of_exchangeable_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:contractable_of_exchangeable" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">6</span><span class="theorem_thmtitle">Exchangeable implies Contractable</span></div>
+    <div class="thm_thmcontent"><p>    If \((X_n)\) is exchangeable, then it is contractable. </p>
+</div>
+
+    <a class="latex_link" href="sect0003.html#thm:contractable_of_exchangeable">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.contractable_of_exchangeable">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:deFinetti_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:deFinetti" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">23</span><span class="theorem_thmtitle">de Finetti–Ryll-Nardzewski equivalence</span></div>
+    <div class="thm_thmcontent"><p>    For an infinite sequence \((X_n)_{n \in \mathbb {N}}\) of random variables taking values in a <em>standard Borel space</em> \(\alpha \) (with \(\alpha \) nonempty), the following are equivalent: </p>
+<ol class="enumerate">
+  <li><p>\((X_n)\) is contractable </p>
+</li>
+  <li><p>\((X_n)\) is exchangeable </p>
+</li>
+  <li><p>\((X_n)\) is conditionally i.i.d. (i.e., there exists a directing kernel \(\nu \)) </p>
+</li>
+</ol>
+<p> <b class="bfseries">Remark:</b> The martingale proof constructs \(\nu \) from the tail \(\sigma \)-algebra \(\mathcal{T}\) via \(\nu (\omega )(B) = \mathbb {E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega )\). </p>
+</div>
+
+    <a class="latex_link" href="sect0006.html#thm:deFinetti">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+
+
+    
+    <div class="dep-modal-container" id="thm:exchangeable_of_conditionallyIID_modal">
+      <div class="dep-modal-content">
+          <button class="dep-closebtn">
+<svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
+</button>
+        
+  <div class="thm" id="thm:exchangeable_of_conditionallyIID" style="display: none">
+    <div class="thm_thmheading">
+      <span class="theorem_thmcaption">
+      Theorem
+      </span>
+      <span class="theorem_thmlabel">7</span><span class="theorem_thmtitle">Conditionally i.i.d. implies Exchangeable</span></div>
+    <div class="thm_thmcontent"><p>    If \((X_n)\) is conditionally i.i.d., then it is exchangeable. </p>
+</div>
+
+    <a class="latex_link" href="sect0003.html#thm:exchangeable_of_conditionallyIID">LaTeX</a>
+    
+    
+  <a class="lean_link lean_decl" href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.exchangeable_of_conditionallyIID">Lean</a>
+    
+    
+  
+    
+  </div>
+    
+      </div>
+    </div>
+</div>
+</div> <!-- content -->
+</div> <!-- wrapper -->
+<script src="js/jquery.min.js" type="text/javascript"></script>
+
+<script src="js/d3.min.js"></script>
+<script src="js/hpcc.min.js"></script>
+<script src="js/d3-graphviz.js"></script>
+
+<script type="text/javascript">
+const graphContainer = d3.select("#graph");
+const width = graphContainer.node().clientWidth;
+const height = graphContainer.node().clientHeight;
+
+
+graphContainer.graphviz({useWorker: true})
+    .width(width)
+    .height(height)
+    .fit(true)
+    .renderDot(`strict digraph "" {	graph [bgcolor=transparent];	node [label="\N",		penwidth=1.8	];	edge [arrowhead=vee];	"def:conditionallyIID"	[color=green,		fillcolor="#B0ECA3",		label=conditionallyIID,		shape=box,		style=filled];	"thm:conditionallyIID_of_contractable_L2"	[color=green,		label=conditionallyIID_of_contractable_L2,		shape=ellipse];	"def:conditionallyIID" -> "thm:conditionallyIID_of_contractable_L2"	[style=dashed];	"thm:conditionallyIID_of_contractable_Koopman"	[color=green,		label=conditionallyIID_of_contractable_Koopman,		shape=ellipse];	"def:conditionallyIID" -> "thm:conditionallyIID_of_contractable_Koopman"	[style=dashed];	"thm:exchangeable_of_conditionallyIID"	[color=green,		label=exchangeable_of_conditionallyIID,		shape=ellipse];	"def:conditionallyIID" -> "thm:exchangeable_of_conditionallyIID"	[style=dashed];	"thm:conditionallyIID_of_contractable_martingale"	[color=green,		label=conditionallyIID_of_contractable_martingale,		shape=ellipse];	"def:conditionallyIID" -> "thm:conditionallyIID_of_contractable_martingale"	[style=dashed];	"thm:deFinetti"	[color=green,		label=deFinetti,		shape=ellipse];	"thm:exchangeable_of_conditionallyIID" -> "thm:deFinetti"	[style=dashed];	"thm:conditionallyIID_of_contractable_martingale" -> "thm:deFinetti"	[style=dashed];	"def:tailSigma"	[color=green,		fillcolor="#B0ECA3",		label=tailSigma,		shape=box,		style=filled];	"lem:kallenberg_chain"	[color=green,		label=kallenberg_chain,		shape=ellipse];	"def:tailSigma" -> "lem:kallenberg_chain"	[style=dashed];	"lem:extreme_members_equal"	[color=green,		label=extreme_members_equal,		shape=ellipse];	"lem:kallenberg_chain" -> "lem:extreme_members_equal"	[style=dashed];	"lem:extreme_members_equal" -> "thm:conditionallyIID_of_contractable_martingale"	[style=dashed];	"lem:condexp_convergence"	[color=green,		label=condexp_convergence,		shape=ellipse];	"lem:condexp_convergence" -> "lem:extreme_members_equal"	[style=dashed];	"lem:l2_bound"	[color=blue,		label=l2_bound,		shape=ellipse];	"lem:l2_bound" -> "thm:conditionallyIID_of_contractable_L2"	[style=dashed];	"lem:pi_system"	[color=green,		label=pi_system,		shape=ellipse];	"thm:condIndep_extension"	[color=green,		label=condIndep_extension,		shape=ellipse];	"lem:pi_system" -> "thm:condIndep_extension"	[style=dashed];	"def:exchangeable"	[color=green,		fillcolor="#B0ECA3",		label=exchangeable,		shape=box,		style=filled];	"def:exchangeable" -> "thm:exchangeable_of_conditionallyIID"	[style=dashed];	"def:contractable"	[color=green,		fillcolor="#B0ECA3",		label=contractable,		shape=box,		style=filled];	"def:exchangeable" -> "def:contractable"	[style=dashed];	"def:contractable" -> "lem:l2_bound"	[style=dashed];	"thm:contractable_of_exchangeable"	[color=green,		label=contractable_of_exchangeable,		shape=ellipse];	"def:contractable" -> "thm:contractable_of_exchangeable"	[style=dashed];	"lem:indicator_product_bridge_contractable"	[color=green,		label=indicator_product_bridge_contractable,		shape=ellipse];	"def:contractable" -> "lem:indicator_product_bridge_contractable"	[style=dashed];	"lem:pair_law_eq"	[color=green,		label=pair_law_eq,		shape=ellipse];	"def:contractable" -> "lem:pair_law_eq"	[style=dashed];	"lem:integral_prod_blockAvg"	[color=green,		label=integral_prod_blockAvg,		shape=ellipse];	"def:contractable" -> "lem:integral_prod_blockAvg"	[style=dashed];	"thm:contractable_of_exchangeable" -> "thm:deFinetti"	[style=dashed];	"lem:indicator_product_bridge_contractable" -> "thm:conditionallyIID_of_contractable_Koopman"	[style=dashed];	"lem:pair_law_eq" -> "lem:kallenberg_chain"	[style=dashed];	"lem:pair_law_eq" -> "lem:condexp_convergence"	[style=dashed];	"lem:integral_prod_blockAvg" -> "thm:conditionallyIID_of_contractable_Koopman"	[style=dashed];	"def:futureFiltration"	[color=green,		fillcolor="#B0ECA3",		label=futureFiltration,		shape=box,		style=filled];	"def:futureFiltration" -> "lem:pair_law_eq"	[style=dashed];	"def:blockAvg"	[color=green,		fillcolor="#B0ECA3",		label=blockAvg,		shape=box,		style=filled];	"def:blockAvg" -> "lem:integral_prod_blockAvg"	[style=dashed];	"lem:blockAvg_tendsto"	[color=green,		label=blockAvg_tendsto,		shape=ellipse];	"def:blockAvg" -> "lem:blockAvg_tendsto"	[style=dashed];	"lem:blockAvg_tendsto" -> "thm:conditionallyIID_of_contractable_Koopman"	[style=dashed];	"lem:perm_extension"	[color=green,		label=perm_extension,		shape=ellipse];	"lem:perm_extension" -> "thm:contractable_of_exchangeable"	[style=dashed];}`)
+    .on("end", interactive);
+
+latexLabelEscaper = function(label) {
+  return label.replace(/\./g, '\\.').replace(/:/g, '\\:')
+}
+
+clickNode = function() {
+  $("#statements div").hide()
+  var node_id = $('text', this).text();
+  $('.thm').hide();
+  $('#'+latexLabelEscaper(node_id)).show().children().show();
+}
+function interactive() {
+    $("span#legend_title").on("click", function () {
+           $(this).siblings('dl').toggle();
+        })
+
+    d3.selectAll('.node')
+        .attr('pointer-events', 'fill')
+        .on('click', function () {
+           var title = d3.select(this).selectAll('title').text().trim();
+           $('#statements > div').hide()
+           $('.thm').hide();
+           $('#'+latexLabelEscaper(title)+'_modal').show().children().show().children().show();
+           $('#statements').show()
+        });
+
+    d3.selectAll('.dep-closebtn').on('click', function() {
+        var modal =
+            d3.select(this).node().parentNode.parentNode.parentNode ;
+        d3.select(modal).style('display', 'none');
+    });
+}
+
+</script>
+
+</body>
+</html>

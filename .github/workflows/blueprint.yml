@@ -1,4 +1,5 @@
 # Custom workflow for blueprint + homepage deployment.
+# Blueprint is pre-built locally and committed to repo.
 #
 # TODO: When upgrading to Lean 4.26.0+, switch to docgen-action:
 #   uses: leanprover-community/docgen-action@main
@@ -9,7 +10,7 @@
 # The docgen-action `:docs` facet doesn't work with Lean 4.24.0 but works
 # with 4.26.0 (see brownian-motion project for working example).
 
-name: Compile blueprint
+name: Deploy blueprint
 
 on:
   push:
@@ -30,51 +31,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Cleanup disk space
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
-        with:
-          tool-cache: false
-          android: true
-          dotnet: false
-          haskell: false
-          large-packages: false
-          docker-images: false
-          swap-storage: false
-
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Build Lean project
         uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709
         with:
           build: true
           lint: false
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev texlive-latex-extra texlive-fonts-recommended
-
-      - name: Install blueprint dependencies
-        run: |
-          pip install pygraphviz leanblueprint
-
-      - name: Build blueprint
-        run: |
-          cd blueprint
-          leanblueprint pdf
-          leanblueprint web
-          cd ..
-          mkdir -p docs
-          cp -r blueprint/web docs/blueprint
-          cp blueprint/print/print.pdf docs/blueprint.pdf
 
       - name: Check declarations
         run: |
@@ -87,8 +51,11 @@ jobs:
           bundler-cache: true
           working-directory: home_page
 
-      - name: Build homepage
+      - name: Assemble docs
         run: |
+          mkdir -p docs
+          cp -r blueprint/web docs/blueprint
+          cp blueprint/print/print.pdf docs/blueprint.pdf
           cd home_page
           bundle exec jekyll build --baseurl "/exchangeability"
           cd ..

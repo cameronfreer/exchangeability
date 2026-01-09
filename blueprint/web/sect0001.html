@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  MathJax = { 
+    tex: {
+		    inlineMath: [['$','$'], ['\\(','\\)']]
+	} }
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+<meta name="generator" content="plasTeX" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Introduction</title>
+<link rel="next" href="sect0002.html" title="Foundations" />
+<link rel="prev" href="index.html" title="Exchangeability and de Finetti’s theorems" />
+<link rel="up" href="index.html" title="Exchangeability and de Finetti’s theorems" />
+<link rel="stylesheet" href="styles/theme-white.css" />
+<link rel="stylesheet" href="styles/amsthm.css" />
+<link rel="stylesheet" href="styles/showmore.css" />
+<link rel="stylesheet" href="styles/blueprint.css" />
+<link rel="stylesheet" href="styles/extra_styles.css" />
+</head>
+
+<body>
+<header>
+<svg  id="toc-toggle" class="icon icon-list-numbered "><use xlink:href="symbol-defs.svg#icon-list-numbered"></use></svg>
+<h1 id="doc_title"><a href="index.html">Exchangeability and de Finetti’s theorems</a></h1>
+</header>
+
+<div class="wrapper">
+<nav class="toc">
+<ul class="sub-toc-0">
+<li class=" active current">
+  <a href="sect0001.html"><span class="toc_ref">1</span> <span class="toc_entry">Introduction</span></a>
+ </li>
+<li class="">
+  <a href="sect0002.html"><span class="toc_ref">2</span> <span class="toc_entry">Foundations</span></a>
+  <span class="expand-toc">▶</span>
+  <ul class="sub-toc-1">
+     <li class="">
+  <a href="sect0002.html#a0000000008"><span class="toc_ref">2.1</span> <span class="toc_entry">Core Definitions</span></a>
+ </li>
+
+  </ul>
+ </li>
+<li class="">
+  <a href="sect0003.html"><span class="toc_ref">3</span> <span class="toc_entry">Easy Directions</span></a>
+  <span class="expand-toc">▶</span>
+  <ul class="sub-toc-1">
+     <li class="">
+  <a href="sect0003.html#a0000000009"><span class="toc_ref">3.1</span> <span class="toc_entry">Exchangeable implies Contractable</span></a>
+ </li>
+<li class="">
+  <a href="sect0003.html#a0000000010"><span class="toc_ref">3.2</span> <span class="toc_entry">Conditionally i.i.d. implies Exchangeable</span></a>
+ </li>
+
+  </ul>
+ </li>
+<li class="">
+  <a href="sect0004.html"><span class="toc_ref">4</span> <span class="toc_entry">Main Implication: Contractable implies Conditionally i.i.d.</span></a>
+  <span class="expand-toc">▶</span>
+  <ul class="sub-toc-1">
+     <li class="">
+  <a href="sect0004.html#a0000000011"><span class="toc_ref">4.1</span> <span class="toc_entry">Via Martingale (Aldous’ proof)</span></a>
+ </li>
+<li class="">
+  <a href="sect0004.html#a0000000012"><span class="toc_ref">4.2</span> <span class="toc_entry">Via L\(^2\) (Elementary proof)</span></a>
+ </li>
+<li class="">
+  <a href="sect0004.html#a0000000013"><span class="toc_ref">4.3</span> <span class="toc_entry">Via Koopman (Mean Ergodic Theorem)</span></a>
+ </li>
+
+  </ul>
+ </li>
+<li class="">
+  <a href="sect0005.html"><span class="toc_ref">5</span> <span class="toc_entry">Common Ending</span></a>
+ </li>
+<li class="">
+  <a href="sect0006.html"><span class="toc_ref">6</span> <span class="toc_entry">Main Theorem</span></a>
+ </li>
+<li ><a href="dep_graph_document.html">Dependency graph</a></li>
+</ul>
+</nav>
+
+<div class="content">
+<div class="content-wrapper">
+
+
+<div class="main-text">
+<h1 id="a0000000002">1 Introduction</h1>
+<p>This blueprint documents the formalization of <b class="bfseries">de Finetti’s theorem</b> and the <b class="bfseries">de Finetti–Ryll-Nardzewski equivalence</b> for infinite sequences on <em>standard Borel spaces</em>. </p>
+<p>The main result establishes a three-way equivalence between: </p>
+<ul class="itemize">
+  <li><p><b class="bfseries">Contractable</b>: All strictly increasing subsequences of equal length have the same distribution </p>
+</li>
+  <li><p><b class="bfseries">Exchangeable</b>: Distribution invariant under finite permutations </p>
+</li>
+  <li><p><b class="bfseries">Conditionally i.i.d.</b>: There exists a probability kernel such that finite marginals equal mixtures of product measures </p>
+</li>
+</ul>
+<p>We formalize <em>all three proofs</em> from Kallenberg (2005): </p>
+<ol class="enumerate">
+  <li><p><b class="bfseries">Koopman/Ergodic approach</b> using the Mean Ergodic Theorem </p>
+</li>
+  <li><p><b class="bfseries">L\(^2\) approach</b> using elementary contractability bounds </p>
+</li>
+  <li><p><b class="bfseries">Martingale approach</b> using reverse martingale convergence (after Aldous) </p>
+</li>
+</ol>
+
+</div> <!--main-text -->
+</div> <!-- content-wrapper -->
+</div> <!-- content -->
+</div> <!-- wrapper -->
+
+<nav class="prev_up_next">
+  <svg  id="showmore-minus" class="icon icon-eye-minus showmore"><use xlink:href="symbol-defs.svg#icon-eye-minus"></use></svg>
+
+  <svg  id="showmore-plus" class="icon icon-eye-plus showmore"><use xlink:href="symbol-defs.svg#icon-eye-plus"></use></svg>
+
+  <a href="index.html" title="Exchangeability and de Finetti’s theorems"><svg  class="icon icon-arrow-left "><use xlink:href="symbol-defs.svg#icon-arrow-left"></use></svg>
+</a>
+  <a href="index.html" title="Exchangeability and de Finetti’s theorems"><svg  class="icon icon-arrow-up "><use xlink:href="symbol-defs.svg#icon-arrow-up"></use></svg>
+</a>
+  <a href="sect0002.html" title="Foundations"><svg  class="icon icon-arrow-right "><use xlink:href="symbol-defs.svg#icon-arrow-right"></use></svg>
+</a>
+</nav>
+
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/plastex.js"></script>
+<script type="text/javascript" src="js/svgxuse.js"></script>
+<script type="text/javascript" src="js/js.cookie.min.js"></script>
+<script type="text/javascript" src="js/showmore.js"></script>
+</body>
+</html>
