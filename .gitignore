@@ -31,7 +31,7 @@ paranoia_report.json
 *-report.json
 
 # Blueprint build artifacts (web/ and print/ are committed, rebuilt locally)
-blueprint/lean_decls
+# Note: blueprint/lean_decls is committed for CI checkdecls validation
 blueprint/src/web.paux
 blueprint/src/print.paux
 blueprint/print/*.aux
