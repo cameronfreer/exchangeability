@@ -81,17 +81,17 @@ lemma blockAvg_abs_le_one
           exact hf_bdd (X (m + k) ω)
       _ = n := by
           have : (Finset.range n).card = n := Finset.card_range n
-          simpa [this]
+          simp [this]
   have hnonneg : 0 ≤ (n : ℝ)⁻¹ := by exact inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
   calc
     |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))|
         = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (m + k) ω))|
-          := by simpa [abs_mul, abs_of_nonneg hnonneg]
+          := by simp [abs_mul, abs_of_nonneg hnonneg]
     _ ≤ (n : ℝ)⁻¹ * (n : ℝ)
           := by exact mul_le_mul_of_nonneg_left hsum_bound hnonneg
     _ ≤ 1 := by
         by_cases hn : n = 0
-        · simpa [hn]
+        · simp [hn]
         · have : (n : ℝ) ≠ 0 := by simp [hn]
           simp [this]
 

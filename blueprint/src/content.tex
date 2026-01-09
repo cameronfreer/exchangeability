@@ -150,7 +150,9 @@ This is the deep direction of de Finetti's theorem. We formalize three independe
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable}
   \leanok
   \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal}
-  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.
+  The directing kernel $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
+  is constructed from the tail $\sigma$-algebra.
 \end{theorem}
 
 
@@ -173,7 +175,7 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2}
   \leanok
   \uses{def:contractable, def:conditionallyIID, lem:l2_bound}
-  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.
 \end{theorem}
 
 
@@ -223,7 +225,7 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman}
   \leanok
   \uses{def:contractable, def:conditionallyIID, lem:blockAvg_tendsto, lem:integral_prod_blockAvg, lem:indicator_product_bridge_contractable}
-  If $(X_n)$ is contractable, then it is conditionally i.i.d.\ given the tail $\sigma$-algebra.
+  If $(X_n)$ is contractable, then it is conditionally i.i.d.
   This proof uses the Mean Ergodic Theorem via the Koopman operator on L$^2$.
 \end{theorem}
 
@@ -261,6 +263,8 @@ via a monotone class argument.
   \begin{enumerate}
     \item $(X_n)$ is contractable
     \item $(X_n)$ is exchangeable
-    \item $(X_n)$ is conditionally i.i.d.\ given the tail $\sigma$-algebra
+    \item $(X_n)$ is conditionally i.i.d.\ (i.e., there exists a directing kernel $\nu$)
   \end{enumerate}
+  \textbf{Remark:} The martingale proof constructs $\nu$ from the tail $\sigma$-algebra $\mathcal{T}$
+  via $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$.
 \end{theorem}
