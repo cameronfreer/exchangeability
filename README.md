@@ -1,6 +1,7 @@
 # Exchangeability
 
 [![Lean 4](https://img.shields.io/badge/Lean-4-blue)](https://leanprover.github.io/lean4/doc/)
+[![Blueprint](https://img.shields.io/badge/Blueprint-online-green)](https://cameronfreer.github.io/exchangeability/blueprint/)
 
 Formalization of **exchangeability** and **de Finetti's theorem** in Lean 4.
 
@@ -15,17 +16,17 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 1. **Martingale Approach** ✅ **COMPLETE** (Default)
    - Kallenberg's "third proof" (after Aldous)
    - Elegant probabilistic argument using reverse martingales
-   - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
+   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (14 files)
 
 2. **L² Approach** ✅ **COMPLETE**
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
-   - Directory: [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/)
+   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (13 files)
 
 3. **Koopman Approach** ✅ **COMPLETE**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - Directory: [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/)
+   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (19 files)
 
 ## Quick Start
 
@@ -52,13 +53,13 @@ lake build
 import Exchangeability
 
 -- de Finetti's theorem (uses martingale proof by default)
-example {Ω α : Type*} [MeasurableSpace Ω] [TopologicalSpace α]
-    [MeasurableSpace α] [BorelSpace α]
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
+example {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X) :
     ConditionallyIID μ X :=
-  deFinetti μ X hX_meas hX_exch
+  deFinetti X hX_meas hX_exch
 ```
 
 ## Project Structure
@@ -91,11 +92,9 @@ Exchangeability/
 
 ## Documentation
 
-- **Status**: [`STATUS.md`](STATUS.md) - Current project status and sorry counts
+- **Blueprint**: [cameronfreer.github.io/exchangeability/blueprint](https://cameronfreer.github.io/exchangeability/blueprint/) - Interactive dependency graph and proof status
+- **Status**: [`STATUS.md`](STATUS.md) - Current project status
 - **History**: [`DEVELOPMENT_CHRONOLOGY.md`](DEVELOPMENT_CHRONOLOGY.md) - Project development history
-- **Paper Planning**: [`paper/`](paper/) - AFM paper materials and planning
-- **Blueprint**: [`blueprint/`](blueprint/) - Mathematical blueprint
-- **Work Plans**: [`WorkPlans/`](WorkPlans/) - Development notes and roadmaps
 
 ## Main Results
 
@@ -124,10 +123,6 @@ Exchangeability/
 - **Hewitt, Edwin and Savage, Leonard J.** (1955). "Symmetric measures on Cartesian products." *Transactions of the American Mathematical Society* 80 (2): 470–501. [https://doi.org/10.1090/S0002-9947-1955-0076206-8](https://doi.org/10.1090/S0002-9947-1955-0076206-8)
 
 - **Diaconis, Persi and Freedman, David** (1980). "Finite exchangeable sequences." *The Annals of Probability* 8 (4): 745–764. [https://doi.org/10.1214/aop/1176994663](https://doi.org/10.1214/aop/1176994663)
-
-## Contributing
-
-This is an active research project. See [`WorkPlans/`](WorkPlans/) for current tasks and progress.
 
 ## License
 

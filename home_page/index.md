@@ -1,5 +1,4 @@
 ---
-usemathjax: true
 ---
 
 # Exchangeability in Lean 4
@@ -12,24 +11,21 @@ A formalization of **de Finetti's theorem** and the **de Finetti--Ryll-Nardzewsk
 
 1. **(Contractable)** All strictly increasing subsequences of equal length have the same distribution
 2. **(Exchangeable)** Distribution invariant under finite permutations
-3. **(Conditionally i.i.d.)** Coordinates are i.i.d. given the tail $\sigma$-algebra
+3. **(Conditionally i.i.d.)** Coordinates are i.i.d. given the tail σ-algebra
 
 ## Three Independent Proofs
 
 We formalize **all three proofs** from Kallenberg (2005):
 
-| Approach | Method | Status |
-|----------|--------|--------|
-| **Martingale** | Reverse martingale convergence (Aldous) | Complete |
-| **L$^2$** | Elementary contractability bounds | Complete |
-| **Koopman** | Mean Ergodic Theorem | Complete |
+| Approach | Method |
+|----------|--------|
+| **Martingale** | Reverse martingale convergence (Aldous) |
+| **L²** | Elementary contractability bounds |
+| **Koopman** | Mean Ergodic Theorem |
 
 ## Links
 
 * [Blueprint]({{ site.url }}/blueprint/) - Proof structure with Lean links
-* [Blueprint (PDF)]({{ site.url }}/blueprint.pdf)
-* [Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html)
-* [API Documentation]({{ site.url }}/docs/)
 * [GitHub Repository](https://github.com/cameronfreer/exchangeability)
 
 ## References
