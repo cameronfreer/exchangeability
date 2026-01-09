@@ -17,7 +17,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
    - Elegant probabilistic argument using reverse martingales
    - File: [`Exchangeability/DeFinetti/ViaMartingale.lean`](Exchangeability/DeFinetti/ViaMartingale.lean)
 
-2. **L² Approach** (2 sorries remaining)
+2. **L² Approach** (1 sorry remaining)
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
    - Directory: [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/)

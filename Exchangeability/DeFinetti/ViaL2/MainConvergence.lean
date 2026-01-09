@@ -851,38 +851,8 @@ private theorem contractability_conditional_expectation
     True :=
   trivial
 
-/-!
-## Step 5: α_n = E_n f(X_{n+1}) = ν^f
--/
-
-/-- The L¹ limit α satisfies α = ∫ f dν a.s. for the directing measure ν.
-
-For bounded measurable f, the Cesàro averages (1/m) Σₖ f(X_{n+k+1}) converge
-in L¹ to a limit α, which equals the integral ∫ f dν(ω) a.e.
-
-**Kallenberg**: "which implies α_n = E_n f(ξ_{n+1}) = ν^f a.s."
-
-The key insight is that α is an OUTPUT (the L¹ limit), not an input.
-The original statement taking α as input was incorrect since it claimed
-α_n = ∫ f dν for ALL n, but the RHS is independent of n.
--/
-theorem alpha_is_conditional_expectation
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
-    ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
-      Measurable alpha ∧
-      MemLp alpha 1 μ ∧
-      (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-      (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
-      -- L¹ convergence: Cesàro averages converge to alpha
-      (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
-        ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
-      -- Identification: alpha equals the integral against nu
-      (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
-  -- Wrapper for the axiomatized Step 5 result from BlockAverages
-  exact Helpers.alpha_is_conditional_expectation_packaged X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+/-! Note: Step 5 theorem `alpha_is_conditional_expectation_packaged` has a complete
+proof in `MoreL2Helpers.lean` (at the `ViaL2` namespace level). It was removed from
+here since it wasn't used in the critical path. The critical path uses
+`directing_measure_satisfies_requirements` from MoreL2Helpers instead. -/
 

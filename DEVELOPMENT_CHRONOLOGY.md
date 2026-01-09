@@ -177,7 +177,7 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 
 | Proof Route | Approach | Status |
 |-------------|----------|--------|
-| **ViaL2** | Elementary L² bounds | 2 sorries remaining |
+| **ViaL2** | Elementary L² bounds | 1 sorry remaining |
 | **ViaKoopman** | Ergodic theory | **Complete** (Jan 1, 2026) |
 | **ViaMartingale** | Reverse martingale | **Complete** (Jan 1, 2026) |
 
