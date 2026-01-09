@@ -51,4 +51,5 @@ jobs:
         uses: leanprover-community/docgen-action@cc833d262c7b8f179ac444cd20fde412b24b8beb # 2026-01-08
         with:
           blueprint: true
+          api-docs: false
           homepage: home_page
