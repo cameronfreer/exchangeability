@@ -90,9 +90,9 @@ lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i
   let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
   have h_eval_meas : Measurable eval := measurable_eval_fin1
   have h_meas_k : Measurable fun ω => fun j : Fin 1 => X (k j) ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
   have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
   have h_eval := congrArg (Measure.map eval) h_map
@@ -197,9 +197,9 @@ lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Meas
     intro i
     simpa [Φ] using hf_meas.comp (measurable_pi_apply i)
   have h_meas_k : Measurable fun ω => fun i : Fin n => X (k i) ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   have h_meas_std : Measurable fun ω => fun i : Fin n => X i.val ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   have h_left := (Measure.map_map hΦ_meas h_meas_k (μ := μ)).symm
   have h_right := Measure.map_map hΦ_meas h_meas_std (μ := μ)
   have h_apply := congrArg (Measure.map Φ) h_base
@@ -414,9 +414,9 @@ lemma contractable_single_marginal_eq
   let eval : (Fin 1 → α) → α := fun g => g ⟨0, by decide⟩
   have h_eval_meas : Measurable eval := measurable_pi_apply _
   have h_meas_κ : Measurable fun ω => fun j : Fin 1 => X (κ j) ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
-    fun_prop (disch := measurability)
+    fun_prop
   -- Apply eval to both sides
   have h_left := (Measure.map_map h_eval_meas h_meas_κ (μ := μ)).symm
   have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)

@@ -6,23 +6,21 @@ Authors: Cameron Freer
 import Mathlib.MeasureTheory.Measure.Trim
 
 /-!
-# Instance Lemmas for Trimmed Measures
+# Sigma-Finiteness for Trimmed Measures
 
-This file provides instance lemmas showing that `μ.trim hm` inherits finiteness
-properties from the original measure `μ`.
+This file provides a lemma showing that `μ.trim hm` is sigma-finite when `μ` is finite.
 
 ## Main Results
 
-* `isFiniteMeasure_trim`: If `μ` is a finite measure, then `μ.trim hm` is finite.
 * `sigmaFinite_trim`: If `μ` is a finite measure, then `μ.trim hm` is sigma-finite.
 
 ## Implementation Notes
 
-These lemmas are useful when working with conditional expectations on sub-σ-algebras,
+This lemma is useful when working with conditional expectations on sub-σ-algebras,
 where mathlib's `condExp` requires `SigmaFinite (μ.trim hm)`.
 
-The proofs are straightforward: trimming preserves measure on measurable sets
-(including `univ`), so finiteness transfers directly.
+Note: `IsFiniteMeasure (μ.trim hm)` is now provided by mathlib as an instance
+(`MeasureTheory.Measure.isFiniteMeasure_trim`), so we only need the sigma-finite corollary.
 
 ## References
 
@@ -35,28 +33,13 @@ namespace MeasureTheory.Measure
 
 variable {Ω : Type*} {m₀ : MeasurableSpace Ω}
 
-/-- Trimmed measure is finite when the original measure is finite.
-
-This is essential for conditional expectation on sub-σ-algebras: `condExp` requires
-`SigmaFinite (μ.trim hm)`, which follows from this finiteness result. -/
-lemma isFiniteMeasure_trim (μ : Measure Ω) [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
-    IsFiniteMeasure (μ.trim hm) := by
-  classical
-  -- univ is m-measurable, so trim agrees with μ on univ
-  have hU : (μ.trim hm) Set.univ = μ Set.univ := by
-    rw [trim_measurableSet_eq hm MeasurableSet.univ]
-  -- Now measure_univ_lt_top comes from [IsFiniteMeasure μ]
-  refine ⟨?_⟩
-  simp [hU, measure_lt_top]
-
 /-- Trimmed measure is sigma-finite when the original measure is finite.
 
-This is the instance typically needed for `condExp` on sub-σ-algebras. -/
+This is the instance typically needed for `condExp` on sub-σ-algebras.
+The finiteness of `μ.trim hm` is automatic via mathlib's `isFiniteMeasure_trim` instance. -/
 lemma sigmaFinite_trim (μ : Measure Ω) [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (hm : m ≤ m₀) :
-    SigmaFinite (μ.trim hm) := by
-  haveI := isFiniteMeasure_trim μ hm
-  infer_instance
+    SigmaFinite (μ.trim hm) :=
+  inferInstance
 
 end MeasureTheory.Measure

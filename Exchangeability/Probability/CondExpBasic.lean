@@ -10,16 +10,12 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 # Basic Helper Lemmas for Conditional Expectation
 
 This file provides basic helper lemmas for working with conditional expectations,
-set integration, σ-finiteness, and indicator functions.
+σ-finiteness, and indicator functions.
 
 These are foundational utilities extracted from the main CondExp.lean file to
 improve compilation speed.
 
 ## Main components
-
-### Set Integration
-- `setIntegral_congr_ae'`: Congru ence for set integrals on restricted measures
-- `setIntegral_congr_ae_of_ae`: Congruence for set integrals from global a.e. equality
 
 ### σ-Finiteness
 - `sigmaFinite_trim_of_le`: Trimmed measure inherits σ-finiteness from finite measures
@@ -36,24 +32,6 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-
-/-! ### Helper lemmas for set integration -/
-
-/-- If two functions are a.e. equal on `μ.restrict s`, their set integrals on `s` coincide. -/
-lemma setIntegral_congr_ae'
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
-    (hfg : f =ᵐ[μ.restrict s] g) :
-    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
-  integral_congr_ae hfg
-
-/-- If two functions are a.e. equal under `μ`, their set integrals on any `s` coincide. -/
-lemma setIntegral_congr_ae_of_ae
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    {μ : Measure Ω} {s : Set Ω} {f g : Ω → E}
-    (hfgμ : f =ᵐ[μ] g) :
-    ∫ x in s, f x ∂μ = ∫ x in s, g x ∂μ :=
-  setIntegral_congr_ae' (ae_restrict_of_ae hfgμ)
 
 /-! ### Helper lemmas for σ-finiteness and indicators
 

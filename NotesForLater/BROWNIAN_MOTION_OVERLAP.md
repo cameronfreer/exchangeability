@@ -2,7 +2,7 @@
 
 > **Status:** Exploratory recommendations/ideas for potential collaboration
 >
-> **Date:** January 2026
+> **Date:** January 2026 (updated with 4.27.0-rc1)
 >
 > **Repository:** https://github.com/RemyDegenne/brownian-motion
 
@@ -48,7 +48,7 @@ Both projects formalize probability theory in Lean 4 with significant infrastruc
 
 | brownian-motion | exchangeability |
 |-----------------|-----------------|
-| `Auxiliary/MeasureTheory.lean`: covariance, variance helpers, sigma-algebra comap | `Probability/CondExp*.lean`: 6+ files with extensive helpers |
+| `Auxiliary/MeasureTheory.lean`: covariance, variance helpers, sigma-algebra comap | `Probability/CondExp*.lean`: 4 top-level + 3 in CondExpHelpers/ |
 | `covariance_fun_add_*`, `variance_pi` | `condexp_indicator_eq_of_pair_law_eq`, `condExp_L1_lipschitz`, `condExp_mul_pullout` |
 | Independence & set integral factorization | Distributional equality ⇒ condexp equality (core bridge lemma) |
 
@@ -67,7 +67,7 @@ Both projects formalize probability theory in Lean 4 with significant infrastruc
 
 | brownian-motion | exchangeability |
 |-----------------|-----------------|
-| `Auxiliary/Adapted.lean`: `Adapted`, `ProgMeasurable`, right-continuous adaptedness | `Tail/TailSigma.lean`: `tailFamily`, `tailProcess`, reverse filtrations |
+| `Auxiliary/Adapted.lean`: `Adapted`, `ProgMeasurable`, right-continuous adaptedness | `Tail/TailSigma.lean`, `ShiftInvariantMeasure.lean`, `CondExpShiftInvariance.lean`: `tailFamily`, `tailProcess`, reverse filtrations |
 | `Adapted.progMeasurable_of_rightContinuous` | `tailProcess_eq_iInf_revFiltration` |
 | Forward filtrations, progressive measurability | **Tail σ-algebras**, shift invariance |
 
@@ -155,7 +155,7 @@ Both projects formalize probability theory in Lean 4 with significant infrastruc
 
 | brownian-motion | exchangeability |
 |-----------------|-----------------|
-| `Gaussian/StochasticProcesses.lean`: modification, indistinguishability | `PathSpace/Shift.lean`: shift operator, shift invariance |
+| `Gaussian/StochasticProcesses.lean`: modification, indistinguishability | `PathSpace/Shift.lean`, `CylinderHelpers.lean`: shift operator, shift invariance, cylinder sets |
 | `modification_of_indistinguishable` | `shift_measurable`, `isShiftInvariant_iff` |
 | Continuity-based indistinguishability | Shift-based symmetry |
 
@@ -187,6 +187,7 @@ Both projects formalize probability theory in Lean 4 with significant infrastruc
    - `condexp_indicator_eq_of_pair_law_eq` (exchangeability)
    - `covariance_fun_add_*` (brownian-motion)
    - `condExp_mul_pullout` (exchangeability)
+   - **Note:** `isFiniteMeasure_trim` is now in mathlib (as of 4.27); `sigmaFinite_trim` for finite measures is still local
 
 2. **Adopt `HasLaw` abstraction** in exchangeability:
    - Would simplify proofs about distributional equality
@@ -273,9 +274,12 @@ Exchangeability/
 │   ├── InfiniteProduct.lean # Kolmogorov extension for i.i.d.
 │   └── LpNormHelpers.lean
 ├── Tail/                     # Tail σ-algebra machinery
-│   └── TailSigma.lean
+│   ├── TailSigma.lean
+│   ├── ShiftInvariantMeasure.lean
+│   └── CondExpShiftInvariance.lean
 ├── PathSpace/                # Shift operators
-│   └── Shift.lean
+│   ├── Shift.lean
+│   └── CylinderHelpers.lean
 └── DeFinetti/ViaL2/          # L² proof infrastructure
     ├── AlphaIic*.lean       # CDF construction
     ├── DirectingMeasure*.lean

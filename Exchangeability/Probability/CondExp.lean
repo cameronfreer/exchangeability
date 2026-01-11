@@ -65,9 +65,9 @@ This file centralizes these patterns to keep the main proofs clean and maintaina
   - **Purpose**: Avoids typeclass metavariable issues in `μ[f | m]`
   - **Used in**: ViaMartingale finite-future sigma algebras
   
-- **`isFiniteMeasure_trim`**, **`sigmaFinite_trim`**: Trimmed measure instances
-  - **Used in**: ViaMartingale (line 582), multiple sub-σ-algebra constructions
-  - **Key fact**: Trimmed finite measures remain finite
+- **`sigmaFinite_trim`**: Trimmed measure is sigma-finite (when base is finite)
+  - **Used in**: ViaMartingale, multiple sub-σ-algebra constructions
+  - **Note**: `isFiniteMeasure_trim` is now in mathlib as an instance
 
 ## Design Philosophy
 
@@ -309,7 +309,8 @@ These lemmas are now in `ForMathlib.MeasureTheory.Measure.TrimInstances` and re-
 for backward compatibility. -/
 
 -- Re-export from ForMathlib for backward compatibility
-export MeasureTheory.Measure (isFiniteMeasure_trim sigmaFinite_trim)
+-- Note: isFiniteMeasure_trim is now in mathlib (as an instance), only sigmaFinite_trim is local
+export MeasureTheory.Measure (sigmaFinite_trim)
 
 /-! ### Stable conditional expectation wrapper
 
@@ -327,7 +328,7 @@ def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
     (f : Ω → ℝ) : Ω → ℝ := by
   classical
   haveI : IsFiniteMeasure μ := inferInstance
-  haveI : IsFiniteMeasure (μ.trim _hm) := isFiniteMeasure_trim μ _hm
+  -- IsFiniteMeasure (μ.trim _hm) is now automatic via mathlib instance
   haveI : SigmaFinite (μ.trim _hm) := sigmaFinite_trim μ _hm
   exact μ[f | m]
 
@@ -353,9 +354,7 @@ lemma condexp_indicator_inter_bridge
     (μ[A.indicator (fun _ => (1 : ℝ)) | m] *
      μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
   classical
-  -- Install trimmed instances
-  haveI : IsFiniteMeasure μ := inferInstance
-  haveI : IsFiniteMeasure (μ.trim hm) := isFiniteMeasure_trim μ hm
+  -- Install trimmed instances (IsFiniteMeasure is automatic via mathlib)
   haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
   -- Forward to the proven lemma
   exact condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
@@ -604,9 +603,7 @@ lemma condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measure
   obtain ⟨C, hC⟩ := hg_bd
   have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
 
-  -- Provide typeclass instances explicitly (key insight from condExpWith pattern!)
-  haveI : IsFiniteMeasure μ := inferInstance
-  haveI : IsFiniteMeasure (μ.trim hm) := isFiniteMeasure_trim μ hm
+  -- Provide typeclass instances explicitly (IsFiniteMeasure is automatic via mathlib)
   haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
 
   -- Now condExp_stronglyMeasurable_mul_of_bound can resolve instances

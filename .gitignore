@@ -30,6 +30,9 @@ depgraph.json
 paranoia_report.json
 *-report.json
 
+# Local doc generation (CI builds docs via docgen-action)
+docbuild/
+
 # Blueprint build artifacts (web/ and print/ are committed, rebuilt locally)
 # Note: blueprint/lean_decls is committed for CI checkdecls validation
 blueprint/src/web.paux

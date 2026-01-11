@@ -81,6 +81,7 @@ lemma projectPairSeq_embedPairSeq (p : α × (ℕ → α)) : projectPairSeq (emb
   rcases p with ⟨a, f⟩
   simp only [projectPairSeq, embedPairSeq]
 
+@[measurability]
 lemma embedPairSeq_measurable : Measurable (embedPairSeq : α × (ℕ → α) → ℕ → α) := by
   rw [measurable_pi_iff]
   intro n
@@ -88,6 +89,7 @@ lemma embedPairSeq_measurable : Measurable (embedPairSeq : α × (ℕ → α) �
   | zero => exact measurable_fst
   | succ k => exact (measurable_pi_apply k).comp measurable_snd
 
+@[measurability]
 lemma projectPairSeq_measurable : Measurable (projectPairSeq : (ℕ → α) → α × (ℕ → α)) :=
   Measurable.prod (measurable_pi_apply 0)
     (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1))

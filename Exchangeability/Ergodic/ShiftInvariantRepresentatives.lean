@@ -108,7 +108,7 @@ lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
   have h_meas_ereal : Measurable fun ω => gLimsupE g0 ω := by
     simpa [gLimsupE] using (Measurable.limsup hstep)
   have : Measurable fun ω => (gLimsupE g0 ω).toReal := by
-    fun_prop (disch := measurability)
+    fun_prop
   simpa [gRep, gLimsupE] using this
 
 omit [MeasurableSpace α] in

@@ -52,6 +52,7 @@ def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
 
 set_option linter.unusedSectionVars false in
 /-- Basic measurability for tail cylinders. -/
+@[measurability]
 lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (tailCylinder (α:=α) r C) := by
@@ -79,6 +80,7 @@ def finCylinder (r : ℕ) (C : Fin r → Set α) : Set (Fin r → α) :=
 
 variable [MeasurableSpace α]
 
+@[measurability]
 lemma finCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (finCylinder r C) := by
@@ -90,6 +92,7 @@ lemma finCylinder_measurable {r : ℕ} {C : Fin r → Set α}
     rw [← this]
     exact (hC i).preimage (measurable_pi_apply i)
 
+@[measurability]
 lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet (cylinder (α:=α) r C) := by
@@ -144,6 +147,7 @@ lemma firstRCylinder_measurable_in_firstRSigma
 /-- **Measurable in the ambient σ‑algebra.**
 If each coordinate `X i` is measurable, then the block cylinder is measurable
 in the ambient σ‑algebra (useful for `Integrable.indicator`). -/
+@[measurability]
 lemma firstRCylinder_measurable_ambient
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hX : ∀ i, Measurable (X i)) (hC : ∀ i, MeasurableSet (C i)) :
@@ -239,6 +243,7 @@ omit [MeasurableSpace α] in
 @[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
     drop f n = f (n + 1) := rfl
 
+@[measurability]
 lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
   rw [measurable_pi_iff]
   intro n
