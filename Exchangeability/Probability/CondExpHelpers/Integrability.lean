@@ -40,7 +40,7 @@ lemma integrable_mul_of_bound_one
   (hf : Integrable f μ)
   (hg_meas : AEStronglyMeasurable g μ)
   (hbound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ (1 : ℝ)) :
-  Integrable (fun ω => g ω * f ω) μ := hf.bdd_mul' hg_meas hbound
+  Integrable (fun ω => g ω * f ω) μ := hf.bdd_mul hg_meas hbound
 
 /-- **Jensen's inequality for conditional expectation**: the absolute value of a conditional
 expectation is a.e. bounded by the conditional expectation of the absolute value.
@@ -279,12 +279,12 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
   -- Strategy: Show fn * H → f * H in L¹, then apply tendsto_setIntegral_of_L1
   apply MeasureTheory.tendsto_setIntegral_of_L1 (fun ω => f ω * H ω) _ _ _ s
   · -- Goal (a): Show f * H is integrable
-    -- Apply bdd_mul': bounded function H times integrable function f
-    have := hf_int.bdd_mul' hH_int.aestronglyMeasurable hH_bdd
+    -- Apply bdd_mul: bounded function H times integrable function f
+    have := hf_int.bdd_mul hH_int.aestronglyMeasurable hH_bdd
     simpa only [mul_comm] using this
   · -- Goal (b): Show fn * H is eventually integrable
     filter_upwards with n
-    have := (hfn_int n).bdd_mul' hH_int.aestronglyMeasurable hH_bdd
+    have := (hfn_int n).bdd_mul hH_int.aestronglyMeasurable hH_bdd
     simpa only [mul_comm] using this
   · -- Goal (c): Show ∫⁻ ‖(fn * H) - (f * H)‖₊ → 0
     -- Bound ∫⁻ ‖(fn - f) * H‖₊ by C * ∫⁻ ‖fn - f‖₊

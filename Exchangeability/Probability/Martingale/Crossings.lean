@@ -106,8 +106,8 @@ lemma negProcess_revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω �
 /-- Helper: hitting respects pointwise equality on [n, m] -/
 lemma hitting_congr {Ω β : Type*} {u v : ℕ → Ω → β} {s : Set β} {n m : ℕ} {ω : Ω}
     (h : ∀ k, n ≤ k → k ≤ m → u k ω = v k ω) :
-    MeasureTheory.hitting u s n m ω = MeasureTheory.hitting v s n m ω := by
-  simp only [MeasureTheory.hitting]
+    MeasureTheory.hittingBtwn u s n m ω = MeasureTheory.hittingBtwn v s n m ω := by
+  simp only [MeasureTheory.hittingBtwn]
   by_cases hex : ∃ j ∈ Set.Icc n m, u j ω ∈ s
   · have hex' : ∃ j ∈ Set.Icc n m, v j ω ∈ s := by
       obtain ⟨j, hj, hj_mem⟩ := hex
