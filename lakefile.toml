@@ -1,6 +1,6 @@
 name = "exchangeability"
 version = "0.1.0"
-defaultTargets = ["exchangeability", "Exchangeability", "ForMathlib"]
+defaultTargets = ["Exchangeability", "ForMathlib"]
 
 [[require]]
 name = "mathlib"
@@ -16,7 +16,3 @@ name = "ForMathlib"
 
 [[lean_lib]]
 name = "Exchangeability"
-
-[[lean_exe]]
-name = "exchangeability"
-root = "Main"
