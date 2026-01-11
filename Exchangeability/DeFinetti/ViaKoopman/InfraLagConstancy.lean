@@ -423,6 +423,7 @@ end LagConstancyProof
 /-- For exchangeable measures, set integrals are equal for functions that agree on reindexing.
 This is a key step in proving lag-constancy: ∫_s F = ∫_s G when F ∘ reindex τ = G
 and the set s is shift-invariant (hence also reindex-invariant). -/
+@[nolint unusedArguments]
 lemma setIntegral_eq_of_reindex_eq
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]
@@ -447,6 +448,7 @@ lemma setIntegral_eq_of_reindex_eq
     _ = ∫ ω in s, G ω ∂μ := by congr 1
 
 /-- If ∫_s (F - G) = 0 for all s in sub-σ-algebra, then CE[F|m] = CE[G|m] a.e. -/
+@[nolint unusedArguments]
 lemma condExp_ae_eq_of_setIntegral_diff_eq_zero
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure (ℕ → α)} [IsProbabilityMeasure μ]

@@ -47,6 +47,7 @@ expectation is a.e. bounded by the conditional expectation of the absolute value
 
 For integrable `f`: `|μ[f|m]| ≤ μ[|f||m]` almost everywhere.
 -/
+@[nolint unusedArguments]
 lemma abs_condExp_le_condExp_abs
     {Ω : Type*} {m m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     (hm : m ≤ m₀) [SigmaFinite (μ.trim hm)]
@@ -138,6 +139,7 @@ lemma condExp_ae_unique_of_ae_eq
 
 /-- Drop-in replacement for sequence-based uniqueness:
 it *only* needs L¹ convergence to the same target and `f =ᵐ g`. -/
+@[nolint unusedArguments]
 lemma tendsto_condExp_unique_L1
   {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
   {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
@@ -166,6 +168,7 @@ you at least as much information as knowing `η = g(ζ)`.
 
 **Mathematical statement:** σ(η) ≤ σ(ζ) when η = g ∘ ζ.
 -/
+@[nolint unusedArguments]
 lemma sigma_factor_le {Ω α β : Type*}
     [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β]
     {η : Ω → α} {ζ : Ω → β} {g : β → α}

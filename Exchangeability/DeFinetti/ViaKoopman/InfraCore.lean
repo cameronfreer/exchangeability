@@ -74,6 +74,7 @@ private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
 
 /-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
     This is the measure-space analogue of lp.coeFn_sum (which is for sequence spaces). -/
+@[nolint unusedArguments]
 lemma coeFn_finset_sum
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
   {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -443,6 +444,7 @@ the sub-σ-algebra as the ambient instance in type class arguments. -/
 namespace MeasureTheory
 
 /-- CE is a.e.-strongly measurable w.r.t. the *sub* σ-algebra, with ambient locked. -/
+@[nolint unusedArguments]
 lemma aestronglyMeasurable_condExp'
     {Ω β} [mΩ : MeasurableSpace Ω] [NormedAddCommGroup β] [NormedSpace ℝ β] [CompleteSpace β]
     {μ : Measure Ω} (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)

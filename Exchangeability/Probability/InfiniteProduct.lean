@@ -95,6 +95,7 @@ according to `ν`.
 Kolmogorov's extension theorem. We will show that this family is projective
 (consistent under marginalization) and then extend it to an infinite product.
 -/
+@[nolint unusedArguments]
 def iidProjectiveFamily {ν : Measure α} [IsProbabilityMeasure ν] :
     ∀ I : Finset ℕ, Measure (∀ _ : I, α) :=
   fun I => Measure.pi (fun (_ : I) => ν)
@@ -139,6 +140,7 @@ theorem (used in `Exchangeability.lean`).
 theory of i.i.d. sequences, forming the basis for the law of large numbers, central
 limit theorem, and de Finetti's theorem.
 -/
+@[nolint unusedArguments]
 def iidProduct (ν : Measure α) [IsProbabilityMeasure ν] : Measure (ℕ → α) :=
   Measure.infinitePi (fun _ : ℕ => ν)
 

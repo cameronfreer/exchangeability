@@ -40,6 +40,7 @@ Then for all Borel `A,B`:
 E[ 1_A(Y) 1_B(Z) | σ(W) ]
 = E[ 1_A(Y) | σ(W) ] * E[ 1_B(Z) | σ(W) ] a.e.
 -/
+@[nolint unusedArguments]
 lemma condIndep_indicator_of_dropInfoY
   {Ω : Type*} [inst_mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
   {Y Z W : Ω → ℝ}

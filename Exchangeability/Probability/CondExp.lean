@@ -321,6 +321,7 @@ when calling `condexp` with sub-σ-algebras. -/
 
 This wrapper "freezes" the conditioning σ-algebra and installs the necessary
 sigma-finite instances before calling `μ[f | m]`, avoiding typeclass metavariable issues. -/
+@[nolint unusedArguments]
 noncomputable
 def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
     (μ : Measure Ω) [IsFiniteMeasure μ]
@@ -515,6 +516,7 @@ lemma integrable_of_bounded [IsFiniteMeasure μ]
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
 /-- Product of integrable and bounded measurable functions is integrable. -/
+@[nolint unusedArguments]
 lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
     (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
@@ -533,6 +535,7 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
 /-- Conditional expectation preserves monotonicity (in absolute value).
 
 If |f| ≤ |g| everywhere, then |E[f|m]| ≤ E[|g||m]. -/
+@[nolint unusedArguments]
 lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
@@ -566,6 +569,7 @@ For integrable functions f, g, the conditional expectation is contractive in L¹
   ‖E[f|m] - E[g|m]‖₁ ≤ ‖f - g‖₁
 
 This is the key operator-theoretic property that makes CE well-behaved. -/
+@[nolint unusedArguments]
 lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :

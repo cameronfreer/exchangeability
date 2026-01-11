@@ -702,6 +702,7 @@ lemma condExp_exists_ae_limit_antitone
 
 This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`,
 which works for any family of sub-σ-algebras (not just filtrations). -/
+@[nolint unusedArguments]
 lemma uniformIntegrable_condexp_antitone
     [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
     (_h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
@@ -721,6 +722,7 @@ The key observation: For antitone 𝔽 (𝔽 n decreases as n increases):
 - Hence Xlim is F_inf-measurable (up to a.e. equality)
 
 This is crucial for showing that reverse martingale limits satisfy μ[Xlim | F_inf] = Xlim. -/
+@[nolint unusedArguments]
 lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
     (_h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))

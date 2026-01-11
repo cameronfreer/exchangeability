@@ -48,6 +48,7 @@ For integrable functions f, g in L²(μ):
 
 This is Hölder's inequality specialized to p = q = 2. We derive it from the
 nonnegative version by observing that |∫ f·g| ≤ ∫ |f|·|g| and |f|² = f². -/
+@[nolint unusedArguments]
 lemma abs_integral_mul_le_L2
     [IsFiniteMeasure μ] {f g : Ω → ℝ}
     (hf : MemLp f 2 μ) (hg : MemLp g 2 μ) :
@@ -83,6 +84,7 @@ the ENNReal coercion of the integral of absolute value.
 This bridges the gap between Real-valued integrals (∫ |f| ∂μ : ℝ) and
 ENNReal-valued Lp norms (eLpNorm f 1 μ : ℝ≥0∞), which is essential for
 applying mathlib's convergence in measure machinery. -/
+@[nolint unusedArguments]
 lemma eLpNorm_one_eq_integral_abs
     {μ : Measure Ω} [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Integrable f μ) :

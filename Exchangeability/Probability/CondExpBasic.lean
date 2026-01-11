@@ -42,6 +42,7 @@ linter.unusedSectionVars false`. -/
 
 set_option linter.unusedSectionVars false in
 /-- If `μ` is finite, then any trim of `μ` is σ-finite. -/
+@[nolint unusedArguments]
 lemma sigmaFinite_trim_of_le {m m₀ : MeasurableSpace Ω}
     (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ m₀) :
     SigmaFinite (μ.trim hm) :=
@@ -50,6 +51,7 @@ lemma sigmaFinite_trim_of_le {m m₀ : MeasurableSpace Ω}
 set_option linter.unusedSectionVars false in
 /-- For pairwise disjoint sets, the indicator of the union equals
 the pointwise `tsum` of indicators (for ℝ-valued constants). -/
+@[nolint unusedArguments]
 lemma indicator_iUnion_tsum_of_pairwise_disjoint
     (f : ℕ → Set Ω) (hdisj : Pairwise (Disjoint on f)) :
     (fun ω => ((⋃ i, f i).indicator (fun _ => (1 : ℝ)) ω))
@@ -83,6 +85,7 @@ lemma indicator_iUnion_tsum_of_pairwise_disjoint
 set_option linter.unusedSectionVars false in
 /-- For pairwise disjoint sets, the tsum of indicators is bounded by 1 at each point.
 This follows from the fact that at most one indicator is 1 at any point. -/
+@[nolint unusedArguments]
 lemma indicator_tsum_le_one_of_pairwise_disjoint
     (f : ℕ → Set Ω) (hdisj : Pairwise (Disjoint on f)) (x : Ω) :
     ∑' i, (f i).indicator (fun _ => (1:ℝ)) x ≤ 1 := by

@@ -130,6 +130,7 @@ lemma condexp_precomp_iterate_eq
       _ = ∫ ω in s, (fun ω => f (shiftk ω)) ω ∂μ :=
             MeasureTheory.integral_indicator hS_meas
 
+@[nolint unusedArguments]
 lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
     (shift (α := α))^[k] y n = y (n + k) := by
   induction k generalizing n with
@@ -137,6 +138,7 @@ lemma shift_iterate_apply (k n : ℕ) (y : Ω[α]) :
   | succ k ih => rw [Function.iterate_succ_apply']; simp only [shift, ih]; ring_nf
 
 
+@[nolint unusedArguments]
 lemma cesaro_ce_eq_condexp
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -290,6 +292,7 @@ Given lag-constancy (CE[f·g_{k+1}] = CE[f·g_k] for all k), proves that
 `CE[f·A_n | mSI] = CE[f·g₀ | mSI]` for all n, where A_n is the Cesàro average.
 
 This uses the lag-constancy hypothesis to collapse the sum termwise. -/
+@[nolint unusedArguments]
 lemma product_ce_constant_of_lag_const
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (f g : α → ℝ)

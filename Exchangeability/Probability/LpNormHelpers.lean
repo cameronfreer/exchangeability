@@ -51,6 +51,7 @@ the gap between ENNReal-valued Lp norms and Real-valued integrals.
 
 **Proof strategy**: Use the definition of eLpNorm for p = 2, which involves
 lintegral of ‖f‖^2, and convert via toReal. -/
+@[nolint unusedArguments]
 lemma eLpNorm_two_sq_eq_integral_sq
     [IsFiniteMeasure μ] {f : Ω → ℝ}
     (hf : MemLp f 2 μ) :
@@ -151,6 +152,7 @@ lemma eLpNorm_lt_of_integral_sq_lt
 If |f| ≤ M almost everywhere, then f ∈ Lp for any p ∈ [1, ∞) on a finite measure space.
 
 This is a standard result used to show block averages of bounded functions are in L². -/
+@[nolint unusedArguments]
 lemma memLp_of_abs_le_const
     [IsFiniteMeasure μ] {f : Ω → ℝ} {M : ℝ}
     (hf_meas : Measurable f)

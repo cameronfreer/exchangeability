@@ -851,6 +851,7 @@ lemma condIndep_boundedMeasurable (μ : Measure Ω) [IsProbabilityMeasure μ]
 
 This is essentially the identity, since `CondIndep` is defined as rectangle factorization.
 This wrapper allows replacing axioms in ViaMartingale.lean with concrete proofs. -/
+@[nolint unusedArguments]
 lemma condIndep_of_rect_factorization (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hRect :

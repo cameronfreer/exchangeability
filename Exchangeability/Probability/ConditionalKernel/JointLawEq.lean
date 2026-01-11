@@ -49,6 +49,7 @@ from `TripleLawDropInfo.DropInfo`, with variable mapping:
 - W' = ζ (finer σ-algebra)
 - h_law.symm provides (ξ, η) =^d (ξ, ζ) matching the drop-info lemma's (X, W) =^d (X, W')
 -/
+@[nolint unusedArguments]
 theorem condExp_eq_of_joint_law_eq
     [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
     [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]

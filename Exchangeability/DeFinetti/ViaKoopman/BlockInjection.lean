@@ -235,6 +235,7 @@ for i ≥ m, blockInjection(i) = i + (m*n - m).
 For shift-invariant sets s (where shift⁻¹(s) = s), membership is determined by
 the eventual behavior of the sequence. Since blockInjection only permutes
 finitely many coordinates and then shifts, it preserves membership in s. -/
+@[nolint unusedArguments]
 lemma reindex_blockInjection_preimage_shiftInvariant {m n : ℕ} (hn : 0 < n)
     (j : Fin m → Fin n) (s : Set (Ω[α]))
     (hs : isShiftInvariant s) :
