@@ -103,8 +103,8 @@ lemma condIndep_indicator_of_dropInfoY
   have hIndB_int : Integrable indB μ := (integrable_const 1).indicator (hB.preimage hZ)
   have hProd_int : Integrable (indA * indB) μ := by
     -- indA is bounded by 1, so we can use bdd_mul with indB integrable
-    have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := by
-      use 1; intro x
+    have hIndA_bdd : ∀ᵐ x ∂μ, ‖indA x‖ ≤ 1 := by
+      filter_upwards with x
       simp only [indA, Real.norm_eq_abs]
       rw [Set.indicator_apply]
       by_cases h : x ∈ Y ⁻¹' A <;> simp [h]
@@ -164,8 +164,8 @@ lemma condIndep_indicator_of_dropInfoY
     stronglyMeasurable_condExp
   have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
     -- indB is bounded by 1, and condExp is integrable
-    have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := by
-      use 1; intro x
+    have hIndB_bdd : ∀ᵐ x ∂μ, ‖indB x‖ ≤ 1 := by
+      filter_upwards with x
       simp only [indB, Real.norm_eq_abs]
       rw [Set.indicator_apply]
       by_cases h : x ∈ Z ⁻¹' B <;> simp [h]

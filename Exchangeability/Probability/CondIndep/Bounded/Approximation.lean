@@ -394,8 +394,8 @@ lemma tendsto_integral_mul_of_bounded_L1
       have h_prod : Integrable (fun ω => f ω * (gn n ω - g ω)) μ := by
         have h_eq : (fun ω => f ω * (gn n ω - g ω)) = f * (gn n - g) := rfl
         rw [h_eq]
-        -- bdd_mul' (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
-        refine Integrable.bdd_mul' (c := M) h_diff_int hf_asm ?_
+        -- bdd_mul (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
+        refine Integrable.bdd_mul (c := M) h_diff_int hf_asm ?_
         filter_upwards [hf_bdd] with ω hω
         rw [Real.norm_eq_abs]; exact hω
       exact h_prod.abs
@@ -476,10 +476,10 @@ lemma integrable_condExp_mul_of_bounded
     have h_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ (⟨M, hM_nn⟩ : NNReal) := by
       filter_upwards [hf_bdd] with ω hω; simpa using hω
     simpa [Real.norm_eq_abs] using ae_bdd_condExp_of_ae_bdd (m := m) (R := ⟨M, hM_nn⟩) h_bdd
-  -- bdd_mul' (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
+  -- bdd_mul (c := M) hg hf_asm hf_bdd gives Integrable (hf * hg)
   -- We want μ[f|m] * μ[g|m] where f is bounded
-  -- So use: (integrable μ[g|m]).bdd_mul' (μ[f|m].aestronglyMeasurable) (bound on μ[f|m])
-  refine Integrable.bdd_mul' (c := M)
+  -- So use: (integrable μ[g|m]).bdd_mul (μ[f|m].aestronglyMeasurable) (bound on μ[f|m])
+  refine Integrable.bdd_mul (c := M)
     (integrable_condExp (μ := μ) (m := m) (f := g))
     (integrable_condExp (μ := μ) (m := m) (f := f)).aestronglyMeasurable ?_
   filter_upwards [hf_ce_bdd] with ω hω

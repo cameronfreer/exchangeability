@@ -523,8 +523,13 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
   -- Rewrite as g * f to match Integrable.bdd_mul signature
   have : f * g = fun ω => g ω * f ω := by ext ω; exact mul_comm _ _
   rw [this]
+  -- Convert pointwise bound to a.e. bound
+  obtain ⟨C, hC⟩ := hbd
+  have hbd_ae : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := by
+    filter_upwards with ω
+    exact (Real.norm_eq_abs _).symm ▸ hC ω
   -- Apply Integrable.bdd_mul with g bounded, f integrable
-  exact Integrable.bdd_mul hf hg.aestronglyMeasurable hbd
+  exact Integrable.bdd_mul hf hg.aestronglyMeasurable hbd_ae
 
 /-- Conditional expectation preserves monotonicity (in absolute value).
 

@@ -83,8 +83,8 @@ lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
 
 lemma measurable_prefixProj {n : ℕ} :
-    Measurable (prefixProj (α:=α) n) := by
-  measurability
+    Measurable (prefixProj (α:=α) n) :=
+  measurable_pi_lambda _ (fun i => measurable_pi_apply (↑i : ℕ))
 
 /--
 Cylinder set determined by the first `n` coordinates.
@@ -194,8 +194,8 @@ variable [MeasurableSpace α]
 set_option linter.unusedSectionVars false
 
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
-    Measurable (takePrefix (α:=α) hmn) := by
-  measurability
+    Measurable (takePrefix (α:=α) hmn) :=
+  measurable_pi_lambda _ (fun i => measurable_pi_apply (Fin.castLE hmn i))
 
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
     (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) :=
@@ -387,8 +387,8 @@ lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
     reindex (α:=α) π x i = x (π i) := rfl
 
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
-    Measurable (reindex (α:=α) π) := by
-  measurability
+    Measurable (reindex (α:=α) π) :=
+  measurable_pi_lambda _ (fun i => measurable_pi_apply (π i))
 
 attribute [measurability] measurable_prefixProj takePrefix_measurable measurable_reindex
 

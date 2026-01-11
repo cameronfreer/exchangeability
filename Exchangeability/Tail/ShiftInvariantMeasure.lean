@@ -418,8 +418,8 @@ lemma setIntegral_comp_shift_eq
         exact h_full
 
       let indices : List ℕ := pt.sort (· ≤ ·)
-      have h_sorted : indices.Sorted (· < ·) := Finset.sort_sorted_lt pt
-      have h_nodup : indices.Nodup := Finset.sort_nodup (· ≤ ·) pt
+      have h_sorted : indices.SortedLT := pt.sortedLT_sort
+      have h_nodup : indices.Nodup := pt.sort_nodup (· ≤ ·)
       have h_indices_ne : indices ≠ [] := by
         simp only [indices, ne_eq, List.eq_nil_iff_forall_not_mem]
         intro h
@@ -447,7 +447,7 @@ lemma setIntegral_comp_shift_eq
       have h_idx_sorted : ∀ i j : ℕ, (hi : i < d) → (hj : j < d) → i < j →
           indices.get ⟨i, by rw [h_len]; exact hi⟩ < indices.get ⟨j, by rw [h_len]; exact hj⟩ := by
         intro i j hi hj hij
-        exact List.Sorted.rel_get_of_lt h_sorted (by simp [hij])
+        exact h_sorted.getElem_lt_getElem_iff.mpr hij
 
       have hσ_strictMono : StrictMono σ := by
         intro i j hij
