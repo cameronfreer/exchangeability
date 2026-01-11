@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Claude (Anthropic), Cameron Freer
+Authors: Cameron Freer
 
 This file documents the concrete plan to eliminate ALL axioms from the de Finetti formalization
 by using the Mean Ergodic Theorem + CE commutation approach.

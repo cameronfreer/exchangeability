@@ -1,9 +1,10 @@
 /-
 Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Cameron Freer, Claude (Anthropic)
+Authors: Cameron Freer
 -/
 import Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers
+import Mathlib.MeasureTheory.Function.ConditionalExpectation.PullOut
 
 /-!
 # Kallenberg Lemma 1.3: Drop-Info Property via Contraction

@@ -525,7 +525,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
     have hIndB_int : Integrable indB μ :=
       (integrable_const 1).indicator (hB_Xr.preimage (hX_meas r))
     have hProd_int : Integrable (indA * indB) μ := by
-      have hIndA_bdd : ∃ C, ∀ x, ‖indA x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
+      have hIndA_bdd : ∀ᵐ x ∂μ, ‖indA x‖ ≤ 1 := by filter_upwards with x; exact norm_indicator_one_le _ x
       exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
 
     -- Key: indB is mW'-measurable (X_r = W'(0) via consRV)
@@ -571,7 +571,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
     -- Step 6: Pull-out for mW: E[E[indA|mW] * indB | mW] =ᵐ E[indA|mW] * E[indB|mW]
     have hCondExpA_stronglyMeas : StronglyMeasurable[mW] (μ[indA | mW]) :=
       stronglyMeasurable_condExp
-    have hIndB_bdd : ∃ C, ∀ x, ‖indB x‖ ≤ C := ⟨1, fun x => norm_indicator_one_le _ x⟩
+    have hIndB_bdd : ∀ᵐ x ∂μ, ‖indB x‖ ≤ 1 := by filter_upwards with x; exact norm_indicator_one_le _ x
     have h_prod_condA_indB_int : Integrable (μ[indA | mW] * indB) μ := by
       convert integrable_condExp.bdd_mul hIndB_int.aestronglyMeasurable hIndB_bdd using 2
       exact mul_comm _ _

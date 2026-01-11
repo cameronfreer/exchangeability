@@ -18,7 +18,7 @@ import Exchangeability.Tail.ShiftInvariantMeasure
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.MeasureTheory.Integral.SetIntegral
+import Mathlib.MeasureTheory.Integral.Bochner.Set
 import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 
 /-!
@@ -2083,7 +2083,7 @@ private lemma blockAvg_shift_tendsto
       have : Tendsto (fun m : ℕ => (N + m : ℝ) / m) atTop (𝓝 1) := by
         -- For m ≠ 0: (N + m) / m = 1 + N / m
         have hN_div : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) :=
-          tendsto_const_div_atTop_nhds_zero_nat N
+          tendsto_const_div_atTop_nhds_zero_nat (N : ℝ)
         have h_sum : Tendsto (fun m : ℕ => (1 : ℝ) + (N : ℝ) / m) atTop (𝓝 1) := by
           convert hN_div.const_add 1; ring
         apply Filter.Tendsto.congr' _ h_sum
@@ -2096,7 +2096,7 @@ private lemma blockAvg_shift_tendsto
 
     have h_coeff2 : Tendsto (fun (m : ℕ) => ENNReal.ofReal ((N : ℝ) / m)) atTop (𝓝 0) := by
       have : Tendsto (fun m : ℕ => (N : ℝ) / m) atTop (𝓝 0) :=
-        tendsto_const_div_atTop_nhds_zero_nat N
+        tendsto_const_div_atTop_nhds_zero_nat (N : ℝ)
       convert ENNReal.tendsto_ofReal this
       simp [ENNReal.ofReal_zero]
 

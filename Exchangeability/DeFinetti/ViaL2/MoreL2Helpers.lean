@@ -790,7 +790,7 @@ lemma weighted_sums_converge_L1_add
           rw [h_paren]
           have h_tri := abs_add_le ((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω)
               ((1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω)
-          exact add_le_add_left h_tri _
+          gcongr
         _ = |-((1 / (m : ℝ)) * ∑ k : Fin m, (f + g) (X (k.val + 1) ω) - alpha_fg ω)| +
             |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha_f ω| +
             |(1 / (m : ℝ)) * ∑ k : Fin m, g (X (k.val + 1) ω) - alpha_g ω| := by ring
@@ -1003,7 +1003,7 @@ lemma weighted_sums_converge_L1_one_sub
                 (((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω) 0
                 (((1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω)) - alpha ω)
             simp only [sub_zero, zero_sub, abs_neg] at h_bound
-            exact add_le_add_left h_bound _
+            gcongr
           -- Convert right-associative to left-associative
           _ = |-(((1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω))) - alpha_sub ω)| +
               |(((1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ)) - alpha_1 ω)| +

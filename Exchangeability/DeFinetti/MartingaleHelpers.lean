@@ -82,8 +82,8 @@ lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
 
 @[measurability]
 lemma measurable_shiftSeq {d : ℕ} :
-    Measurable (shiftSeq (β:=β) d) := by
-  measurability
+    Measurable (shiftSeq (β:=β) d) :=
+  measurable_pi_lambda _ (fun n => measurable_pi_apply (n + d))
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
@@ -157,7 +157,7 @@ lemma strictMono_fin_cases
     | zero =>
       have : (Fin.succ i : Fin (n + 1)).1 < 0 := by
         set_option linter.unnecessarySimpa false in
-        simpa [Fin.lt_iff_val_lt_val] using hij
+        simpa [Fin.lt_def] using hij
       exact absurd this (Nat.not_lt.mpr (Nat.zero_le _))
     | succ j =>
       have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
