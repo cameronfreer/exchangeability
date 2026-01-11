@@ -83,12 +83,14 @@ lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
   iInf_le_of_le 0 (revFiltration_le X hX 0)
 
 /-- Tail σ-algebra is sub-σ-algebra of future filtration. -/
+@[nolint unusedArguments]
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
     tailSigma X ≤ futureFiltration X m :=
   iInf_le_of_le (m + 1) le_rfl
 
 /-- Indicators of tail-measurable sets are tail-measurable functions. -/
+@[nolint unusedArguments]
 lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (A : Set Ω) (hA : MeasurableSet[tailSigma X] A) :
     StronglyMeasurable[tailSigma X] (A.indicator (fun _ => (1 : ℝ))) :=
@@ -118,6 +120,7 @@ lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace 
 
 /-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
 Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/
+@[nolint unusedArguments]
 lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m k : ℕ) (hk : 1 ≤ k) {A : Set α} (hA : MeasurableSet A) :
     MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by

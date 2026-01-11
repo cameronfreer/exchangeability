@@ -90,6 +90,7 @@ contractability properties.
 
 This provides the distributional foundation for proving conditional independence in the
 finite approximation setting. -/
+@[nolint unusedArguments]
 lemma contractable_finite_cylinder_measure
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -333,6 +334,7 @@ lemma contractable_triple_pushforward
 /-! ### σ-Algebra Join Characterization -/
 
 /-- Join with a finite future equals the comap of the paired map `(Z_r, θ_future^k)`. -/
+@[nolint unusedArguments]
 lemma join_eq_comap_pair_finFuture
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (r m k : ℕ) :

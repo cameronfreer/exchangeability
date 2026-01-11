@@ -146,6 +146,7 @@ lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
   exact gRep_eq_of_constant_orbit (g0 := g0) hω
 
 
+@[nolint unusedArguments]
 lemma ae_shift_invariance_on_rep
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)

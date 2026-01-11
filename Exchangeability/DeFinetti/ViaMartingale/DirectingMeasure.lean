@@ -49,6 +49,7 @@ at ω to get a measure on Ω, then push forward along X₀.
 
 Concretely: `directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)`
 -/
+@[nolint unusedArguments]
 noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -121,6 +122,7 @@ end Directing
 
 /-- General form: All `X_n` have the same conditional law `ν`.
 This follows from `extreme_members_equal_on_tail`. -/
+@[nolint unusedArguments]
 lemma conditional_law_eq_of_X0_marginal
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]

@@ -94,6 +94,7 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-- Functions that are `AEStronglyMeasurable` with respect to the invariant σ-algebra are
 almost everywhere fixed by the shift. -/
+@[nolint unusedArguments]
 lemma shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {f : Ω[α] → ℝ}
@@ -382,6 +383,7 @@ lemma metProjectionShift_fixes_fixedSubspace
 
 This is the orthogonal projection onto the subspace of shift-invariant L² functions,
 implemented using mathlib's `condExpL2`. -/
+@[nolint unusedArguments]
 noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
   -- Apply mathlib's conditional expectation to get projection onto lpMeas

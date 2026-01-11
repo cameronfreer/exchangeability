@@ -1976,6 +1976,7 @@ private lemma l2_limit_from_cauchy
 
 The block average `blockAvg f X m n` only depends on `X m, X (m+1), ..., X (m+n-1)`,
 which are all measurable w.r.t. `tailFamily X m`. -/
+@[nolint unusedArguments]
 lemma blockAvg_measurable_tailFamily
     {Ω : Type*} [MeasurableSpace Ω]
     {f : ℝ → ℝ} (hf : Measurable f)
@@ -3018,6 +3019,7 @@ If `Xₙ → X` a.e. and each `Xₙ`, `X` is measurable, and `t` is a continuity
 This is the Dominated Convergence Theorem: indicator functions are bounded by 1,
 and converge pointwise a.e. The continuity set assumption ensures we avoid the
 boundary case where convergence can fail (when X ω = t and Xn oscillates around t). -/
+@[nolint unusedArguments]
 theorem tendsto_integral_indicator_Iic
   {Ω : Type*} [MeasurableSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]

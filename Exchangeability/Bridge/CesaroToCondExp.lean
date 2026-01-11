@@ -40,6 +40,7 @@ abbrev PathSpace (α : Type*) := ℕ → α
 -- Only use the Ω[α] notation in display contexts to avoid shadowing the variable Ω
 
 /-- Factor map that sends `ω : Ω` to the path `(n ↦ X n ω)` -/
+@[nolint unusedArguments]
 def pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] (X : ℕ → Ω → α) :
     Ω → PathSpace α :=
   fun ω n => X n ω

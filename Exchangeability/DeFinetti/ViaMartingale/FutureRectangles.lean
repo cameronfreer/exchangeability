@@ -41,6 +41,7 @@ for any `r`, base set `B` and measurable sets on the first `r` tail coordinates,
 the probabilities agree when comparing `(X m, θₘ X)` vs `(X k, θₘ X)`.
 
 This is the exact finite-dimensional marginal needed for the martingale step. -/
+@[nolint unusedArguments]
 lemma contractable_dist_eq_on_first_r_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
@@ -192,6 +193,7 @@ lemma agree_on_future_rectangles_of_contractable
 
 /-! ## Measure extension from future rectangles -/
 
+@[nolint unusedArguments]
 lemma measure_ext_of_future_rectangles
     {μ ν : Measure (α × (ℕ → α))} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (h : ∀ (r : ℕ) (B : Set α) (_hB : MeasurableSet B)

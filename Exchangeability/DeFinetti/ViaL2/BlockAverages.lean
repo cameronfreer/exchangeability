@@ -446,6 +446,7 @@ private lemma reindexed_weights_prob
     rw [h_w_def]
     exact h_nonneg _
 
+@[nolint unusedArguments]
 lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
@@ -895,6 +896,7 @@ Returns `Cf = 2σ²(1-ρ)` where `(mf, σ², ρ)` is the covariance structure of
 **Design rationale**: Computing the covariance structure once and passing it to
 both bound lemmas ensures they use the same constant, avoiding the need to prove
 equality of opaque existential witnesses. -/
+@[nolint unusedArguments]
 lemma get_covariance_constant
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -951,6 +953,7 @@ indices n and m is uniformly small. This gives us the key uniform bound we need.
 NOTE: This wrapper is not used in the main proof. The uniform version with disjointness
 hypothesis is used instead. This wrapper is left for potential future use.
 -/
+@[nolint unusedArguments]
 lemma l2_bound_two_windows
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
@@ -1007,6 +1010,7 @@ with the average of the last k terms (where k ≤ m) has the same L² contractab
 
 This is the key lemma needed to complete the Cauchy argument in weighted_sums_converge_L1.
 -/
+@[nolint unusedArguments]
 lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
@@ -1446,10 +1450,12 @@ def tailFamily := @Exchangeability.Tail.tailFamily
 def tailSigma := @Exchangeability.Tail.tailProcess
 
 -- Re-export the lemmas for backward compatibility
+@[nolint unusedArguments]
 lemma antitone_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) : Antitone (tailFamily X) :=
   Exchangeability.Tail.tailFamily_antitone X
 
+@[nolint unusedArguments]
 lemma tailSigma_le_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) (n : ℕ) : tailSigma X ≤ tailFamily X n :=
   Exchangeability.Tail.tailProcess_le_tailFamily X n
