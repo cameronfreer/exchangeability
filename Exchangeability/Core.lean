@@ -499,6 +499,8 @@ lemma lt_permBound_of_lt {i : ℕ} (hi : i < n) :
 lemma lt_permBound_fin {i : Fin n} :
     π i < permBound π n := lt_permBound_of_lt (π:=π) (n:=n) i.isLt
 
+/-- Equivalence between indices below n and indices in the image of a permutation.
+Used in the proof of exchangeability via permutation extension. -/
 def approxEquiv :
     {x : Fin (permBound π n) // (x : ℕ) < n} ≃
       {x : Fin (permBound π n) // ∃ j : Fin n, (x : ℕ) = π j} :=

@@ -52,6 +52,8 @@ mathlib's `stieltjesOfMeasurableRat` construction, which automatically:
 - Produces a valid probability measure via Carathéodory extension
 -/
 
+/-- CDF function constructed from the alpha conditional expectations.
+This is the right-continuous version obtained via Stieltjes extension. -/
 noncomputable def cdf_from_alpha
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

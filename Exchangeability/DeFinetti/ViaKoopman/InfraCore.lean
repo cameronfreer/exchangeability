@@ -112,6 +112,7 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 /-- Bi-infinite path space indexed by `ℤ`. -/
 abbrev Ωℤ (α : Type*) := ℤ → α
 
+/-- Notation for bi-infinite path space `ℤ → α`. -/
 notation "Ωℤ[" α "]" => Ωℤ α
 
 /-- The two-sided shift on bi-infinite sequences. -/
@@ -157,7 +158,7 @@ omit [MeasurableSpace α] in
 
 omit [MeasurableSpace α] in
 @[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
-    extendByZero (α := α) ω (Int.ofNat n) = ω n := by simp [extendByZero]
+    extendByZero (α := α) ω ↑n = ω n := by simp [extendByZero]
 
 omit [MeasurableSpace α] in
 lemma restrictNonneg_shiftℤ (ω : Ωℤ[α]) :
@@ -238,6 +239,7 @@ lemma shiftInvariantSigmaℤ_le :
 
 /-- Data describing the natural two-sided extension of a one-sided stationary process. -/
 structure NaturalExtensionData (μ : Measure (Ω[α])) where
+  /-- The two-sided extension measure on bi-infinite path space. -/
   μhat : Measure (Ωℤ[α])
   μhat_isProb : IsProbabilityMeasure μhat
   shift_preserving : MeasurePreserving (shiftℤ (α := α)) μhat μhat
