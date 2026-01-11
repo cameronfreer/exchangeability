@@ -116,7 +116,7 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   classical
   intro a b hlt
   -- Reduce to: a.val = 0, b.val = 1 (only possibility in Fin 2 with a < b)
-  have hval : a.val < b.val := Fin.lt_iff_val_lt_val.mp hlt
+  have hval : a.val < b.val := Fin.lt_def.mp hlt
   have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
   have hb_ne_zero : b.val ≠ 0 := by intro hb; simp [hb] at hval
   have hb_val : b.val = 1 :=

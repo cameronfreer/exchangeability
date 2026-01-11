@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Cameron Freer, Claude (Anthropic)
+Authors: Cameron Freer
 -/
 import Mathlib.Probability.Martingale.Upcrossing
 
@@ -30,7 +30,7 @@ completes by time N - lowerCrossingTime X (k-m), which is ≤ N for m = k.
 
 ## Key Technique
 
-The proof relies on `hitting_le_of_mem` to bound hitting times: if the target set
+The proof relies on `hittingBtwn_le_of_mem` to bound hitting times: if the target set
 is reached at time t with the search starting at s ≤ t ≤ horizon, then hitting ≤ t.
 
 ## References
@@ -63,11 +63,10 @@ private lemma lowerCrossingTime_lt_upperCrossingTime_succ' {Ω : Type*} {a b : �
   have h_eq : lowerCrossingTime a b f N n ω = upperCrossingTime a b f N (n+1) ω :=
     le_antisymm h_le hge
   have h_neq' : lowerCrossingTime a b f N n ω ≠ N := h_eq ▸ h_neq
-  have h_le_a : stoppedValue f (lowerCrossingTime a b f N n) ω ≤ a :=
-    stoppedValue_lowerCrossingTime h_neq'
-  have h_ge_b : b ≤ stoppedValue f (upperCrossingTime a b f N (n+1)) ω :=
-    stoppedValue_upperCrossingTime h_neq
-  simp only [stoppedValue, h_eq] at h_le_a h_ge_b
+  have h_le_a := stoppedValue_lowerCrossingTime (f := f) h_neq'
+  have h_ge_b := stoppedValue_upperCrossingTime (f := f) h_neq
+  simp only [stoppedValue] at h_le_a h_ge_b
+  rw [h_eq] at h_le_a
   linarith
 
 /-- Strong version tracking the bijection explicitly.
@@ -162,7 +161,7 @@ private lemma timeReversal_crossing_bound_strong
     -- lowerCrossingTime X j ≥ σ (hitting starts from σ)
     have h_lct_ge : lowerCrossingTime a b X N j ω ≥ σ := by
       simp only [lowerCrossingTime, hσ_def]
-      exact le_hitting (Nat.le_of_lt hσ_lt_N) ω
+      exact le_hittingBtwn (Nat.le_of_lt hσ_lt_N) ω
 
     -- From IH: upperCrossingTime Y m' ≤ N - lowerCrossingTime X j ≤ N - σ
     have h_uct_le_Nσ : upperCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
@@ -170,13 +169,13 @@ private lemma timeReversal_crossing_bound_strong
           ≤ N - lowerCrossingTime a b X N j ω := ih'
         _ ≤ N - σ := Nat.sub_le_sub_left h_lct_ge N
 
-    -- lowerCrossingTime Y m' ≤ N - σ (by hitting_le_of_mem)
+    -- lowerCrossingTime Y m' ≤ N - σ (by hittingBtwn_le_of_mem)
     have h_Nσ_le_N1 : N - σ ≤ N + 1 := Nat.le_succ_of_le (Nat.sub_le N σ)
     have hY_Nσ_in_Iic : Y (N - σ) ω ∈ Set.Iic (-b) := hY_Nσ_le_negb
 
     have h_lctY_le_Nσ : lowerCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
       simp only [lowerCrossingTime]
-      exact hitting_le_of_mem h_uct_le_Nσ h_Nσ_le_N1 hY_Nσ_in_Iic
+      exact hittingBtwn_le_of_mem h_uct_le_Nσ h_Nσ_le_N1 hY_Nσ_in_Iic
 
     -- N - σ < N - τ and lowerCrossingTime Y m' < N - τ
     have hNσ_lt_Nτ : N - σ < N - τ := Nat.sub_lt_sub_left hτ_lt_N hτ_lt_σ
@@ -188,9 +187,9 @@ private lemma timeReversal_crossing_bound_strong
 
     -- Final: upperCrossingTime Y (m'+1) ≤ N - τ
     calc upperCrossingTime (-b) (-a) Y (N+1) (m'+1) ω
-        = hitting Y (Set.Ici (-a)) (lowerCrossingTime (-b) (-a) Y (N+1) m' ω) (N+1) ω := by
+        = hittingBtwn Y (Set.Ici (-a)) (lowerCrossingTime (-b) (-a) Y (N+1) m' ω) (N+1) ω := by
           simp only [upperCrossingTime, lowerCrossingTime]; rfl
-      _ ≤ N - τ := hitting_le_of_mem h_lctY_le_Nτ h_Nτ_le_N1 hY_Nτ_in_Ici
+      _ ≤ N - τ := hittingBtwn_le_of_mem h_lctY_le_Nτ h_Nτ_le_N1 hY_Nτ_in_Ici
 
 /-- **Time-reversal crossing bound.**
 
@@ -200,7 +199,7 @@ completing at time ≤ N.
 
 The proof uses the bijection (τ, σ) ↦ (N-σ, N-τ) which maps X's crossings to Y's
 crossings in reverse order. The greedy upcrossing algorithm finds these crossings
-with completion times bounded by `hitting_le_of_mem`. -/
+with completion times bounded by `hittingBtwn_le_of_mem`. -/
 lemma timeReversal_crossing_bound
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k : ℕ) (ω : Ω)
     (h_k : upperCrossingTime a b X N k ω < N)

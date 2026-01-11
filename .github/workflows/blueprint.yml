@@ -1,16 +1,4 @@
-# Custom workflow for blueprint + homepage deployment.
-# Blueprint is pre-built locally and committed to repo.
-#
-# TODO: When upgrading to Lean 4.26.0+, switch to docgen-action:
-#   uses: leanprover-community/docgen-action@main
-#   with:
-#     blueprint: true
-#     homepage: home_page
-#
-# The docgen-action `:docs` facet doesn't work with Lean 4.24.0 but works
-# with 4.26.0 (see brownian-motion project for working example).
-
-name: Deploy blueprint
+name: Deploy documentation
 
 on:
   push:
@@ -33,9 +21,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for doc generation
 
       - name: Build Lean project
-        uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709
+        uses: leanprover/lean-action@main
         with:
           build: true
           lint: false
@@ -44,39 +34,8 @@ jobs:
         run: |
           ~/.elan/bin/lake exe checkdecls blueprint/lean_decls
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Build and deploy documentation
+        uses: leanprover-community/docgen-action@main
         with:
-          ruby-version: '3.1'  # nokogiri 1.13.6 requires Ruby < 3.2
-          bundler-cache: true
-          working-directory: home_page
-
-      - name: Assemble docs
-        run: |
-          mkdir -p docs
-          cp -r blueprint/web docs/blueprint
-          cp blueprint/print/print.pdf docs/blueprint.pdf
-          cd home_page
-          bundle exec jekyll build --baseurl "/exchangeability"
-          cd ..
-          cp -r home_page/_site/* docs/
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-
-  deploy:
-    needs: build
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          blueprint: true
+          homepage: home_page

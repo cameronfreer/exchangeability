@@ -57,7 +57,7 @@ lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
           · exact mul_le_mul_of_nonneg_left hPg (abs_nonneg _)
       _ = |P_f - P_g| + |f 0 - g 0| := by ring
       _ ≤ (∑ i : Fin n, |f i.succ - g i.succ|) + |f 0 - g 0| := by
-          apply add_le_add_right
+          gcongr
           exact ih (fun i => f i.succ) (fun i => g i.succ)
                    (fun i => hf i.succ) (fun i => hg i.succ)
       _ = |f 0 - g 0| + ∑ i : Fin n, |f i.succ - g i.succ| := by ring

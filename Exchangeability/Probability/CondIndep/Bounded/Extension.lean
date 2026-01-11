@@ -98,7 +98,7 @@ lemma condIndep_simpleFunc_left
         have h_eq : (φ ∘ Y) * ((sψ n) ∘ Z) = ((sψ n) ∘ Z) * (φ ∘ Y) := by
           ext ω; exact mul_comm _ _
         rw [h_eq]
-        refine Integrable.bdd_mul' (c := Mψ) hφ_int ((sψ n).measurable.comp hZ).aestronglyMeasurable ?_
+        refine Integrable.bdd_mul (c := Mψ) hφ_int ((sψ n).measurable.comp hZ).aestronglyMeasurable ?_
         filter_upwards [hψ_bdd] with ω hω
         calc ‖((sψ n) ∘ Z) ω‖
             = |sψ n (Z ω)| := by simp [Real.norm_eq_abs]
@@ -244,7 +244,7 @@ lemma condIndep_simpleFunc_left
             have h_diff_int' : Integrable (μ[((sψ n) ∘ Z) | mW] - μ[(ψ ∘ Z) | mW]) μ :=
               integrable_condExp.sub integrable_condExp
             have h_prod : Integrable (fun ω => μ[(φ ∘ Y) | mW] ω * (μ[((sψ n) ∘ Z) | mW] ω - μ[(ψ ∘ Z) | mW] ω)) μ :=
-              h_diff_int'.bdd_mul' h_bdd_asm h_bdd_bound
+              h_diff_int'.bdd_mul h_bdd_asm h_bdd_bound
             exact h_prod.abs
           have h_rhs_int : Integrable (fun ω =>
               Mφ * |μ[((sψ n) ∘ Z) | mW] ω - μ[(ψ ∘ Z) | mW] ω|) μ := by
@@ -265,10 +265,10 @@ lemma condIndep_simpleFunc_left
 
       have h_int_prod : ∀ n, Integrable (μ[(φ ∘ Y) | mW] * μ[((sψ n) ∘ Z) | mW]) μ := by
         intro n
-        -- bdd_mul' (c := Mφ) hg hf hf_bound gives Integrable (hf * hg)
+        -- bdd_mul (c := Mφ) hg hf hf_bound gives Integrable (hf * hg)
         -- We want Integrable (μ[φY|mW] * μ[sψnZ|mW])
         -- So hf = μ[φY|mW] (bounded), hg = μ[sψnZ|mW] (integrable)
-        refine Integrable.bdd_mul' (c := Mφ)
+        refine Integrable.bdd_mul (c := Mφ)
           (integrable_condExp (m := mW) (f := (sψ n) ∘ Z))
           (integrable_condExp (m := mW) (f := φ ∘ Y)).aestronglyMeasurable ?_
         filter_upwards [hφY_bdd] with ω hω
@@ -276,7 +276,7 @@ lemma condIndep_simpleFunc_left
         exact hω
 
       have h_int_prod_lim : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
-        refine Integrable.bdd_mul' (c := Mφ)
+        refine Integrable.bdd_mul (c := Mφ)
           (integrable_condExp (m := mW) (f := ψ ∘ Z))
           (integrable_condExp (m := mW) (f := φ ∘ Y)).aestronglyMeasurable ?_
         filter_upwards [hφY_bdd] with ω hω
@@ -355,12 +355,12 @@ lemma condIndep_simpleFunc_left
       filter_upwards [hψ_bdd] with ω hω
       simp only [Function.comp_apply, Set.mem_Icc]
       exact abs_le.mp hω
-    -- bdd_mul' (c := Mψ) hg hf bound gives Integrable (hf * hg)
+    -- bdd_mul (c := Mψ) hg hf bound gives Integrable (hf * hg)
     -- We want Integrable ((φ ∘ Y) * (ψ ∘ Z))
     -- So hf = φ ∘ Y, hg = ψ ∘ Z, but φ is simple (integrable), ψ is bounded
     -- Actually: ψ is bounded, φ is integrable, so use φ as hg, ψ as hf
     have h_prod : Integrable ((ψ ∘ Z) * (φ ∘ Y)) μ := by
-      refine Integrable.bdd_mul' (c := Mψ) hφ_int (hψ_meas.comp hZ).aestronglyMeasurable ?_
+      refine Integrable.bdd_mul (c := Mψ) hφ_int (hψ_meas.comp hZ).aestronglyMeasurable ?_
       filter_upwards [hψ_bdd] with ω hω
       rw [Real.norm_eq_abs]
       exact hω
@@ -384,11 +384,11 @@ lemma condIndep_simpleFunc_left
       simpa [Real.norm_eq_abs] using
         ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mψ, hMψ_nn⟩) h_bdd
     have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
-      -- bdd_mul' (c := Mψ) hg hf_asm hf_bound gives Integrable (hf * hg)
+      -- bdd_mul (c := Mψ) hg hf_asm hf_bound gives Integrable (hf * hg)
       -- We want Integrable (μ[φY|mW] * μ[ψZ|mW])
       -- So hf = μ[φY|mW], hg = μ[ψZ|mW], but ψZ is bounded so use it as hf
       have h_prod : Integrable (μ[(ψ ∘ Z) | mW] * μ[(φ ∘ Y) | mW]) μ := by
-        refine h1.bdd_mul' (c := Mψ) h2.aestronglyMeasurable ?_
+        refine h1.bdd_mul (c := Mψ) h2.aestronglyMeasurable ?_
         filter_upwards [hψZ_ce_bdd] with ω hω
         rw [Real.norm_eq_abs]
         exact hω
@@ -465,7 +465,7 @@ lemma condIndep_bddMeas_extend_left
         exact abs_le.mp hω
       have hprod_int : Integrable (((sφ n) ∘ Y) * (ψ ∘ Z)) μ := by
         -- sφ n is bounded (simple function), ψ ∘ Z is integrable
-        refine Integrable.bdd_mul' (c := Mφ) hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
+        refine Integrable.bdd_mul (c := Mφ) hψ_int ((sφ n).measurable.comp hY).aestronglyMeasurable ?_
         -- Need bound on sφ n ∘ Y: use that |sφ n| ≤ |φ| from h_sφ_bdd
         filter_upwards [hφ_bdd] with ω hω
         calc ‖((sφ n) ∘ Y) ω‖
@@ -629,7 +629,7 @@ lemma condIndep_bddMeas_extend_left
           have h_lhs_int : Integrable (fun ω =>
               |(μ[((sφ n) ∘ Y) | mW] ω - μ[(φ ∘ Y) | mW] ω) * μ[(ψ ∘ Z) | mW] ω|) μ := by
             -- Product of difference (integrable) and bounded factor (CE[ψ])
-            -- Use Integrable.bdd_mul': (bounded * integrable), then swap order
+            -- Use Integrable.bdd_mul: (bounded * integrable), then swap order
             have h_diff_int' : Integrable (μ[((sφ n) ∘ Y) | mW] - μ[(φ ∘ Y) | mW]) μ :=
               integrable_condExp.sub integrable_condExp
             have h_bdd_asm := (integrable_condExp (μ := μ) (m := mW) (f := ψ ∘ Z)).aestronglyMeasurable
@@ -638,7 +638,7 @@ lemma condIndep_bddMeas_extend_left
               rw [Real.norm_eq_abs]
               exact hω
             have h_prod : Integrable (fun ω => μ[(ψ ∘ Z) | mW] ω * (μ[((sφ n) ∘ Y) | mW] ω - μ[(φ ∘ Y) | mW] ω)) μ :=
-              h_diff_int'.bdd_mul' h_bdd_asm h_bdd_bound
+              h_diff_int'.bdd_mul h_bdd_asm h_bdd_bound
             -- Swap order using mul_comm, then take abs
             convert h_prod.abs using 1
             ext ω
@@ -675,10 +675,10 @@ lemma condIndep_bddMeas_extend_left
       -- Set integral converges by bounding: |∫_C f| ≤ ∫_C |f| ≤ ∫ |f|
       have h_int_prod : ∀ n, Integrable (μ[((sφ n) ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
         intro n
-        -- Use bdd_mul': f * g with f bounded and g integrable
+        -- Use bdd_mul: f * g with f bounded and g integrable
         -- Here f = μ[(ψ ∘ Z)|mW] is bounded by Mψ, g = μ[(sφn ∘ Y)|mW] is integrable
         have h_prod : Integrable (μ[(ψ ∘ Z) | mW] * μ[((sφ n) ∘ Y) | mW]) μ := by
-          refine Integrable.bdd_mul' (c := Mψ)
+          refine Integrable.bdd_mul (c := Mψ)
             (integrable_condExp (m := mW) (f := (sφ n) ∘ Y))
             (integrable_condExp (m := mW) (f := ψ ∘ Z)).aestronglyMeasurable ?_
           filter_upwards [hψZ_bdd] with ω hω
@@ -688,7 +688,7 @@ lemma condIndep_bddMeas_extend_left
         simpa only [mul_comm] using h_prod
       have h_int_limit : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
         have h_prod : Integrable (μ[(ψ ∘ Z) | mW] * μ[(φ ∘ Y) | mW]) μ := by
-          refine Integrable.bdd_mul' (c := Mψ)
+          refine Integrable.bdd_mul (c := Mψ)
             (integrable_condExp (m := mW) (f := φ ∘ Y))
             (integrable_condExp (m := mW) (f := ψ ∘ Z)).aestronglyMeasurable ?_
           filter_upwards [hψZ_bdd] with ω hω
@@ -758,8 +758,8 @@ lemma condIndep_bddMeas_extend_left
 
   have hf_int : Integrable ((φ ∘ Y) * (ψ ∘ Z)) μ := by
     -- Product of bounded integrable functions: φ ∘ Y bounded a.e., ψ ∘ Z integrable
-    -- Use Integrable.bdd_mul': requires hg integrable, hf ae strongly measurable, hf bounded a.e.
-    refine Integrable.bdd_mul' (c := Mφ) hψZ_int (hφ_meas.comp hY).aestronglyMeasurable ?_
+    -- Use Integrable.bdd_mul: requires hg integrable, hf ae strongly measurable, hf bounded a.e.
+    refine Integrable.bdd_mul (c := Mφ) hψZ_int (hφ_meas.comp hY).aestronglyMeasurable ?_
     -- Need: ∀ᵐ ω ∂μ, ‖(φ ∘ Y) ω‖ ≤ Mφ
     filter_upwards [hφ_bdd] with ω hω
     simp only [Function.comp_apply]
@@ -777,7 +777,7 @@ lemma condIndep_bddMeas_extend_left
     have h2 : Integrable (μ[(ψ ∘ Z) | mW]) μ := integrable_condExp
     -- Product of integrable functions is integrable on whole space (finite measure)
     have hprod : Integrable (μ[(φ ∘ Y) | mW] * μ[(ψ ∘ Z) | mW]) μ := by
-      -- Use Integrable.bdd_mul': product of integrable and bounded ae functions is integrable
+      -- Use Integrable.bdd_mul: product of integrable and bounded ae functions is integrable
       -- First, establish that μ[φ ∘ Y|mW] is bounded ae by Mφ
       have hMφ_nn : 0 ≤ Mφ := by
         rcases hφ_bdd.exists with ⟨ω, hω⟩
@@ -788,9 +788,9 @@ lemma condIndep_bddMeas_extend_left
           simpa using hω
         simpa [Real.norm_eq_abs] using
           ae_bdd_condExp_of_ae_bdd (m := mW) (R := ⟨Mφ, hMφ_nn⟩) h_bdd
-      -- Apply Integrable.bdd_mul': g integrable, f ae strongly measurable and bounded
+      -- Apply Integrable.bdd_mul: g integrable, f ae strongly measurable and bounded
       -- Use h1.aestronglyMeasurable since h1 : Integrable (μ[(φ ∘ Y) | mW]) μ
-      refine h2.bdd_mul' (c := Mφ) h1.aestronglyMeasurable ?_
+      refine h2.bdd_mul (c := Mφ) h1.aestronglyMeasurable ?_
       filter_upwards [hφY_ce_bdd] with ω hω
       rw [Real.norm_eq_abs]
       exact hω

@@ -298,14 +298,14 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             refine Integrable.comp_measurable ?_ hZ
             exact SimpleFunc.integrable_of_isFiniteMeasure ψ2
           have h1_int : Integrable (((A.indicator (fun _ => c)) ∘ Y) * (ψ1 ∘ Z)) μ := by
-            refine Integrable.bdd_mul' (c := |c|) ?_ ?_ ?_
+            refine Integrable.bdd_mul (c := |c|) ?_ ?_ ?_
             · exact hψ1_int
             · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
             · filter_upwards with ω
               simp only [Function.comp_apply, Set.indicator]
               by_cases h : Y ω ∈ A <;> simp [h]
           have h2_int : Integrable (((A.indicator (fun _ => c)) ∘ Y) * (ψ2 ∘ Z)) μ := by
-            refine Integrable.bdd_mul' (c := |c|) ?_ ?_ ?_
+            refine Integrable.bdd_mul (c := |c|) ?_ ?_ ?_
             · exact hψ2_int
             · exact ((measurable_const.indicator hA).comp hY).aestronglyMeasurable
             · filter_upwards with ω
@@ -370,16 +370,14 @@ lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
           have h1_int : Integrable ((φ1 ∘ Y) * (ψ ∘ Z)) μ := by
             apply Integrable.bdd_mul hψ_int
             · exact (φ1.measurable.comp hY).aestronglyMeasurable
-            · use (φ1.range.sup (fun x => ‖x‖₊)).toReal
-              intro x
+            · filter_upwards with x
               simp only [Function.comp_apply]
               rw [← coe_nnnorm, NNReal.coe_le_coe]
               exact Finset.le_sup (SimpleFunc.mem_range_self φ1 (Y x))
           have h2_int : Integrable ((φ2 ∘ Y) * (ψ ∘ Z)) μ := by
             apply Integrable.bdd_mul hψ_int
             · exact (φ2.measurable.comp hY).aestronglyMeasurable
-            · use (φ2.range.sup (fun x => ‖x‖₊)).toReal
-              intro x
+            · filter_upwards with x
               simp only [Function.comp_apply]
               rw [← coe_nnnorm, NNReal.coe_le_coe]
               exact Finset.le_sup (SimpleFunc.mem_range_self φ2 (Y x))

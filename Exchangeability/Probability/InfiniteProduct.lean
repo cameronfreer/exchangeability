@@ -282,7 +282,7 @@ lemma perm_eq {σ : Equiv.Perm ℕ} :
   intro s t ht
 
   -- Need to show: (infinitePi ν).map (fun f => f ∘ σ) (Set.pi s t) = ∏ i ∈ s, ν (t i)
-  rw [Measure.map_apply _ (.pi s.countable_toSet (by simpa using ht))]
+  rw [Measure.map_apply _ (.pi s.countable_toSet (fun _ _ => ht _))]
   swap
   · measurability
 
@@ -311,7 +311,7 @@ lemma perm_eq {σ : Equiv.Perm ℕ} :
     simp only [Finset.mem_map, Equiv.toEmbedding_apply] at hj
     obtain ⟨i, hi, rfl⟩ := hj
     rw [show t (σ.symm (σ i)) = t i by rw [σ.symm_apply_apply]]
-    exact ht i hi
+    exact ht i
 
 end iidProduct
 
