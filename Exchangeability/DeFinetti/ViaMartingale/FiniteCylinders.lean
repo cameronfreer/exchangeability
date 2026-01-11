@@ -226,10 +226,10 @@ lemma contractable_finite_cylinder_measure
   -- Apply measure equality (with inline measurability from fun_prop)
   calc μ ((fun ω (i : Fin (r + 1 + k)) => X (idx i) ω) ⁻¹' S)
       = Measure.map (fun ω i => X (idx i) ω) μ S := by
-        rw [Measure.map_apply (by fun_prop (disch := measurability)) hS_meas]
+        rw [Measure.map_apply (by fun_prop) hS_meas]
     _ = Measure.map (fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) μ S := by rw [contract]
     _ = μ ((fun ω (i : Fin (r + 1 + k)) => X (↑i) ω) ⁻¹' S) := by
-        rw [Measure.map_apply (by fun_prop (disch := measurability)) hS_meas]
+        rw [Measure.map_apply (by fun_prop) hS_meas]
 
 /-! ### Triple Pushforward -/
 

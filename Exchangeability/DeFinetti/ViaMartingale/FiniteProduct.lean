@@ -241,7 +241,7 @@ lemma finite_product_formula_id
           = μ ((fun ω => fun i : Fin m => X i ω) ⁻¹' (Set.univ.pi C)) := by
               -- Standard: (map f μ) S = μ (f⁻¹ S) for measurable f and S
               refine Measure.map_apply ?_ ?_
-              · fun_prop (disch := measurability)
+              · fun_prop
               · -- Set.univ.pi C is measurable in product σ-algebra
                 classical
                 apply MeasurableSet.univ_pi
@@ -339,7 +339,7 @@ lemma finite_product_formula_id
     haveI : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
       constructor
       have hme : Measurable (fun ω => fun i : Fin m => X i ω) := by
-        fun_prop (disch := measurability)
+        fun_prop
       rw [Measure.map_apply hme MeasurableSet.univ]
       have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := Set.preimage_univ
       rw [this]
