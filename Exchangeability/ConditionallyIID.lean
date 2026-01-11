@@ -91,6 +91,7 @@ then the product measure `∏ᵢ μ i` also has total mass 1.
 **Proof:** The measure of the whole space `∏ᵢ αᵢ` equals the product of the measures
 of the marginal spaces, which is `∏ᵢ 1 = 1`.
 -/
+@[nolint unusedArguments]
 instance pi_isProbabilityMeasure {ι : Type*} [Fintype ι] {α : ι → Type*}
     [∀ i, MeasurableSpace (α i)] (μ : ∀ i, Measure (α i))
     [∀ i, IsProbabilityMeasure (μ i)] [∀ i, SigmaFinite (μ i)] :

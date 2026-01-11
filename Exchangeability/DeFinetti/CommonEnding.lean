@@ -342,6 +342,7 @@ private lemma product_measure_on_rectangle {Ω α : Type*} [MeasurableSpace α]
     ext x; simp [Set.pi]
   rw [set_eq, Measure.pi_pi]
 
+@[nolint unusedArguments]
 lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
@@ -400,6 +401,7 @@ of the product measure. This is the other side of the ConditionallyIID equation.
 Note: We use lintegral (∫⁻) for measure-valued integrals since measures are ENNReal-valued.
 
 This is a direct application of `Measure.bind_apply` from mathlib's Giry monad. -/
+@[nolint unusedArguments]
 lemma bind_pi_apply {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s))
@@ -672,6 +674,7 @@ proof to conditional i.i.d.
 
 This encapsulates the "completed as before" step.
 -/
+@[nolint unusedArguments]
 theorem complete_from_directing_measure
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))

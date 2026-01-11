@@ -149,6 +149,7 @@ private lemma conditionallyIID_of_path_ciid
     rw [h_path_def] at h_marginal
     rw [← h_lhs, h_marginal, h_rhs]
 
+@[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
@@ -193,6 +194,7 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
 3. Apply Koopman ergodic machinery
 4. Transfer from path space to original space
 -/
+@[nolint unusedArguments]
 theorem deFinetti_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))

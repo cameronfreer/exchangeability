@@ -898,6 +898,7 @@ lemma integral_bounded_measurable_tailAEStronglyMeasurable
 
 Base case: For Iic indicators, set integral equality follows from
 `directing_measure_integral_Iic_ae_eq_alphaIicCE` + `setIntegral_condExp`. -/
+@[nolint unusedArguments]
 lemma setIntegral_directing_measure_indicator_Iic_eq
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

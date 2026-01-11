@@ -182,6 +182,7 @@ lemma birkhoffAvgCLM_apply (U : E →L[ℝ] E) (n : ℕ) (v : E) :
 
 /-- For Lp spaces: iterating Koopman and then coercing equals
     coercing and then composing with T^[k] (almost everywhere). -/
+@[nolint unusedArguments]
 lemma powCLM_koopman_coe_ae {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT_meas : Measurable T) (hT_mp : MeasurePreserving T μ μ)

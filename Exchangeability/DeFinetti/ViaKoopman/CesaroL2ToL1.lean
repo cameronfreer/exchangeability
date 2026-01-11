@@ -65,6 +65,7 @@ the classical `condExp` a.e., since:
 **Lean challenge:** Requires navigating Lp quotient types and finding the correct API to
 convert between `Lp ℝ 2 μ` and `MemLp _ 2 μ` representations. The `Lp.memℒp` constant
 doesn't exist in the current mathlib API. -/
+@[nolint unusedArguments]
 lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
     (condexpL2 (μ := μ) f : Ω[α] → ℝ) =ᵐ[μ] μ[f | shiftInvariantSigma] := by
   -- Get MemLp from Lp using Lp.memLp
@@ -88,12 +89,14 @@ lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
 /-- Pull a.e. equality back along a measure-preserving map.
     Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
     Proof: Use QuasiMeasurePreserving.ae_eq_comp from mathlib. -/
+@[nolint unusedArguments]
 lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
     (hT : MeasurePreserving shift μ μ) (hfg : f =ᵐ[μ] g) :
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
   hT.quasiMeasurePreserving.ae_eq_comp hfg
 
 /-- Iterate of a measure-preserving map is measure-preserving. -/
+@[nolint unusedArguments]
 lemma MeasurePreserving.iterate' (hT : MeasurePreserving shift μ μ) (k : ℕ) :
     MeasurePreserving (shift^[k]) μ μ := by
   induction k with
@@ -101,6 +104,7 @@ lemma MeasurePreserving.iterate' (hT : MeasurePreserving shift μ μ) (k : ℕ) 
   | succ k ih => simp only [Function.iterate_succ']; exact hT.comp ih
 
 /-- General evaluation formula for shift iteration. -/
+@[nolint unusedArguments]
 lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) n = ω (k + n) := by
   induction k generalizing n with
@@ -126,6 +130,7 @@ Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -
     implies L¹ convergence of chosen representatives.  This version is robust to
     older mathlib snapshots (no `Subtype.aestronglyMeasurable`, no `tendsto_iff_*`,
     and `snorm` is fully qualified). -/
+@[nolint unusedArguments]
 lemma optionB_Step3b_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
@@ -268,6 +273,7 @@ lemma optionB_Step3b_L2_to_L1
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
 For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
+@[nolint unusedArguments]
 lemma optionB_Step4b_AB_close
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (hg_meas : Measurable g) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
@@ -429,6 +435,7 @@ lemma optionB_Step4b_AB_close
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
 Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
+@[nolint unusedArguments]
 lemma optionB_Step4c_triangle
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)

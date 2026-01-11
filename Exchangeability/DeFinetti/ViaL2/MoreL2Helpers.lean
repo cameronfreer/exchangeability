@@ -370,6 +370,7 @@ This is used to prove the linearity lemmas below.
 This follows from the triangle inequality: ‖g - h‖₁ ≤ ‖g - f_n‖₁ + ‖f_n - h‖₁,
 and both terms go to 0.
 -/
+@[nolint unusedArguments]
 lemma ae_eq_of_tendsto_L1 {μ : Measure Ω} [IsProbabilityMeasure μ]
     {f : ℕ → Ω → ℝ} {g h : Ω → ℝ}
     (_hf_meas : ∀ n, Measurable (f n))
@@ -1538,6 +1539,7 @@ def mapsWithCollision (m N : ℕ) (ij : Fin m × Fin m) : Finset (Fin m → Fin 
 **Proof:** A non-injective map has some pair (i, j) with i ≠ j and φ(i) = φ(j).
 By union bound over the m² pairs, and for each pair there are at most N^(m-1) maps.
 -/
+@[nolint unusedArguments]
 lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
     Fintype.card {φ : Fin m → Fin N // ¬Function.Injective φ} ≤ m * m * N^(m - 1) := by
   classical
@@ -1759,6 +1761,7 @@ This is the key insight that makes the block-separated approach work:
 every selection is StrictMono, so contractability applies to EVERY term
 (no exchangeability required).
 -/
+@[nolint unusedArguments]
 lemma block_index_strictMono {m N : ℕ} (_hN : 0 < N) (φ : Fin m → Fin N) :
     StrictMono (fun i : Fin m => i.val * N + (φ i).val) := by
   intro i j hij

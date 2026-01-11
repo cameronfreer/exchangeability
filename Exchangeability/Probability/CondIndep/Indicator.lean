@@ -197,6 +197,7 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
 
 For φ = c • 1_A and ψ = d • 1_B, the factorization follows by extracting scalars
 and applying the CondIndep definition. -/
+@[nolint unusedArguments]
 lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)

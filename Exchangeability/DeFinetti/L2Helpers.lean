@@ -78,6 +78,7 @@ For a contractable sequence, the law of each coordinate agrees with the law of `
 This follows from contractability by taking the singleton subsequence `{i}`.
 
 This is used to establish uniform covariance structure across all pairs of coordinates. -/
+@[nolint unusedArguments]
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
     Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
   classical
@@ -139,6 +140,7 @@ subsequence `{i, j}`.
 Combined with `contractable_map_single`, this establishes that covariances are uniform:
 Cov(X_i, X_j) depends only on whether i = j, giving the covariance structure needed
 for the L² contractability bound. -/
+@[nolint unusedArguments]
 lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
@@ -185,6 +187,7 @@ set_option linter.unusedSectionVars false in
 If X is a contractable sequence and f is measurable, then `f ∘ X` is also contractable.
 This allows transferring contractability from one sequence to another via measurable
 transformations, which is useful for studying bounded functions of contractable sequences. -/
+@[nolint unusedArguments]
 lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
     Contractable μ (fun n ω => f (X n ω)) := by
@@ -260,6 +263,7 @@ lemma dist_toLp_eq_eLpNorm_sub
 
 If `x < ofReal ε` in ENNReal (with x finite), then `toReal x < ε` in ℝ.
 Bridges extended and real arithmetic in L^p norm bounds. -/
+@[nolint unusedArguments]
 lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
     (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
@@ -844,6 +848,7 @@ private lemma prob_dist_diff_abs_sum_le_two {n : ℕ}
     _ ≤ 2 * 1 := mul_le_mul_of_nonneg_left hle_one (by norm_num)
     _ = 2 := by norm_num
 
+@[nolint unusedArguments]
 theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {n : ℕ} (ξ : Fin n → Ω → ℝ)

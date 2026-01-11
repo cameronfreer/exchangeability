@@ -59,6 +59,7 @@ existential `alphaIic` almost everywhere.
 - Monotone in `t` almost everywhere (from positivity of conditional expectation)
 - Endpoint limits follow from L¹ contraction and dominated convergence
 -/
+@[nolint unusedArguments]
 noncomputable def alphaIicCE
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

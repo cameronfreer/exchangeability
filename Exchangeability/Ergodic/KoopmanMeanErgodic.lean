@@ -116,6 +116,7 @@ consists of functions constant along orbits (the invariant σ-algebra).
 is the tail σ-algebra, and the Mean Ergodic Theorem shows convergence to conditional
 expectation onto this σ-algebra.
 -/
+@[nolint unusedArguments]
 def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
   (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap

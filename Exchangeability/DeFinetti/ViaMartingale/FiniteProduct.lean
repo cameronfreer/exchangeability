@@ -125,6 +125,7 @@ lemma lintegral_prod_prob_eq_ofReal_integral
 /-! #### Core lemmas -/
 
 /-- On a finite index type, product measures evaluate on rectangles as a finite product. -/
+@[nolint unusedArguments]
 lemma measure_pi_univ_pi
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
     {m : ℕ} (μi : Fin m → Measure α) [∀ i, SigmaFinite (μi i)]
@@ -134,6 +135,7 @@ lemma measure_pi_univ_pi
   Measure.pi_pi μi C
 
 /-- Bind computation on rectangles for finite product measures. -/
+@[nolint unusedArguments]
 lemma bind_apply_univ_pi
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -173,6 +175,7 @@ The general case for strictly monotone subsequences reduces to this via contract
 **Proof strategy:**
 1. Show equality on rectangles using factorization machinery
 2. Extend from rectangles to full σ-algebra via π-λ theorem -/
+@[nolint unusedArguments]
 lemma finite_product_formula_id
     [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]

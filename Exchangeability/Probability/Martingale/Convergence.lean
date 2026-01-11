@@ -73,6 +73,7 @@ converges a.s. to E[f | ⨆ₙ 𝔽ₙ].
 
 **Implementation:** Direct wrapper around mathlib's `MeasureTheory.tendsto_ae_condExp`
 from `Mathlib.Probability.Martingale.Convergence`. -/
+@[nolint unusedArguments]
 theorem condExp_tendsto_iSup
     [IsProbabilityMeasure μ]
     {𝔽 : ℕ → MeasurableSpace Ω}

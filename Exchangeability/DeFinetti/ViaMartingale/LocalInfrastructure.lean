@@ -155,6 +155,7 @@ be contributed to mathlib as `condDistrib_unique_of_pair_law_and_factor`.
 This leverages the uniqueness of regular conditional distributions on standard Borel
 spaces: if two probability kernels disintegrate the same joint measure, they agree a.e.
 -/
+@[nolint unusedArguments]
 lemma condDistrib_factor_indicator_agree
     {Ω α β : Type*}
     [MeasurableSpace Ω] [StandardBorelSpace Ω]

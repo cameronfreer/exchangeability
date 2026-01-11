@@ -60,6 +60,7 @@ applying both sides to the rectangle `∏ᵢ Bᵢ` and using:
 - RHS: `∫⁻ (Measure.pi ν)(rectangle) ∂μ = ∫⁻ ∏ᵢ ν ω (Bᵢ) ∂μ`
 
 gives the desired integral equality. -/
+@[nolint unusedArguments]
 lemma measure_eq_implies_lintegral_prod_eq
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) [∀ ω, IsProbabilityMeasure (ν ω)]

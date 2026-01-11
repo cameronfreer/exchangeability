@@ -32,6 +32,7 @@ can be expressed as integration against the conditional distribution kernel.
 
 This is the key link between conditional expectation (a measure-theoretic notion)
 and conditional distribution (a kernel-theoretic notion). -/
+@[nolint unusedArguments]
 lemma condExp_indicator_eq_integral_condDistrib
     [MeasurableSpace Ω] [MeasurableSpace Γ] [MeasurableSpace E]
     [StandardBorelSpace Ω] [StandardBorelSpace Γ] [StandardBorelSpace E]

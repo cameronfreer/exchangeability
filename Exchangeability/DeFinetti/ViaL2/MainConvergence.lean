@@ -637,6 +637,7 @@ summability of expectations.
 
 Note: Adapted to our L¹ convergence setting.
 -/
+@[nolint unusedArguments]
 theorem subsequence_criterion_convergence_in_probability
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : ℕ → Ω → ℝ) (ξ_limit : Ω → ℝ)

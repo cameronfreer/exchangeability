@@ -79,7 +79,7 @@ def phi0 (r m : ℕ) : ℕ → ℕ := fun n =>
 def phi1 (r m : ℕ) : ℕ → ℕ := fun n =>
   if n ≤ r then n else n + (m - r)
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[nolint unusedArguments]
 lemma phi0_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi0 r m) := by
   intro i j hij
   simp only [phi0]
@@ -93,7 +93,7 @@ lemma phi0_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi0 r m) := by
     simp only [hj, if_false]
     omega
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
+@[nolint unusedArguments]
 lemma phi1_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi1 r m) := by
   intro i j hij
   simp only [phi1]
@@ -296,6 +296,7 @@ Since σ(W') = σ(X_r, W), this gives:
 
 which is exactly U ⊥⊥ X_r | W in indicator form.
 -/
+@[nolint unusedArguments]
 lemma condExp_indicator_eq_of_contractable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     [StandardBorelSpace α]
@@ -418,6 +419,7 @@ Two correct approaches:
    This gives E[f(U) | σ(X_r, W)] = E[f(U) | σ(W)], i.e., U ⊥⊥ X_r | W.
    By symmetry of CI, this gives X_r ⊥⊥ U | W which is the goal.
 2. Embed into a common type space by viewing W as a tuple (default, W) to match W' = (U, W). -/
+@[nolint unusedArguments]
 lemma condExp_Xr_indicator_eq_of_contractable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     [StandardBorelSpace α]

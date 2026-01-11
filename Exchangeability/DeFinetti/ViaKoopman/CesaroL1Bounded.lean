@@ -42,6 +42,7 @@ For a bounded measurable function g : α → ℝ, the Cesàro averages
 expectation `μ[g(ω₀) | mSI]`.
 
 This is a key ingredient for de Finetti's theorem via contractability. -/
+@[nolint unusedArguments]
 lemma L1_cesaro_convergence_bounded
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -66,6 +67,7 @@ private lemma shift_iterate_apply_zero (j : ℕ) (ω : ℕ → α) :
 
 Extends the bounded case to general integrable functions by truncating g_M := max(min(g, M), -M),
 applying the bounded case to each g_M, and letting M → ∞ using dominated convergence. -/
+@[nolint unusedArguments]
 lemma L1_cesaro_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (hσ : MeasurePreserving shift μ μ)
@@ -385,6 +387,7 @@ omit [StandardBorelSpace α] in
 
 Given that `A_n → CE[g(ω₀) | mSI]` in L¹ and f is bounded,
 proves that `CE[f·A_n | mSI] → CE[f·CE[g | mSI] | mSI]` in L¹. -/
+@[nolint unusedArguments]
 lemma ce_lipschitz_convergence
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (f g : α → ℝ)

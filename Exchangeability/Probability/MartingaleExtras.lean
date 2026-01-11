@@ -65,6 +65,7 @@ lemma revCE_tower
   exact condExp_condExp_of_le (hF hmn) (h_le n)
 
 /-- L¹ boundedness of the reverse martingale. -/
+@[nolint unusedArguments]
 lemma revCE_L1_bdd
     [IsProbabilityMeasure μ]
     {F : ℕ → MeasurableSpace Ω}
@@ -103,6 +104,7 @@ lemma deLaValleePoussin_eventually_ge_id
 /-- Fatou's lemma on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit.
 
 If `u n x → g x` a.e., then `∫⁻ ‖g‖ ≤ liminf (∫⁻ ‖u n‖)`. -/
+@[nolint unusedArguments]
 lemma lintegral_fatou_ofReal_norm
   {α β : Type*} [MeasurableSpace α] {μ : Measure α}
   [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]

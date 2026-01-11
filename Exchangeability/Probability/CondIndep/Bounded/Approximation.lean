@@ -56,6 +56,7 @@ The proof strategy is:
 
 The conclusion as stated uses pointwise topology, but the natural convergence mode is L¹.
 For applications, L¹ convergence of condExp is typically what's needed. -/
+@[nolint unusedArguments]
 lemma tendsto_condexp_L1 {mΩ : MeasurableSpace Ω} (μ : Measure Ω) [IsProbabilityMeasure μ]
     (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
@@ -367,6 +368,7 @@ These lemmas capture common patterns in the bounded measurable extension proofs:
 
 If `f` is bounded a.e. by `M` and `∫|gn - g| → 0`, then `∫|f * (gn - g)| → 0`.
 This pattern appears repeatedly in monotone class arguments. -/
+@[nolint unusedArguments]
 lemma tendsto_integral_mul_of_bounded_L1
     {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
     {f : Ω → ℝ} {gn : ℕ → Ω → ℝ} {g : Ω → ℝ}
@@ -437,6 +439,7 @@ lemma tendsto_setIntegral_of_L1
 
 If `fn → f` pointwise ae, `|fn - f| ≤ 2M` ae, and `M` is finite, then `∫|fn - f| → 0`.
 This wraps `tendsto_integral_of_dominated_convergence` for the common L¹ case. -/
+@[nolint unusedArguments]
 lemma tendsto_L1_of_pointwise_dominated
     {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
     {fn : ℕ → Ω → ℝ} {f : Ω → ℝ}
@@ -464,6 +467,7 @@ lemma tendsto_L1_of_pointwise_dominated
 /-- **Integrability of conditional expectation product with bounded factor.**
 
 If `f` is bounded ae by `M`, then `μ[f|m] * μ[g|m]` is integrable for any integrable `g`. -/
+@[nolint unusedArguments]
 lemma integrable_condExp_mul_of_bounded
     {Ω : Type*} {m m₀ : MeasurableSpace Ω} (_hm : m ≤ m₀)
     (μ : Measure Ω) [IsProbabilityMeasure μ]

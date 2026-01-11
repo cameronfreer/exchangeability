@@ -155,6 +155,7 @@ where we need to handle functions like φ * (v * 1_B)∘W without the ψ factor.
 **Proof strategy:** Apply the pair law equality directly to the test function F(y,w) = φ(y)*g(w),
 using integral_map to convert between ∫ F∘(Y,W) and ∫ F d[Law(Y,W)].
 -/
+@[nolint unusedArguments]
 lemma test_fn_pair_law
   {Ω α γ : Type*}
   [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace γ]
@@ -243,6 +244,7 @@ lemma setIntegral_eq_integral_indicator_one_mul
   by_cases hω : ω ∈ s <;> simp [Set.indicator, hω, mul_comm]
 
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
+@[nolint unusedArguments]
 lemma ae_bound_condexp_of_ae_bound
     {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
     {m : MeasurableSpace Ω} (hm : m ≤ m0)
@@ -344,6 +346,7 @@ lemma integral_mul_condexp_adjoint_Linfty
     _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
 
 -- Utility lemmas for indicator-set integral conversion
+@[nolint unusedArguments]
 lemma indicator_comp_preimage_one
   {Ω S : Type*} [MeasurableSpace S] {W : Ω → S} {T : Set S} :
   (fun ω => Set.indicator T (fun _ : S => (1 : ℝ)) (W ω))

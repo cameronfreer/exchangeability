@@ -300,6 +300,7 @@ omit [StandardBorelSpace α] in
 
 Given `X : ℕ → Ω → α` that is contractable, the pushforward measure on `Ω[α] = ℕ → α`
 satisfies the path-space contractability hypothesis. -/
+@[nolint unusedArguments]
 lemma pathSpace_contractable_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -380,6 +381,7 @@ lemma measure_map_shift_eq_of_contractable
 /-- Shift-preservation transfers to the pushforward measure.
 
 If `X` is contractable, the pushforward measure is shift-preserving. -/
+@[nolint unusedArguments]
 lemma pathSpace_shift_preserving_of_contractable
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
@@ -406,6 +408,7 @@ omit [StandardBorelSpace α] in
 If `μ_path = μ.map φ` where `φ ω = (fun i => X i ω)`, then
 `ConditionallyIID μ_path id ↔ ConditionallyIID μ X`
 where `id` on path space is `fun i ω => ω i`. -/
+@[nolint unusedArguments]
 lemma conditionallyIID_transfer
     {Ω : Type*} [MeasurableSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]

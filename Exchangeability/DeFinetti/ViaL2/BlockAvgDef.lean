@@ -61,6 +61,7 @@ lemma blockAvg_measurable
       exact hf.comp (hX (m + k)))
   simpa using (measurable_const.mul hsum : Measurable _)
 
+@[nolint unusedArguments]
 lemma blockAvg_abs_le_one
     {Ω α : Type*} [MeasurableSpace Ω]
     (f : α → ℝ) (X : ℕ → Ω → α)

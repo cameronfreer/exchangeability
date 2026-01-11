@@ -57,6 +57,7 @@ lemma comap_restrictNonneg_shiftInvariantSigma_le :
 **Proof**: Uses `ae_map_iff` from mathlib: since `μ = map restrictNonneg ext.μhat`,
 we have `(∀ᵐ ω ∂μ, F ω = G ω) ↔ (∀ᵐ ωhat ∂ext.μhat, F (restrictNonneg ωhat) = G (restrictNonneg ωhat))`.
 The hypothesis `h` gives the RHS, so we conclude the LHS. -/
+@[nolint unusedArguments]
 lemma naturalExtension_pullback_ae
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ext : NaturalExtensionData (μ := μ))
@@ -264,6 +265,7 @@ private lemma integrable_of_bounded_mul_helper
 
 This shows that multiplying an integrable function by a bounded function preserves integrability.
 The bound `|f * g| ≤ C * |g|` follows from `|f| ≤ C`. -/
+@[nolint unusedArguments]
 lemma Integrable.of_abs_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     {f g : Ω → ℝ} (hg : Integrable g μ) (C : ℝ) (hC : 0 ≤ C)
     (h_bound : ∀ ω, |f ω| ≤ C)
@@ -543,6 +545,7 @@ These lemmas support the L¹ Cesàro convergence framework. -/
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
+@[nolint unusedArguments]
 lemma integrable_mul_of_ae_bdd_left
     {μ : Measure (Ω[α])} [IsFiniteMeasure μ]
     {Z Y : Ω[α] → ℝ}
@@ -557,6 +560,7 @@ lemma integrable_mul_of_ae_bdd_left
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
+@[nolint unusedArguments]
 lemma condExp_L1_lipschitz
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :

@@ -39,6 +39,7 @@ noncomputable section
 /-- Scalar linearity of conditional expectation.
 **Mathematical content**: CE[c·f| mSI] = c·CE[f| mSI]
 **Mathlib source**: `MeasureTheory.condexp_smul` for scalar multiplication. -/
+@[nolint unusedArguments]
 lemma condExp_const_mul
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
@@ -52,6 +53,7 @@ lemma condExp_const_mul
 **Mathematical content**: CE[Σᵢfᵢ| mSI] = ΣᵢCE[fᵢ| mSI]
 **Mathlib source**: Direct application of `MeasureTheory.condExp_finset_sum`.
 NOTE: Uses η-expansion to work around notation elaboration issues with `∑ i ∈ s, f i` vs `fun ω => ∑ i ∈ s, f i ω`. -/
+@[nolint unusedArguments]
 lemma condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
