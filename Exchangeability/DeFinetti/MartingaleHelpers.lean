@@ -53,6 +53,7 @@ open MeasureTheory
 section ComapTools
 
 /-- If `g` is measurable, then `comap (g ∘ f) ≤ comap f`. -/
+@[nolint unusedArguments]
 lemma comap_comp_le
     {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
     (f : X → Y) (g : Y → Z) (hg : Measurable g) :
@@ -168,6 +169,7 @@ end FinsetOrder
 section IndicatorAlgebra
 
 /-- The product of two indicator functions equals the indicator of their intersection. -/
+@[nolint unusedArguments]
 lemma indicator_mul_indicator_eq_indicator_inter
     {Ω : Type*} [MeasurableSpace Ω]
     (A B : Set Ω) (c d : ℝ) :
@@ -178,6 +180,7 @@ lemma indicator_mul_indicator_eq_indicator_inter
     simp [Set.indicator, hA, hB, Set.mem_inter_iff]
 
 /-- Indicator function composed with preimage. -/
+@[nolint unusedArguments]
 lemma indicator_comp_preimage
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (f : Ω → α) (B : Set α) (c : ℝ) :
@@ -187,6 +190,7 @@ lemma indicator_comp_preimage
   rfl
 
 /-- Binary indicator takes values in {0, 1}. -/
+@[nolint unusedArguments]
 lemma indicator_binary
     {Ω : Type*} [MeasurableSpace Ω]
     (A : Set Ω) (ω : Ω) :
@@ -196,6 +200,7 @@ lemma indicator_binary
   · simp [Set.indicator, h]
 
 /-- Indicator is bounded by its constant. -/
+@[nolint unusedArguments]
 lemma indicator_le_const
     {Ω : Type*} [MeasurableSpace Ω]
     (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
@@ -205,6 +210,7 @@ lemma indicator_le_const
   · simp [Set.indicator, h, hc]
 
 /-- Indicator is nonnegative when constant is nonnegative. -/
+@[nolint unusedArguments]
 lemma indicator_nonneg
     {Ω : Type*} [MeasurableSpace Ω]
     (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
