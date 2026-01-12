@@ -118,8 +118,7 @@ lemma condIndep_indicator_of_dropInfoY
     have h_ind_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
       measurable_const.indicator hB
     -- indB = (indicator B 1) ∘ Z
-    have h_eq : indB = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
-      ext ω; simp only [Function.comp_apply, indB, Set.indicator]; rfl
+    have h_eq : indB = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := rfl
     rw [h_eq]
     exact h_ind_meas.comp hZ_mZW
 
