@@ -1,14 +1,16 @@
 # Project Status: de Finetti Theorem Formalization
 
-**Last Updated:** 2026-01-08
+**Last Updated:** 2026-01-12
 
 ## Executive Summary
 
-| Proof Approach | Build | Status |
-|---------------|-------|--------|
-| **ViaMartingale** | Pass | **COMPLETE** |
-| **ViaL2** | Pass | **COMPLETE** |
-| **ViaKoopman** | Pass | **COMPLETE** |
+| Proof Approach | Lines | Build | Status |
+|---------------|------:|-------|--------|
+| **ViaMartingale** | 3,770 | Pass | **COMPLETE** |
+| **ViaL2** | 12,476 | Pass | **COMPLETE** |
+| **ViaKoopman** | 6,893 | Pass | **COMPLETE** |
+| *Shared infrastructure* | 20,373 | — | — |
+| **Total** | **43,512** | Pass | **COMPLETE** |
 
 **All three proofs complete.**
 
