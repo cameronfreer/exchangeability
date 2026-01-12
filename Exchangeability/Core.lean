@@ -678,13 +678,13 @@ private lemma exchangeable_finite_marginals_eq_reindexed {μ : Measure Ω}
   have hlhs :
       Measure.map (prefixProj (α:=α) n) μX =
         Measure.map (fun ω => fun i : Fin n => X i ω) μ := by
-    rw [hμX]; exact h1
+    rwa [hμX]
   -- RHS equals the permuted marginal
   have hrhs :
       Measure.map (prefixProj (α:=α) n)
           (Measure.map (reindex (α:=α) π) μX) =
         Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
-    rw [hμX]; exact h2
+    rwa [hμX]
   rw [hlhs, hrhs]
   exact (congrArg (fun ν => ν S) hperm).symm
 

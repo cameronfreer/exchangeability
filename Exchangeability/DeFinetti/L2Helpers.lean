@@ -297,7 +297,7 @@ lemma sqrt_div_lt_half_eps_of_nat
   have heq : Cf / (4*Cf/ε^2) = ε^2 / 4 := by
     field_simp [ne_of_gt hCfpos]
   have hlt : Cf / (m : ℝ) < ε^2 / 4 := by
-    rw [← heq]; exact hdiv
+    rwa [← heq]
   have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
   calc Real.sqrt (Cf / m)
       < Real.sqrt (ε^2 / 4) := Real.sqrt_lt_sqrt hnonneg hlt
@@ -355,7 +355,7 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Get integral bound in terms of ‖g‖^2
   have h_int_le : ∫ ω, ‖g ω‖^2 ∂μ ≤ C := by
     have : (fun ω => ‖g ω‖^2) = fun ω => (g ω)^2 := funext h_sq_eq
-    rw [this]; exact h
+    rwa [this]
   -- Integral is nonnegative
   have h_int_nonneg : 0 ≤ ∫ ω, ‖g ω‖^2 ∂μ := by
     apply integral_nonneg; intro ω; exact sq_nonneg _
