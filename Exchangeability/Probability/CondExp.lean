@@ -522,7 +522,7 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
     (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
     Integrable (f * g) μ := by
   -- Rewrite as g * f to match Integrable.bdd_mul signature
-  have : f * g = fun ω => g ω * f ω := by ext ω; exact mul_comm _ _
+  have : f * g = fun ω => g ω * f ω := funext fun _ => mul_comm _ _
   rw [this]
   -- Convert pointwise bound to a.e. bound
   obtain ⟨C, hC⟩ := hbd

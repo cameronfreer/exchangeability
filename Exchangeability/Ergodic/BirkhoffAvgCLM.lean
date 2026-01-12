@@ -103,7 +103,7 @@ lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
       calc (↑↑(fs i + t.sum fs) : Ω → ℝ)
           =ᵐ[μ] (↑↑(fs i) : Ω → ℝ) + (↑↑(t.sum fs) : Ω → ℝ) := Lp.coeFn_add _ _
         _ =ᵐ[μ] (↑↑(fs i) : Ω → ℝ) + fun ω => t.sum (fun j => (fs j : Ω → ℝ) ω) :=
-            Filter.EventuallyEq.add (by rfl) IH
+            Filter.EventuallyEq.add .rfl IH
         _ =ᵐ[μ] fun ω => (fs i : Ω → ℝ) ω + t.sum (fun j => (fs j : Ω → ℝ) ω) := by
             apply Filter.Eventually.of_forall
             intro ω
@@ -252,7 +252,7 @@ lemma birkhoffAvgCLM_coe_ae_eq_function_avg
           Lp.coeFn_smul' ((n : ℝ)⁻¹) _
       -- Step 2: Distribute coercion through sum
       _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω := by
-          apply Filter.EventuallyEq.mul (by rfl)
+          apply Filter.EventuallyEq.mul .rfl
           -- First show that (∑ CLMs) applied to fL2 equals ∑ (CLM applied to fL2)
           have h_sum_app : (∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2 =
                            ∑ k : Fin n, (powCLM (koopman T hT_mp) k) fL2 := by
@@ -261,7 +261,7 @@ lemma birkhoffAvgCLM_coe_ae_eq_function_avg
           exact Lp.coeFn_sum' _
       -- Step 3: For each k, replace powCLM with function iteration
       _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω) := by
-          apply Filter.EventuallyEq.mul (by rfl)
+          apply Filter.EventuallyEq.mul .rfl
           apply EventuallyEq.sum'
           intro k
           exact powCLM_koopman_coe_ae T hT_meas hT_mp k fL2

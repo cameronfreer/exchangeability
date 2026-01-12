@@ -103,12 +103,8 @@ lemma condIndep_indicator_of_dropInfoY
   have hIndA_int : Integrable indA μ := (integrable_const 1).indicator (hA.preimage hY)
   have hIndB_int : Integrable indB μ := (integrable_const 1).indicator (hB.preimage hZ)
   have hProd_int : Integrable (indA * indB) μ := by
-    -- indA is bounded by 1, so we can use bdd_mul with indB integrable
-    have hIndA_bdd : ∀ᵐ x ∂μ, ‖indA x‖ ≤ 1 := by
-      filter_upwards with x
-      simp only [indA, Real.norm_eq_abs]
-      rw [Set.indicator_apply]
-      by_cases h : x ∈ Y ⁻¹' A <;> simp [h]
+    have hIndA_bdd : ∀ᵐ x ∂μ, ‖indA x‖ ≤ 1 := .of_forall fun x =>
+      (norm_indicator_le_norm_self _ x).trans (by simp)
     exact hIndB_int.bdd_mul hIndA_int.aestronglyMeasurable hIndA_bdd
 
   -- indB is mZW-measurable (depends only on Z)
@@ -122,8 +118,7 @@ lemma condIndep_indicator_of_dropInfoY
     have h_ind_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
       measurable_const.indicator hB
     -- indB = (indicator B 1) ∘ Z
-    have h_eq : indB = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
-      ext ω; simp only [Function.comp_apply, indB, Set.indicator]; rfl
+    have h_eq : indB = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := rfl
     rw [h_eq]
     exact h_ind_meas.comp hZ_mZW
 

@@ -51,10 +51,8 @@ This is a wrapper around `Finset.measurable_prod` specialized to ENNReal.
 -/
 lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [MeasurableSpace Ω]
     (f : ι → Ω → ENNReal) (hf : ∀ i, Measurable (f i)) :
-    Measurable fun ω => ∏ i, f i ω := by
-  apply Finset.measurable_prod
-  intro i _
-  exact hf i
+    Measurable fun ω => ∏ i, f i ω :=
+  Finset.measurable_prod _ fun i _ => hf i
 
 /-- Rewrite `Set.univ.pi B` as a setOf comprehension.
 
@@ -127,18 +125,14 @@ lemma rectangles_generate_pi_sigma {m : ℕ} {α : Type*} [MeasurableSpace α] :
       use fun i => B i
       simp only [Set.mem_pi]
       constructor
-      · intro i _; exact hB_meas i
-      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
-          ext x; simp [Set.pi]
-        rw [this]; exact hS.symm
+      · exact fun i _ => hB_meas i
+      · rw [univ_pi_eq_setOf_forall]; exact hS.symm
     · intro ⟨B, hB_mem, hS⟩
       simp only [Set.mem_pi, Set.mem_univ, Set.mem_setOf_eq] at hB_mem hS
       use B
       constructor
       · exact fun i => hB_mem i (Set.mem_univ i)
-      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
-          ext x; simp [Set.pi]
-        rw [← this]; exact hS.symm
+      · rw [← univ_pi_eq_setOf_forall]; exact hS.symm
 
   rw [set_eq]
   exact generateFrom_pi.symm
@@ -195,8 +189,7 @@ lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
           = Set.univ.pi fun i => B i := by
         ext x; simp [Set.pi]
       simp [κ, this, Measure.pi_pi]
-    have hfac : ∀ i, Measurable fun ω => ν ω (B i) := by
-      intro i; exact hν_meas (B i) (hB i)
+    have hfac : ∀ i, Measurable fun ω => ν ω (B i) := fun i => hν_meas (B i) (hB i)
     have hmeas : Measurable fun ω => ∏ i : Fin m, ν ω (B i) :=
       measurable_prod_ennreal (fun i ω => ν ω (B i)) hfac
     simpa [κ, rect]
@@ -285,51 +278,26 @@ lemma tripleRectangles_generate {r k : ℕ} {α : Type*} [MeasurableSpace α] :
     -- First projection: (Fin r → α)
     have h_fst : ∀ (A : Fin r → Set α), (∀ i, MeasurableSet (A i)) →
         MeasurableSet[MeasurableSpace.generateFrom (TripleRectangles r k α)]
-          (Prod.fst ⁻¹' (Set.univ.pi A)) := by
-      intro A hA
-      have : (Prod.fst : (Fin r → α) × α × (Fin k → α) → (Fin r → α)) ⁻¹' (Set.univ.pi A) =
-          (Set.univ.pi A) ×ˢ (Set.univ : Set α) ×ˢ (Set.univ.pi (fun (_ : Fin k) => Set.univ)) := by
-        ext ⟨z, y, c⟩
-        simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ_pi, Set.mem_univ, true_and]
-        tauto
-      rw [this]
-      apply MeasurableSpace.measurableSet_generateFrom
-      exact ⟨A, hA, Set.univ, MeasurableSet.univ,
-              fun _ => Set.univ, fun _ => MeasurableSet.univ, rfl⟩
+          (Prod.fst ⁻¹' (Set.univ.pi A)) := fun A hA => by
+      refine MeasurableSpace.measurableSet_generateFrom ⟨A, hA, Set.univ, .univ, fun _ => Set.univ,
+        fun _ => .univ, ?_⟩
+      ext ⟨z, y, c⟩; simp
 
     -- Second projection (middle component): α
     have h_fst_snd : ∀ (B : Set α), MeasurableSet B →
         MeasurableSet[MeasurableSpace.generateFrom (TripleRectangles r k α)]
-          ((Prod.fst ∘ Prod.snd) ⁻¹' B) := by
-      intro B hB
-      have : (Prod.fst ∘ Prod.snd : (Fin r → α) × α × (Fin k → α) → α) ⁻¹' B =
-          (Set.univ.pi (fun (_ : Fin r) => Set.univ)) ×ˢ B ×ˢ
-          (Set.univ.pi (fun (_ : Fin k) => Set.univ)) := by
-        ext ⟨z, y, c⟩
-        simp only [Set.mem_preimage, Function.comp_apply, Set.mem_prod,
-                   Set.mem_univ_pi, Set.mem_univ]
-        tauto
-      rw [this]
-      apply MeasurableSpace.measurableSet_generateFrom
-      exact ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
-              B, hB, fun _ => Set.univ, fun _ => MeasurableSet.univ, rfl⟩
+          ((Prod.fst ∘ Prod.snd) ⁻¹' B) := fun B hB => by
+      refine MeasurableSpace.measurableSet_generateFrom ⟨fun _ => Set.univ, fun _ => .univ,
+        B, hB, fun _ => Set.univ, fun _ => .univ, ?_⟩
+      ext ⟨z, y, c⟩; simp
 
     -- Third projection: (Fin k → α)
     have h_snd_snd : ∀ (C : Fin k → Set α), (∀ j, MeasurableSet (C j)) →
         MeasurableSet[MeasurableSpace.generateFrom (TripleRectangles r k α)]
-          ((Prod.snd ∘ Prod.snd) ⁻¹' (Set.univ.pi C)) := by
-      intro C hC
-      have : (Prod.snd ∘ Prod.snd : (Fin r → α) × α × (Fin k → α) → Fin k → α) ⁻¹'
-          (Set.univ.pi C) =
-          (Set.univ.pi (fun (_ : Fin r) => Set.univ)) ×ˢ Set.univ ×ˢ (Set.univ.pi C) := by
-        ext ⟨z, y, c⟩
-        simp only [Set.mem_preimage, Function.comp_apply, Set.mem_prod,
-                   Set.mem_univ_pi, Set.mem_univ]
-        tauto
-      rw [this]
-      apply MeasurableSpace.measurableSet_generateFrom
-      exact ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ,
-              Set.univ, MeasurableSet.univ, C, hC, rfl⟩
+          ((Prod.snd ∘ Prod.snd) ⁻¹' (Set.univ.pi C)) := fun C hC => by
+      refine MeasurableSpace.measurableSet_generateFrom ⟨fun _ => Set.univ, fun _ => .univ,
+        Set.univ, .univ, C, hC, ?_⟩
+      ext ⟨z, y, c⟩; simp
 
     -- Comap of first projection ≤ generateFrom
     have h_fst_comap : MeasurableSpace.comap Prod.fst inferInstance
@@ -390,7 +358,7 @@ lemma tripleRectangles_generate {r k : ℕ} {α : Type*} [MeasurableSpace α] :
             (Prod.snd : (Fin r → α) × α × (Fin k → α) → α × (Fin k → α)) inferInstance
           = MeasurableSpace.comap Prod.snd
               (MeasurableSpace.comap Prod.fst inferInstance ⊔
-               MeasurableSpace.comap Prod.snd inferInstance) := by rfl
+               MeasurableSpace.comap Prod.snd inferInstance) := rfl
         _ = MeasurableSpace.comap Prod.snd (MeasurableSpace.comap Prod.fst inferInstance)
             ⊔ MeasurableSpace.comap Prod.snd (MeasurableSpace.comap Prod.snd inferInstance) := by
               rw [MeasurableSpace.comap_sup]

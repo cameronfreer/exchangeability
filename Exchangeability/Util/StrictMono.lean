@@ -17,7 +17,6 @@ in subsequence selection and permutation construction arguments.
 * `strictMono_Fin_ge_id`: For strictly monotone `k : Fin m → ℕ`, values dominate indices
 * `strictMono_add_left`, `strictMono_add_right`: Addition preserves strict monotonicity
 * `fin_val_strictMono`: The identity `Fin n → ℕ` is strictly monotone
-* `strictMono_comp`: Composition of strictly monotone functions
 * `injective_implies_strictMono_perm`: Any injective `k : Fin m → ℕ` can be composed with
   a permutation to become strictly monotone
 
@@ -97,16 +96,6 @@ The canonical embedding of `Fin n` into `ℕ` preserves the order structure.
 lemma fin_val_strictMono : StrictMono (fun i : Fin n => i.val) := by
   intro i j hij
   exact hij
-
-/--
-Composing strictly monotone functions preserves strict monotonicity.
-
-If `f : Fin m → Fin n` is strictly monotone and `g : Fin n → ℕ` is strictly
-monotone, then their composition `g ∘ f` is strictly monotone.
--/
-lemma strictMono_comp (f : Fin m → Fin n) (g : Fin n → ℕ)
-    (hf : StrictMono f) (hg : StrictMono g) : StrictMono (fun i => g (f i)) :=
-  fun ⦃_ _⦄ hab ↦ hg (hf hab)
 
 /-- Any injective function `k : Fin m → ℕ` can be composed with a permutation
 to become strictly monotone.

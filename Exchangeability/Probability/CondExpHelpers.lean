@@ -24,7 +24,6 @@ the three key lemmas about conditional independence and factorization.
 * `tendsto_condExpL1_domconv`: DCT for conditional expectation in L¹
 * `integrable_mul_of_bound_one`: Product with bounded factor is integrable
 * `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
-* `condExp_project_of_le`: Tower/projection property μ[μ[f|m']|m] = μ[f|m] for m ≤ m'
 
 ## Module Structure
 

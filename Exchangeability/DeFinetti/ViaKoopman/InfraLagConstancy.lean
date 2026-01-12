@@ -189,30 +189,8 @@ lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → α))
   have h_iter_k2 := h_iter (k + 2)
   -- ω ∈ shift^[m] ⁻¹' s ↔ shift^[m] ω ∈ s, and h_iter_k2 says shift^[k+2] ⁻¹' s = s
   -- h_iter_k2 means: ξ ∈ s ↔ ξ ∈ shift^[k+2] ⁻¹' s ↔ shift^[k+2] ξ ∈ s
-  constructor
-  · -- Assume reindex τ ω ∈ s, show ω ∈ s
-    intro h
-    -- Step 1: reindex τ ω ∈ s → shift^[k+2] (reindex τ ω) ∈ s (using h_iter_k2 backwards)
-    have h1 : (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) ∈ (shift (α := α))^[k + 2] ⁻¹' s := by
-      rw [h_iter_k2]; exact h
-    -- Step 2: shift^[k+2] (reindex τ ω) ∈ s (by definition of preimage)
-    simp only [Set.mem_preimage] at h1
-    -- Step 3: By h_eq, shift^[k+2] (reindex τ ω) = shift^[k+2] ω
-    rw [h_eq] at h1
-    -- Step 4: shift^[k+2] ω ∈ s → ω ∈ s (using h_iter_k2)
-    have h2 : ω ∈ (shift (α := α))^[k + 2] ⁻¹' s := by simp only [Set.mem_preimage]; exact h1
-    rw [h_iter_k2] at h2; exact h2
-  · -- Assume ω ∈ s, show reindex τ ω ∈ s
-    intro h
-    -- Step 1: ω ∈ s → shift^[k+2] ω ∈ s (using h_iter_k2 backwards)
-    have h1 : ω ∈ (shift (α := α))^[k + 2] ⁻¹' s := by rw [h_iter_k2]; exact h
-    simp only [Set.mem_preimage] at h1
-    -- Step 2: By h_eq (reversed), shift^[k+2] ω = shift^[k+2] (reindex τ ω)
-    rw [← h_eq] at h1
-    -- Step 3: shift^[k+2] (reindex τ ω) ∈ s → reindex τ ω ∈ s (using h_iter_k2)
-    have h2 : (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) ∈ (shift (α := α))^[k + 2] ⁻¹' s := by
-      simp only [Set.mem_preimage]; exact h1
-    rw [h_iter_k2] at h2; exact h2
+  -- Transport membership through shift^[k+2] using shift-invariance
+  constructor <;> intro h <;> (rw [← h_iter_k2, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
 
 /-- **Generalized reindex preimage invariance**: For any permutation π that is identity
 beyond some bound M, shift-invariant sets are reindex-invariant.
@@ -245,23 +223,8 @@ lemma reindex_perm_preimage_shiftInvariant (π : Equiv.Perm ℕ) (M : ℕ)
     have hle : M ≤ n + M := Nat.le_add_left M n
     rw [h_id_beyond (n + M) hle]
   have h_iter_M := h_iter M
-  constructor
-  · -- Assume reindex π ω ∈ s, show ω ∈ s
-    intro h
-    have h1 : (Exchangeability.reindex π ω) ∈ (shift (α := α))^[M] ⁻¹' s := by
-      rw [h_iter_M]; exact h
-    simp only [Set.mem_preimage] at h1
-    rw [h_eq] at h1
-    have h2 : ω ∈ (shift (α := α))^[M] ⁻¹' s := by simp only [Set.mem_preimage]; exact h1
-    rw [h_iter_M] at h2; exact h2
-  · -- Assume ω ∈ s, show reindex π ω ∈ s
-    intro h
-    have h1 : ω ∈ (shift (α := α))^[M] ⁻¹' s := by rw [h_iter_M]; exact h
-    simp only [Set.mem_preimage] at h1
-    rw [← h_eq] at h1
-    have h2 : (Exchangeability.reindex π ω) ∈ (shift (α := α))^[M] ⁻¹' s := by
-      simp only [Set.mem_preimage]; exact h1
-    rw [h_iter_M] at h2; exact h2
+  -- Transport membership through shift^[M] using shift-invariance
+  constructor <;> intro h <;> (rw [← h_iter_M, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
 
 /-! ### Cycle permutation for lag constancy -/
 
