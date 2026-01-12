@@ -287,7 +287,7 @@ lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀
 
 -- Re-export StrictMono utilities for backward compatibility
 open Util.StrictMono (strictMono_add_left strictMono_add_right
-                       strictMono_Fin_ge_id fin_val_strictMono strictMono_comp)
+                       strictMono_Fin_ge_id fin_val_strictMono)
 
 /--
 Any strictly increasing function can be extended to a permutation.
