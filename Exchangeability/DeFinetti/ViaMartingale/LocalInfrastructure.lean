@@ -155,7 +155,6 @@ be contributed to mathlib as `condDistrib_unique_of_pair_law_and_factor`.
 This leverages the uniqueness of regular conditional distributions on standard Borel
 spaces: if two probability kernels disintegrate the same joint measure, they agree a.e.
 -/
-@[nolint unusedArguments]
 lemma condDistrib_factor_indicator_agree
     {Ω α β : Type*}
     [MeasurableSpace Ω] [StandardBorelSpace Ω]
@@ -163,12 +162,12 @@ lemma condDistrib_factor_indicator_agree
     [MeasurableSpace β] [Nonempty β]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ξ : Ω → α) (η ζ : Ω → β)
-    (hξ : Measurable ξ) (hη : Measurable η) (hζ : Measurable ζ)
+    (_hξ : Measurable ξ) (_hη : Measurable η) (hζ : Measurable ζ)
     (_h_law : Measure.map (fun ω => (ξ ω, η ω)) μ =
              Measure.map (fun ω => (ξ ω, ζ ω)) μ)
     (h_le : MeasurableSpace.comap η inferInstance ≤
             MeasurableSpace.comap ζ inferInstance)
-    {B : Set α} (hB : MeasurableSet B) :
+    {B : Set α} (_hB : MeasurableSet B) :
     μ[ μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ | MeasurableSpace.comap ζ inferInstance]
        | MeasurableSpace.comap η inferInstance ]
       =ᵐ[μ]
@@ -183,20 +182,11 @@ lemma condDistrib_factor_indicator_agree
   -- a σ(η)-measurable representative (namely Yeta := μ[μ[f|σ(ζ)]|σ(η)]) that
   -- equals μ[f|σ(η)] a.e., which is what conditional expectation uniqueness needs.
 
-  set f := Set.indicator B (fun _ => (1 : ℝ)) ∘ ξ
-
-  -- Comap measurable spaces are sub-σ-algebras of ambient space
-  have hη_le : MeasurableSpace.comap η inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    rintro s ⟨t, ht, rfl⟩; exact hη ht
+  -- Prove σ(ζ) is a sub-σ-algebra of the ambient space (needed for tower property)
   have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
     rintro s ⟨t, ht, rfl⟩; exact hζ ht
-
-  -- Apply the tower/projection property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
-  exact condExp_project_of_le
-    (MeasurableSpace.comap η inferInstance)
-    (MeasurableSpace.comap ζ inferInstance)
-    inferInstance
-    hη_le hζ_le h_le ((integrable_const 1 |>.indicator hB).comp_measurable hξ)
+  -- Apply mathlib's tower property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
+  exact condExp_condExp_of_le h_le hζ_le
 
   -- ══════════════════════════════════════════════════════════════════════════════
   -- THREE ROUTES TO COMPLETE THIS PROOF
