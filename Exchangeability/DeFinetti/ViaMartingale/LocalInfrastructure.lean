@@ -182,11 +182,8 @@ lemma condDistrib_factor_indicator_agree
   -- a σ(η)-measurable representative (namely Yeta := μ[μ[f|σ(ζ)]|σ(η)]) that
   -- equals μ[f|σ(η)] a.e., which is what conditional expectation uniqueness needs.
 
-  -- Prove σ(ζ) is a sub-σ-algebra of the ambient space (needed for tower property)
-  have hζ_le : MeasurableSpace.comap ζ inferInstance ≤ (inferInstance : MeasurableSpace Ω) := by
-    rintro s ⟨t, ht, rfl⟩; exact hζ ht
   -- Apply mathlib's tower property: μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)]
-  exact condExp_condExp_of_le h_le hζ_le
+  exact condExp_condExp_of_le h_le hζ.comap_le
 
   -- ══════════════════════════════════════════════════════════════════════════════
   -- THREE ROUTES TO COMPLETE THIS PROOF

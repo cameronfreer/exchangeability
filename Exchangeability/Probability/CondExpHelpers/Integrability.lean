@@ -86,24 +86,16 @@ lemma condExp_indicator_ae_bound_one
     ∧
     MeasureTheory.condExp mW μ
           (fun ω => (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω)) ω ≤ 1 := by
-  classical
-  -- Pointwise bounds for the integrand: 0 ≤ 1_B ≤ 1.
+  have h_int : Integrable (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))) μ :=
+    (integrable_const 1).indicator (hZ hB)
   have h0 : ∀ᵐ ω ∂μ, (0 : ℝ) ≤ Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω :=
     .of_forall fun ω => Set.indicator_nonneg (fun _ _ => zero_le_one) ω
-  have h1 : ∀ᵐ ω ∂μ, Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω ≤ (1 : ℝ) :=
+  have h1 : ∀ᵐ ω ∂μ, Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) ω ≤ 1 :=
     .of_forall fun ω => Set.indicator_le_self' (fun _ _ => zero_le_one) ω
-  -- Integrability of the indicator
-  have h_ind_int : Integrable (Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ))) μ := by
-    have : @MeasurableSet Ω m0 (Z ⁻¹' B) := hZ hB
-    exact (integrable_const (1 : ℝ)).indicator this
-  -- Use condExp_mono
-  have hCE0 : μ[fun _ => (0 : ℝ) | mW] ≤ᵐ[μ] μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] :=
-    condExp_mono (integrable_const _) h_ind_int h0
   have hCE1 : μ[Set.indicator (Z ⁻¹' B) (fun _ => (1 : ℝ)) | mW] ≤ᵐ[μ] μ[fun _ => (1 : ℝ) | mW] :=
-    condExp_mono h_ind_int (integrable_const _) h1
-  -- Pack using condExp_const to simplify constant expectations
-  filter_upwards [hCE0, hCE1] with ω h0' h1'
-  simp only [condExp_const hm (0 : ℝ), condExp_const hm (1 : ℝ)] at h0' h1'
+    condExp_mono h_int (integrable_const _) h1
+  filter_upwards [condExp_nonneg h0, hCE1] with ω h0' h1'
+  simp only [condExp_const hm (1 : ℝ)] at h1'
   exact ⟨h0', h1'⟩
 
 /-!
