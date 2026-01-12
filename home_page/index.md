@@ -21,11 +21,28 @@ We formalize **all three proofs** from Kallenberg (2005):
 | **L²** | Elementary contractability bounds |
 | **Koopman** | Mean Ergodic Theorem |
 
+## Visualizations
+
+### Import Graphs
+
+<p align="center">
+  <img src="{{ site.url }}/blueprint/import_graph_colored.svg" alt="Import Graph" width="100%">
+</p>
+
+<p align="center">
+  <em>Color legend: 🔵 ViaMartingale &nbsp; 🟢 ViaL2 &nbsp; 🟠 ViaKoopman</em>
+</p>
+
+| Graph | Description |
+|-------|-------------|
+| [File-level Import Graph]({{ site.url }}/blueprint/import_graph_colored.html) | Interactive graph of 57 files with physics simulation |
+| [Declaration-level Graph]({{ site.url }}/blueprint/import_graph_full_declarations.html) | All 431 declarations with search functionality |
+| [Mathematical Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html) | Blueprint proof structure |
+
 ## Links
 
 * [Blueprint]({{ site.url }}/blueprint/) - Proof structure with Lean links
 * [Blueprint (PDF)]({{ site.url }}/blueprint/print.pdf) - Printable version
-* [Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html) - Interactive visualization
 * [Documentation]({{ site.url }}/docs/) - Generated Lean documentation
 * [GitHub Repository](https://github.com/cameronfreer/exchangeability)
 

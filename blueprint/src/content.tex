@@ -56,12 +56,53 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
   of $(X_{k(0)}, \ldots, X_{k(m-1)})$ equals the mixture $\mu.\mathrm{bind}(\omega \mapsto \nu(\omega)^{\otimes m})$.
 \end{definition}
 
+\section{$\sigma$-algebra Infrastructure}
+
 \begin{definition}[Tail $\sigma$-algebra]
   \label{def:tailSigma}
   \lean{Exchangeability.DeFinetti.ViaMartingale.tailSigma}
   \leanok
   The \emph{tail $\sigma$-algebra} of a sequence $(X_n)$ is
   $\mathcal{T} = \bigcap_{n=0}^{\infty} \sigma(X_n, X_{n+1}, \ldots)$.
+\end{definition}
+
+\begin{definition}[Future filtration]
+  \label{def:futureFiltration}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.futureFiltration}
+  \leanok
+  The \emph{future filtration} at level $m$ is $\mathcal{F}_m = \sigma(X_{m+1}, X_{m+2}, \ldots)$.
+\end{definition}
+
+\begin{lemma}[Future filtration is antitone]
+  \label{lem:futureFiltration_antitone}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.futureFiltration_antitone}
+  \leanok
+  \uses{def:futureFiltration}
+  The future filtration is antitone: $m \le n$ implies $\mathcal{F}_n \le \mathcal{F}_m$.
+\end{lemma}
+
+\begin{lemma}[Tail $\sigma$-algebra contained in future filtration]
+  \label{lem:tailSigma_le_futureFiltration}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.tailSigma_le_futureFiltration}
+  \leanok
+  \uses{def:tailSigma, def:futureFiltration}
+  For all $m$: $\mathcal{T} \le \mathcal{F}_m$.
+\end{lemma}
+
+\begin{lemma}[Tail $\sigma$-algebra is infimum of reverse filtration]
+  \label{lem:tailSigma_eq_iInf}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.tailSigma_eq_iInf_rev}
+  \leanok
+  \uses{def:tailSigma, def:futureFiltration}
+  $\mathcal{T} = \bigwedge_{m=0}^{\infty} \mathcal{F}_m$.
+\end{lemma}
+
+\begin{definition}[Shift-invariant $\sigma$-algebra]
+  \label{def:shiftInvariantSigma}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.shiftInvariantSigma}
+  \leanok
+  The shift-invariant $\sigma$-algebra consists of sets $S$ such that
+  $\theta^{-1}(S) = S$ where $\theta$ is the shift operator.
 \end{definition}
 
 
@@ -102,15 +143,21 @@ This is the deep direction of de Finetti's theorem. We formalize three independe
 
 \section{Via Martingale (Aldous' proof)}
 
-\begin{definition}[Future filtration]
-  \label{def:futureFiltration}
-  \lean{Exchangeability.DeFinetti.ViaMartingale.futureFiltration}
-  \leanok
-  The \emph{future filtration} at level $m$ is $\mathcal{F}_m = \sigma(X_{m+1}, X_{m+2}, \ldots)$.
-\end{definition}
+The martingale approach uses reverse martingale convergence to the tail $\sigma$-algebra.
 
-\begin{lemma}[Pair law equality]
+\subsection{Pair Law Equality}
+
+\begin{lemma}[Pair law equality for contractable sequences]
   \label{lem:pair_law_eq}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.pair_law_eq_of_contractable}
+  \leanok
+  \uses{def:contractable}
+  For a contractable sequence and $k \le m$, the joint distribution of
+  $(X_k, X_{m+1}, X_{m+2}, \ldots)$ equals that of $(X_m, X_{m+1}, X_{m+2}, \ldots)$.
+\end{lemma}
+
+\begin{lemma}[Contractable distribution equality]
+  \label{lem:contractable_dist_eq}
   \lean{Exchangeability.DeFinetti.ViaMartingale.contractable_dist_eq}
   \leanok
   \uses{def:contractable, def:futureFiltration}
@@ -118,11 +165,22 @@ This is the deep direction of de Finetti's theorem. We formalize three independe
   that of $(X_m, \theta_{m+1} X)$ for all $k \le m$, where $\theta_n$ is the shift operator.
 \end{lemma}
 
+\begin{lemma}[Conditional expectation of indicator equals under contractability]
+  \label{lem:condExp_indicator_eq}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.condExp_indicator_eq_of_contractable}
+  \leanok
+  \uses{lem:contractable_dist_eq, def:futureFiltration}
+  For contractable sequences and $k \le m$:
+  $\mathbb{E}[\mathbf{1}_{X_k \in B} \mid \mathcal{F}_m] = \mathbb{E}[\mathbf{1}_{X_m \in B} \mid \mathcal{F}_m]$ a.s.
+\end{lemma}
+
+\subsection{Kallenberg Chain and Convergence}
+
 \begin{lemma}[Kallenberg chain lemma]
   \label{lem:kallenberg_chain}
   \lean{Exchangeability.DeFinetti.ViaMartingale.condExp_indicator_revFiltration_eq_tail}
   \leanok
-  \uses{lem:pair_law_eq, def:tailSigma}
+  \uses{lem:condExp_indicator_eq, def:tailSigma, lem:tailSigma_eq_iInf, lem:futureFiltration_antitone}
   Conditional expectations of indicators given the reverse filtration
   converge to conditional expectations given the tail $\sigma$-algebra.
 \end{lemma}
@@ -145,11 +203,56 @@ This is the deep direction of de Finetti's theorem. We formalize three independe
   $\mathbb{E}[\mathbf{1}_{X_m \in B} \mid \mathcal{T}] = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}]$ a.s.
 \end{lemma}
 
+\subsection{Factorization and Directing Measure}
+
+\begin{lemma}[Finite level factorization]
+  \label{lem:finite_level_factorization}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.finite_level_factorization}
+  \leanok
+  \uses{lem:extreme_members_equal, def:futureFiltration}
+  For finite products of indicators, the conditional expectation given $\mathcal{F}_m$
+  factors as a product of individual conditional expectations.
+\end{lemma}
+
+\begin{lemma}[Tail factorization from future]
+  \label{lem:tail_factorization}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.tail_factorization_from_future}
+  \leanok
+  \uses{lem:finite_level_factorization, def:tailSigma, lem:tailSigma_le_futureFiltration}
+  The tail $\sigma$-algebra factorization follows from the finite-level factorization
+  via reverse martingale convergence.
+\end{lemma}
+
+\begin{lemma}[Block coordinate conditional independence]
+  \label{lem:block_coord_condIndep}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.block_coord_condIndep}
+  \leanok
+  \uses{lem:tail_factorization, def:tailSigma}
+  Coordinates are conditionally independent given the tail $\sigma$-algebra.
+\end{lemma}
+
+\begin{lemma}[Directing measure is probability measure]
+  \label{lem:directingMeasure_isProb}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.directingMeasure_isProb}
+  \leanok
+  \uses{def:tailSigma}
+  The directing measure $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
+  is a probability measure for a.e.\ $\omega$.
+\end{lemma}
+
+\begin{lemma}[Directing measure measurability]
+  \label{lem:directingMeasure_measurable}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.directingMeasure_measurable_eval}
+  \leanok
+  \uses{def:tailSigma}
+  The directing measure $\omega \mapsto \nu(\omega)(B)$ is measurable for each Borel $B$.
+\end{lemma}
+
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Martingale)]
   \label{thm:conditionallyIID_of_contractable_martingale}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal}
+  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal, lem:block_coord_condIndep, lem:directingMeasure_isProb, lem:directingMeasure_measurable, thm:condIndep_extension}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.
   The directing kernel $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
   is constructed from the tail $\sigma$-algebra.
@@ -164,19 +267,103 @@ This is Kallenberg's ``second proof'' and has the lightest dependencies.
 \textbf{Note:} This proof applies to \emph{real-valued} sequences ($X : \mathbb{N} \to \Omega \to \mathbb{R}$)
 with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
+\subsection{Block Averages and Covariance Structure}
+
+\begin{definition}[Block average (L$^2$ version)]
+  \label{def:blockAvg_L2}
+  \lean{Exchangeability.DeFinetti.ViaL2.blockAvg}
+  \leanok
+  The block average $A_n = \frac{1}{n}\sum_{i=0}^{n-1} f(X_i)$ for bounded measurable $f$.
+\end{definition}
+
+\begin{lemma}[Contractable covariance structure]
+  \label{lem:covariance_structure}
+  \lean{Exchangeability.DeFinetti.ViaL2.contractable_covariance_structure}
+  \leanok
+  \uses{def:contractable, def:blockAvg_L2}
+  For contractable sequences, the covariance $\mathrm{Cov}(f(X_i), f(X_j))$ is constant
+  for $i \ne j$.
+\end{lemma}
+
+\begin{lemma}[L$^2$ bound on window differences]
+  \label{lem:l2_bound_windows}
+  \lean{Exchangeability.DeFinetti.ViaL2.l2_bound_two_windows}
+  \leanok
+  \uses{lem:covariance_structure}
+  The L$^2$ norm of the difference between averages over disjoint windows is bounded.
+\end{lemma}
+
 \begin{lemma}[L$^2$ contractability bound]
   \label{lem:l2_bound}
   \lean{Exchangeability.DeFinetti.L2Approach.l2_contractability_bound}
   \leanok
-  \uses{def:contractable}
+  \uses{lem:l2_bound_windows}
   For contractable sequences, certain L$^2$ norms of block averages are bounded.
 \end{lemma}
+
+\subsection{Cesaro Convergence}
+
+\begin{lemma}[Kallenberg L$^2$ bound]
+  \label{lem:kallenberg_L2_bound}
+  \lean{Exchangeability.DeFinetti.ViaL2.kallenberg_L2_bound}
+  \leanok
+  \uses{lem:l2_bound}
+  The key L$^2$ bound that drives the Cesaro convergence.
+\end{lemma}
+
+\begin{lemma}[Cesaro to conditional expectation (L$^2$)]
+  \label{lem:cesaro_L2}
+  \lean{Exchangeability.DeFinetti.ViaL2.cesaro_to_condexp_L2}
+  \leanok
+  \uses{lem:kallenberg_L2_bound}
+  Block averages converge in L$^2$ to the conditional expectation given the tail.
+\end{lemma}
+
+\begin{lemma}[Cesaro to conditional expectation (L$^1$)]
+  \label{lem:cesaro_L1}
+  \lean{Exchangeability.DeFinetti.ViaL2.cesaro_to_condexp_L1}
+  \leanok
+  \uses{lem:cesaro_L2}
+  Block averages converge in L$^1$ to the conditional expectation given the tail.
+\end{lemma}
+
+\subsection{Directing Measure Construction}
+
+\begin{lemma}[CDF from alpha bounds]
+  \label{lem:cdf_bounds}
+  \lean{Exchangeability.DeFinetti.ViaL2.cdf_from_alpha_bounds}
+  \leanok
+  The limiting function $\alpha(t, \omega)$ is a.e.\ in $[0,1]$.
+\end{lemma}
+
+\begin{lemma}[CDF monotonicity]
+  \label{lem:cdf_mono}
+  \lean{Exchangeability.DeFinetti.ViaL2.cdf_from_alpha_mono}
+  \leanok
+  The limiting function $\alpha(t, \omega)$ is monotone in $t$ for a.e.\ $\omega$.
+\end{lemma}
+
+\begin{lemma}[Directing measure is probability (L$^2$ version)]
+  \label{lem:directing_measure_isProb_L2}
+  \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_isProbabilityMeasure}
+  \leanok
+  \uses{lem:cdf_bounds, lem:cdf_mono}
+  The Stieltjes measure constructed from the limiting CDF is a probability measure a.e.
+\end{lemma}
+
+\begin{theorem}[Weighted sums converge in L$^1$]
+  \label{thm:weighted_sums_L1}
+  \lean{Exchangeability.DeFinetti.ViaL2.weighted_sums_converge_L1}
+  \leanok
+  \uses{lem:cesaro_L1}
+  The weighted sums of indicators converge in L$^1$.
+\end{theorem}
 
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via L$^2$)]
   \label{thm:conditionallyIID_of_contractable_L2}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:l2_bound}
+  \uses{def:contractable, def:conditionallyIID, lem:l2_bound, thm:weighted_sums_L1, lem:directing_measure_isProb_L2, thm:condIndep_extension}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.
 \end{theorem}
 
@@ -185,6 +372,8 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 The Koopman approach uses the Mean Ergodic Theorem via the shift operator on L$^2$.
 This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
+
+\subsection{Block Averages and Ergodic Theory}
 
 \begin{definition}[Block average]
   \label{def:blockAvg}
@@ -195,15 +384,44 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   For $n = 0$, the block average is defined as $0$.
 \end{definition}
 
+\begin{lemma}[Koopman-condexp commutation]
+  \label{lem:koopman_condexp_comm}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.condexpL2_koopman_comm}
+  \leanok
+  \uses{def:shiftInvariantSigma}
+  The conditional expectation operator onto the shift-invariant subspace
+  commutes with the Koopman operator.
+\end{lemma}
+
+\begin{theorem}[Birkhoff averages converge to condexp]
+  \label{thm:birkhoff_condexp}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.birkhoffAverage_tendsto_condexp}
+  \leanok
+  \uses{lem:koopman_condexp_comm, def:shiftInvariantSigma}
+  Birkhoff averages converge in L$^2$ to the conditional expectation
+  given the shift-invariant $\sigma$-algebra.
+\end{theorem}
+
 \begin{lemma}[Block averages converge in $L^1$]
   \label{lem:blockAvg_tendsto}
   \lean{Exchangeability.DeFinetti.ViaKoopman.blockAvg_tendsto_condExp}
   \leanok
-  \uses{def:blockAvg}
+  \uses{def:blockAvg, thm:birkhoff_condexp}
   For a shift-invariant measure, block averages converge \emph{in $L^1$} to the conditional
   expectation given the shift-invariant $\sigma$-algebra:
   $\int |A_{m,n,k}(f) - \mathbb{E}[f \circ \pi_0 \mid \mathcal{I}]| \, d\mu \to 0$
   as $n \to \infty$.
+\end{lemma}
+
+\subsection{Contractability and Factorization}
+
+\begin{lemma}[Conditional expectation lag constancy from exchangeability]
+  \label{lem:condexp_lag_const}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.condexp_lag_constant_from_exchangeability}
+  \leanok
+  \uses{def:exchangeable, def:shiftInvariantSigma}
+  For exchangeable sequences, the conditional expectation of a product
+  does not depend on the lag between coordinates.
 \end{lemma}
 
 \begin{lemma}[Integral product equals block average product]
@@ -213,6 +431,23 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   \uses{def:blockAvg, def:contractable}
   For contractable sequences, integrals of products factor through block averages.
 \end{lemma}
+
+\begin{lemma}[Product block average L$^1$ convergence]
+  \label{lem:product_blockAvg_L1}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.product_blockAvg_L1_convergence}
+  \leanok
+  \uses{lem:blockAvg_tendsto, lem:integral_prod_blockAvg}
+  Products of block averages converge in L$^1$.
+\end{lemma}
+
+\begin{theorem}[Conditional expectation product factorization]
+  \label{thm:condexp_product_factorization}
+  \lean{Exchangeability.DeFinetti.ViaKoopman.condexp_product_factorization_contractable}
+  \leanok
+  \uses{lem:product_blockAvg_L1, lem:condexp_lag_const}
+  For contractable sequences, the conditional expectation of a product
+  of indicators factors as a product of conditional expectations.
+\end{theorem}
 
 \begin{lemma}[Bridge from contractability]
   \label{lem:indicator_product_bridge_contractable}
@@ -226,7 +461,7 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
   \label{thm:conditionallyIID_of_contractable_Koopman}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:blockAvg_tendsto, lem:integral_prod_blockAvg, lem:indicator_product_bridge_contractable}
+  \uses{def:contractable, def:conditionallyIID, lem:blockAvg_tendsto, thm:condexp_product_factorization, lem:indicator_product_bridge_contractable, thm:condIndep_extension}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.
   This proof uses the Mean Ergodic Theorem via the Koopman operator on L$^2$.
 \end{theorem}
@@ -244,11 +479,19 @@ via a monotone class argument.
   Measures on product spaces are determined by their finite-dimensional marginals.
 \end{lemma}
 
+\begin{theorem}[Monotone class theorem]
+  \label{thm:monotone_class}
+  \lean{Exchangeability.DeFinetti.CommonEnding.monotone_class_theorem}
+  \leanok
+  \uses{lem:pi_system}
+  The monotone class theorem allows extending from indicators to measurable functions.
+\end{theorem}
+
 \begin{theorem}[Conditional independence extension]
   \label{thm:condIndep_extension}
   \lean{Exchangeability.DeFinetti.CommonEnding.conditional_iid_from_directing_measure}
   \leanok
-  \uses{lem:pi_system}
+  \uses{thm:monotone_class, lem:pi_system}
   Conditional independence on indicators extends to the full product $\sigma$-algebra.
 \end{theorem}
 
@@ -259,7 +502,7 @@ via a monotone class argument.
   \label{thm:deFinetti}
   \lean{Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence}
   \leanok
-  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale}
+  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale, thm:conditionallyIID_of_contractable_L2, thm:conditionallyIID_of_contractable_Koopman}
   For an infinite sequence $(X_n)_{n \in \mathbb{N}}$ of random variables taking values
   in a \emph{standard Borel space} $\alpha$ (with $\alpha$ nonempty), the following are equivalent:
   \begin{enumerate}

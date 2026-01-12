@@ -28,6 +28,19 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
    - Deep connection to dynamical systems and ergodic theory
    - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (18 files)
 
+### Import Graph
+
+<p align="center">
+  <img src="blueprint/web/import_graph_colored.svg" alt="Import Graph" width="100%">
+</p>
+
+<p align="center">
+  <em>Color legend: 🔵 ViaMartingale &nbsp; 🟢 ViaL2 &nbsp; 🟠 ViaKoopman</em><br>
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_colored.html">Interactive version</a> ·
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_full_declarations.html">Full declarations (431)</a> ·
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/dep_graph_document.html">Mathematical dependency graph</a>
+</p>
+
 ## Quick Start
 
 ### Prerequisites
