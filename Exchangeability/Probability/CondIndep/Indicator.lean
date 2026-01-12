@@ -185,7 +185,7 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
   calc μ[f * g | MeasurableSpace.comap W (by infer_instance)]
       =ᵐ[μ] (fun _ => μ[f * g]) := hfg_ce
     _ = (fun _ => μ[f] * μ[g]) := by rw [h_factor]
-    _ =ᵐ[μ] (fun _ => μ[f]) * (fun _ => μ[g]) := by rfl
+    _ =ᵐ[μ] (fun _ => μ[f]) * (fun _ => μ[g]) := .rfl
     _ =ᵐ[μ] μ[f | MeasurableSpace.comap W (by infer_instance)] * μ[g | MeasurableSpace.comap W (by infer_instance)] :=
         Filter.EventuallyEq.mul hf_ce.symm hg_ce.symm
 

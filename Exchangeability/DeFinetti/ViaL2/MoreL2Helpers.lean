@@ -1324,7 +1324,7 @@ lemma integral_alphaIic_eq_marginal
         by_cases hε_top : ε = ⊤
         · refine ⟨0, fun m _ => ?_⟩
           rw [hε_top]
-          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) by rfl]
+          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) from rfl]
           rw [← ofReal_integral_norm_eq_lintegral_enorm (h_diff_int m)]
           exact le_top
         · -- ε ≠ ⊤ case: use L¹ convergence
@@ -1333,7 +1333,7 @@ lemma integral_alphaIic_eq_marginal
           refine ⟨M, fun m hm => ?_⟩
           have := hM m hm
           simp only [Real.dist_eq, sub_zero] at this
-          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) by rfl]
+          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) from rfl]
           rw [← ofReal_integral_norm_eq_lintegral_enorm (h_diff_int m)]
           have h_int_nonneg : 0 ≤ ∫ x, |A m x - limit x| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
           have h_norm_eq_abs : ∫ x, ‖A m x - limit x‖ ∂μ = ∫ x, |A m x - limit x| ∂μ := by

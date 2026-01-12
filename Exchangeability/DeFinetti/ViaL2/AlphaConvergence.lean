@@ -940,7 +940,7 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       -- h_sub_ω : μ[indIic n ∘ X 0 - fun x => μ[fun x => 1|...] ω|...] ω = ...
       -- After substitution, we get the equality we need
       calc alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1
-          = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - 1 := by rfl
+          = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - 1 := rfl
         _ = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - μ[(fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_const_ω]
         _ = μ[indIic (n : ℝ) ∘ X 0 - (fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_sub_ω]
         _ = μ[(fun ω => indIic (n : ℝ) (X 0 ω) - 1)|TailSigma.tailSigma X] ω := by congr

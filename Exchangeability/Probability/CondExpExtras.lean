@@ -695,7 +695,7 @@ theorem condExp_project_of_condIndepFun
         _ =ᵐ[μ] fun ω => ∑ i ∈ s, (a i * (μ[ (A i).indicator 1 | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω)) := step2
         _ =ᵐ[μ] fun ω => (∑ i ∈ s, a i * μ[ (A i).indicator 1 | mW ] ω) * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step3
         _ =ᵐ[μ] fun ω => μ[ fun ω' => ∑ i ∈ s, a i * (A i).indicator 1 ω' | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω := step5
-        _ =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := by rfl
+        _ =ᵐ[μ] μ[ fun ω => ∑ i ∈ s, a i * (A i).indicator 1 ω | mW ] * μ[ (Z ⁻¹' B).indicator 1 | mW ] := .rfl
 
     -- ** STAGE 3: General Integrable Functions **
     -- For general integrable f : βY → ℝ:

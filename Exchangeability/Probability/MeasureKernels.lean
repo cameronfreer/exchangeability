@@ -390,7 +390,7 @@ lemma tripleRectangles_generate {r k : ℕ} {α : Type*} [MeasurableSpace α] :
             (Prod.snd : (Fin r → α) × α × (Fin k → α) → α × (Fin k → α)) inferInstance
           = MeasurableSpace.comap Prod.snd
               (MeasurableSpace.comap Prod.fst inferInstance ⊔
-               MeasurableSpace.comap Prod.snd inferInstance) := by rfl
+               MeasurableSpace.comap Prod.snd inferInstance) := rfl
         _ = MeasurableSpace.comap Prod.snd (MeasurableSpace.comap Prod.fst inferInstance)
             ⊔ MeasurableSpace.comap Prod.snd (MeasurableSpace.comap Prod.snd inferInstance) := by
               rw [MeasurableSpace.comap_sup]
