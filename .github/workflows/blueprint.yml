@@ -24,11 +24,18 @@ jobs:
         with:
           fetch-depth: 0  # Full history for doc generation
 
-      - name: Build Lean project
+      - name: Install elan
         uses: leanprover/lean-action@main
         with:
-          build: true
-          lint: false
+          build: false
+
+      - name: Get mathlib cache
+        run: |
+          lake exe cache get
+
+      - name: Build Lean project
+        run: |
+          lake build
 
       - name: Check declarations
         run: |
@@ -47,3 +54,4 @@ jobs:
         with:
           blueprint: true
           homepage: home_page
+          references: docs/references.bib
