@@ -43,7 +43,7 @@ extension argument.
 
 - **Exchangeable → contractable** (this file): Any strictly increasing subsequence
   can be realized as the image of the first m coordinates under some permutation.
-- **Contractable → exchangeable** (`Exchangeability/DeFinetti/*.lean`): Uses ergodic
+- **Contractable → exchangeable** (`Exchangeability/DeFinetti/Theorem.lean`): Uses ergodic
   theory and the martingale convergence approach.
 - **Exchangeable ↔ fully exchangeable** (`Exchangeability/Exchangeability.lean`):
   Uses π-system uniqueness and finite approximation of infinite permutations.

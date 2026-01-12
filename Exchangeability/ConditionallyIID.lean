@@ -22,8 +22,6 @@ exchangeable. This establishes one direction of de Finetti's representation theo
 * `ConditionallyIID μ X`: A sequence `X` is conditionally i.i.d. under measure `μ` if
   there exists a probability kernel `ν : Ω → Measure α` such that coordinates are
   independent given `ν(ω)`, with each coordinate distributed as `ν(ω)`.
-* `MixtureOfIID`: A sequence whose distribution is a mixture of i.i.d. distributions
-  (placeholder for future development).
 
 ## Main results
 
@@ -43,7 +41,7 @@ This file proves: **conditionally i.i.d. ⇒ exchangeable**
 - **Conditionally i.i.d. ⇒ exchangeable** (this file): Direct from definition using
   permutation invariance of product measures.
 - **Exchangeable ⇒ contractable** (`Contractability.lean`): Via permutation extension.
-- **Contractable ⇒ exchangeable** (`DeFinetti/*.lean`): Deep result using ergodic theory.
+- **Contractable ⇒ exchangeable** (`DeFinetti/Theorem.lean`): Deep result using ergodic theory.
 - **Exchangeable ⇒ conditionally i.i.d.** (de Finetti's theorem): The hard direction,
   requiring the existence of a random measure (the de Finetti measure).
 
@@ -196,16 +194,6 @@ def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
       ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
-
-/-- A random sequence ξ is a **mixture of i.i.d.** sequences if its distribution is a mixture of
-i.i.d. distributions: P{ξ ∈ ·} = E[ν^∞] = ∫ m^∞ P(ν ∈ dm).
-
-This is an abbreviation for `ConditionallyIID`. The names emphasize different perspectives:
-- "ConditionallyIID" emphasizes conditional independence given the directing random measure
-- "MixtureOfIID" emphasizes that the overall distribution is a mixture over directing measures
-
-**Reference:** Kallenberg (2005), Theorem 1.1 (page 27-28). -/
-abbrev MixtureOfIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop := ConditionallyIID μ X
 
 /-- Helper lemma: Permuting coordinates after taking a product is the same as taking the product
 and then permuting. -/
