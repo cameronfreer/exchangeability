@@ -82,8 +82,8 @@ lemma measure_eq_implies_lintegral_prod_eq
     ext ω; simp only [S, mem_preimage, mem_pi, mem_univ, true_implies, mem_iInter]
 
   -- Measurability of preimage
-  have hpre_meas : MeasurableSet (⋂ i : Fin m, (X (k i)) ⁻¹' (B i)) := by
-    apply MeasurableSet.iInter; intro i; exact hX_meas (k i) (hB i)
+  have hpre_meas : MeasurableSet (⋂ i : Fin m, (X (k i)) ⁻¹' (B i)) :=
+    .iInter fun i => hX_meas (k i) (hB i)
 
   -- Measurability of the mapping function
   have hf_meas : Measurable (fun ω => fun i : Fin m => X (k i) ω) := by

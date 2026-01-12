@@ -148,8 +148,8 @@ private theorem h_tower_of_lagConst_from_one
           hA_meas.aestronglyMeasurable.sub integrable_condExp.aestronglyMeasurable
         exact continuous_abs.comp_aestronglyMeasurable h_diff
       -- By integral_map: ∫ f d(μ.map g) = ∫ (f ∘ g) dμ (reversed is what we need)
-      have hh_asm' : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) (μ.map shift) := by
-        rw [hσ.map_eq]; exact hh_asm
+      have hh_asm' : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) (μ.map shift) :=
+        hσ.map_eq.symm ▸ hh_asm
       have h_int_map := integral_map hσ.measurable.aemeasurable hh_asm'
       -- Rewrite: ∫ (h ∘ shift) dμ = ∫ h d(μ.map shift) = ∫ h dμ
       rw [h_int_map.symm, hσ.map_eq]

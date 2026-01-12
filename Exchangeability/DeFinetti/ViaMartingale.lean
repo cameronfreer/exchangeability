@@ -137,7 +137,7 @@ lemma integral_eq_of_map_eq
   classical
   -- Use integral_map on both sides and the law equality
   have h1 := integral_map_eq hMeas hg
-  have h2 : Integrable g (Measure.map T' μ) := by rw [← hLaw]; exact hg
+  have h2 : Integrable g (Measure.map T' μ) := hLaw ▸ hg
   have h3 := integral_map_eq hMeas' h2
   calc ∫ ω, g (T ω) ∂μ
       = ∫ y, g y ∂(Measure.map T μ) := h1

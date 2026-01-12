@@ -163,8 +163,8 @@ private lemma L1_tendsto_clip01
     simpa [Pi.sub_apply] using abs_clip01_sub_le (fn n ω) (f ω)
   -- pass to limit
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds h ?_ ?_
-  · apply Eventually.of_forall; intro n; exact zero_le _
-  · apply Eventually.of_forall; intro n; exact hmono n
+  · exact .of_forall fun _ => zero_le _
+  · exact .of_forall fun n => hmono n
 
 /-! ### Boundedness Helpers -/
 

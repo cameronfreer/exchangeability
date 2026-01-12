@@ -56,14 +56,11 @@ lemma abs_condExp_le_condExp_abs
   have h_up : μ[f|m] ≤ᵐ[μ] μ[(fun ω => |f ω|)|m] := by
     refine condExp_mono hf ?_ ?_
     · exact hf.abs
-    · apply Filter.Eventually.of_forall
-      intro ω; exact le_abs_self _
+    · exact .of_forall fun _ => le_abs_self _
   -- Lower bound: -μ[|f||m] ≤ μ[f|m]
   -- Proof: f ≥ -|f| pointwise, so μ[f|m] ≥ μ[-|f||m] = -μ[|f||m]
   have h_low : (fun ω => -(μ[(fun ω => |f ω|)|m]) ω) ≤ᵐ[μ] μ[f|m] := by
-    have neg_abs_bound : (fun ω => -(|f ω|)) ≤ᵐ[μ] f := by
-      apply Filter.Eventually.of_forall
-      intro ω; exact neg_abs_le _
+    have neg_abs_bound : (fun ω => -(|f ω|)) ≤ᵐ[μ] f := .of_forall fun _ => neg_abs_le _
     have ce_ineq : μ[(fun ω => -(|f ω|))|m] ≤ᵐ[μ] μ[f|m] :=
       condExp_mono hf.abs.neg hf neg_abs_bound
     have neg_eq : (fun ω => -(μ[(fun ω => |f ω|)|m]) ω) =ᵐ[μ] μ[(fun ω => -(|f ω|))|m] :=

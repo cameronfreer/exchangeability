@@ -189,8 +189,7 @@ lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
           = Set.univ.pi fun i => B i := by
         ext x; simp [Set.pi]
       simp [κ, this, Measure.pi_pi]
-    have hfac : ∀ i, Measurable fun ω => ν ω (B i) := by
-      intro i; exact hν_meas (B i) (hB i)
+    have hfac : ∀ i, Measurable fun ω => ν ω (B i) := fun i => hν_meas (B i) (hB i)
     have hmeas : Measurable fun ω => ∏ i : Fin m, ν ω (B i) :=
       measurable_prod_ennreal (fun i ω => ν ω (B i)) hfac
     simpa [κ, rect]
