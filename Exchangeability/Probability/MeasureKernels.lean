@@ -51,10 +51,8 @@ This is a wrapper around `Finset.measurable_prod` specialized to ENNReal.
 -/
 lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [MeasurableSpace Ω]
     (f : ι → Ω → ENNReal) (hf : ∀ i, Measurable (f i)) :
-    Measurable fun ω => ∏ i, f i ω := by
-  apply Finset.measurable_prod
-  intro i _
-  exact hf i
+    Measurable fun ω => ∏ i, f i ω :=
+  Finset.measurable_prod _ fun i _ => hf i
 
 /-- Rewrite `Set.univ.pi B` as a setOf comprehension.
 
@@ -127,18 +125,14 @@ lemma rectangles_generate_pi_sigma {m : ℕ} {α : Type*} [MeasurableSpace α] :
       use fun i => B i
       simp only [Set.mem_pi]
       constructor
-      · intro i _; exact hB_meas i
-      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
-          ext x; simp [Set.pi]
-        rw [this]; exact hS.symm
+      · exact fun i _ => hB_meas i
+      · rw [univ_pi_eq_setOf_forall]; exact hS.symm
     · intro ⟨B, hB_mem, hS⟩
       simp only [Set.mem_pi, Set.mem_univ, Set.mem_setOf_eq] at hB_mem hS
       use B
       constructor
       · exact fun i => hB_mem i (Set.mem_univ i)
-      · have : univ.pi (fun i => B i) = {x | ∀ i, x i ∈ B i} := by
-          ext x; simp [Set.pi]
-        rw [← this]; exact hS.symm
+      · rw [← univ_pi_eq_setOf_forall]; exact hS.symm
 
   rw [set_eq]
   exact generateFrom_pi.symm
