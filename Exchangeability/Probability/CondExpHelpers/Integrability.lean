@@ -20,7 +20,6 @@ lemmas for conditional expectations.
 * `integrable_mul_of_bound_one`: Product with bounded factor is integrable
 * `abs_condExp_le_condExp_abs`: Jensen's inequality for conditional expectation
 * `condExp_indicator_ae_bound_one`: CE of indicator is a.e. in [0,1]
-* `condExp_ae_unique_of_ae_eq`: Uniqueness of CE via L¹
 * `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
 * `MeasureTheory.condExp_project_of_le`: Tower/projection property
 -/
@@ -107,52 +106,6 @@ lemma condExp_indicator_ae_bound_one
   filter_upwards [hCE0, hCE1] with ω h0' h1'
   simp only [condExp_const hm (0 : ℝ), condExp_const hm (1 : ℝ)] at h0' h1'
   exact ⟨h0', h1'⟩
-
-/-- **Uniqueness of the conditional expectation via L¹**:
-if the underlying integrands agree a.e., then `condExp` agrees a.e.
-We do *not* require full-sequence a.e. convergence; L¹ is enough. -/
-lemma condExp_ae_unique_of_ae_eq
-  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
-  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
-  {f g : Ω → ℝ} (hfg : f =ᵐ[μ] g) :
-  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g := by
-  classical
-  -- Step 1: L¹-level equality of the conditional expectations
-  have hL1 :
-      (MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ)
-    = (MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) := by
-    simp [MeasureTheory.condExpL1_congr_ae hmW_le hfg]
-  -- Step 2: bridge `condExp =ᵐ ↑condExpL1` on both sides
-  have hf :
-      MeasureTheory.condExp mW μ f
-      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) :=
-    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le f
-  have hg :
-      MeasureTheory.condExp mW μ g
-      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) :=
-    MeasureTheory.condExp_ae_eq_condExpL1 hmW_le g
-  -- Step 3: conclude
-  calc MeasureTheory.condExp mW μ f
-      =ᵐ[μ] ((MeasureTheory.condExpL1 hmW_le μ f : Ω →₁[μ] ℝ) : Ω → ℝ) := hf
-    _ = ((MeasureTheory.condExpL1 hmW_le μ g : Ω →₁[μ] ℝ) : Ω → ℝ) := by simp [hL1]
-    _ =ᵐ[μ] MeasureTheory.condExp mW μ g := hg.symm
-
-/-- Drop-in replacement for sequence-based uniqueness:
-it *only* needs L¹ convergence to the same target and `f =ᵐ g`. -/
-@[nolint unusedArguments]
-lemma tendsto_condExp_unique_L1
-  {Ω : Type*} {mΩ : MeasurableSpace Ω} {μ : Measure Ω}
-  {mW : MeasurableSpace Ω} (hmW_le : mW ≤ mΩ) [SigmaFinite (μ.trim hmW_le)]
-  {fs gs : ℕ → Ω → ℝ} {f g : Ω → ℝ}
-  (_hfs : Filter.Tendsto
-           (fun n => (MeasureTheory.condExpL1 hmW_le μ (fs n) : Ω →₁[μ] ℝ))
-           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ f)))
-  (_hgs : Filter.Tendsto
-           (fun n => (MeasureTheory.condExpL1 hmW_le μ (gs n) : Ω →₁[μ] ℝ))
-           Filter.atTop (nhds (MeasureTheory.condExpL1 hmW_le μ g)))
-  (hfg : f =ᵐ[μ] g) :
-  MeasureTheory.condExp mW μ f =ᵐ[μ] MeasureTheory.condExp mW μ g :=
-  condExp_ae_unique_of_ae_eq hmW_le hfg
 
 /-!
 ## σ-algebra factorization
