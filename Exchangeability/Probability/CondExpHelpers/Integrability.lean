@@ -21,7 +21,6 @@ lemmas for conditional expectations.
 * `abs_condExp_le_condExp_abs`: Jensen's inequality for conditional expectation
 * `condExp_indicator_ae_bound_one`: CE of indicator is a.e. in [0,1]
 * `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
-* `MeasureTheory.condExp_project_of_le`: Tower/projection property
 -/
 
 noncomputable section
@@ -127,73 +126,10 @@ lemma sigma_factor_le {Ω α β : Type*}
     {η : Ω → α} {ζ : Ω → β} {g : β → α}
     (hη : η = g ∘ ζ) (hg : Measurable g) :
     MeasurableSpace.comap η inferInstance ≤ MeasurableSpace.comap ζ inferInstance := by
-  -- Key idea: η = g ∘ ζ with g measurable implies σ(η) ≤ σ(ζ)
-  -- Every η-measurable set has form η⁻¹(t) = (g∘ζ)⁻¹(t) = ζ⁻¹(g⁻¹(t))
-  intro s hs
-  -- hs : s ∈ σ(η) means s = η⁻¹(t) for some measurable t
-  obtain ⟨t, ht, rfl⟩ := hs
-  -- Rewrite using hη: η⁻¹(t) = ζ⁻¹(g⁻¹(t))
-  rw [hη, Set.preimage_comp]
-  -- Goal: ζ⁻¹(g⁻¹(t)) ∈ σ(ζ)
-  exact ⟨g ⁻¹' t, hg ht, rfl⟩
+  rw [hη, MeasurableSpace.comap_comp.symm]
+  exact MeasurableSpace.comap_mono hg.comap_le
 
 namespace MeasureTheory
-
-/-- **Conditional expectation projection property.**
-
-If m ≤ m' are sub-σ-algebras, then projecting from m' down to m via conditional
-expectation is idempotent: μ[μ[f|m']|m] = μ[f|m] almost everywhere.
-
-**Mathematical content:** This is the "tower property" or "projection property" for
-conditional expectations. It says that conditioning twice (first on the finer σ-algebra m',
-then on the coarser σ-algebra m) gives the same result as conditioning once on m.
-
-**Intuition:** If you know less information (m ⊆ m'), then averaging over the additional
-information in m' brings you back to what you'd get by conditioning on m directly.
-
-**Application:** This is the key lemma for de Finetti's theorem Route 1, where we have
-σ(η) ≤ σ(ζ) and need to show that μ[μ[f|σ(ζ)]|σ(η)] = μ[f|σ(η)].
-
-**Proof strategy:** Use the uniqueness characterization from mathlib:
-1. Define Yproj := μ[μ[f|m']|m], which is automatically m-measurable
-2. Show that for every m-measurable set S, ∫_S Yproj = ∫_S f via two-step projection:
-   - First: ∫_S Yproj = ∫_S μ[f|m'] (by CE property on m-sets)
-   - Second: ∫_S μ[f|m'] = ∫_S f (by CE property, using m ≤ m' so S is also m'-measurable)
-3. By uniqueness (`ae_eq_condExp_of_forall_setIntegral_eq`), Yproj = μ[f|m] a.e.
--/
-lemma condExp_project_of_le {α : Type*} (m m' m₀ : MeasurableSpace α) {μ : Measure α}
-    (hm : m ≤ m₀) (hm' : m' ≤ m₀) (h_le : m ≤ m')
-    [SigmaFinite (Measure.trim μ hm)] [SigmaFinite (Measure.trim μ hm')]
-    {f : α → ℝ} (hf_int : Integrable f μ) :
-    μ[ μ[f | m'] | m ] =ᵐ[μ] μ[f | m] := by
-  -- Define the projected representative
-  set Yproj := μ[ μ[f | m'] | m ]
-
-  -- Show integrals match on m-measurable sets via two-step projection
-  have hYproj_integrals : ∀ s, MeasurableSet[m] s → μ s < ∞ →
-      ∫ x in s, Yproj x ∂μ = ∫ x in s, f x ∂μ := by
-    intro s hs hμs
-    -- First projection step: use CE property on m-sets
-    have step1 : ∫ x in s, Yproj x ∂μ = ∫ x in s, μ[f | m'] x ∂μ := by
-      have : SigmaFinite (μ.trim hm) := inferInstance
-      simpa [Yproj] using setIntegral_condExp hm integrable_condExp hs
-    -- Second step: s is also m'-measurable since m ≤ m'
-    calc
-      ∫ x in s, Yproj x ∂μ
-          = ∫ x in s, μ[f | m'] x ∂μ := step1
-      _   = ∫ x in s, f x ∂μ := by
-        have hs' : MeasurableSet[m'] s := h_le s hs
-        have : SigmaFinite (μ.trim hm') := inferInstance
-        simpa using setIntegral_condExp hm' hf_int hs'
-
-  -- Apply uniqueness
-  have hYproj : Yproj =ᵐ[μ] μ[f | m] := by
-    refine ae_eq_condExp_of_forall_setIntegral_eq hm hf_int ?integrableOn hYproj_integrals ?sm
-    · intro s hs hμs
-      exact integrable_condExp.integrableOn
-    · exact stronglyMeasurable_condExp.aestronglyMeasurable
-
-  exact hYproj
 
 /-!
 ## Wrappers for dominated convergence and L¹ continuity
