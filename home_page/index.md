@@ -5,11 +5,11 @@ A formalization of **de Finetti's theorem** for infinite sequences on standard B
 
 ## Main Result
 
-**Theorem (Kallenberg 1.1):** For an infinite sequence of random variables on a Borel space, the following are equivalent:
+**Theorem (Kallenberg 1.1):** For an infinite sequence of random variables on a standard Borel space, the following are equivalent:
 
 1. **(Contractable)** All strictly increasing subsequences of equal length have the same distribution
 2. **(Exchangeable)** Distribution invariant under finite permutations
-3. **(Conditionally i.i.d.)** Coordinates are i.i.d. given the tail σ-algebra
+3. **(Conditionally i.i.d.)** Admits a directing kernel (mixture-of-products representation)
 
 ## Three Proofs
 
@@ -18,7 +18,7 @@ We formalize **all three proofs** from Kallenberg (2005):
 | Approach | Method |
 |----------|--------|
 | **Martingale** | Reverse martingale convergence (Aldous) |
-| **L²** | Elementary contractability bounds |
+| **L²** | Elementary contractability bounds (ℝ-valued, L² integrable) |
 | **Koopman** | Mean Ergodic Theorem |
 
 ## Visualizations
@@ -36,7 +36,7 @@ We formalize **all three proofs** from Kallenberg (2005):
 | Graph | Description |
 |-------|-------------|
 | [File-level Import Graph]({{ site.url }}/blueprint/import_graph_colored.html) | Interactive graph of 57 files with physics simulation |
-| [Declaration-level Graph]({{ site.url }}/blueprint/import_graph_full_declarations.html) | All 431 declarations with search functionality |
+| [Declaration-level Graph]({{ site.url }}/blueprint/import_graph_full_declarations.html) | All declarations with search functionality |
 | [Mathematical Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html) | Blueprint proof structure |
 
 ## Links

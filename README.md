@@ -7,7 +7,7 @@ Formalization of **exchangeability** and **de Finetti's theorem** in Lean 4.
 
 ## Overview
 
-This project formalizes the **de Finetti-Ryll-Nardzewski theorem** (Kallenberg's Theorem 1.1), which establishes a three-way equivalence for infinite sequences on Borel spaces:
+This project formalizes the **de Finetti-Ryll-Nardzewski theorem** (Kallenberg's Theorem 1.1), which establishes a three-way equivalence for infinite sequences on standard Borel spaces:
 
 **(i) Contractable** ⟺ **(ii) Exchangeable** ⟺ **(iii) Conditionally i.i.d.**
 
@@ -21,6 +21,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 2. **L² Approach**
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
+   - Formalized for ℝ-valued sequences with L² integrability
    - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (12 files)
 
 3. **Koopman Approach**
@@ -39,7 +40,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 <p align="center">
   <em>Color legend: 🔵 ViaMartingale &nbsp; 🟢 ViaL2 &nbsp; 🟠 ViaKoopman</em><br>
   <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_colored.html">Interactive version</a> ·
-  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_full_declarations.html">Full declarations (431)</a> ·
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_full_declarations.html">All declarations</a> ·
   <a href="https://cameronfreer.github.io/exchangeability/blueprint/dep_graph_document.html">Mathematical dependency graph</a>
 </p>
 
@@ -47,7 +48,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 
 ### Prerequisites
 
-- [Lean 4](https://leanprover.github.io/lean4/doc/setup.html)
+- [Lean 4](https://leanprover.github.io/lean4/doc/setup.html) (this project uses `lean-toolchain` pinned to 4.27.0-rc1)
 - [elan](https://github.com/leanprover/elan) (Lean version manager)
 
 ### Installation
@@ -82,7 +83,7 @@ example {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
 ```
 Exchangeability/
 ├── Core.lean                    # Exchangeability definitions, π-systems
-├── Contractability.lean         # Contractability ↔ exchangeability
+├── Contractability.lean         # Exchangeable → Contractable
 ├── ConditionallyIID.lean        # Conditionally i.i.d. sequences
 ├── Probability/                 # Probability infrastructure
 │   ├── CondExp.lean            # Conditional expectation
@@ -113,15 +114,19 @@ Exchangeability/
 
 ## Main Results
 
+### Main API
+- `deFinetti` — Exchangeable → Conditionally i.i.d. (uses martingale proof)
+- `conditionallyIID_of_contractable` — Contractable → Conditionally i.i.d. (martingale/default)
+- `conditionallyIID_of_contractable_viaL2` — L² proof variant
+- `conditionallyIID_of_contractable_viaKoopman` — Koopman proof variant
+
 ### Core Theory
-- `exchangeable_iff_fullyExchangeable` - Finite and infinite exchangeability are equivalent
-- `measure_eq_of_fin_marginals_eq` - Measures determined by finite marginals
+- `exchangeable_iff_fullyExchangeable` — Finite and infinite exchangeability are equivalent
+- `measure_eq_of_fin_marginals_eq` — Measures determined by finite marginals
 
 ### de Finetti's Theorem (Three-way Equivalence)
-- `deFinetti` - Exchangeable sequences are conditionally i.i.d.
-- `conditionallyIID_of_contractable` - **Contractable implies conditionally i.i.d.** (three independent proofs via L², Koopman, and martingale approaches)
-- `contractable_of_exchangeable` - Exchangeability implies contractability
-- `exchangeable_of_conditionallyIID` - Conditionally i.i.d. implies exchangeability
+- `contractable_of_exchangeable` — Exchangeability implies contractability
+- `exchangeable_of_conditionallyIID` — Conditionally i.i.d. implies exchangeability
 
 ## References
 
@@ -132,6 +137,8 @@ Exchangeability/
 - **De Finetti, Bruno** (1937). "La prévision : ses lois logiques, ses sources subjectives." *Annales de l'Institut Henri Poincaré* 7 (1): 1–68. [[English translation: "Foresight: Its Logical Laws, Its Subjective Sources" (1964) in *Studies in Subjective Probability*, H. E. Kyburg and H. E. Smokler, eds.]](https://www.numdam.org/item/AIHP_1937__7_1_1_0/)
 
 - **Aldous, David J.** (1985). "Exchangeability and related topics." In *École d'Été de Probabilités de Saint-Flour XIII—1983*, Lecture Notes in Mathematics 1117, pp. 1–198. Springer-Verlag, Berlin. [https://doi.org/10.1007/BFb0099421](https://doi.org/10.1007/BFb0099421)
+
+- **Ryll-Nardzewski, Czesław** (1957). "On stationary sequences of random variables and the de Finetti's equivalence." *Colloquium Mathematicum* 4 (2): 149–156. [https://doi.org/10.4064/cm-4-2-149-156](https://doi.org/10.4064/cm-4-2-149-156)
 
 ### Related Work
 
