@@ -31,7 +31,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 ### Import Graph
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/cameronfreer/exchangeability/main/blueprint/web/import_graph_colored.png">
+  <a href="blueprint/web/import_graph_colored.png">
     <img src="blueprint/web/import_graph_colored.png" alt="Import Graph" width="100%">
   </a>
 </p>
