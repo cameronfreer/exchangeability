@@ -45,3 +45,4 @@ blueprint/print/*.out
 blueprint/print/*.synctex.gz
 # Exception: allow symbol-defs.svg in blueprint
 !blueprint/web/symbol-defs.svg
+\!blueprint/web/import_graph_colored.png
