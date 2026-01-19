@@ -32,7 +32,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 ### Import Graph
 
 <p align="center">
-  <a href="blueprint/web/import_graph_colored.svg">
+  <a href="https://raw.githubusercontent.com/cameronfreer/exchangeability/refs/heads/main/blueprint/web/import_graph_colored.svg">
     <img src="blueprint/web/import_graph_colored.png" alt="Import Graph" width="100%">
   </a>
 </p>
