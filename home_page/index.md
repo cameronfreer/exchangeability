@@ -30,14 +30,14 @@ We formalize **all three proofs** from Kallenberg (2005):
 </p>
 
 <p align="center">
-  <em>Color legend: 🔵 ViaMartingale &nbsp; 🟢 ViaL2 &nbsp; 🟠 ViaKoopman</em>
+  <em>Modules colored by proof: 🔵 Martingale &nbsp; 🟢 L² &nbsp; 🟠 Koopman</em>
 </p>
 
 | Graph | Description |
 |-------|-------------|
-| [File-level Import Graph]({{ site.url }}/blueprint/import_graph_colored.html) | Interactive graph of 57 files with physics simulation |
-| [Declaration-level Graph]({{ site.url }}/blueprint/import_graph_full_declarations.html) | All declarations with search functionality |
-| [Mathematical Dependency Graph]({{ site.url }}/blueprint/dep_graph_document.html) | Blueprint proof structure |
+| [Modules]({{ site.url }}/blueprint/import_graph_colored.html) | 57 files (interactive) |
+| [All declarations]({{ site.url }}/blueprint/import_graph_full_declarations.html) | Searchable |
+| [Blueprint only]({{ site.url }}/blueprint/dep_graph_document.html) | Documented items |
 
 ## Links
 

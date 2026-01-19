@@ -10,17 +10,21 @@
 <title>import_graph</title>
 <polygon fill="white" stroke="none" points="-4,4 -4,-1624 7689.35,-1624 7689.35,4 -4,4"/>
 <!-- Exchangeability.Probability.CondExpHelpers.Integrability -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExpHelpers/Integrability.html" target="_blank">
 <g id="node1" class="node">
 <title>Exchangeability.Probability.CondExpHelpers.Integrability</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="6525.86" cy="-1602" rx="227.41" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6525.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExpHelpers.Integrability</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExpHelpers.html" target="_blank">
 <g id="node17" class="node">
 <title>Exchangeability.Probability.CondExpHelpers</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="6988.86" cy="-1530" rx="179.3" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6988.86" y="-1524.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExpHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpHelpers.Integrability&#45;&gt;Exchangeability.Probability.CondExpHelpers -->
 <g id="edge11" class="edge">
 <title>Exchangeability.Probability.CondExpHelpers.Integrability&#45;&gt;Exchangeability.Probability.CondExpHelpers</title>
@@ -28,17 +32,21 @@
 <polygon fill="black" stroke="black" points="6881.74,-1550.74 6891.1,-1545.78 6880.69,-1543.81 6881.74,-1550.74"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman.html" target="_blank">
 <g id="node2" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5161.86" cy="-162" rx="160.37" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5161.86" y="-156.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.TheoremViaKoopman -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/TheoremViaKoopman.html" target="_blank">
 <g id="node100" class="node">
 <title>Exchangeability.DeFinetti.TheoremViaKoopman</title>
 <ellipse fill="#fc9272" stroke="black" cx="4844.86" cy="-90" rx="194.15" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4844.86" y="-84.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.TheoremViaKoopman</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman&#45;&gt;Exchangeability.DeFinetti.TheoremViaKoopman -->
 <g id="edge130" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman&#45;&gt;Exchangeability.DeFinetti.TheoremViaKoopman</title>
@@ -46,11 +54,13 @@
 <polygon fill="black" stroke="black" points="4929.77,-106.16 4919.25,-107.43 4928.26,-113 4929.77,-106.16"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/ContractableFactorization.html" target="_blank">
 <g id="node3" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5290.86" cy="-234" rx="258.63" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5290.86" y="-228.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization&#45;&gt;Exchangeability.DeFinetti.ViaKoopman -->
 <g id="edge1" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.ContractableFactorization&#45;&gt;Exchangeability.DeFinetti.ViaKoopman</title>
@@ -58,17 +68,21 @@
 <polygon fill="black" stroke="black" points="5205.17,-182.52 5194.71,-180.83 5201.83,-188.67 5205.17,-182.52"/>
 </g>
 <!-- Exchangeability.PathSpace.Shift -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/PathSpace/Shift.html" target="_blank">
 <g id="node4" class="node">
 <title>Exchangeability.PathSpace.Shift</title>
 <ellipse fill="#c6dbef" stroke="black" cx="5082.86" cy="-1314" rx="131.71" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5082.86" y="-1308.95" font-family="Times,serif" font-size="14.00">Exchangeability.PathSpace.Shift</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.ShiftInvariantSigma -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/ShiftInvariantSigma.html" target="_blank">
 <g id="node20" class="node">
 <title>Exchangeability.Ergodic.ShiftInvariantSigma</title>
 <ellipse fill="#bcbddc" stroke="black" cx="6517.86" cy="-1242" rx="179.82" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6517.86" y="-1236.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.ShiftInvariantSigma</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Ergodic.ShiftInvariantSigma -->
 <g id="edge12" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Ergodic.ShiftInvariantSigma</title>
@@ -76,11 +90,13 @@
 <polygon fill="black" stroke="black" points="6347.69,-1254.81 6357.51,-1250.82 6347.35,-1247.81 6347.69,-1254.81"/>
 </g>
 <!-- Exchangeability.Tail.ShiftInvariantMeasure -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Tail/ShiftInvariantMeasure.html" target="_blank">
 <g id="node33" class="node">
 <title>Exchangeability.Tail.ShiftInvariantMeasure</title>
 <ellipse fill="#fdd0a2" stroke="black" cx="3382.86" cy="-1098" rx="173.67" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3382.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Tail.ShiftInvariantMeasure</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Tail.ShiftInvariantMeasure -->
 <g id="edge23" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Tail.ShiftInvariantMeasure</title>
@@ -88,11 +104,13 @@
 <polygon fill="black" stroke="black" points="3423.13,-1118.9 3412.73,-1116.86 3419.59,-1124.94 3423.13,-1118.9"/>
 </g>
 <!-- Exchangeability.DeFinetti.CommonEnding -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/CommonEnding.html" target="_blank">
 <g id="node43" class="node">
 <title>Exchangeability.DeFinetti.CommonEnding</title>
 <ellipse fill="#9e9ac8" stroke="black" cx="4328.86" cy="-1098" rx="172.14" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4328.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.CommonEnding</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.DeFinetti.CommonEnding -->
 <g id="edge76" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.DeFinetti.CommonEnding</title>
@@ -100,11 +118,13 @@
 <polygon fill="black" stroke="black" points="4372.04,-1118.28 4361.57,-1116.72 4368.78,-1124.47 4372.04,-1118.28"/>
 </g>
 <!-- Exchangeability.Ergodic.KoopmanMeanErgodic -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/KoopmanMeanErgodic.html" target="_blank">
 <g id="node47" class="node">
 <title>Exchangeability.Ergodic.KoopmanMeanErgodic</title>
 <ellipse fill="#bcbddc" stroke="black" cx="5670.86" cy="-1170" rx="192.1" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5670.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.KoopmanMeanErgodic</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Ergodic.KoopmanMeanErgodic -->
 <g id="edge35" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Ergodic.KoopmanMeanErgodic</title>
@@ -112,11 +132,13 @@
 <polygon fill="black" stroke="black" points="5630.01,-1196.5 5637.33,-1188.85 5626.83,-1190.26 5630.01,-1196.5"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CylinderFunctions.html" target="_blank">
 <g id="node53" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5450.86" cy="-738" rx="231.51" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5450.86" y="-732.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions -->
 <g id="edge91" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CylinderFunctions</title>
@@ -124,11 +146,13 @@
 <polygon fill="black" stroke="black" points="5454.36,-768 5450.86,-758 5447.36,-768 5454.36,-768"/>
 </g>
 <!-- Exchangeability.Bridge.CesaroToCondExp -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Bridge/CesaroToCondExp.html" target="_blank">
 <g id="node93" class="node">
 <title>Exchangeability.Bridge.CesaroToCondExp</title>
 <ellipse fill="#e0e0e0" stroke="black" cx="4689.86" cy="-1098" rx="171.11" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4689.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Bridge.CesaroToCondExp</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Bridge.CesaroToCondExp -->
 <g id="edge93" class="edge">
 <title>Exchangeability.PathSpace.Shift&#45;&gt;Exchangeability.Bridge.CesaroToCondExp</title>
@@ -136,17 +160,21 @@
 <polygon fill="black" stroke="black" points="4667.45,-1127.35 4671.26,-1117.46 4662.12,-1122.81 4667.45,-1127.35"/>
 </g>
 <!-- Exchangeability.Util.ProductBounds -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Util/ProductBounds.html" target="_blank">
 <g id="node5" class="node">
 <title>Exchangeability.Util.ProductBounds</title>
 <ellipse fill="#dadaeb" stroke="black" cx="4442.86" cy="-522" rx="146.55" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4442.86" y="-516.95" font-family="Times,serif" font-size="14.00">Exchangeability.Util.ProductBounds</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.BlockAverage -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/BlockAverage.html" target="_blank">
 <g id="node6" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.BlockAverage</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-306" rx="216.15" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-300.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.BlockAverage</text>
 </g>
+</a>
 <!-- Exchangeability.Util.ProductBounds&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockAverage -->
 <g id="edge19" class="edge">
 <title>Exchangeability.Util.ProductBounds&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockAverage</title>
@@ -154,11 +182,13 @@
 <polygon fill="black" stroke="black" points="5485.19,-328.55 5494.37,-323.26 5483.9,-321.67 5485.19,-328.55"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.MoreL2Helpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/MoreL2Helpers.html" target="_blank">
 <g id="node63" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</title>
 <ellipse fill="#74c476" stroke="black" cx="4148.86" cy="-450" rx="195.68" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4148.86" y="-444.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</text>
 </g>
+</a>
 <!-- Exchangeability.Util.ProductBounds&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers -->
 <g id="edge48" class="edge">
 <title>Exchangeability.Util.ProductBounds&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</title>
@@ -172,17 +202,21 @@
 <polygon fill="black" stroke="black" points="5372.54,-251.11 5361.99,-252.17 5370.89,-257.92 5372.54,-251.11"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Extension -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Bounded/Extension.html" target="_blank">
 <g id="node7" class="node">
 <title>Exchangeability.Probability.CondIndep.Bounded.Extension</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="4516.86" cy="-1314" rx="232.02" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4516.86" y="-1308.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Bounded.Extension</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Projection -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Bounded/Projection.html" target="_blank">
 <g id="node32" class="node">
 <title>Exchangeability.Probability.CondIndep.Bounded.Projection</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="4332.86" cy="-1242" rx="233.04" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4332.86" y="-1236.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Bounded.Projection</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Extension&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Projection -->
 <g id="edge21" class="edge">
 <title>Exchangeability.Probability.CondIndep.Bounded.Extension&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Projection</title>
@@ -190,11 +224,13 @@
 <polygon fill="black" stroke="black" points="4389.73,-1260.89 4379.14,-1260.61 4387.24,-1267.43 4389.73,-1260.89"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.Indicator -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Indicator.html" target="_blank">
 <g id="node8" class="node">
 <title>Exchangeability.Probability.CondIndep.Indicator</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="5677.86" cy="-1386" rx="192.61" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5677.86" y="-1380.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Indicator</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Indicator&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Extension -->
 <g id="edge3" class="edge">
 <title>Exchangeability.Probability.CondIndep.Indicator&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Extension</title>
@@ -202,11 +238,13 @@
 <polygon fill="black" stroke="black" points="4707.23,-1322.97 4697.04,-1325.86 4706.81,-1329.96 4707.23,-1322.97"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Approximation -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Bounded/Approximation.html" target="_blank">
 <g id="node9" class="node">
 <title>Exchangeability.Probability.CondIndep.Bounded.Approximation</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="4516.86" cy="-1386" rx="251.98" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4516.86" y="-1380.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Bounded.Approximation</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Approximation&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Extension -->
 <g id="edge4" class="edge">
 <title>Exchangeability.Probability.CondIndep.Bounded.Approximation&#45;&gt;Exchangeability.Probability.CondIndep.Bounded.Extension</title>
@@ -214,17 +252,21 @@
 <polygon fill="black" stroke="black" points="4520.36,-1343.62 4516.86,-1333.62 4513.36,-1343.62 4520.36,-1343.62"/>
 </g>
 <!-- Exchangeability.Probability.Martingale -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/Martingale.html" target="_blank">
 <g id="node10" class="node">
 <title>Exchangeability.Probability.Martingale</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2824.86" cy="-954" rx="156.78" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2824.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.Martingale</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.Factorization -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/Factorization.html" target="_blank">
 <g id="node96" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.Factorization</title>
 <ellipse fill="#6baed6" stroke="black" cx="3603.86" cy="-810" rx="215.64" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3603.86" y="-804.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.Factorization</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.Factorization -->
 <g id="edge109" class="edge">
 <title>Exchangeability.Probability.Martingale&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.Factorization</title>
@@ -232,11 +274,13 @@
 <polygon fill="black" stroke="black" points="3434.88,-826.93 3444.61,-822.74 3434.39,-819.94 3434.88,-826.93"/>
 </g>
 <!-- Exchangeability.Probability.Martingale.OrderDual -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/Martingale/OrderDual.html" target="_blank">
 <g id="node11" class="node">
 <title>Exchangeability.Probability.Martingale.OrderDual</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="3248.86" cy="-1026" rx="198.75" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3248.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.Martingale.OrderDual</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale.OrderDual&#45;&gt;Exchangeability.Probability.Martingale -->
 <g id="edge5" class="edge">
 <title>Exchangeability.Probability.Martingale.OrderDual&#45;&gt;Exchangeability.Probability.Martingale</title>
@@ -244,11 +288,13 @@
 <polygon fill="black" stroke="black" points="2923.95,-967.81 2913.51,-969.64 2922.81,-974.72 2923.95,-967.81"/>
 </g>
 <!-- Exchangeability.Probability.Martingale.Convergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/Martingale/Convergence.html" target="_blank">
 <g id="node12" class="node">
 <title>Exchangeability.Probability.Martingale.Convergence</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="1573.86" cy="-1026" rx="207.96" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1573.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.Martingale.Convergence</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale.Convergence&#45;&gt;Exchangeability.Probability.Martingale -->
 <g id="edge6" class="edge">
 <title>Exchangeability.Probability.Martingale.Convergence&#45;&gt;Exchangeability.Probability.Martingale</title>
@@ -256,11 +302,13 @@
 <polygon fill="black" stroke="black" points="2704.2,-971.81 2713.83,-967.38 2703.54,-964.84 2704.2,-971.81"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.KallenbergChain -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/KallenbergChain.html" target="_blank">
 <g id="node24" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.KallenbergChain</title>
 <ellipse fill="#6baed6" stroke="black" cx="1981.86" cy="-954" rx="229.97" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1981.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.KallenbergChain</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale.Convergence&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.KallenbergChain -->
 <g id="edge104" class="edge">
 <title>Exchangeability.Probability.Martingale.Convergence&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.KallenbergChain</title>
@@ -268,11 +316,13 @@
 <polygon fill="black" stroke="black" points="1878.56,-976.27 1887.83,-971.13 1877.38,-969.37 1878.56,-976.27"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.Basic -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Basic.html" target="_blank">
 <g id="node13" class="node">
 <title>Exchangeability.Probability.CondIndep.Basic</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="6988.86" cy="-1458" rx="179.82" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6988.86" y="-1452.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Basic</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Basic&#45;&gt;Exchangeability.Probability.CondIndep.Indicator -->
 <g id="edge7" class="edge">
 <title>Exchangeability.Probability.CondIndep.Basic&#45;&gt;Exchangeability.Probability.CondIndep.Indicator</title>
@@ -280,17 +330,21 @@
 <polygon fill="black" stroke="black" points="5853.36,-1392.87 5843.19,-1395.83 5852.99,-1399.86 5853.36,-1392.87"/>
 </g>
 <!-- Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/TripleLawDropInfo/PairLawHelpers.html" target="_blank">
 <g id="node14" class="node">
 <title>Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="813.86" cy="-1458" rx="251.47" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="813.86" y="-1452.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.TripleLawDropInfo.DropInfo -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/TripleLawDropInfo/DropInfo.html" target="_blank">
 <g id="node58" class="node">
 <title>Exchangeability.Probability.TripleLawDropInfo.DropInfo</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="737.86" cy="-1026" rx="225.88" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="737.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.TripleLawDropInfo.DropInfo</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers&#45;&gt;Exchangeability.Probability.TripleLawDropInfo.DropInfo -->
 <g id="edge94" class="edge">
 <title>Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers&#45;&gt;Exchangeability.Probability.TripleLawDropInfo.DropInfo</title>
@@ -298,11 +352,13 @@
 <polygon fill="black" stroke="black" points="744.26,-1055.6 739.83,-1045.97 737.29,-1056.26 744.26,-1055.6"/>
 </g>
 <!-- Exchangeability.Probability.CondExpBasic -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExpBasic.html" target="_blank">
 <g id="node15" class="node">
 <title>Exchangeability.Probability.CondExpBasic</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="987.86" cy="-1602" rx="171.11" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="987.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExpBasic</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpBasic&#45;&gt;Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers -->
 <g id="edge8" class="edge">
 <title>Exchangeability.Probability.CondExpBasic&#45;&gt;Exchangeability.Probability.TripleLawDropInfo.PairLawHelpers</title>
@@ -310,11 +366,13 @@
 <polygon fill="black" stroke="black" points="846.33,-1480.98 836.37,-1477.37 841.9,-1486.4 846.33,-1480.98"/>
 </g>
 <!-- Exchangeability.Probability.CondExp -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExp.html" target="_blank">
 <g id="node70" class="node">
 <title>Exchangeability.Probability.CondExp</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2469.86" cy="-1530" rx="150.64" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2469.86" y="-1524.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExp</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpBasic&#45;&gt;Exchangeability.Probability.CondExp -->
 <g id="edge69" class="edge">
 <title>Exchangeability.Probability.CondExpBasic&#45;&gt;Exchangeability.Probability.CondExp</title>
@@ -322,11 +380,13 @@
 <polygon fill="black" stroke="black" points="2313.75,-1539.01 2323.64,-1535.21 2313.54,-1532.02 2313.75,-1539.01"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.Clip01 -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/Clip01.html" target="_blank">
 <g id="node16" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.Clip01</title>
 <ellipse fill="#74c476" stroke="black" cx="4078.86" cy="-522" rx="161.39" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4078.86" y="-516.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.Clip01</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.Clip01&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers -->
 <g id="edge44" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.Clip01&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</title>
@@ -340,11 +400,13 @@
 <polygon fill="black" stroke="black" points="6992.36,-1487.62 6988.86,-1477.62 6985.36,-1487.62 6992.36,-1487.62"/>
 </g>
 <!-- Exchangeability.Probability.CondExpHelpers.AEComb -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExpHelpers/AEComb.html" target="_blank">
 <g id="node18" class="node">
 <title>Exchangeability.Probability.CondExpHelpers.AEComb</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="6988.86" cy="-1602" rx="217.18" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6988.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExpHelpers.AEComb</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpHelpers.AEComb&#45;&gt;Exchangeability.Probability.CondExpHelpers -->
 <g id="edge9" class="edge">
 <title>Exchangeability.Probability.CondExpHelpers.AEComb&#45;&gt;Exchangeability.Probability.CondExpHelpers</title>
@@ -352,11 +414,13 @@
 <polygon fill="black" stroke="black" points="6992.36,-1559.62 6988.86,-1549.62 6985.36,-1559.62 6992.36,-1559.62"/>
 </g>
 <!-- Exchangeability.Probability.CondExpHelpers.Convergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondExpHelpers/Convergence.html" target="_blank">
 <g id="node19" class="node">
 <title>Exchangeability.Probability.CondExpHelpers.Convergence</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="7454.86" cy="-1602" rx="230.48" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="7454.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondExpHelpers.Convergence</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondExpHelpers.Convergence&#45;&gt;Exchangeability.Probability.CondExpHelpers -->
 <g id="edge10" class="edge">
 <title>Exchangeability.Probability.CondExpHelpers.Convergence&#45;&gt;Exchangeability.Probability.CondExpHelpers</title>
@@ -364,11 +428,13 @@
 <polygon fill="black" stroke="black" points="7097.54,-1543.79 7087.13,-1545.76 7096.5,-1550.71 7097.54,-1543.79"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.BlockInjection -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/BlockInjection.html" target="_blank">
 <g id="node25" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.BlockInjection</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="6630.86" cy="-378" rx="217.69" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6630.86" y="-372.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.BlockInjection</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockInjection -->
 <g id="edge77" class="edge">
 <title>Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockInjection</title>
@@ -376,11 +442,13 @@
 <polygon fill="black" stroke="black" points="6682.91,-398.17 6672.41,-396.74 6679.72,-404.41 6682.91,-398.17"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.DirectingKernel -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/DirectingKernel.html" target="_blank">
 <g id="node27" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.DirectingKernel</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="6236.86" cy="-450" rx="222.81" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6236.86" y="-444.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.DirectingKernel</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.DirectingKernel -->
 <g id="edge90" class="edge">
 <title>Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.DirectingKernel</title>
@@ -388,11 +456,13 @@
 <polygon fill="black" stroke="black" points="6379.73,-463.01 6369.35,-465.13 6378.79,-469.95 6379.73,-463.01"/>
 </g>
 <!-- Exchangeability.Ergodic.ShiftInvariantRepresentatives -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/ShiftInvariantRepresentatives.html" target="_blank">
 <g id="node95" class="node">
 <title>Exchangeability.Ergodic.ShiftInvariantRepresentatives</title>
 <ellipse fill="#bcbddc" stroke="black" cx="6462.86" cy="-1170" rx="214.11" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6462.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.ShiftInvariantRepresentatives</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.Ergodic.ShiftInvariantRepresentatives -->
 <g id="edge105" class="edge">
 <title>Exchangeability.Ergodic.ShiftInvariantSigma&#45;&gt;Exchangeability.Ergodic.ShiftInvariantRepresentatives</title>
@@ -400,17 +470,21 @@
 <polygon fill="black" stroke="black" points="6486.17,-1195 6477.24,-1189.29 6480.66,-1199.32 6486.17,-1195"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/CondExpConvergence.html" target="_blank">
 <g id="node21" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence</title>
 <ellipse fill="#6baed6" stroke="black" cx="2998.86" cy="-882" rx="250.44" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2998.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/DirectingMeasure.html" target="_blank">
 <g id="node44" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure</title>
 <ellipse fill="#6baed6" stroke="black" cx="3123.86" cy="-810" rx="234.07" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3123.86" y="-804.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure -->
 <g id="edge135" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure</title>
@@ -424,11 +498,13 @@
 <polygon fill="black" stroke="black" points="3470.13,-830 3479.66,-825.37 3469.32,-823.04 3470.13,-830"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FutureFiltration -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/FutureFiltration.html" target="_blank">
 <g id="node22" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.FutureFiltration</title>
 <ellipse fill="#6baed6" stroke="black" cx="3228.86" cy="-954" rx="225.37" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3228.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.FutureFiltration</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FutureFiltration&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence -->
 <g id="edge13" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.FutureFiltration&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence</title>
@@ -436,11 +512,13 @@
 <polygon fill="black" stroke="black" points="3066.6,-899.96 3056.01,-900.39 3064.56,-906.65 3066.6,-899.96"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/FiniteCylinders.html" target="_blank">
 <g id="node90" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders</title>
 <ellipse fill="#6baed6" stroke="black" cx="3491.86" cy="-882" rx="224.34" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3491.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FutureFiltration&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders -->
 <g id="edge87" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.FutureFiltration&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders</title>
@@ -448,11 +526,13 @@
 <polygon fill="black" stroke="black" points="3419,-906.01 3427.76,-900.06 3417.2,-899.25 3419,-906.01"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FutureRectangles -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/FutureRectangles.html" target="_blank">
 <g id="node23" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.FutureRectangles</title>
 <ellipse fill="#6baed6" stroke="black" cx="3703.86" cy="-954" rx="231.51" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3703.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.FutureRectangles</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FutureRectangles&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence -->
 <g id="edge14" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.FutureRectangles&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence</title>
@@ -472,11 +552,13 @@
 <polygon fill="black" stroke="black" points="5757.17,-315.25 5746.96,-318.07 5756.71,-322.23 5757.17,-315.25"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CesaroConvergence.html" target="_blank">
 <g id="node26" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-378" rx="237.14" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-372.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockAverage -->
 <g id="edge17" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroConvergence&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.BlockAverage</title>
@@ -490,11 +572,13 @@
 <polygon fill="black" stroke="black" points="5668.77,-322.33 5658.26,-323.64 5667.3,-329.17 5668.77,-322.33"/>
 </g>
 <!-- Exchangeability.DeFinetti.BridgeProperty -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/BridgeProperty.html" target="_blank">
 <g id="node28" class="node">
 <title>Exchangeability.DeFinetti.BridgeProperty</title>
 <ellipse fill="#9e9ac8" stroke="black" cx="3899.86" cy="-594" rx="167.02" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3899.86" y="-588.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.BridgeProperty</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.BridgeProperty&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers -->
 <g id="edge46" class="edge">
 <title>Exchangeability.DeFinetti.BridgeProperty&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</title>
@@ -502,11 +586,13 @@
 <polygon fill="black" stroke="black" points="4016.68,-469.89 4025.96,-464.77 4015.52,-462.99 4016.68,-469.89"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FiniteProduct -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/FiniteProduct.html" target="_blank">
 <g id="node29" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.FiniteProduct</title>
 <ellipse fill="#6baed6" stroke="black" cx="3955.86" cy="-738" rx="217.18" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3955.86" y="-732.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.FiniteProduct</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FiniteProduct&#45;&gt;Exchangeability.DeFinetti.BridgeProperty -->
 <g id="edge20" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.FiniteProduct&#45;&gt;Exchangeability.DeFinetti.BridgeProperty</title>
@@ -514,11 +600,13 @@
 <polygon fill="black" stroke="black" points="3914.09,-621.54 3907.17,-613.52 3907.58,-624.11 3914.09,-621.54"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale.html" target="_blank">
 <g id="node42" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale</title>
 <ellipse fill="#6baed6" stroke="black" cx="3369.86" cy="-666" rx="164.46" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3369.86" y="-660.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.FiniteProduct&#45;&gt;Exchangeability.DeFinetti.ViaMartingale -->
 <g id="edge32" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.FiniteProduct&#45;&gt;Exchangeability.DeFinetti.ViaMartingale</title>
@@ -526,11 +614,13 @@
 <polygon fill="black" stroke="black" points="3490.06,-677.83 3479.72,-680.12 3489.23,-684.78 3490.06,-677.83"/>
 </g>
 <!-- Exchangeability.Probability.CondProb -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondProb.html" target="_blank">
 <g id="node30" class="node">
 <title>Exchangeability.Probability.CondProb</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2469.86" cy="-1602" rx="153.2" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2469.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondProb</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondProb&#45;&gt;Exchangeability.Probability.CondExp -->
 <g id="edge70" class="edge">
 <title>Exchangeability.Probability.CondProb&#45;&gt;Exchangeability.Probability.CondExp</title>
@@ -538,17 +628,21 @@
 <polygon fill="black" stroke="black" points="2473.36,-1559.62 2469.86,-1549.62 2466.36,-1559.62 2473.36,-1559.62"/>
 </g>
 <!-- Exchangeability.Util.StrictMono -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Util/StrictMono.html" target="_blank">
 <g id="node31" class="node">
 <title>Exchangeability.Util.StrictMono</title>
 <ellipse fill="#dadaeb" stroke="black" cx="3657.86" cy="-1314" rx="132.22" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3657.86" y="-1308.95" font-family="Times,serif" font-size="14.00">Exchangeability.Util.StrictMono</text>
 </g>
+</a>
 <!-- Exchangeability.Contractability -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Contractability.html" target="_blank">
 <g id="node78" class="node">
 <title>Exchangeability.Contractability</title>
 <ellipse fill="#a1d99b" stroke="black" cx="3367.86" cy="-1242" rx="128.12" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3367.86" y="-1236.95" font-family="Times,serif" font-size="14.00">Exchangeability.Contractability</text>
 </g>
+</a>
 <!-- Exchangeability.Util.StrictMono&#45;&gt;Exchangeability.Contractability -->
 <g id="edge128" class="edge">
 <title>Exchangeability.Util.StrictMono&#45;&gt;Exchangeability.Contractability</title>
@@ -556,11 +650,13 @@
 <polygon fill="black" stroke="black" points="3442.18,-1257.34 3431.64,-1258.39 3440.54,-1264.14 3442.18,-1257.34"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.Bounded -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/Bounded.html" target="_blank">
 <g id="node37" class="node">
 <title>Exchangeability.Probability.CondIndep.Bounded</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="4852.86" cy="-1170" rx="192.61" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4852.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.Bounded</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Bounded.Projection&#45;&gt;Exchangeability.Probability.CondIndep.Bounded -->
 <g id="edge25" class="edge">
 <title>Exchangeability.Probability.CondIndep.Bounded.Projection&#45;&gt;Exchangeability.Probability.CondIndep.Bounded</title>
@@ -568,11 +664,13 @@
 <polygon fill="black" stroke="black" points="4735.08,-1190.39 4744.52,-1185.58 4734.14,-1183.45 4735.08,-1190.39"/>
 </g>
 <!-- Exchangeability.Tail.CondExpShiftInvariance -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Tail/CondExpShiftInvariance.html" target="_blank">
 <g id="node65" class="node">
 <title>Exchangeability.Tail.CondExpShiftInvariance</title>
 <ellipse fill="#fdd0a2" stroke="black" cx="4251.86" cy="-666" rx="181.86" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4251.86" y="-660.95" font-family="Times,serif" font-size="14.00">Exchangeability.Tail.CondExpShiftInvariance</text>
 </g>
+</a>
 <!-- Exchangeability.Tail.ShiftInvariantMeasure&#45;&gt;Exchangeability.Tail.CondExpShiftInvariance -->
 <g id="edge129" class="edge">
 <title>Exchangeability.Tail.ShiftInvariantMeasure&#45;&gt;Exchangeability.Tail.CondExpShiftInvariance</title>
@@ -580,11 +678,13 @@
 <polygon fill="black" stroke="black" points="4256.13,-695.79 4252.55,-685.81 4249.13,-695.84 4256.13,-695.79"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.BlockAverages -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/BlockAverages.html" target="_blank">
 <g id="node66" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
 <ellipse fill="#74c476" stroke="black" cx="1992.86" cy="-1026" rx="193.12" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1992.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.BlockAverages</text>
 </g>
+</a>
 <!-- Exchangeability.Tail.ShiftInvariantMeasure&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages -->
 <g id="edge56" class="edge">
 <title>Exchangeability.Tail.ShiftInvariantMeasure&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
@@ -592,11 +692,13 @@
 <polygon fill="black" stroke="black" points="2151.46,-1035.31 2141.25,-1038.11 2150.98,-1042.29 2151.46,-1035.31"/>
 </g>
 <!-- Exchangeability.Tail.TailSigma -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Tail/TailSigma.html" target="_blank">
 <g id="node34" class="node">
 <title>Exchangeability.Tail.TailSigma</title>
 <ellipse fill="#fdd0a2" stroke="black" cx="3681.86" cy="-1170" rx="129.15" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3681.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Tail.TailSigma</text>
 </g>
+</a>
 <!-- Exchangeability.Tail.TailSigma&#45;&gt;Exchangeability.Tail.ShiftInvariantMeasure -->
 <g id="edge22" class="edge">
 <title>Exchangeability.Tail.TailSigma&#45;&gt;Exchangeability.Tail.ShiftInvariantMeasure</title>
@@ -604,11 +706,13 @@
 <polygon fill="black" stroke="black" points="3463.07,-1114.18 3452.53,-1115.31 3461.47,-1121 3463.07,-1114.18"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.ShiftOperations -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/ShiftOperations.html" target="_blank">
 <g id="node40" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.ShiftOperations</title>
 <ellipse fill="#6baed6" stroke="black" cx="3837.86" cy="-1098" rx="225.37" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3837.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.ShiftOperations</text>
 </g>
+</a>
 <!-- Exchangeability.Tail.TailSigma&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.ShiftOperations -->
 <g id="edge67" class="edge">
 <title>Exchangeability.Tail.TailSigma&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.ShiftOperations</title>
@@ -622,11 +726,13 @@
 <polygon fill="black" stroke="black" points="4195.81,-1115.68 4205.41,-1111.2 4195.11,-1108.71 4195.81,-1115.68"/>
 </g>
 <!-- Exchangeability.Core -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Core.html" target="_blank">
 <g id="node35" class="node">
 <title>Exchangeability.Core</title>
 <ellipse fill="#fdae6b" stroke="black" cx="3367.86" cy="-1170" rx="90.76" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3367.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Core</text>
 </g>
+</a>
 <!-- Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.KallenbergChain -->
 <g id="edge101" class="edge">
 <title>Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.KallenbergChain</title>
@@ -640,11 +746,13 @@
 <polygon fill="black" stroke="black" points="3380.21,-1128.1 3378.88,-1117.58 3373.36,-1126.63 3380.21,-1128.1"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.PairLawEquality -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/PairLawEquality.html" target="_blank">
 <g id="node38" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.PairLawEquality</title>
 <ellipse fill="#6baed6" stroke="black" cx="3963.86" cy="-882" rx="229.46" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3963.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.PairLawEquality</text>
 </g>
+</a>
 <!-- Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality -->
 <g id="edge26" class="edge">
 <title>Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality</title>
@@ -652,11 +760,13 @@
 <polygon fill="black" stroke="black" points="3973.74,-911.11 3968.42,-901.95 3966.87,-912.43 3973.74,-911.11"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.InfraCore -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/InfraCore.html" target="_blank">
 <g id="node55" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.InfraCore</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5689.86" cy="-1026" rx="198.75" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5689.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.InfraCore</text>
 </g>
+</a>
 <!-- Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.InfraCore -->
 <g id="edge119" class="edge">
 <title>Exchangeability.Core&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.InfraCore</title>
@@ -670,17 +780,21 @@
 <polygon fill="black" stroke="black" points="4559.2,-1115.73 4568.85,-1111.38 4558.59,-1108.76 4559.2,-1115.73"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.BlockAvgDef -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/BlockAvgDef.html" target="_blank">
 <g id="node36" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.BlockAvgDef</title>
 <ellipse fill="#74c476" stroke="black" cx="2843.86" cy="-1026" rx="188" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2843.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.BlockAvgDef</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.CesaroConvergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/CesaroConvergence.html" target="_blank">
 <g id="node77" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.CesaroConvergence</title>
 <ellipse fill="#74c476" stroke="black" cx="2439.86" cy="-954" rx="210.52" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2439.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.CesaroConvergence</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.BlockAvgDef&#45;&gt;Exchangeability.DeFinetti.ViaL2.CesaroConvergence -->
 <g id="edge62" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.BlockAvgDef&#45;&gt;Exchangeability.DeFinetti.ViaL2.CesaroConvergence</title>
@@ -688,11 +802,13 @@
 <polygon fill="black" stroke="black" points="2542.22,-969.18 2531.77,-970.93 2541.03,-976.08 2542.22,-969.18"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep.KallenbergIndicator -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep/KallenbergIndicator.html" target="_blank">
 <g id="node84" class="node">
 <title>Exchangeability.Probability.CondIndep.KallenbergIndicator</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="5150.86" cy="-1098" rx="233.56" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5150.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep.KallenbergIndicator</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.Bounded&#45;&gt;Exchangeability.Probability.CondIndep.KallenbergIndicator -->
 <g id="edge79" class="edge">
 <title>Exchangeability.Probability.CondIndep.Bounded&#45;&gt;Exchangeability.Probability.CondIndep.KallenbergIndicator</title>
@@ -706,11 +822,13 @@
 <polygon fill="black" stroke="black" points="3698.56,-825.85 3688.08,-827.38 3697.23,-832.72 3698.56,-825.85"/>
 </g>
 <!-- Exchangeability.Probability.TripleLawDropInfo -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/TripleLawDropInfo.html" target="_blank">
 <g id="node39" class="node">
 <title>Exchangeability.Probability.TripleLawDropInfo</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="1360.86" cy="-954" rx="189.03" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1360.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.TripleLawDropInfo</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.TripleLawDropInfo&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality -->
 <g id="edge27" class="edge">
 <title>Exchangeability.Probability.TripleLawDropInfo&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality</title>
@@ -730,11 +848,13 @@
 <polygon fill="black" stroke="black" points="3976.58,-910.48 3970.4,-901.87 3969.86,-912.45 3976.58,-910.48"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.RevFiltration -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/RevFiltration.html" target="_blank">
 <g id="node83" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.RevFiltration</title>
 <ellipse fill="#6baed6" stroke="black" cx="3719.86" cy="-1026" rx="216.15" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3719.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.RevFiltration</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.ShiftOperations&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.RevFiltration -->
 <g id="edge78" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.ShiftOperations&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.RevFiltration</title>
@@ -742,11 +862,13 @@
 <polygon fill="black" stroke="black" points="3760.38,-1046.97 3750,-1044.88 3756.81,-1052.99 3760.38,-1046.97"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/LocalInfrastructure.html" target="_blank">
 <g id="node41" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure</title>
 <ellipse fill="#6baed6" stroke="black" cx="5154.86" cy="-954" rx="238.16" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5154.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality -->
 <g id="edge29" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.LocalInfrastructure&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.PairLawEquality</title>
@@ -754,11 +876,13 @@
 <polygon fill="black" stroke="black" points="4154.87,-890.72 4144.68,-893.63 4154.46,-897.71 4154.87,-890.72"/>
 </g>
 <!-- Exchangeability.DeFinetti.TheoremViaMartingale -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/TheoremViaMartingale.html" target="_blank">
 <g id="node46" class="node">
 <title>Exchangeability.DeFinetti.TheoremViaMartingale</title>
 <ellipse fill="#fc9272" stroke="black" cx="3369.86" cy="-594" rx="198.24" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3369.86" y="-588.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.TheoremViaMartingale</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale&#45;&gt;Exchangeability.DeFinetti.TheoremViaMartingale -->
 <g id="edge34" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale&#45;&gt;Exchangeability.DeFinetti.TheoremViaMartingale</title>
@@ -778,11 +902,13 @@
 <polygon fill="black" stroke="black" points="5504.88,-1039.03 5514.71,-1035.07 5504.56,-1032.04 5504.88,-1039.03"/>
 </g>
 <!-- Exchangeability.DeFinetti.TheoremViaL2 -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/TheoremViaL2.html" target="_blank">
 <g id="node85" class="node">
 <title>Exchangeability.DeFinetti.TheoremViaL2</title>
 <ellipse fill="#fc9272" stroke="black" cx="4358.86" cy="-306" rx="167.53" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4358.86" y="-300.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.TheoremViaL2</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.CommonEnding&#45;&gt;Exchangeability.DeFinetti.TheoremViaL2 -->
 <g id="edge81" class="edge">
 <title>Exchangeability.DeFinetti.CommonEnding&#45;&gt;Exchangeability.DeFinetti.TheoremViaL2</title>
@@ -796,11 +922,13 @@
 <polygon fill="black" stroke="black" points="3340.44,-693.65 3346.4,-684.88 3336.28,-688.02 3340.44,-693.65"/>
 </g>
 <!-- Exchangeability.Probability.ConditionalKernel -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/ConditionalKernel.html" target="_blank">
 <g id="node45" class="node">
 <title>Exchangeability.Probability.ConditionalKernel</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="3046.86" cy="-738" rx="184.42" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3046.86" y="-732.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.ConditionalKernel</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.ConditionalKernel&#45;&gt;Exchangeability.DeFinetti.ViaMartingale -->
 <g id="edge33" class="edge">
 <title>Exchangeability.Probability.ConditionalKernel&#45;&gt;Exchangeability.DeFinetti.ViaMartingale</title>
@@ -808,11 +936,13 @@
 <polygon fill="black" stroke="black" points="3287.46,-688.44 3296.49,-682.9 3285.98,-681.6 3287.46,-688.44"/>
 </g>
 <!-- Exchangeability.DeFinetti.Theorem -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/Theorem.html" target="_blank">
 <g id="node48" class="node">
 <title>Exchangeability.DeFinetti.Theorem</title>
 <ellipse fill="#fc9272" stroke="black" cx="3654.86" cy="-234" rx="143.99" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3654.86" y="-228.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.Theorem</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.TheoremViaMartingale&#45;&gt;Exchangeability.DeFinetti.Theorem -->
 <g id="edge36" class="edge">
 <title>Exchangeability.DeFinetti.TheoremViaMartingale&#45;&gt;Exchangeability.DeFinetti.Theorem</title>
@@ -820,11 +950,13 @@
 <polygon fill="black" stroke="black" points="3534.04,-251.59 3543.19,-246.25 3532.7,-244.72 3534.04,-251.59"/>
 </g>
 <!-- Exchangeability.Ergodic.InvariantSigma -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/InvariantSigma.html" target="_blank">
 <g id="node97" class="node">
 <title>Exchangeability.Ergodic.InvariantSigma</title>
 <ellipse fill="#bcbddc" stroke="black" cx="6049.86" cy="-1098" rx="161.9" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6049.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.InvariantSigma</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.KoopmanMeanErgodic&#45;&gt;Exchangeability.Ergodic.InvariantSigma -->
 <g id="edge142" class="edge">
 <title>Exchangeability.Ergodic.KoopmanMeanErgodic&#45;&gt;Exchangeability.Ergodic.InvariantSigma</title>
@@ -832,11 +964,13 @@
 <polygon fill="black" stroke="black" points="5957.9,-1119.54 5967.1,-1114.29 5956.63,-1112.66 5957.9,-1119.54"/>
 </g>
 <!-- Exchangeability.Ergodic.BirkhoffAvgCLM -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/BirkhoffAvgCLM.html" target="_blank">
 <g id="node98" class="node">
 <title>Exchangeability.Ergodic.BirkhoffAvgCLM</title>
 <ellipse fill="#bcbddc" stroke="black" cx="5689.86" cy="-1098" rx="172.65" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5689.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.BirkhoffAvgCLM</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.KoopmanMeanErgodic&#45;&gt;Exchangeability.Ergodic.BirkhoffAvgCLM -->
 <g id="edge120" class="edge">
 <title>Exchangeability.Ergodic.KoopmanMeanErgodic&#45;&gt;Exchangeability.Ergodic.BirkhoffAvgCLM</title>
@@ -856,17 +990,21 @@
 <polygon fill="black" stroke="black" points="4309.83,-37.56 4318.38,-31.3 4307.8,-30.86 4309.83,-37.56"/>
 </g>
 <!-- Exchangeability.PathSpace.CylinderHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/PathSpace/CylinderHelpers.html" target="_blank">
 <g id="node49" class="node">
 <title>Exchangeability.PathSpace.CylinderHelpers</title>
 <ellipse fill="#c6dbef" stroke="black" cx="5242.86" cy="-1242" rx="174.7" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5242.86" y="-1236.95" font-family="Times,serif" font-size="14.00">Exchangeability.PathSpace.CylinderHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.MartingaleHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/MartingaleHelpers.html" target="_blank">
 <g id="node61" class="node">
 <title>Exchangeability.DeFinetti.MartingaleHelpers</title>
 <ellipse fill="#e0e0e0" stroke="black" cx="5242.86" cy="-1170" rx="179.82" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5242.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.MartingaleHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.PathSpace.CylinderHelpers&#45;&gt;Exchangeability.DeFinetti.MartingaleHelpers -->
 <g id="edge49" class="edge">
 <title>Exchangeability.PathSpace.CylinderHelpers&#45;&gt;Exchangeability.DeFinetti.MartingaleHelpers</title>
@@ -874,11 +1012,13 @@
 <polygon fill="black" stroke="black" points="5246.36,-1199.62 5242.86,-1189.62 5239.36,-1199.62 5246.36,-1199.62"/>
 </g>
 <!-- Exchangeability.Probability.InfiniteProduct -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/InfiniteProduct.html" target="_blank">
 <g id="node50" class="node">
 <title>Exchangeability.Probability.InfiniteProduct</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="3335.86" cy="-1314" rx="171.63" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3335.86" y="-1308.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.InfiniteProduct</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.InfiniteProduct&#45;&gt;Exchangeability.Contractability -->
 <g id="edge127" class="edge">
 <title>Exchangeability.Probability.InfiniteProduct&#45;&gt;Exchangeability.Contractability</title>
@@ -886,17 +1026,21 @@
 <polygon fill="black" stroke="black" points="3358.44,-1272.03 3359.41,-1261.48 3352.07,-1269.12 3358.44,-1272.03"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/KoopmanCommutation.html" target="_blank">
 <g id="node51" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-666" rx="251.47" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-660.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1 -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CesaroL2ToL1.html" target="_blank">
 <g id="node80" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-594" rx="219.22" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-588.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1 -->
 <g id="edge73" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1</title>
@@ -904,11 +1048,13 @@
 <polygon fill="black" stroke="black" points="5584.36,-623.62 5580.86,-613.62 5577.36,-623.62 5584.36,-623.62"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CesaroHelpers.html" target="_blank">
 <g id="node52" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5917.86" cy="-738" rx="217.18" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5917.86" y="-732.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation -->
 <g id="edge37" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.KoopmanCommutation</title>
@@ -922,17 +1068,21 @@
 <polygon fill="black" stroke="black" points="5540.17,-692.89 5547.31,-685.06 5536.85,-686.72 5540.17,-692.89"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.InfraLagConstancy -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/InfraLagConstancy.html" target="_blank">
 <g id="node54" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.InfraLagConstancy</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5712.86" cy="-954" rx="234.07" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5712.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.InfraLagConstancy</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.InfraGeneralized -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/InfraGeneralized.html" target="_blank">
 <g id="node79" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.InfraGeneralized</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5712.86" cy="-882" rx="225.37" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5712.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.InfraGeneralized</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.InfraLagConstancy&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.InfraGeneralized -->
 <g id="edge97" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.InfraLagConstancy&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.InfraGeneralized</title>
@@ -946,11 +1096,13 @@
 <polygon fill="black" stroke="black" points="5706.97,-984.14 5706.77,-973.54 5700.32,-981.95 5706.97,-984.14"/>
 </g>
 <!-- Exchangeability.Probability.ConditionalKernel.JointLawEq -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/ConditionalKernel/JointLawEq.html" target="_blank">
 <g id="node56" class="node">
 <title>Exchangeability.Probability.ConditionalKernel.JointLawEq</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="737.86" cy="-954" rx="231.51" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="737.86" y="-948.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.ConditionalKernel.JointLawEq</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.ConditionalKernel.JointLawEq&#45;&gt;Exchangeability.Probability.ConditionalKernel -->
 <g id="edge95" class="edge">
 <title>Exchangeability.Probability.ConditionalKernel.JointLawEq&#45;&gt;Exchangeability.Probability.ConditionalKernel</title>
@@ -958,11 +1110,13 @@
 <polygon fill="black" stroke="black" points="2978.57,-762.22 2987.13,-755.97 2976.55,-755.52 2978.57,-762.22"/>
 </g>
 <!-- Exchangeability.Probability.ConditionalKernel.CondExpKernel -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/ConditionalKernel/CondExpKernel.html" target="_blank">
 <g id="node57" class="node">
 <title>Exchangeability.Probability.ConditionalKernel.CondExpKernel</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="246.86" cy="-1026" rx="246.86" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="246.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.ConditionalKernel.CondExpKernel</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.ConditionalKernel.CondExpKernel&#45;&gt;Exchangeability.Probability.ConditionalKernel.JointLawEq -->
 <g id="edge41" class="edge">
 <title>Exchangeability.Probability.ConditionalKernel.CondExpKernel&#45;&gt;Exchangeability.Probability.ConditionalKernel.JointLawEq</title>
@@ -988,11 +1142,13 @@
 <polygon fill="black" stroke="black" points="741.36,-983.62 737.86,-973.62 734.36,-983.62 741.36,-983.62"/>
 </g>
 <!-- Exchangeability.Probability.LpNormHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/LpNormHelpers.html" target="_blank">
 <g id="node59" class="node">
 <title>Exchangeability.Probability.LpNormHelpers</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="1331.86" cy="-1098" rx="176.74" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1331.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.LpNormHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.LpNormHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages -->
 <g id="edge54" class="edge">
 <title>Exchangeability.Probability.LpNormHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
@@ -1000,11 +1156,13 @@
 <polygon fill="black" stroke="black" points="1857.49,-1044.86 1867.07,-1040.32 1856.76,-1037.89 1857.49,-1044.86"/>
 </g>
 <!-- Exchangeability.Probability.CenteredVariables -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CenteredVariables.html" target="_blank">
 <g id="node72" class="node">
 <title>Exchangeability.Probability.CenteredVariables</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="1164.86" cy="-1026" rx="183.4" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1164.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CenteredVariables</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.LpNormHelpers&#45;&gt;Exchangeability.Probability.CenteredVariables -->
 <g id="edge59" class="edge">
 <title>Exchangeability.Probability.LpNormHelpers&#45;&gt;Exchangeability.Probability.CenteredVariables</title>
@@ -1012,11 +1170,13 @@
 <polygon fill="black" stroke="black" points="1217.47,-1045.25 1206.89,-1044.62 1214.76,-1051.71 1217.47,-1045.25"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaMartingale/IndicatorAlgebra.html" target="_blank">
 <g id="node60" class="node">
 <title>Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra</title>
 <ellipse fill="#6baed6" stroke="black" cx="4586.86" cy="-882" rx="229.97" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4586.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.Factorization -->
 <g id="edge112" class="edge">
 <title>Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra&#45;&gt;Exchangeability.DeFinetti.ViaMartingale.Factorization</title>
@@ -1048,17 +1208,21 @@
 <polygon fill="black" stroke="black" points="4625.96,-903.39 4615.65,-900.99 4622.21,-909.3 4625.96,-903.39"/>
 </g>
 <!-- Exchangeability.Probability.MartingaleExtras -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/MartingaleExtras.html" target="_blank">
 <g id="node62" class="node">
 <title>Exchangeability.Probability.MartingaleExtras</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2896.86" cy="-1170" rx="180.33" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2896.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.MartingaleExtras</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale.Crossings -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/Martingale/Crossings.html" target="_blank">
 <g id="node88" class="node">
 <title>Exchangeability.Probability.Martingale.Crossings</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2093.86" cy="-1098" rx="195.68" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2093.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.Martingale.Crossings</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.MartingaleExtras&#45;&gt;Exchangeability.Probability.Martingale.Crossings -->
 <g id="edge83" class="edge">
 <title>Exchangeability.Probability.MartingaleExtras&#45;&gt;Exchangeability.Probability.Martingale.Crossings</title>
@@ -1066,11 +1230,13 @@
 <polygon fill="black" stroke="black" points="2245.56,-1108.43 2235.3,-1111.06 2244.96,-1115.4 2245.56,-1108.43"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2 -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2.html" target="_blank">
 <g id="node86" class="node">
 <title>Exchangeability.DeFinetti.ViaL2</title>
 <ellipse fill="#74c476" stroke="black" cx="4288.86" cy="-378" rx="133.75" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="4288.86" y="-372.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.MoreL2Helpers&#45;&gt;Exchangeability.DeFinetti.ViaL2 -->
 <g id="edge136" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.MoreL2Helpers&#45;&gt;Exchangeability.DeFinetti.ViaL2</title>
@@ -1078,11 +1244,13 @@
 <polygon fill="black" stroke="black" points="4246.72,-403.99 4254.1,-396.38 4243.59,-397.72 4246.72,-403.99"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/DirectingMeasureIntegral.html" target="_blank">
 <g id="node64" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral</title>
 <ellipse fill="#74c476" stroke="black" cx="3629.86" cy="-522" rx="232.02" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3629.86" y="-516.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers -->
 <g id="edge45" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral&#45;&gt;Exchangeability.DeFinetti.ViaL2.MoreL2Helpers</title>
@@ -1102,11 +1270,13 @@
 <polygon fill="black" stroke="black" points="2330.98,-975.59 2340.32,-970.59 2329.89,-968.68 2330.98,-975.59"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.WindowMachinery -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/WindowMachinery.html" target="_blank">
 <g id="node67" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.WindowMachinery</title>
 <ellipse fill="#74c476" stroke="black" cx="2515.86" cy="-1098" rx="208.48" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2515.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.WindowMachinery</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.WindowMachinery&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages -->
 <g id="edge50" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.WindowMachinery&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
@@ -1114,11 +1284,13 @@
 <polygon fill="black" stroke="black" points="2111.86,-1039.4 2101.49,-1041.54 2110.93,-1046.33 2111.86,-1039.4"/>
 </g>
 <!-- Exchangeability.DeFinetti.L2Helpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/L2Helpers.html" target="_blank">
 <g id="node68" class="node">
 <title>Exchangeability.DeFinetti.L2Helpers</title>
 <ellipse fill="#e0e0e0" stroke="black" cx="1675.86" cy="-1098" rx="149.11" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1675.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.L2Helpers</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.L2Helpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages -->
 <g id="edge51" class="edge">
 <title>Exchangeability.DeFinetti.L2Helpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
@@ -1132,11 +1304,13 @@
 <polygon fill="black" stroke="black" points="1280.78,-1039.35 1270.39,-1041.46 1279.83,-1046.28 1280.78,-1039.35"/>
 </g>
 <!-- Exchangeability.ConditionallyIID -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/ConditionallyIID.html" target="_blank">
 <g id="node69" class="node">
 <title>Exchangeability.ConditionallyIID</title>
 <ellipse fill="#9ecae1" stroke="black" cx="3964.86" cy="-1170" rx="136.31" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3964.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.ConditionallyIID</text>
 </g>
+</a>
 <!-- Exchangeability.ConditionallyIID&#45;&gt;Exchangeability.DeFinetti.CommonEnding -->
 <g id="edge74" class="edge">
 <title>Exchangeability.ConditionallyIID&#45;&gt;Exchangeability.DeFinetti.CommonEnding</title>
@@ -1174,11 +1348,13 @@
 <polygon fill="black" stroke="black" points="1932.6,-1051.84 1940.13,-1044.39 1929.6,-1045.52 1932.6,-1051.84"/>
 </g>
 <!-- Exchangeability.Util.FinsetHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Util/FinsetHelpers.html" target="_blank">
 <g id="node71" class="node">
 <title>Exchangeability.Util.FinsetHelpers</title>
 <ellipse fill="#dadaeb" stroke="black" cx="2882.86" cy="-1098" rx="140.92" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2882.86" y="-1092.95" font-family="Times,serif" font-size="14.00">Exchangeability.Util.FinsetHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Util.FinsetHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages -->
 <g id="edge55" class="edge">
 <title>Exchangeability.Util.FinsetHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.BlockAverages</title>
@@ -1192,11 +1368,13 @@
 <polygon fill="black" stroke="black" points="2280.84,-971.53 2290.56,-967.31 2280.33,-964.54 2280.84,-971.53"/>
 </g>
 <!-- Exchangeability.Probability.IntegrationHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/IntegrationHelpers.html" target="_blank">
 <g id="node73" class="node">
 <title>Exchangeability.Probability.IntegrationHelpers</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="1390.86" cy="-1602" rx="184.93" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="1390.86" y="-1596.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.IntegrationHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.IntegrationHelpers&#45;&gt;Exchangeability.Probability.CondExp -->
 <g id="edge71" class="edge">
 <title>Exchangeability.Probability.IntegrationHelpers&#45;&gt;Exchangeability.Probability.CondExp</title>
@@ -1210,11 +1388,13 @@
 <polygon fill="black" stroke="black" points="1156.06,-1056.08 1156.6,-1045.49 1149.58,-1053.43 1156.06,-1056.08"/>
 </g>
 <!-- Exchangeability.Probability.SigmaAlgebraHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/SigmaAlgebraHelpers.html" target="_blank">
 <g id="node74" class="node">
 <title>Exchangeability.Probability.SigmaAlgebraHelpers</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2439.86" cy="-1026" rx="198.24" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2439.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.SigmaAlgebraHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.SigmaAlgebraHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.CesaroConvergence -->
 <g id="edge65" class="edge">
 <title>Exchangeability.Probability.SigmaAlgebraHelpers&#45;&gt;Exchangeability.DeFinetti.ViaL2.CesaroConvergence</title>
@@ -1222,11 +1402,13 @@
 <polygon fill="black" stroke="black" points="2443.36,-983.62 2439.86,-973.62 2436.36,-983.62 2443.36,-983.62"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.Infrastructure -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/Infrastructure.html" target="_blank">
 <g id="node75" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.Infrastructure</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5712.86" cy="-810" rx="213.08" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5712.86" y="-804.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.Infrastructure</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.Infrastructure&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers -->
 <g id="edge60" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.Infrastructure&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers</title>
@@ -1234,11 +1416,13 @@
 <polygon fill="black" stroke="black" points="5858.57,-762.94 5866.91,-756.4 5856.31,-756.32 5858.57,-762.94"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/LpCondExpHelpers.html" target="_blank">
 <g id="node76" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="6180.86" cy="-810" rx="236.63" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6180.86" y="-804.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers -->
 <g id="edge61" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroHelpers</title>
@@ -1246,11 +1430,13 @@
 <polygon fill="black" stroke="black" points="5992.37,-755.21 5981.81,-756.02 5990.57,-761.97 5992.37,-755.21"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.MainConvergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/MainConvergence.html" target="_blank">
 <g id="node103" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.MainConvergence</title>
 <ellipse fill="#74c476" stroke="black" cx="2444.86" cy="-882" rx="204.89" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2444.86" y="-876.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.MainConvergence</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.CesaroConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.MainConvergence -->
 <g id="edge132" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.CesaroConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.MainConvergence</title>
@@ -1288,11 +1474,13 @@
 <polygon fill="black" stroke="black" points="5716.36,-839.62 5712.86,-829.62 5709.36,-839.62 5716.36,-839.62"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CesaroL1Bounded.html" target="_blank">
 <g id="node87" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-522" rx="232.02" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-516.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded -->
 <g id="edge82" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroL2ToL1&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded</title>
@@ -1300,11 +1488,13 @@
 <polygon fill="black" stroke="black" points="5584.36,-551.62 5580.86,-541.62 5577.36,-551.62 5584.36,-551.62"/>
 </g>
 <!-- Exchangeability.Probability.TimeReversalCrossing -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/TimeReversalCrossing.html" target="_blank">
 <g id="node81" class="node">
 <title>Exchangeability.Probability.TimeReversalCrossing</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2101.86" cy="-1170" rx="200.8" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2101.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.TimeReversalCrossing</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.TimeReversalCrossing&#45;&gt;Exchangeability.Probability.Martingale.Crossings -->
 <g id="edge84" class="edge">
 <title>Exchangeability.Probability.TimeReversalCrossing&#45;&gt;Exchangeability.Probability.Martingale.Crossings</title>
@@ -1312,11 +1502,13 @@
 <polygon fill="black" stroke="black" points="2100.6,-1127.15 2095.99,-1117.61 2093.65,-1127.94 2100.6,-1127.15"/>
 </g>
 <!-- Exchangeability.Probability.MeasureKernels -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/MeasureKernels.html" target="_blank">
 <g id="node82" class="node">
 <title>Exchangeability.Probability.MeasureKernels</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="3904.86" cy="-1242" rx="176.74" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="3904.86" y="-1236.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.MeasureKernels</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.MeasureKernels&#45;&gt;Exchangeability.ConditionallyIID -->
 <g id="edge100" class="edge">
 <title>Exchangeability.Probability.MeasureKernels&#45;&gt;Exchangeability.ConditionallyIID</title>
@@ -1342,11 +1534,13 @@
 <polygon fill="black" stroke="black" points="2153.23,-964.6 2143.02,-967.44 2152.77,-971.59 2153.23,-964.6"/>
 </g>
 <!-- Exchangeability.Probability.CondIndep -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/CondIndep.html" target="_blank">
 <g id="node94" class="node">
 <title>Exchangeability.Probability.CondIndep</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="5152.86" cy="-1026" rx="156.78" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5152.86" y="-1020.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.CondIndep</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.CondIndep.KallenbergIndicator&#45;&gt;Exchangeability.Probability.CondIndep -->
 <g id="edge98" class="edge">
 <title>Exchangeability.Probability.CondIndep.KallenbergIndicator&#45;&gt;Exchangeability.Probability.CondIndep</title>
@@ -1366,11 +1560,13 @@
 <polygon fill="black" stroke="black" points="4336.09,-334.72 4340.69,-325.17 4331.14,-329.77 4336.09,-334.72"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroPairFactorization -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaKoopman/CesaroPairFactorization.html" target="_blank">
 <g id="node101" class="node">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroPairFactorization</title>
 <ellipse fill="#fd8d3c" stroke="black" cx="5580.86" cy="-450" rx="251.98" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="5580.86" y="-444.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaKoopman.CesaroPairFactorization</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroPairFactorization -->
 <g id="edge126" class="edge">
 <title>Exchangeability.DeFinetti.ViaKoopman.CesaroL1Bounded&#45;&gt;Exchangeability.DeFinetti.ViaKoopman.CesaroPairFactorization</title>
@@ -1384,11 +1580,13 @@
 <polygon fill="black" stroke="black" points="1694.82,-1039.75 1684.44,-1041.89 1693.89,-1046.69 1694.82,-1039.75"/>
 </g>
 <!-- Exchangeability.Probability.Martingale.Reverse -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Probability/Martingale/Reverse.html" target="_blank">
 <g id="node89" class="node">
 <title>Exchangeability.Probability.Martingale.Reverse</title>
 <ellipse fill="#c7e9c0" stroke="black" cx="2509.86" cy="-1170" rx="189.03" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2509.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Probability.Martingale.Reverse</text>
 </g>
+</a>
 <!-- Exchangeability.Probability.Martingale.Reverse&#45;&gt;Exchangeability.Probability.Martingale.Crossings -->
 <g id="edge85" class="edge">
 <title>Exchangeability.Probability.Martingale.Reverse&#45;&gt;Exchangeability.Probability.Martingale.Crossings</title>
@@ -1402,11 +1600,13 @@
 <polygon fill="black" stroke="black" points="3568.59,-837.17 3575.21,-828.91 3564.88,-831.24 3568.59,-837.17"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/DirectingMeasureCore.html" target="_blank">
 <g id="node91" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore</title>
 <ellipse fill="#74c476" stroke="black" cx="2758.86" cy="-594" rx="221.27" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2758.86" y="-588.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore&#45;&gt;Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral -->
 <g id="edge96" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore&#45;&gt;Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral</title>
@@ -1414,11 +1614,13 @@
 <polygon fill="black" stroke="black" points="3461.53,-540.04 3471.22,-535.75 3460.97,-533.06 3461.53,-540.04"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.AlphaConvergence -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/AlphaConvergence.html" target="_blank">
 <g id="node92" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.AlphaConvergence</title>
 <ellipse fill="#74c476" stroke="black" cx="2563.86" cy="-666" rx="207.45" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2563.86" y="-660.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.AlphaConvergence</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.AlphaConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore -->
 <g id="edge89" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.AlphaConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.DirectingMeasureCore</title>
@@ -1474,11 +1676,13 @@
 <polygon fill="black" stroke="black" points="5584.36,-407.62 5580.86,-397.62 5577.36,-407.62 5584.36,-407.62"/>
 </g>
 <!-- Exchangeability.Ergodic.ProjectionLemmas -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/Ergodic/ProjectionLemmas.html" target="_blank">
 <g id="node102" class="node">
 <title>Exchangeability.Ergodic.ProjectionLemmas</title>
 <ellipse fill="#bcbddc" stroke="black" cx="6055.86" cy="-1170" rx="175.21" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="6055.86" y="-1164.95" font-family="Times,serif" font-size="14.00">Exchangeability.Ergodic.ProjectionLemmas</text>
 </g>
+</a>
 <!-- Exchangeability.Ergodic.ProjectionLemmas&#45;&gt;Exchangeability.Ergodic.InvariantSigma -->
 <g id="edge143" class="edge">
 <title>Exchangeability.Ergodic.ProjectionLemmas&#45;&gt;Exchangeability.Ergodic.InvariantSigma</title>
@@ -1486,11 +1690,13 @@
 <polygon fill="black" stroke="black" points="6055.8,-1127.28 6051.46,-1117.61 6048.82,-1127.87 6055.8,-1127.28"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.AlphaIic -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/AlphaIic.html" target="_blank">
 <g id="node105" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.AlphaIic</title>
 <ellipse fill="#74c476" stroke="black" cx="2463.86" cy="-810" rx="168.56" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2463.86" y="-804.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.AlphaIic</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.MainConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.AlphaIic -->
 <g id="edge146" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.MainConvergence&#45;&gt;Exchangeability.DeFinetti.ViaL2.AlphaIic</title>
@@ -1498,11 +1704,13 @@
 <polygon fill="black" stroke="black" points="2459.58,-840.13 2458.82,-829.57 2452.83,-838.3 2459.58,-840.13"/>
 </g>
 <!-- Exchangeability.DeFinetti.ViaL2.AlphaIicCE -->
+<a xlink:href="https://cameronfreer.github.io/exchangeability/docs/Exchangeability/DeFinetti/ViaL2/AlphaIicCE.html" target="_blank">
 <g id="node104" class="node">
 <title>Exchangeability.DeFinetti.ViaL2.AlphaIicCE</title>
 <ellipse fill="#74c476" stroke="black" cx="2485.86" cy="-738" rx="180.33" ry="18"/>
 <text xml:space="preserve" text-anchor="middle" x="2485.86" y="-732.95" font-family="Times,serif" font-size="14.00">Exchangeability.DeFinetti.ViaL2.AlphaIicCE</text>
 </g>
+</a>
 <!-- Exchangeability.DeFinetti.ViaL2.AlphaIicCE&#45;&gt;Exchangeability.DeFinetti.ViaL2.AlphaConvergence -->
 <g id="edge137" class="edge">
 <title>Exchangeability.DeFinetti.ViaL2.AlphaIicCE&#45;&gt;Exchangeability.DeFinetti.ViaL2.AlphaConvergence</title>

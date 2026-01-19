@@ -38,10 +38,10 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 </p>
 
 <p align="center">
-  <em>Color legend: 🔵 ViaMartingale &nbsp; 🟢 ViaL2 &nbsp; 🟠 ViaKoopman</em><br>
-  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_colored.html">Interactive version</a> ·
+  <em>Modules colored by proof: 🔵 Martingale &nbsp; 🟢 L² &nbsp; 🟠 Koopman</em><br>
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_colored.html">Interactive</a> ·
   <a href="https://cameronfreer.github.io/exchangeability/blueprint/import_graph_full_declarations.html">All declarations</a> ·
-  <a href="https://cameronfreer.github.io/exchangeability/blueprint/dep_graph_document.html">Mathematical dependency graph</a>
+  <a href="https://cameronfreer.github.io/exchangeability/blueprint/dep_graph_document.html">Blueprint only</a>
 </p>
 
 ## Quick Start
