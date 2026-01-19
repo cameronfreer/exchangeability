@@ -130,9 +130,11 @@ Exchangeability/
 
 ## References
 
-### Primary Sources
+### Primary Source
 
 - **Kallenberg, Olav** (2005). *Probabilistic Symmetries and Invariance Principles*. Probability and Its Applications. Springer-Verlag, New York. [https://doi.org/10.1007/0-387-28861-9](https://doi.org/10.1007/0-387-28861-9) [Chapter 1, Theorem 1.1]
+
+### Additional Sources
 
 - **De Finetti, Bruno** (1937). "La prévision : ses lois logiques, ses sources subjectives." *Annales de l'Institut Henri Poincaré* 7 (1): 1–68. [[English translation: "Foresight: Its Logical Laws, Its Subjective Sources" (1964) in *Studies in Subjective Probability*, H. E. Kyburg and H. E. Smokler, eds.]](https://www.numdam.org/item/AIHP_1937__7_1_1_0/)
 
