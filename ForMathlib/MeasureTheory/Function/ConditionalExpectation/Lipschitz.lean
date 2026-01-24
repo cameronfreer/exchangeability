@@ -104,7 +104,8 @@ theorem condExp_L1_lipschitz [IsFiniteMeasure μ]
   have h_linear : ∀ᵐ ω ∂μ, μ[f|m] ω - μ[g|m] ω = μ[(f - g)|m] ω :=
     EventuallyEq.symm (condExp_sub hf hg m)
   calc ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ
-      = ∫ ω, |μ[(f - g)|m] ω| ∂μ := integral_congr_ae (h_linear.mono fun _ h => congrArg _ h)
+      = ∫ ω, |μ[(f - g)|m] ω| ∂μ :=
+          integral_congr_ae (h_linear.mono fun _ h => congrArg _ h)
     _ ≤ ∫ ω, |(f - g) ω| ∂μ := integral_abs_condExp_le (f - g)
     _ = ∫ ω, |f ω - g ω| ∂μ := rfl
 
@@ -120,7 +121,8 @@ theorem condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measu
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
   have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
   obtain ⟨C, hC⟩ := hg_bd
-  have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
+  have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C :=
+    ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
   haveI : SigmaFinite (μ.trim hm) := MeasureTheory.Measure.sigmaFinite_trim μ hm
   have h := condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
   -- f * g = g * f pointwise, so μ[f * g|m] =ᵃᵉ μ[g * f|m] = g · μ[f|m]

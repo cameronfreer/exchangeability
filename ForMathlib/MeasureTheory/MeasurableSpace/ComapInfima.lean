@@ -24,7 +24,7 @@ This file provides lemmas about how `MeasurableSpace.comap` interacts with infim
 
 * `preimage_injective_of_surjective`: Preimage is injective on sets when `f` is surjective
 * `map_comap_eq_of_surjective`: If `f` is surjective, then `map f (comap f m) = m`
-* `comap_iInf_le`: The inequality `comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i)` holds unconditionally
+* `comap_iInf_le`: `comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i)` holds unconditionally
 
 ## Mathematical Context
 
@@ -110,8 +110,9 @@ private lemma measurableSet_comap_iInf_of_canonical {ι : Type*} [Nonempty ι]
 
 This is the key lemma for showing that tail σ-algebras defined via coordinate pullbacks
 equal tail σ-algebras defined as pullbacks of path-space tails. -/
-theorem iInf_comap_eq_comap_iInf_of_surjective {ι : Type*} [Nonempty ι] {α β : Type*} {f : α → β}
-    (hf : Function.Surjective f) (m : ι → MeasurableSpace β) :
+theorem iInf_comap_eq_comap_iInf_of_surjective {ι : Type*} [Nonempty ι]
+    {α β : Type*} {f : α → β} (hf : Function.Surjective f)
+    (m : ι → MeasurableSpace β) :
     iInf (fun i => MeasurableSpace.comap f (m i)) = MeasurableSpace.comap f (iInf m) := by
   classical
   -- (≥) direction holds unconditionally (monotonicity)
