@@ -3,7 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
+import Mathlib.MeasureTheory.Measure.MeasureSpace
 
 /-!
 # Combining Finitely Many A.E. Equalities
@@ -33,9 +33,8 @@ using `EventuallyEq.fun_add` to combine equalities at each step.
 * Williams (1991), *Probability with Martingales*, §9
 -/
 
-noncomputable section
-open scoped MeasureTheory ENNReal BigOperators
-open MeasureTheory ProbabilityTheory Set
+open scoped MeasureTheory BigOperators
+open MeasureTheory
 
 namespace MeasureTheory
 
@@ -58,5 +57,3 @@ theorem finset_sum_ae_eq [AddCommMonoid β]
       (IH fun i hi => h i (Finset.mem_insert_of_mem hi))
 
 end MeasureTheory
-
-end
