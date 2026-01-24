@@ -80,24 +80,22 @@ theorem exists_perm_extending_strictMono (k : Fin m → ℕ)
     (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
     ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
       (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
-  classical
   let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
-  -- e_dom: first m elements of Fin n ≃ Fin m (using mathlib's Fin.castLEquiv)
+  -- e_dom: first m elements of Fin n ≃ Fin m
   let e_dom : {x : Fin n // (x : ℕ) < m} ≃ Fin m := (Fin.castLEquiv hmn).symm
-  -- e_cod: Fin m ≃ image of k (via strict monotonicity giving injectivity)
+  -- e_cod: Fin m ≃ range of kFin (via strict monotonicity giving injectivity)
+  have hk_inj : Function.Injective kFin := fun i j h =>
+    hk_mono.injective (Fin.ext_iff.mp h)
+  let e_cod' : Fin m ≃ Set.range kFin := Equiv.ofInjective kFin hk_inj
+  -- Convert between range representation and existential predicate
   let e_cod : Fin m ≃ {x : Fin n // ∃ i : Fin m, x = kFin i} :=
-    { toFun := fun i => ⟨kFin i, i, rfl⟩
-      invFun := fun y => Classical.choose y.2
-      left_inv := fun i => by
-        have h_spec := Classical.choose_spec (⟨i, rfl⟩ : ∃ j : Fin m, kFin i = kFin j)
-        exact hk_mono.injective (by simpa [kFin] using (Fin.ext_iff.mp h_spec).symm)
-      right_inv := fun ⟨_, hy⟩ => Subtype.ext (Classical.choose_spec hy).symm }
+    e_cod'.trans (Equiv.subtypeEquivRight fun x => by simp [Set.mem_range, eq_comm])
   -- Compose and extend to full permutation
   let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype (e_dom.trans e_cod)
   refine ⟨σ, fun i => ?_⟩
   have h := Equiv.extendSubtype_apply_of_mem (e := e_dom.trans e_cod)
     (x := Fin.castLE hmn i) i.isLt
-  simp only [Equiv.trans_apply, kFin] at h
+  simp only [Equiv.trans_apply, e_cod, e_cod', Equiv.ofInjective_apply, kFin] at h
   exact congrArg Fin.val h
 
 end Combinatorics
