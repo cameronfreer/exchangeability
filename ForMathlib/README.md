@@ -15,6 +15,9 @@ organized for potential contribution to [mathlib4](https://github.com/leanprover
 | Lp/integration helpers | `MeasureTheory/Function/LpHelpers.lean` | ✅ Extracted | Standard | - |
 | σ-algebra helpers | `MeasureTheory/MeasurableSpace/SigmaAlgebraHelpers.lean` | ✅ Extracted | Standard | - |
 | Product kernel measurability | `Probability/Kernel/ProductMeasurable.lean` | ✅ Extracted | Standard | - |
+| `condIndep_of_indicator_condexp_eq` | `Probability/Independence/Conditional.lean` | ✅ Extracted | Standard | - |
+| `finset_sum_ae_eq` | `MeasureTheory/Function/AEHelpers.lean` | ✅ Extracted | Standard | - |
+| `condexp_indicator_eq_of_pair_law_eq` | `Probability/ConditionalExpectation/Distributional.lean` | ✅ Extracted | Standard | - |
 
 All extracted files:
 - Import only mathlib (no `Exchangeability.*` dependencies)
@@ -40,8 +43,13 @@ ForMathlib/
 │   └── Function/
 │       ├── ConditionalExpectation/
 │       │   └── Lipschitz.lean          # condExp_L1_lipschitz
+│       ├── AEHelpers.lean              # finset_sum_ae_eq
 │       └── LpHelpers.lean              # eLpNorm_two_sq_eq_integral_sq, abs_integral_mul_le_L2
 ├── Probability/
+│   ├── Independence/
+│   │   └── Conditional.lean            # condIndep_of_indicator_condexp_eq (Doob)
+│   ├── ConditionalExpectation/
+│   │   └── Distributional.lean         # condexp_indicator_eq_of_pair_law_eq
 │   └── Kernel/
 │       └── ProductMeasurable.lean      # measurable_measure_pi, rectangles_isPiSystem
 └── README.md                           # This file
@@ -60,9 +68,12 @@ Level 1 (after Level 0):
   PR5: Lipschitz - conditional expectation helpers
   PR6: LpHelpers - Lp norm/integral bridges
   PR7: SigmaAlgebraHelpers - AEStronglyMeasurable for infima
+  PR8: AEHelpers - finset_sum_ae_eq utility
 
 Level 2 (after Level 1):
-  PR8: ProductMeasurable - uses π-system infrastructure from Cylinders
+  PR9: ProductMeasurable - uses π-system infrastructure from Cylinders
+  PR10: Independence/Conditional - Doob's characterization
+  PR11: ConditionalExpectation/Distributional - CE equality from dist equality
 ```
 
 ## Module Summaries
@@ -75,6 +86,10 @@ Bridges ENNReal-valued Lp norms and Real-valued integrals:
 - `L2_tendsto_implies_L1_tendsto_of_bounded`: L² → L¹ convergence
 - `setIntegral_le_eLpNorm_mul_measure`: |∫_A g| ≤ ‖g‖₂·√(μ A)
 
+### MeasureTheory/Function/AEHelpers.lean
+Utility for combining a.e. equalities:
+- `finset_sum_ae_eq`: combine finitely many a.e. equalities into sum equality
+
 ### MeasureTheory/MeasurableSpace/SigmaAlgebraHelpers.lean
 Support for AEStronglyMeasurable with respect to infima:
 - `aestronglyMeasurable_iInf_antitone`: preservation under antitone infima
@@ -85,6 +100,15 @@ Measurability of product measure kernels:
 - `rectangles_isPiSystem`: measurable rectangles form a π-system
 - `rectangles_generate_pi_sigma`: product σ-algebra = generateFrom of rectangles
 - `measurable_measure_pi`: ω ↦ ∏ᵢ ν(ω) is measurable
+
+### Probability/Independence/Conditional.lean
+Doob's characterization of conditional independence:
+- `condIndep_of_indicator_condexp_eq`: projection property ⟹ conditional independence
+
+### Probability/ConditionalExpectation/Distributional.lean
+Bridge from distributional equality to conditional expectation equality:
+- `condexp_indicator_eq_of_pair_law_eq`: if (Y,Z) and (Y',Z) have same law,
+  then E[1_{Y∈B}|σ(Z)] = E[1_{Y'∈B}|σ(Z)] a.e.
 
 ## Contribution Guidelines
 
