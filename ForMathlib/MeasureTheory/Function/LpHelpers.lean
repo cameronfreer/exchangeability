@@ -84,7 +84,7 @@ lemma eLpNorm_two_sq_eq_integral_sq [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : 
   rw [h_enorm_conv, ← integral_eq_lintegral_of_nonneg_ae]
   · congr 1; ext ω; exact h_norm_eq ω
   · exact ae_of_all _ fun _ => sq_nonneg _
-  · exact AEStronglyMeasurable.pow hf.1.norm
+  · exact (AEStronglyMeasurable.pow hf.1.norm 2).congr (ae_of_all _ fun _ => rfl)
 
 /-- **L² norm bound from integral bound.**
 
