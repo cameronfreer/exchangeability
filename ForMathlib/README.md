@@ -5,15 +5,19 @@ organized for potential contribution to [mathlib4](https://github.com/leanprover
 
 ## PR Tracking
 
-| Candidate | Source | Target | Status | PR # |
+| Candidate | Target | Status | Axioms | PR # |
 |-----------|--------|--------|--------|------|
-| `exists_perm_extending_strictMono` | `Contractability.lean:313-370` | `Combinatorics/PermutationExtension.lean` | Ready | - |
-| `iInf_comap_eq_comap_iInf_of_surjective` | `Tail/TailSigma.lean:98-220` | `MeasureTheory/MeasurableSpace/ComapInfima.lean` | Ready | - |
-| π-system/cylinder infrastructure | `Core.lean:150-346` | `MeasureTheory/Constructions/Pi/Cylinders.lean` | Ready | - |
-| `sigmaFinite_trim` | `ForMathlib/.../TrimInstances.lean` | `MeasureTheory/Measure/TrimInstances.lean` | Ready | - |
-| Conditional expectation helpers | `Probability/CondExp.lean` | `MeasureTheory/Function/ConditionalExpectation/Lipschitz.lean` | Ready | - |
-| Tail σ-algebra infrastructure | `Tail/TailSigma.lean`, `RevFiltration.lean` | `Probability/Process/TailSigmaAlgebra.lean` | Planned | - |
-| Finite marginals uniqueness | `Core.lean:336` | `MeasureTheory/Measure/FinMarginals.lean` | Planned | - |
+| `exists_perm_extending_strictMono` | `Combinatorics/PermutationExtension.lean` | ✅ Extracted | Standard | - |
+| `iInf_comap_eq_comap_iInf_of_surjective` | `MeasureTheory/MeasurableSpace/ComapInfima.lean` | ✅ Extracted | Standard | - |
+| π-system/cylinder infrastructure | `MeasureTheory/Constructions/Pi/Cylinders.lean` | ✅ Extracted | Standard | - |
+| `sigmaFinite_trim` | `MeasureTheory/Measure/TrimInstances.lean` | ✅ Existing | Standard | - |
+| `condExp_L1_lipschitz` | `MeasureTheory/Function/ConditionalExpectation/Lipschitz.lean` | ✅ Extracted | Standard | - |
+
+All extracted files:
+- Import only mathlib (no `Exchangeability.*` dependencies)
+- Use only standard axioms: `propext`, `Classical.choice`, `Quot.sound`
+- Follow mathlib style (<100 char lines)
+- Include module docstrings with mathematical context
 
 ## PR Sequencing Strategy
 
@@ -43,19 +47,12 @@ ForMathlib/
 │   │   └── ComapInfima.lean            # iInf_comap_eq_comap_iInf_of_surjective
 │   ├── Constructions/
 │   │   └── Pi/
-│   │       └── Cylinders.lean          # π-system infrastructure
+│   │       └── Cylinders.lean          # π-system, measure_eq_of_fin_marginals_eq
 │   ├── Measure/
-│   │   ├── TrimInstances.lean          # sigmaFinite_trim (existing)
-│   │   └── FinMarginals.lean           # measure_eq_of_fin_marginals_eq
+│   │   └── TrimInstances.lean          # sigmaFinite_trim (existing)
 │   └── Function/
 │       └── ConditionalExpectation/
 │           └── Lipschitz.lean          # condExp_L1_lipschitz
-├── Probability/
-│   ├── Independence/
-│   │   └── Conditional/
-│   │       └── Indicator.lean          # condIndep_of_indicator_condexp_eq
-│   └── Process/
-│       └── TailSigmaAlgebra.lean       # tail filtration infrastructure
 └── README.md                           # This file
 ```
 
