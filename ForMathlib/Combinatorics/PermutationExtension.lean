@@ -3,6 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
+import Mathlib.Logic.Equiv.Fin.Basic
 import Mathlib.Logic.Equiv.Fintype
 import Mathlib.GroupTheory.Perm.Basic
 
@@ -80,50 +81,23 @@ theorem exists_perm_extending_strictMono (k : Fin m → ℕ)
     ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
       (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
   classical
-  -- Embed `Fin m` into `Fin n` via the initial segment.
-  let ι : Fin m → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
-  let p : Fin n → Prop := fun x => x.val < m
-  let q : Fin n → Prop := fun x => ∃ i : Fin m, x = ⟨k i, hk_bound i⟩
-  have hι_mem : ∀ i : Fin m, p (ι i) := fun i => i.isLt
   let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
-  have hk_mem : ∀ i : Fin m, q (kFin i) := fun i => ⟨i, rfl⟩
-  haveI : DecidablePred p := fun _ => inferInstance
-  haveI : DecidablePred q := fun _ => inferInstance
-  -- Equivalence between the first `m` coordinates and `Fin m`.
-  let e_dom : {x : Fin n // p x} ≃ Fin m :=
-    { toFun := fun x => ⟨x.1.val, x.2⟩
-    , invFun := fun i => ⟨ι i, by dsimp [p, ι]; exact i.isLt⟩
-    , left_inv := by rintro ⟨x, hx⟩; ext; simp [ι]
-    , right_inv := by intro i; cases i with | mk i hi => simp [ι] }
-  -- Equivalence between the image of `k` and `Fin m`.
-  -- For injectivity of k, we use that it's strictly monotone
-  have hk_inj : Function.Injective kFin :=
-    fun i j hij => hk_mono.injective (Fin.ext_iff.mp hij)
-  let e_cod : Fin m ≃ {x : Fin n // q x} :=
-    { toFun := fun i => ⟨kFin i, hk_mem i⟩
-    , invFun := fun y => Classical.choose y.2
-    , left_inv := by
-        intro i
-        have h_spec := Classical.choose_spec (hk_mem i)
-        have : k (Classical.choose (hk_mem i)) = k i := by
-          simpa [kFin] using (Fin.ext_iff.mp h_spec).symm
-        exact hk_mono.injective this
-    , right_inv := by
-        rintro ⟨y, hy⟩
-        apply Subtype.ext
-        simp only [kFin]
-        exact (Classical.choose_spec hy).symm }
-  -- Equivalence between the subtypes describing the first `m` coordinates and the image of `k`.
-  let e : {x : Fin n // p x} ≃ {x : Fin n // q x} := e_dom.trans e_cod
-  -- Extend this equivalence to a permutation of `Fin n`.
-  let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype e
-  have hσ_apply : ∀ i : Fin m, σ (ι i) = kFin i := by
-    intro i
-    have h_apply := Equiv.extendSubtype_apply_of_mem (e := e) (x := ι i) (hι_mem i)
-    dsimp [σ, e, Equiv.trans, e_dom, e_cod, ι, Fin.castLEEmb, kFin] at h_apply
-    simpa using h_apply
+  -- e_dom: first m elements of Fin n ≃ Fin m (using mathlib's Fin.castLEquiv)
+  let e_dom : {x : Fin n // (x : ℕ) < m} ≃ Fin m := (Fin.castLEquiv hmn).symm
+  -- e_cod: Fin m ≃ image of k (via strict monotonicity giving injectivity)
+  let e_cod : Fin m ≃ {x : Fin n // ∃ i : Fin m, x = kFin i} :=
+    { toFun := fun i => ⟨kFin i, i, rfl⟩
+      invFun := fun y => Classical.choose y.2
+      left_inv := fun i => by
+        have h_spec := Classical.choose_spec (⟨i, rfl⟩ : ∃ j : Fin m, kFin i = kFin j)
+        exact hk_mono.injective (by simpa [kFin] using (Fin.ext_iff.mp h_spec).symm)
+      right_inv := fun ⟨_, hy⟩ => Subtype.ext (Classical.choose_spec hy).symm }
+  -- Compose and extend to full permutation
+  let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype (e_dom.trans e_cod)
   refine ⟨σ, fun i => ?_⟩
-  have hσ_val : (σ (ι i)).val = k i := by simpa [kFin] using congrArg Fin.val (hσ_apply i)
-  simpa [ι] using hσ_val
+  have h := Equiv.extendSubtype_apply_of_mem (e := e_dom.trans e_cod)
+    (x := Fin.castLE hmn i) i.isLt
+  simp only [Equiv.trans_apply, kFin] at h
+  exact congrArg Fin.val h
 
 end Combinatorics

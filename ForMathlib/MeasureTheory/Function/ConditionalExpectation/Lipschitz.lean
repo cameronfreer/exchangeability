@@ -61,13 +61,8 @@ lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
     (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
     Integrable (f * g) μ := by
-  have : f * g = fun ω => g ω * f ω := funext fun _ => mul_comm _ _
-  rw [this]
   obtain ⟨C, hC⟩ := hbd
-  have hbd_ae : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := by
-    filter_upwards with ω
-    exact (Real.norm_eq_abs _).symm ▸ hC ω
-  exact Integrable.bdd_mul hf hg.aestronglyMeasurable hbd_ae
+  exact hf.mul_bdd hg.aestronglyMeasurable (ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω))
 
 /-- Conditional expectation preserves monotonicity in absolute value.
 
@@ -119,17 +114,12 @@ theorem condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measu
     (hg_meas : @Measurable Ω ℝ m _ g)
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-  have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
   obtain ⟨C, hC⟩ := hg_bd
-  have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C :=
-    ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
   haveI : SigmaFinite (μ.trim hm) := MeasureTheory.Measure.sigmaFinite_trim μ hm
-  have h := condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
-  -- f * g = g * f pointwise, so μ[f * g|m] =ᵃᵉ μ[g * f|m] = g · μ[f|m]
-  have hcomm : f * g =ᵐ[μ] g * f := by filter_upwards with ω; simp only [Pi.mul_apply]; ring
-  have step1 : μ[f * g|m] =ᵐ[μ] μ[g * f|m] := condExp_congr_ae hcomm
-  have step2 : (fun ω => g ω * μ[f|m] ω) =ᵐ[μ] (fun ω => μ[f|m] ω * g ω) := by
-    filter_upwards with ω; ring
-  exact step1.trans (h.trans step2)
+  have h := condExp_stronglyMeasurable_mul_of_bound hm hg_meas.stronglyMeasurable hf C
+    (ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω))
+  -- f * g = g * f pointwise, so apply mathlib's g·E[f|m] version and commute
+  exact (condExp_congr_ae (ae_of_all μ fun _ => mul_comm _ _)).trans
+    (h.trans (ae_of_all μ fun _ => mul_comm _ _))
 
 end CondExp

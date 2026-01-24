@@ -22,7 +22,6 @@ This file provides lemmas about how `MeasurableSpace.comap` interacts with infim
 
 ## Supporting Lemmas
 
-* `preimage_injective_of_surjective`: Preimage is injective on sets when `f` is surjective
 * `map_comap_eq_of_surjective`: If `f` is surjective, then `map f (comap f m) = m`
 * `comap_iInf_le`: `comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i)` holds unconditionally
 
@@ -42,27 +41,14 @@ either as pullbacks of the path-space tail, or as infima of coordinate-wise σ-a
 
 namespace MeasurableSpace
 
-/-- Preimage is injective on sets when `f` is surjective. -/
-lemma preimage_injective_of_surjective {α β : Type*} {f : α → β}
-    (hf : Function.Surjective f) :
-    Function.Injective (fun (s : Set β) => f ⁻¹' s) :=
-  hf.preimage_injective
-
 /-- If `f` is surjective, then `map f (comap f m) = m`. -/
 lemma map_comap_eq_of_surjective {α β : Type*} {f : α → β}
     (hf : Function.Surjective f) (m : MeasurableSpace β) :
     MeasurableSpace.map f (MeasurableSpace.comap f m) = m := by
-  classical
   ext S; constructor
-  · intro hS
-    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S) at hS
-    rcases hS with ⟨T, hT, hpre⟩
-    have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
-    have : S = T := by apply hinj; exact hpre.symm
-    simpa [this]
-  · intro hS
-    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S)
-    exact ⟨S, hS, rfl⟩
+  · rintro ⟨T, hT, hpre⟩
+    simpa [hf.preimage_injective hpre.symm] using hT
+  · exact fun hS => ⟨S, hS, rfl⟩
 
 /-- `comap` distributes over `iInf` unconditionally (≤ direction only).
 
@@ -91,11 +77,8 @@ private lemma comap_iInf_witnesses {ι : Type*} {α β : Type*} {f : α → β}
 private lemma comap_witnesses_eq_of_surjective {ι : Type*} {α β : Type*} {f : α → β}
     (hf : Function.Surjective f) (T : ι → Set β) (s : Set α)
     (hspre : ∀ i, s = f ⁻¹' (T i)) :
-    ∀ i j, T i = T j := by
-  intro i j
-  have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
-  have : f ⁻¹' T i = f ⁻¹' T j := by rw [← hspre i, ← hspre j]
-  exact hinj this
+    ∀ i j, T i = T j := fun i j =>
+  hf.preimage_injective (by rw [← hspre i, ← hspre j])
 
 -- A set is measurable in comap f (iInf m) if it's the preimage of a canonically measurable set
 private lemma measurableSet_comap_iInf_of_canonical {ι : Type*} [Nonempty ι]
@@ -114,38 +97,19 @@ theorem iInf_comap_eq_comap_iInf_of_surjective {ι : Type*} [Nonempty ι]
     {α β : Type*} {f : α → β} (hf : Function.Surjective f)
     (m : ι → MeasurableSpace β) :
     iInf (fun i => MeasurableSpace.comap f (m i)) = MeasurableSpace.comap f (iInf m) := by
-  classical
-  -- (≥) direction holds unconditionally (monotonicity)
-  have hge :
-      MeasurableSpace.comap f (iInf m) ≤ iInf (fun i => MeasurableSpace.comap f (m i)) := by
-    refine le_iInf (fun i => ?_)
-    exact MeasurableSpace.comap_mono (iInf_le _ i)
-
   -- (≤) direction uses surjectivity to unify witnesses
-  have hle :
-      iInf (fun i => MeasurableSpace.comap f (m i)) ≤ MeasurableSpace.comap f (iInf m) := by
-    intro s hs
+  refine le_antisymm ?_ (comap_iInf_le f m)
+  intro s hs
     -- For each i, s is measurable in comap f (m i)
-    have hs_all : ∀ i, MeasurableSet[MeasurableSpace.comap f (m i)] s := by
-      rw [MeasurableSpace.measurableSet_iInf] at hs
-      exact hs
-
-    -- Extract witnesses Tᵢ such that s = f ⁻¹' Tᵢ for each i
-    obtain ⟨T, hTmeas, hspre⟩ := comap_iInf_witnesses m s hs_all
-
-    -- All witnesses are equal by surjectivity
-    have Tall := comap_witnesses_eq_of_surjective hf T s hspre
-
-    -- Pick canonical witness T₀
-    rcases ‹Nonempty ι› with ⟨i₀⟩
-    let T0 : Set β := T i₀
-    have T_all : ∀ i, T i = T0 := fun i => Tall i i₀
-    have s_pre : s = f ⁻¹' T0 := by simpa [T_all i₀] using hspre i₀
-    have T0_meas_all : ∀ i, MeasurableSet[m i] T0 := fun i => by simpa [T_all i] using hTmeas i
-
-    -- Conclude measurability
-    exact measurableSet_comap_iInf_of_canonical m T0 T0_meas_all s s_pre
-
-  exact le_antisymm hle hge
+  have hs_all : ∀ i, MeasurableSet[MeasurableSpace.comap f (m i)] s :=
+    MeasurableSpace.measurableSet_iInf.mp hs
+  -- Extract witnesses Tᵢ such that s = f ⁻¹' Tᵢ for each i
+  obtain ⟨T, hTmeas, hspre⟩ := comap_iInf_witnesses m s hs_all
+  -- All witnesses are equal by surjectivity
+  have Tall := comap_witnesses_eq_of_surjective hf T s hspre
+  -- Pick canonical witness T₀
+  rcases ‹Nonempty ι› with ⟨i₀⟩
+  exact measurableSet_comap_iInf_of_canonical m (T i₀)
+    (fun i => by simpa [Tall i i₀] using hTmeas i) s (hspre i₀)
 
 end MeasurableSpace

@@ -3,7 +3,7 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Mathlib.Data.Fin.Tuple.Basic
+import Mathlib.Data.Fin.Tuple.Take
 import Mathlib.Logic.Equiv.Fintype
 import Mathlib.MeasureTheory.Constructions.Cylinders
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
@@ -113,24 +113,15 @@ section Extend
 
 variable {m n : ℕ}
 
-/-- Restrict a finite tuple to its first `m` coordinates. -/
-def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
-  fun i => x (Fin.castLE hmn i)
-
 omit [MeasurableSpace α] in
 @[simp]
-lemma takePrefix_apply {hmn : m ≤ n} (x : Fin n → α) (i : Fin m) :
-    takePrefix (α := α) hmn x i = x (Fin.castLE hmn i) := rfl
-
-omit [MeasurableSpace α] in
-@[simp]
-lemma takePrefix_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
-    takePrefix (α := α) hmn (prefixProj (α := α) n x) = prefixProj (α := α) m x := by
-  ext i; simp [takePrefix]
+lemma take_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
+    Fin.take m hmn (prefixProj (α := α) n x) = prefixProj (α := α) m x := by
+  ext i; simp [prefixProj]
 
 /-- Extend a set from `Fin m → α` to `Fin n → α` by ignoring extra coordinates. -/
 def extendSet (hmn : m ≤ n) (S : Set (Fin m → α)) : Set (Fin n → α) :=
-  {x | takePrefix (α := α) hmn x ∈ S}
+  {x | Fin.take m hmn x ∈ S}
 
 omit [MeasurableSpace α] in
 lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n → α)} :
@@ -139,21 +130,20 @@ lemma prefixCylinder_inter {m n : ℕ} {S : Set (Fin m → α)} {T : Set (Fin n 
         (extendSet (α := α) (Nat.le_max_left _ _) S ∩
           extendSet (α := α) (Nat.le_max_right _ _) T) := by
   ext x
-  simp only [Set.mem_inter_iff, mem_prefixCylinder, extendSet, Set.mem_setOf_eq,
-             takePrefix_prefixProj]
+  simp only [Set.mem_inter_iff, mem_prefixCylinder, extendSet, Set.mem_setOf_eq, take_prefixProj]
 
 -- Disable false-positive linter warnings: Measurable (Fin n → α) depends on [MeasurableSpace α]
 set_option linter.unusedSectionVars false
 
 @[nolint unusedArguments]
-lemma takePrefix_measurable (hmn : m ≤ n) :
-    Measurable (takePrefix (α := α) hmn) :=
+lemma take_measurable (hmn : m ≤ n) :
+    Measurable (Fin.take (α := fun _ => α) m hmn) :=
   measurable_pi_lambda _ (fun i => measurable_pi_apply (Fin.castLE hmn i))
 
 @[nolint unusedArguments]
 lemma extendSet_measurable {S : Set (Fin m → α)} {hmn : m ≤ n}
     (hS : MeasurableSet S) : MeasurableSet (extendSet (α := α) hmn S) :=
-  (takePrefix_measurable (α := α) hmn) hS
+  (take_measurable (α := α) hmn) hS
 
 end Extend
 

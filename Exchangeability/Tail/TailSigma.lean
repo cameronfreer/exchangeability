@@ -98,8 +98,8 @@ These lemmas are now in `ForMathlib.MeasureTheory.MeasurableSpace.ComapInfima`.
 We re-export them here for backward compatibility. -/
 
 -- Re-export comap/infima lemmas from ForMathlib
-export MeasurableSpace (preimage_injective_of_surjective map_comap_eq_of_surjective
-                        comap_iInf_le iInf_comap_eq_comap_iInf_of_surjective)
+export MeasurableSpace (map_comap_eq_of_surjective comap_iInf_le
+                        iInf_comap_eq_comap_iInf_of_surjective)
 
 /-! ### Bridge Lemmas (LOAD-BEARING - Phase 1a) -/
 
