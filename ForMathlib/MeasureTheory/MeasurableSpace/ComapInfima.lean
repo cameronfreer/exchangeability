@@ -45,13 +45,8 @@ namespace MeasurableSpace
 /-- Preimage is injective on sets when `f` is surjective. -/
 lemma preimage_injective_of_surjective {α β : Type*} {f : α → β}
     (hf : Function.Surjective f) :
-    Function.Injective (fun (s : Set β) => f ⁻¹' s) := by
-  intro s t hpre
-  have : f ⁻¹' s = f ⁻¹' t := hpre
-  ext y
-  rcases hf y with ⟨x, rfl⟩
-  have := congrArg (fun A => x ∈ A) this
-  simpa using this
+    Function.Injective (fun (s : Set β) => f ⁻¹' s) :=
+  hf.preimage_injective
 
 /-- If `f` is surjective, then `map f (comap f m) = m`. -/
 lemma map_comap_eq_of_surjective {α β : Type*} {f : α → β}

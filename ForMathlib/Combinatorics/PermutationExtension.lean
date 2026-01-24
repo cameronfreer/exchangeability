@@ -54,16 +54,8 @@ lemma strictMono_Fin_ge_id {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
     | zero => intro _; exact Nat.zero_le _
     | succ n ih =>
         intro hn
-        have hn' : n < m := Nat.lt_of_succ_lt hn
-        let j : Fin m := ⟨n, hn'⟩
-        let j_succ : Fin m := ⟨n.succ, hn⟩
-        have hlt : j < j_succ := by simp [Fin.lt_def, j, j_succ]
-        have hk_lt : k j < k j_succ := hk hlt
-        have ih' : n ≤ k j := ih hn'
-        calc n.succ
-            = n + 1 := rfl
-          _ ≤ k j + 1 := Nat.add_le_add_right ih' 1
-          _ ≤ k j_succ := Nat.succ_le_of_lt hk_lt
+        exact Nat.succ_le_of_lt (Nat.lt_of_le_of_lt (ih (Nat.lt_of_succ_lt hn))
+          (hk (Fin.mk_lt_mk.mpr (Nat.lt_succ_self n))))
   exact this i.val i.isLt
 
 /--
