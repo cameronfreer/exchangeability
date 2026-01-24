@@ -53,9 +53,8 @@ variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
 /-- Bounded measurable functions are integrable on finite measures. -/
 lemma integrable_of_bounded [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
+    Integrable f μ :=
+  hbd.elim fun C hC => Integrable.of_bound hf.aestronglyMeasurable C (ae_of_all μ hC)
 
 /-- Product of integrable and bounded measurable functions is integrable. -/
 lemma integrable_of_bounded_mul [IsFiniteMeasure μ]

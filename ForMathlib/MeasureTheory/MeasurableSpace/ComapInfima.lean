@@ -70,9 +70,8 @@ The inequality `comap f (⨅ i, m i) ≤ ⨅ i, comap f (m i)` holds by monotoni
 The reverse inequality (and hence equality) requires `f` to be surjective.
 See `iInf_comap_eq_comap_iInf_of_surjective` for the surjective case. -/
 lemma comap_iInf_le {ι : Sort*} {α β : Type*} (f : α → β) (m : ι → MeasurableSpace β) :
-    MeasurableSpace.comap f (iInf m) ≤ iInf (fun i => MeasurableSpace.comap f (m i)) := by
-  refine le_iInf (fun i => ?_)
-  exact MeasurableSpace.comap_mono (iInf_le m i)
+    MeasurableSpace.comap f (iInf m) ≤ iInf (fun i => MeasurableSpace.comap f (m i)) :=
+  le_iInf fun i => MeasurableSpace.comap_mono (iInf_le m i)
 
 -- Extract witnesses for each comap and choose them uniformly
 private lemma comap_iInf_witnesses {ι : Type*} {α β : Type*} {f : α → β}
