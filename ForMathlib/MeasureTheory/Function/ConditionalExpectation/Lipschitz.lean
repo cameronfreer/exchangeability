@@ -104,10 +104,7 @@ theorem condExp_L1_lipschitz [IsFiniteMeasure μ]
   have h_linear : ∀ᵐ ω ∂μ, μ[f|m] ω - μ[g|m] ω = μ[(f - g)|m] ω :=
     EventuallyEq.symm (condExp_sub hf hg m)
   calc ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ
-      = ∫ ω, |μ[(f - g)|m] ω| ∂μ := by
-          apply integral_congr_ae
-          filter_upwards [h_linear] with ω h
-          rw [h]
+      = ∫ ω, |μ[(f - g)|m] ω| ∂μ := integral_congr_ae (h_linear.mono fun _ h => congrArg _ h)
     _ ≤ ∫ ω, |(f - g) ω| ∂μ := integral_abs_condExp_le (f - g)
     _ = ∫ ω, |f ω - g ω| ∂μ := rfl
 
