@@ -5,7 +5,6 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.PullOut
-import ForMathlib.MeasureTheory.Measure.TrimInstances
 
 /-!
 # Lipschitz Properties of Conditional Expectation
@@ -115,11 +114,10 @@ theorem condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measu
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
   obtain ⟨C, hC⟩ := hg_bd
-  haveI : SigmaFinite (μ.trim hm) := MeasureTheory.Measure.sigmaFinite_trim μ hm
-  have h := condExp_stronglyMeasurable_mul_of_bound hm hg_meas.stronglyMeasurable hf C
-    (ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω))
-  -- f * g = g * f pointwise, so apply mathlib's g·E[f|m] version and commute
-  exact (condExp_congr_ae (ae_of_all μ fun _ => mul_comm _ _)).trans
-    (h.trans (ae_of_all μ fun _ => mul_comm _ _))
+  have hg_sm : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
+  have hfg : Integrable (f * g) μ :=
+    hf.mul_bdd (hg_meas.mono hm le_rfl).aestronglyMeasurable
+      (ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω))
+  exact condExp_mul_of_stronglyMeasurable_right hg_sm hfg hf
 
 end CondExp
