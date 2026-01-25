@@ -1,13 +1,13 @@
 \section{Snippet Library}
 \label{app:snippets}
 
-This appendix provides an index of key Lean code snippets referenced throughout the paper. All snippets are shown exactly as they appear in the repository.
+This appendix provides key Lean code snippets. All match the repository exactly.
 
 \subsection{Core Definitions}
 
 \paragraph{Snippet 1: Exchangeable.}
+\texttt{Contractability.lean:81}
 \begin{lstlisting}
--- Exchangeability/Contractability.lean:81-84
 def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ n (σ : Equiv.Perm (Fin n)),
     Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
@@ -15,8 +15,8 @@ def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 \end{lstlisting}
 
 \paragraph{Snippet 2: Contractable.}
+\texttt{Contractability.lean:199}
 \begin{lstlisting}
--- Exchangeability/Contractability.lean:199-202
 def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
     Measure.map (fun ω i => X (k i) ω) μ =
@@ -24,8 +24,8 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 \end{lstlisting}
 
 \paragraph{Snippet 3: ConditionallyIID.}
+\texttt{ConditionallyIID.lean:190}
 \begin{lstlisting}
--- Exchangeability/ConditionallyIID.lean:190-196
 def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
   ∃ ν : Ω → Measure α,
     (∀ ω, IsProbabilityMeasure (ν ω)) ∧
@@ -38,12 +38,12 @@ def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 \subsection{Main Theorems}
 
 \paragraph{Snippet 4: de Finetti's Theorem.}
+\texttt{DeFinetti/TheoremViaMartingale.lean:96}
 \begin{lstlisting}
--- Exchangeability/DeFinetti/TheoremViaMartingale.lean:96-103
 theorem deFinetti
     [StandardBorelSpace Ω]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    [Nonempty α] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X) :
     ConditionallyIID μ X :=
@@ -52,42 +52,38 @@ theorem deFinetti
 \end{lstlisting}
 
 \paragraph{Snippet 5: Full Equivalence.}
+\texttt{DeFinetti/TheoremViaMartingale.lean:138}
 \begin{lstlisting}
--- Exchangeability/DeFinetti/TheoremViaMartingale.lean:138-153
 theorem deFinetti_RyllNardzewski_equivalence
     [StandardBorelSpace Ω]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    [Nonempty α] {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) :
-    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
-  constructor
-  · intro hContract
-    have hCIID := conditionallyIID_of_contractable X hX_meas hContract
-    have hExch := exchangeable_of_conditionallyIID hX_meas hCIID
-    exact ⟨hExch, hCIID⟩
-  · intro ⟨hExch, _⟩
-    exact contractable_of_exchangeable hExch hX_meas
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
 \end{lstlisting}
 
 \subsection{Directing Measure}
 
 \paragraph{Snippet 9: Directing Measure Construction.}
+\texttt{DeFinetti/ViaMartingale/DirectingMeasure.lean:53}
 \begin{lstlisting}
--- DeFinetti/ViaMartingale/DirectingMeasure.lean:53-58
 noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α]
+    [Nonempty α]
+    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n))
+    (ω : Ω) : Measure α :=
   (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 \end{lstlisting}
 
 \subsection{Tail $\sigma$-Algebra}
 
 \paragraph{Snippet 12: Tail Shift.}
+\texttt{Tail/TailSigma.lean:88}
 \begin{lstlisting}
--- Exchangeability/Tail/TailSigma.lean:88-92
-def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+def tailShift (α : Type*) [MeasurableSpace α] :
+    MeasurableSpace (ℕ → α) :=
   iInf (fun n : ℕ =>
     MeasurableSpace.comap
       (fun (ω : ℕ → α) => fun k => ω (n + k))
@@ -97,21 +93,23 @@ def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :
 \subsection{Ergodic Theory}
 
 \paragraph{Snippet 13: Koopman Operator.}
+\texttt{Ergodic/KoopmanMeanErgodic.lean:120}
 \begin{lstlisting}
--- Exchangeability/Ergodic/KoopmanMeanErgodic.lean:120-122
 def koopman {μ : Measure Ω} [IsProbabilityMeasure μ]
     (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
-  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
+  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT)
+    .toContinuousLinearMap
 \end{lstlisting}
 
 \paragraph{Snippet 14: Mean Ergodic Theorem.}
+\texttt{Ergodic/KoopmanMeanErgodic.lean:245}
 \begin{lstlisting}
--- Exchangeability/Ergodic/KoopmanMeanErgodic.lean:245-249
 theorem birkhoffAverage_tendsto_metProjection
-    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
-    (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
+    Tendsto
+      (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
       atTop (nhds (metProjection T hT f))
 \end{lstlisting}
 
@@ -119,7 +117,7 @@ theorem birkhoffAverage_tendsto_metProjection
 
 \begin{center}
 \begin{tabular}{cll}
-\textbf{Snippet} & \textbf{Content} & \textbf{File} \\
+\textbf{\#} & \textbf{Content} & \textbf{File} \\
 \hline
 1 & Exchangeable & Contractability.lean \\
 2 & Contractable & Contractability.lean \\
@@ -129,6 +127,6 @@ theorem birkhoffAverage_tendsto_metProjection
 9 & Directing measure & DirectingMeasure.lean \\
 12 & Tail shift & TailSigma.lean \\
 13 & Koopman operator & KoopmanMeanErgodic.lean \\
-14 & Mean Ergodic Theorem & KoopmanMeanErgodic.lean \\
+14 & Mean Ergodic Thm & KoopmanMeanErgodic.lean \\
 \end{tabular}
 \end{center}
