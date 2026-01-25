@@ -1,0 +1,108 @@
+\section{Route 2: Elementary $L^2$ Bounds}
+\label{sec:l2}
+
+The $L^2$ proof is Kallenberg's ``second proof.'' It has the \textbf{lightest dependencies}---no ergodic theory, minimal martingale theory---using only $L^2$ spaces and elementary correlation bounds.
+
+\subsection{Key Ideas}
+
+The central observation is Kallenberg's Lemma~1.2:
+
+\begin{lemma}[Correlation bound]
+For a contractable sequence $(X_i)$ of bounded random variables:
+\[
+|\E[X_i \cdot X_j] - \E[X_i] \cdot \E[X_j]| \le \frac{C}{\min(i+1, j+1)}
+\]
+for some constant $C$ depending on the bounds.
+\end{lemma}
+
+This bound implies that the correlation between distant terms decays, which forces the block averages to converge.
+
+\subsection{Block Averages}
+
+Define the block average:
+\[
+\alpha_n(\omega) = \frac{1}{n} \sum_{i=0}^{n-1} X_i(\omega)
+\]
+
+\begin{lstlisting}
+def blockAvg (X : N -> Omega -> R) (n : N) (omega : Omega) : R :=
+  (1 / n) * sum i in Finset.range n, X i omega
+\end{lstlisting}
+
+\subsection{$L^2$ Convergence}
+
+The correlation bound implies that $(\alpha_n)$ is Cauchy in $L^2$:
+\[
+\E[(\alpha_n - \alpha_m)^2] \le C \cdot \left(\frac{\log n}{n} + \frac{\log m}{m}\right)
+\]
+
+Therefore, there exists $\alpha_\infty \in L^2(\mu)$ with $\alpha_n \to \alpha_\infty$ in $L^2$.
+
+\subsection{Proof Skeleton}
+
+\paragraph{Step 1: Clip to $[0,1]$.}
+For unbounded random variables, first work with $\mathrm{clip}_{01}(X) = \max(0, \min(1, X))$. The general case follows by approximation.
+
+\paragraph{Step 2: Establish the correlation bound.}
+From contractability: $(X_0, X_i) \deq (X_j, X_i)$ for $j \le i$. This bounds cross-correlations.
+
+\paragraph{Step 3: Prove $L^2$ convergence of block averages.}
+The correlation bound implies $\|\alpha_n - \alpha_m\|_2 \to 0$ as $n, m \to \infty$.
+
+\paragraph{Step 4: Product factorization.}
+For bounded measurable $f, g : \R \to \R$:
+\[
+\E[f(X_i) \cdot g(X_j)] = \E[\E[f(X_0) | \alpha_\infty] \cdot \E[g(X_0) | \alpha_\infty]]
+\]
+This is the key factorization showing conditional independence.
+
+\paragraph{Step 5: Construct directing measure.}
+From the factorization, construct $\nu : \Omega \to \mathrm{Measure}(\R)$ with:
+\[
+\int f \, d\nu(\omega) = \E[f(X_0) | \alpha_\infty](\omega)
+\]
+
+\paragraph{Step 6: Extend via $\pi$-system.}
+Common ending (Section~\ref{sec:common-ending}).
+
+\subsection{Key Lemmas}
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Lemma} & \textbf{File:Line} \\
+\hline
+\texttt{blockAvg} & \texttt{BlockAvgDef.lean:45} \\
+\texttt{l2\_contractability\_bound} & \texttt{L2Helpers.lean:852} \\
+\texttt{reverse\_martingale\_subsequence\_convergence} & \texttt{MainConvergence.lean:796} \\
+\texttt{conditionallyIID\_of\_contractable\_viaL2} & \texttt{TheoremViaL2.lean:135} \\
+\end{tabular}
+\end{center}
+
+\subsection{Why ``Elementary''?}
+
+This proof is called ``elementary'' because it:
+\begin{itemize}
+\item Uses \textbf{no ergodic theory} (no Koopman operators or Mean Ergodic Theorem).
+\item Uses \textbf{no reverse martingale convergence} in the technical sense.
+\item Relies only on \textbf{$L^2$ Hilbert space structure}.
+\item Has \textbf{explicit, computable bounds}.
+\end{itemize}
+
+\subsection{Limitations}
+
+The $L^2$ proof works directly only for \textbf{$\R$-valued} random variables (or more generally, Hilbert space-valued). For general standard Borel spaces, one must either:
+\begin{itemize}
+\item Embed into $\R$ via a Borel isomorphism, or
+\item Use the martingale proof instead.
+\end{itemize}
+
+In the formalization, the main theorem requires $L^2$ integrability:
+\begin{lstlisting}
+theorem conditionallyIID_of_contractable_viaL2
+    [StandardBorelSpace Omega]
+    (mu : Measure Omega) [IsProbabilityMeasure mu]
+    (X : N -> Omega -> R) (hX_meas : forall i, Measurable (X i))
+    (hContract : Contractable mu X)
+    (hX_L2 : forall i, MemLp (X i) 2 mu) :
+    ConditionallyIID mu X
+\end{lstlisting}

@@ -1,0 +1,87 @@
+\section{Common Ending: $\pi$-System Extension}
+\label{sec:common-ending}
+
+All three proof routes share a common final step: extending the finite-dimensional product formula from cylinder sets to all Borel sets using \textbf{$\pi$-system uniqueness}.
+
+\subsection{The $\pi$-System Theorem}
+
+\begin{theorem}[Dynkin's $\pi$-$\lambda$ theorem]
+Let $\mathcal{P}$ be a $\pi$-system (closed under finite intersections) that generates a $\sigma$-algebra $\cF$. If $\mu$ and $\nu$ are finite measures with $\mu(A) = \nu(A)$ for all $A \in \mathcal{P}$, then $\mu = \nu$ on $\cF$.
+\end{theorem}
+
+This theorem is crucial because checking equality on a $\pi$-system (often much smaller than the full $\sigma$-algebra) suffices to establish equality of measures.
+
+\subsection{Cylinder Sets}
+
+For the product space $\N \to \alpha$, cylinder sets are sets depending on finitely many coordinates:
+\[
+C_{n,S} = \{x \in \N \to \alpha : (x_0, \ldots, x_{n-1}) \in S\}
+\]
+for a measurable $S \subseteq \alpha^n$.
+
+\begin{lstlisting}
+def prefixProj (alpha : Type*) (n : N) (x : N -> alpha) : Fin n -> alpha :=
+  fun i => x i
+
+def prefixCylinder {n : N} (S : Set (Fin n -> alpha)) : Set (N -> alpha) :=
+  (prefixProj alpha n)^(-1)' S
+\end{lstlisting}
+
+\begin{lemma}
+Cylinder sets form a $\pi$-system that generates the product $\sigma$-algebra on $\N \to \alpha$.
+\end{lemma}
+
+\subsection{Application to de Finetti}
+
+The three proof routes establish the product formula for cylinder sets:
+\[
+\mu(\{X \in C\}) = \int \nu(\omega)^{\otimes n}(C) \, d\mu(\omega)
+\]
+for cylinders $C = C_{n,S}$.
+
+The $\pi$-system theorem then implies:
+\[
+\Law(X_0, X_1, \ldots, X_{n-1}) = \int \nu(\omega)^{\otimes n} \, d\mu(\omega)
+\]
+for \emph{all} Borel sets in $\alpha^n$, not just those of the form $B_0 \times \cdots \times B_{n-1}$.
+
+\subsection{The Bridge to \texttt{ConditionallyIID}}
+
+\begin{lstlisting}
+theorem measure_eq_of_fin_marginals_eq
+    {mu nu : Measure (N -> alpha)} [IsFiniteMeasure mu] [IsFiniteMeasure nu]
+    (h : forall n S, MeasurableSet S -> mu (prefixCylinder S) = nu (prefixCylinder S)) :
+    mu = nu
+\end{lstlisting}
+
+This lemma, combined with the finite-dimensional product formula for cylinders, yields the full \texttt{ConditionallyIID} condition:
+
+\begin{lstlisting}
+theorem conditionallyIID_of_finite_product_formula
+    {nu : Omega -> Measure alpha}
+    (h_nu_prob : forall omega, IsProbabilityMeasure (nu omega))
+    (h_nu_meas : forall B, MeasurableSet B -> Measurable (fun omega => nu omega B))
+    (h_product : forall m (k : Fin m -> N), StrictMono k ->
+      forall (S : Set (Fin m -> alpha)), MeasurableSet S ->
+        mu (cylinder_X S) = integral mu (fun omega => (Measure.pi (fun _ => nu omega)) S)) :
+    ConditionallyIID mu X
+\end{lstlisting}
+
+\subsection{Relationship to Kolmogorov Extension}
+
+The $\pi$-system approach is related to, but distinct from, the \textbf{Kolmogorov extension theorem}:
+\begin{itemize}
+\item \textbf{Kolmogorov extension} constructs a measure from consistent finite-dimensional marginals.
+\item \textbf{$\pi$-system uniqueness} proves equality of two existing measures.
+\end{itemize}
+
+For de Finetti, we already have the measure $\mu$; we need to prove it equals the mixture of product measures. The $\pi$-system approach is more direct.
+
+\subsection{Implementation Notes}
+
+The common ending is implemented in \texttt{DeFinetti/CommonEnding.lean}. Each proof route calls into this shared infrastructure after establishing the cylinder-level product formula. This design ensures:
+\begin{itemize}
+\item No duplication of the $\pi$-system extension argument.
+\item Clean separation between route-specific and shared code.
+\item Easy comparison of what each route contributes.
+\end{itemize}

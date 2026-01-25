@@ -1,0 +1,113 @@
+\section{Route 3: Mean Ergodic Theorem}
+\label{sec:koopman}
+
+The Koopman proof is Kallenberg's ``first proof.'' It connects de Finetti's theorem to \textbf{ergodic theory}, revealing that exchangeability is fundamentally about dynamical invariance under the shift operator.
+
+\subsection{Key Ideas}
+
+The proof interprets the sequence as a dynamical system:
+\begin{enumerate}
+\item The \textbf{shift operator} $T : (\N \to \alpha) \to (\N \to \alpha)$ with $(Tx)_n = x_{n+1}$ is measure-preserving when $X$ is contractable.
+\item The \textbf{Koopman operator} $U_T : L^2(\mu) \to L^2(\mu)$ with $(U_T f)(\omega) = f(T\omega)$ is an isometry.
+\item The \textbf{Mean Ergodic Theorem} asserts that Ces\`{a}ro averages converge in $L^2$ to the projection onto $U_T$-invariant functions.
+\end{enumerate}
+
+\subsection{The Koopman Operator}
+
+\begin{definition}
+For a measure-preserving transformation $T : \Omega \to \Omega$, the Koopman operator is:
+\[
+U_T : L^2(\mu) \to L^2(\mu), \quad (U_T f)(\omega) = f(T\omega)
+\]
+\end{definition}
+
+\begin{lstlisting}
+def koopman {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
+    Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
+  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
+\end{lstlisting}
+
+Since $T$ is measure-preserving, $U_T$ is an isometry: $\|U_T f\|_2 = \|f\|_2$.
+
+\subsection{Mean Ergodic Theorem}
+
+\begin{theorem}[von Neumann, 1932]
+Let $U : L^2(\mu) \to L^2(\mu)$ be an isometry. Then for any $f \in L^2(\mu)$:
+\[
+\frac{1}{n} \sum_{i=0}^{n-1} U^i f \to Pf \quad \text{in } L^2
+\]
+where $P$ is the orthogonal projection onto the closed subspace $\{g : Ug = g\}$ of $U$-invariant functions.
+\end{theorem}
+
+\begin{lstlisting}
+theorem birkhoffAverage_tendsto_metProjection
+    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
+    (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
+    Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+      atTop (nhds (metProjection T hT f))
+\end{lstlisting}
+
+\subsection{Invariant Functions and the Tail}
+
+A function $f$ is $U_T$-invariant if $f(T\omega) = f(\omega)$ a.e.\ This is equivalent to $f$ being measurable with respect to the \textbf{shift-invariant $\sigma$-algebra}:
+\[
+\mathcal{I} = \{A : T^{-1}(A) = A \text{ a.e.}\}
+\]
+
+For the shift on path space, the shift-invariant $\sigma$-algebra coincides with the tail $\sigma$-algebra:
+\[
+\mathcal{I} = \cF_\infty = \bigcap_n \sigma(X_n, X_{n+1}, \ldots)
+\]
+
+\subsection{Proof Skeleton}
+
+\paragraph{Step 1: Shift is measure-preserving.}
+Contractability implies $T_*\mu = \mu$ for the shift operator.
+
+\paragraph{Step 2: Block averaging via contractability.}
+For $m$ disjoint blocks, contractability gives:
+\[
+\int \prod_i f_i(X_i) \, d\mu = \int \prod_i (\text{block average of } f_i) \, d\mu
+\]
+
+\paragraph{Step 3: $L^2$ convergence via Mean Ergodic Theorem.}
+Block averages converge in $L^2$ to conditional expectations given the shift-invariant $\sigma$-algebra.
+
+\paragraph{Step 4: Product factorization.}
+Taking the limit:
+\[
+\E[\prod_i f_i(X_i) | \mathcal{I}] = \prod_i \E[f_i(X_0) | \mathcal{I}] \quad \text{a.e.}
+\]
+
+\paragraph{Step 5: Construct directing measure.}
+Define $\nu(\omega) = \Law(X_0 | \mathcal{I})(\omega)$.
+
+\paragraph{Step 6: Extend via $\pi$-system.}
+Common ending (Section~\ref{sec:common-ending}).
+
+\subsection{Key Lemmas}
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Lemma} & \textbf{File:Line} \\
+\hline
+\texttt{pathSpace\_shift\_preserving\_of\_contractable} & \texttt{ViaKoopman.lean:385} \\
+\texttt{koopman\_isometry} & \texttt{KoopmanMeanErgodic.lean:130} \\
+\texttt{birkhoffAverage\_tendsto\_metProjection} & \texttt{KoopmanMeanErgodic.lean:245} \\
+\texttt{condexp\_product\_factorization\_contractable} & \texttt{ContractableFactorization.lean:477} \\
+\texttt{conditionallyIID\_of\_contractable\_viaKoopman} & \texttt{TheoremViaKoopman.lean:224} \\
+\end{tabular}
+\end{center}
+
+\subsection{Mathematical Significance}
+
+This proof reveals de Finetti's theorem as part of \textbf{ergodic theory}:
+\begin{itemize}
+\item Exchangeability means the shift dynamics is measure-preserving.
+\item The directing measure arises from the ergodic decomposition.
+\item The Mean Ergodic Theorem provides the convergence.
+\item Conditionally on the tail (= invariant $\sigma$-algebra), coordinates are i.i.d.
+\end{itemize}
+
+This connection places de Finetti's theorem in a broader context alongside the Birkhoff Ergodic Theorem and ergodic decomposition theory.

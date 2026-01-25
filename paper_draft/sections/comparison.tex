@@ -1,0 +1,81 @@
+\section{Comparison of the Three Proofs}
+\label{sec:comparison}
+
+Having formalized three independent proofs of the same theorem, we can compare them systematically across several dimensions.
+
+\subsection{Summary Table}
+
+\begin{center}
+\begin{tabular}{lccc}
+\textbf{Aspect} & \textbf{Martingale} & \textbf{$L^2$} & \textbf{Koopman} \\
+\hline
+Reference & Kallenberg ``Third'' & Kallenberg ``Second'' & Kallenberg ``First'' \\
+Key technique & Reverse martingale & Correlation bounds & Mean Ergodic Thm \\
+Dependencies & Medium & Lightest & Heaviest \\
+State space & Standard Borel & $\R$ ($L^2$) & $\R$ ($L^2$) \\
+Files & 14 & 13 & 18 \\
+Lines & $\sim$4000 & $\sim$6500 & $\sim$6000 \\
+Default & Yes & No & No \\
+\end{tabular}
+\end{center}
+
+\subsection{Conceptual Comparison}
+
+\paragraph{Martingale route.}
+The martingale proof is \textbf{probabilistically natural}: it uses conditional expectations, reverse martingales, and the tail $\sigma$-algebra---concepts central to probability theory. The directing measure is constructed as the conditional distribution of $X_0$ given the tail, which is the ``correct'' probabilistic answer to ``what does $X$ look like in the limit?''
+
+\paragraph{$L^2$ route.}
+The $L^2$ proof is \textbf{elementary}: it avoids both ergodic theory and reverse martingale convergence. The key insight is that contractability forces correlations to decay, which is captured by explicit $L^2$ bounds. This proof is closest to a ``bare hands'' approach.
+
+\paragraph{Koopman route.}
+The Koopman proof is \textbf{conceptually deep}: it reveals de Finetti's theorem as a manifestation of ergodic theory. The shift operator provides a dynamical perspective, and the Mean Ergodic Theorem connects to von Neumann's foundational work on ergodic averages. This proof places exchangeability in a broader mathematical context.
+
+\subsection{Dependency Comparison}
+
+\begin{center}
+\begin{tabular}{lccc}
+\textbf{mathlib Component} & \textbf{Martingale} & \textbf{$L^2$} & \textbf{Koopman} \\
+\hline
+Conditional expectation & Heavy & Light & Medium \\
+Martingale theory & Medium & None & None \\
+$L^2$ spaces & Light & Heavy & Heavy \\
+Hilbert space projections & None & None & Heavy \\
+Ergodic theory & None & None & Heavy \\
+Probability kernels & Heavy & Light & Light \\
+\end{tabular}
+\end{center}
+
+\subsection{Generalizability}
+
+\begin{itemize}
+\item \textbf{Martingale}: Works for arbitrary standard Borel state spaces. No integrability assumptions needed.
+
+\item \textbf{$L^2$}: Requires $\R$-valued (or Hilbert space-valued) random variables with $L^2$ integrability. Can handle general state spaces via Borel isomorphism to $\R$, but this adds complexity.
+
+\item \textbf{Koopman}: Similar to $L^2$---requires $L^2$ integrability. The ergodic-theoretic framework is more naturally suited to $\R$-valued functions.
+\end{itemize}
+
+\subsection{What We Learned}
+
+Formalizing three proofs of the same theorem taught us several lessons:
+
+\paragraph{Shared infrastructure matters.}
+The easy directions and common ending are shared across all three routes, comprising roughly 30\% of the codebase. This sharing reduces duplication and ensures consistency.
+
+\paragraph{Different proofs stress different parts of mathlib.}
+The martingale proof exercises probability kernels and conditional expectation. The $L^2$ proof exercises $L^p$ spaces and Cauchy sequences. The Koopman proof exercises Hilbert space projections and ergodic theory. This provides good coverage of mathlib's probability infrastructure.
+
+\paragraph{Proof length varies with mathematical style.}
+The $L^2$ proof has more lines despite being ``elementary'' because explicit bounds require more bookkeeping. The martingale proof is shorter because it leverages more powerful abstractions.
+
+\paragraph{Choosing a default is a design decision.}
+We chose the martingale proof as the default because it is the most general (arbitrary state spaces) and has reasonable dependency weight. A different library might prefer the $L^2$ proof for its lighter dependencies.
+
+\subsection{Recommendations}
+
+\begin{itemize}
+\item \textbf{For general use}: Import \texttt{DeFinetti.Theorem}, which uses the martingale proof.
+\item \textbf{For understanding dependencies}: Study the $L^2$ proof.
+\item \textbf{For connections to dynamics}: Study the Koopman proof.
+\item \textbf{For mathlib contribution}: The martingale proof is likely the cleanest candidate.
+\end{itemize}
