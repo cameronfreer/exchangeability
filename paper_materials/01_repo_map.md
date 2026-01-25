@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -37,7 +37,7 @@ exchangeability/
 │   ├── Tail/                        # Tail σ-algebra (3 files)
 │   ├── Bridge/                      # Cesaro-to-condExp bridge (1 file)
 │   └── Util/                        # Combinatorial utilities (3 files)
-├── ForMathlib/                      # Contributions to mathlib (45 files)
+├── ForMathlib/                      # Contributions to mathlib (1 file)
 ├── paper_materials/                 # This documentation
 ├── blueprint/                       # LaTeX blueprint documents
 └── lake-manifest.json               # Dependencies

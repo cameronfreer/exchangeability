@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -45,17 +45,17 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 
 **Snippet 3: ConditionallyIID**
 - Path: `Exchangeability/ConditionallyIID.lean`
-- Lines: 140-150
+- Lines: 190-196
 - Purpose: Existence of directing measure with product structure
 
 ```lean
-structure ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop where
-  ν : Ω → Measure α
-  isProb : ∀ ω, IsProbabilityMeasure (ν ω)
-  measurable_eval : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => (ν ω) B)
-  finite_product : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
-    Measure.map (fun ω i => X (k i) ω) μ =
-      μ.bind (fun ω => Measure.pi (fun _ => ν ω))
+def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∃ ν : Ω → Measure α,
+    (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 ```
 
 *Math translation:* There exists a kernel ν such that Law(X_k) = ∫ ν(ω)^⊗m dμ(ω).
@@ -181,16 +181,16 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
 
 **Snippet 9: Directing Measure (Martingale)**
 - Path: `Exchangeability/DeFinetti/ViaMartingale/DirectingMeasure.lean`
-- Lines: ~50-80
+- Lines: 53-58
 - Purpose: Construct ν via conditional distribution kernel
 
 ```lean
-def directingMeasure
-    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    [MeasurableSpace α] [StandardBorelSpace α]
+noncomputable def directingMeasure
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) : Ω → Measure α :=
-  condExpKernel μ (X 0) (tailSigma X)
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+  (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 ```
 
 *Math translation:* ν(ω) = Law(X_0 | tail σ-algebra)(ω).
@@ -236,12 +236,15 @@ theorem measure_eq_of_fin_marginals_eq
 
 **Snippet 12: Tail Shift**
 - Path: `Exchangeability/Tail/TailSigma.lean`
-- Lines: ~20-40
+- Lines: 88-92
 - Purpose: Define tail σ-algebra
 
 ```lean
 def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
-  ⨅ n : ℕ, MeasurableSpace.comap (shift^[n]) inferInstance
+  iInf (fun n : ℕ =>
+    MeasurableSpace.comap
+      (fun (ω : ℕ → α) => fun k => ω (n + k))
+      (inferInstance : MeasurableSpace (ℕ → α)))
 ```
 
 *Math translation:* ℱ_∞ = ⋂_n σ(X_n, X_{n+1}, ...).
@@ -252,13 +255,13 @@ def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :
 
 **Snippet 13: Koopman Operator**
 - Path: `Exchangeability/Ergodic/KoopmanMeanErgodic.lean`
-- Lines: ~50-70
+- Lines: 120-122
 - Purpose: Define Koopman operator on L²
 
 ```lean
-def koopmanOp (T : Ω → Ω) (hT : MeasurePreserving T μ) :
+def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
-  compRightCLM hT
+  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
 ```
 
 *Math translation:* (U_T f)(ω) = f(Tω).
@@ -267,15 +270,15 @@ def koopmanOp (T : Ω → Ω) (hT : MeasurePreserving T μ) :
 
 **Snippet 14: Mean Ergodic Theorem**
 - Path: `Exchangeability/Ergodic/KoopmanMeanErgodic.lean`
-- Lines: ~150-180
+- Lines: 245-249
 - Purpose: Cesàro averages converge to invariant projection
 
 ```lean
-theorem mean_ergodic_L2
-    (T : Ω → Ω) (hT : MeasurePreserving T μ)
-    (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => (1 : ℝ) / n • ∑ i ∈ Finset.range n, koopmanOp T hT^i f)
-      atTop (𝓝 (invariantProjection T hT f))
+theorem birkhoffAverage_tendsto_metProjection
+    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
+    (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
+    Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+      atTop (𝓝 (metProjection T hT f))
 ```
 
 *Math translation:* (1/n) Σ U^i f → P f in L².

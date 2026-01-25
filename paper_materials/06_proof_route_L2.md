@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -83,13 +83,7 @@ def blockAvg (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) : ℝ :=
 |𝔼[X_i · X_j] - 𝔼[X_i] · 𝔼[X_j]| ≤ C / min(i+1, j+1)
 ```
 
-**Lean signature:**
-```lean
-theorem kallenberg_correlation_bound
-    (hContract : Contractable μ X)
-    (hBound : ∀ i ω, X i ω ∈ Set.Icc 0 1) :
-    ∀ i j, |∫ X i * X j ∂μ - (∫ X i ∂μ) * (∫ X j ∂μ)| ≤ C / (min i j + 1)
-```
+**Key Lean lemma:** `l2_contractability_bound` at L2Helpers.lean:852
 
 **Proof idea:** From contractability:
 - `(X_0, X_i) =ᵈ (X_j, X_i)` for `j ≤ i`
@@ -173,14 +167,13 @@ Use π-system/monotone class to extend from cylinder sets to Borel sets.
 
 | # | Lemma | File | Purpose |
 |---|-------|------|---------|
-| 1 | `clip01_measurable` | Clip01.lean | Clipping preserves measurability |
-| 2 | `blockAvg_memLp` | BlockAverages.lean | Block averages are in L² |
-| 3 | `kallenberg_correlation_bound` | CesaroConvergence.lean | Kallenberg Lemma 1.2 |
-| 4 | `alpha_L2_cauchy` | AlphaConvergence.lean | Block averages are Cauchy |
-| 5 | `alpha_L2_limit_exists` | MainConvergence.lean | L² limit exists |
-| 6 | `product_factorization` | DirectingMeasureIntegral.lean | Product formula |
-| 7 | `directingMeasure_L2` | DirectingMeasureCore.lean | ν construction |
-| 8 | `finite_product_formula_L2` | DirectingMeasureIntegral.lean | Final formula |
+| 1 | `blockAvg` | BlockAvgDef.lean:45 | Block average definition |
+| 2 | `blockAvg_measurable` | BlockAvgDef.lean:48 | Block averages are measurable |
+| 3 | `l2_contractability_bound` | L2Helpers.lean:852 | Kallenberg Lemma 1.2 (correlation bound) |
+| 4 | `reverse_martingale_subsequence_convergence` | MainConvergence.lean:796 | Subsequential a.e. convergence |
+| 5 | `conditionallyIID_of_contractable_viaL2` | TheoremViaL2.lean:135 | Main theorem |
+
+*Note: The L² proof involves many helper lemmas; the above are the key ones.*
 
 ## Dependencies
 
@@ -194,21 +187,27 @@ Use π-system/monotone class to extend from cylinder sets to Borel sets.
 - `Exchangeability/ConditionallyIID.lean`
 - `Exchangeability/Probability/LpNormHelpers.lean`
 
-## Snippet: Correlation Bound
+## Snippet: L² Contractability Bound (Kallenberg Lemma 1.2)
+
+**File:** `DeFinetti/L2Helpers.lean:852`
 
 ```lean
-/-- Kallenberg Lemma 1.2: Correlation decay for contractable sequences.
-
-    For a contractable sequence X with X_i bounded in [0,1], the correlation
-    between X_i and X_j decays like 1/min(i,j). This is the key quantitative
-    estimate driving the L² proof of de Finetti.
--/
-theorem correlation_decay
+/-- L² bound for weighted differences of contractable random variables.
+Following Kallenberg page 26, Lemma 1.2. -/
+theorem l2_contractability_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → ℝ}
-    (hContract : Contractable μ X)
-    (hBound : ∀ i ω, X i ω ∈ Set.Icc (0 : ℝ) 1) :
-    ∀ i j, |∫ (X i) * (X j) ∂μ - (∫ X i ∂μ) * (∫ X j ∂μ)| ≤ 1 / (min i j + 1)
+    {n : ℕ} (ξ : Fin n → Ω → ℝ)
+    (m : ℝ) (σ ρ : ℝ)
+    (_hρ_bd : -1 ≤ ρ ∧ ρ ≤ 1)
+    (_hmean : ∀ k, ∫ ω, ξ k ω ∂μ = m)
+    (_hL2 : ∀ k, MemLp (fun ω => ξ k ω - m) 2 μ)
+    (_hvar : ∀ k, ∫ ω, (ξ k ω - m)^2 ∂μ = σ ^ 2)
+    (_hcov : ∀ i j, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σ ^ 2 * ρ)
+    (p q : Fin n → ℝ)
+    (_hp_prob : (∑ i, p i) = 1 ∧ ∀ i, 0 ≤ p i)
+    (_hq_prob : (∑ i, q i) = 1 ∧ ∀ i, 0 ≤ q i) :
+    ∫ ω, (∑ i, p i * ξ i ω - ∑ i, q i * ξ i ω)^2 ∂μ ≤
+      2 * σ ^ 2 * (1 - ρ) * (⨆ i, |p i - q i|)
 ```
 
 ## Why This Proof is "Elementary"

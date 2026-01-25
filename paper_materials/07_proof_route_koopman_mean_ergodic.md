@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -90,11 +90,11 @@ U_T f = f ∘ T
 - `U_T` is a linear isometry (since T is measure-preserving)
 - `U_T` is unitary on the invariant subspace
 
-**Lean:**
+**Lean:** `koopman` at KoopmanMeanErgodic.lean:120
 ```lean
-def koopmanOp (T : Ω → Ω) (hT : MeasurePreserving T μ) :
+def koopman {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω) (hT : MeasurePreserving T μ μ) :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
-  compRightCLM hT
+  (MeasureTheory.Lp.compMeasurePreservingₗᵢ ℝ T hT).toContinuousLinearMap
 ```
 
 ### Step 3: Mean Ergodic Theorem
@@ -108,14 +108,7 @@ def koopmanOp (T : Ω → Ω) (hT : MeasurePreserving T μ) :
 
 where `P` is the orthogonal projection onto the `U`-invariant subspace.
 
-**Lean signature:**
-```lean
-theorem mean_ergodic_L2
-    (T : Ω → Ω) (hT : MeasurePreserving T μ)
-    (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => cesaro (koopmanOp T hT) n f) atTop
-      (𝓝 (invariantProjection T hT f))
-```
+**Key Lean lemma:** `birkhoffAverage_tendsto_metProjection` at KoopmanMeanErgodic.lean:245
 
 ### Step 4: Invariant Functions are Tail-Measurable
 
@@ -183,14 +176,12 @@ Use π-system/monotone class extension.
 
 | # | Lemma | File | Purpose |
 |---|-------|------|---------|
-| 1 | `shift_measurePreserving` | ViaKoopman.lean | Shift preserves μ |
-| 2 | `koopmanOp_isometry` | KoopmanMeanErgodic.lean | Koopman is isometric |
-| 3 | `mean_ergodic_L2` | KoopmanMeanErgodic.lean | Mean Ergodic Theorem |
-| 4 | `invariant_iff_tailMeasurable` | InvariantSigma.lean | Invariant = tail |
-| 5 | `block_avg_contractable` | ContractableFactorization.lean | Block factorization |
-| 6 | `block_avg_L1_convergence` | CesaroL1Bounded.lean | L¹ convergence |
-| 7 | `product_factorization_ae` | CesaroPairFactorization.lean | Cond. indep. |
-| 8 | `directingKernel_construct` | DirectingKernel.lean | ν construction |
+| 1 | `pathSpace_shift_preserving_of_contractable` | ViaKoopman.lean:385 | Shift preserves μ |
+| 2 | `koopman_isometry` | KoopmanMeanErgodic.lean:130 | Koopman is isometric |
+| 3 | `birkhoffAverage_tendsto_metProjection` | KoopmanMeanErgodic.lean:245 | Mean Ergodic Theorem |
+| 4 | `metProjectionShift_tendsto` | InvariantSigma.lean:339 | L² convergence |
+| 5 | `condexp_product_factorization_contractable` | ContractableFactorization.lean:477 | Block factorization |
+| 6 | `conditionallyIID_of_contractable_viaKoopman` | TheoremViaKoopman.lean:224 | Main theorem |
 
 ## Dependencies
 
@@ -205,20 +196,19 @@ Use π-system/monotone class extension.
 
 ## Snippet: Mean Ergodic Theorem
 
-```lean
-/-- The Mean Ergodic Theorem in L².
+**File:** `Ergodic/KoopmanMeanErgodic.lean:245`
 
-    For a measure-preserving transformation T, the Cesàro averages
-    (1/n) Σᵢ₌₀ⁿ⁻¹ f ∘ Tⁱ converge in L² to the projection of f onto
-    the T-invariant subspace.
--/
-theorem mean_ergodic_L2
-    {Ω : Type*} [MeasurableSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (T : Ω → Ω) (hT : MeasurePreserving T μ)
-    (f : Lp ℝ 2 μ) :
-    Tendsto (fun n => (1 : ℝ) / n • ∑ i ∈ Finset.range n, koopmanOp T hT^i f)
-      atTop (𝓝 (invariantProjection T hT f))
+```lean
+/-- Mean Ergodic Theorem: Birkhoff averages converge in L² to the orthogonal projection
+onto the fixed-point subspace of the Koopman operator.
+
+Historical note: This theorem was first proved by von Neumann (1932).
+It's dual to the Birkhoff Ergodic Theorem (pointwise convergence). -/
+theorem birkhoffAverage_tendsto_metProjection
+    {μ : Measure Ω} [IsProbabilityMeasure μ] (T : Ω → Ω)
+    (hT : MeasurePreserving T μ μ) (f : Lp ℝ 2 μ) :
+    Tendsto (fun n => birkhoffAverage ℝ (koopman T hT) _root_.id n f)
+      atTop (𝓝 (metProjection T hT f))
 ```
 
 ## Mathematical Significance

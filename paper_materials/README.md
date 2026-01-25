@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -104,7 +104,7 @@ All markdown files begin with a standard header:
 
 ```markdown
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: <full hash>
 Date: <ISO date>
 Built: yes

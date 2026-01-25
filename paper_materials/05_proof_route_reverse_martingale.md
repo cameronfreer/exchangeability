@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -49,13 +49,7 @@ DeFinetti/
 
 **Statement:** If `(ξ, η) =ᵈ (ξ, ζ)` and `σ(η) ⊆ σ(ζ)`, then `ξ ⊥⊥_η ζ`.
 
-**Lean signature:**
-```lean
-theorem contraction_independence
-    (hLaw : Law (Y, W) = Law (Y, W'))
-    (hSub : σ(W) ⊆ σ(W')) :
-    CondIndep Y W W'
-```
+**Key Lean lemma:** `pair_law_eq_of_contractable` at PairLawEquality.lean:153
 
 **Proof idea:**
 1. Define `μ₁ = 𝔼[1_B(Y) | W]` and `μ₂ = 𝔼[1_B(Y) | W']`
@@ -83,13 +77,7 @@ theorem contraction_independence
 𝔼[f | ℱ_{≥n}] → 𝔼[f | ℱ_∞]  a.s. and in L¹
 ```
 
-**Lean signature:**
-```lean
-theorem condExp_tail_convergence
-    (hf : Integrable f μ) :
-    Tendsto (fun n => condExp ℱ_{≥n} f) atTop
-      (𝓝 (condExp ℱ_∞ f)) -- a.e. and L¹
-```
+**Key Lean lemma:** `condexp_convergence` at CondExpConvergence.lean:48
 
 ### Step 4: Directing Measure Construction
 
@@ -100,15 +88,10 @@ theorem condExp_tail_convergence
 ν(ω)(B) = 𝔼[1_{X_0 ∈ B} | ℱ_∞](ω)
 ```
 
-**Key properties:**
-```lean
-def directingMeasure (X : ℕ → Ω → α) : Ω → Measure α := condExpKernel μ (X 0) ℱ_∞
-
-theorem directingMeasure_isProb : ∀ ω, IsProbabilityMeasure (ν ω)
-
-theorem directingMeasure_measurable_eval :
-    ∀ B, MeasurableSet B → Measurable (fun ω => (ν ω) B)
-```
+**Key lemmas at DirectingMeasure.lean:**
+- `directingMeasure` (line 53): Construction via `condExpKernel`
+- `directingMeasure_isProb` (line 80): ν(ω) is a probability measure a.e.
+- `directingMeasure_measurable_eval` (line 63): Measurability of ω ↦ ν(ω)(B)
 
 ### Step 5: Conditional Law Equality
 
@@ -149,14 +132,13 @@ Uses π-system/monotone class to extend from cylinder sets to all Borel sets.
 
 | # | Lemma | File | Line |
 |---|-------|------|------|
-| 1 | `integral_map_eq` | ViaMartingale.lean | 116 |
-| 2 | `integral_eq_of_map_eq` | ViaMartingale.lean | 129 |
-| 3 | `condExp_tail_convergence` | CondExpConvergence.lean | ~80 |
-| 4 | `contraction_independence` | PairLawEquality.lean | ~150 |
-| 5 | `directingMeasure_isProb` | DirectingMeasure.lean | ~50 |
-| 6 | `conditional_law_eq_directingMeasure` | Factorization.lean | ~100 |
-| 7 | `finite_product_formula` | FiniteProduct.lean | ~200 |
-| 8 | `conditionallyIID_of_contractable` | TheoremViaMartingale.lean | 70 |
+| 1 | `condexp_convergence` | CondExpConvergence.lean | 48 |
+| 2 | `pair_law_eq_of_contractable` | PairLawEquality.lean | 153 |
+| 3 | `directingMeasure` | DirectingMeasure.lean | 53 |
+| 4 | `directingMeasure_isProb` | DirectingMeasure.lean | 80 |
+| 5 | `conditional_law_eq_directingMeasure` | DirectingMeasure.lean | 144 |
+| 6 | `finite_product_formula` | FiniteProduct.lean | 424 |
+| 7 | `conditionallyIID_of_contractable` | TheoremViaMartingale.lean | 70 |
 
 ## Dependencies
 
@@ -173,16 +155,18 @@ Uses π-system/monotone class to extend from cylinder sets to all Borel sets.
 
 ## Snippet: Directing Measure Construction
 
+**File:** `DeFinetti/ViaMartingale/DirectingMeasure.lean:53`
+
 ```lean
-/-- The directing measure for a sequence, defined via conditional expectation kernel.
-    This is the random probability measure ν such that coordinates are
-    conditionally i.i.d. with distribution ν. -/
-def directingMeasure
-    {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    [MeasurableSpace α] [StandardBorelSpace α]
+/-- **Directing measure**: conditional distribution of `X₀` given the tail σ-algebra.
+Constructed using `condExpKernel` API: for each ω, evaluate the conditional expectation kernel
+at ω to get a measure on Ω, then push forward along X₀. -/
+noncomputable def directingMeasure
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) : Ω → Measure α :=
-  condExpKernel μ (X 0) (tailSigma X)
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+  (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 ```
 
 ## Elegance Notes

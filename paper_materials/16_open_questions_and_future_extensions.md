@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -70,7 +70,7 @@ The full equivalence `Contractable ⟺ Exchangeable ⟺ ConditionallyIID` is est
 
 ### 5. mathlib Integration
 
-**Current status:** ForMathlib/ contains 45 files with potential contributions.
+**Current status:** ForMathlib/ contains 1 file (`TrimInstances.lean`) with potential contributions.
 
 **Question:** Which lemmas should be upstreamed to mathlib?
 

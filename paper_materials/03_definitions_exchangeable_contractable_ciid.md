@@ -1,5 +1,5 @@
 ---
-Repo: https://github.com/human-oriented/exchangeability
+Repo: https://github.com/cameronfreer/exchangeability
 Commit: aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
 Date: 2026-01-24
 Built: yes
@@ -83,16 +83,16 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
 
 ## ConditionallyIID
 
-**File:** `Exchangeability/ConditionallyIID.lean:140`
+**File:** `Exchangeability/ConditionallyIID.lean:190`
 
 ```lean
-structure ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop where
-  ν : Ω → Measure α
-  isProb : ∀ ω, IsProbabilityMeasure (ν ω)
-  measurable_eval : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => (ν ω) B)
-  finite_product : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
-    Measure.map (fun ω i => X (k i) ω) μ =
-      μ.bind (fun ω => Measure.pi (fun _ => ν ω))
+def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∃ ν : Ω → Measure α,
+    (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 ```
 
 **Mathematical definition:** There exists a random probability measure `ν : Ω → Measure α` (the *directing measure*) such that:
@@ -103,6 +103,8 @@ structure ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop wher
    ```
    Law(X_{k(0)}, ..., X_{k(m-1)}) = ∫ ν(ω)^⊗m dμ(ω)
    ```
+
+**Note:** This is a `def` (existential statement), not a `structure`. The proof of de Finetti's theorem constructs the directing measure `ν` explicitly.
 
 **Intuition:** "Conditionally on `ν`, the sequence is i.i.d. with distribution `ν`."
 
