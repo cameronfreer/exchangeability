@@ -1,79 +1,43 @@
 \section{Axiom Verification}
 \label{app:axioms}
 
-This appendix documents the axioms used by the main theorems, verifying that no custom axioms are introduced.
+This appendix documents the axioms used by the formalization.
 
 \subsection{Standard mathlib Axioms}
 
-The Lean~4 mathematical library (mathlib) uses three standard axioms:
+All theorems in this formalization depend on exactly three standard axioms:
 
 \begin{description}
-\item[\texttt{propext}] \textbf{Propositional extensionality}: Two propositions that are logically equivalent are equal.
-\[
-(P \leftrightarrow Q) \to (P = Q)
-\]
-This is standard in classical mathematics and required for working with propositions as types.
+\item[\texttt{propext}] \textbf{Propositional extensionality}: Two propositions that are logically equivalent are equal: $(P \leftrightarrow Q) \to (P = Q)$.
 
-\item[\texttt{Classical.choice}] \textbf{Axiom of choice}: For any nonempty type, there exists an element.
-\[
-\forall \alpha.\, \text{Nonempty}(\alpha) \to \alpha
-\]
-This is essential for measure theory, which relies heavily on the axiom of choice.
+\item[\texttt{Classical.choice}] \textbf{Axiom of choice}: For any nonempty type, there exists an element. Essential for measure theory.
 
 \item[\texttt{Quot.sound}] \textbf{Quotient soundness}: If two elements are related by an equivalence relation, their quotient images are equal.
-\[
-r\, a\, b \to \mathsf{Quot.mk}\, r\, a = \mathsf{Quot.mk}\, r\, b
-\]
-This is standard for quotient type constructions.
 \end{description}
 
-\subsection{Axiom Checks}
-
-The following Lean commands verify the axioms used by each theorem:
-
-\paragraph{Main theorem (martingale proof).}
-\begin{lstlisting}
-#print axioms Exchangeability.DeFinetti.deFinetti
--- 'Exchangeability.DeFinetti.deFinetti' depends on axioms:
---   [propext, Classical.choice, Quot.sound]
-\end{lstlisting}
-
-\paragraph{Full equivalence.}
-\begin{lstlisting}
-#print axioms Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence
--- 'Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence' depends on axioms:
---   [propext, Classical.choice, Quot.sound]
-\end{lstlisting}
-
-\paragraph{$L^2$ proof.}
-\begin{lstlisting}
-#print axioms Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2
--- 'Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2' depends on axioms:
---   [propext, Classical.choice, Quot.sound]
-\end{lstlisting}
-
-\paragraph{Koopman proof.}
-\begin{lstlisting}
-#print axioms Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman
--- 'Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaKoopman' depends on axioms:
---   [propext, Classical.choice, Quot.sound]
-\end{lstlisting}
+These are the standard axioms used throughout mathlib. No custom axioms are introduced, and no \texttt{sorry} placeholders appear in any theorem.
 
 \subsection{Verification}
 
-All theorems depend on exactly the same three standard axioms. Notably:
+Running \texttt{\#print axioms} on any of the main theorems produces the same result:
+
+\begin{lstlisting}
+#print axioms Exchangeability.DeFinetti.deFinetti
+-- depends on axioms: [propext, Classical.choice, Quot.sound]
+\end{lstlisting}
+
+This applies uniformly to:
 \begin{itemize}
-\item No custom \texttt{axiom} declarations are used.
-\item No \texttt{sorry} placeholders appear in any theorem.
-\item No non-standard axioms (such as \texttt{Axiom.choice} variants beyond the standard one) are introduced.
+\item \texttt{deFinetti} (main theorem)
+\item \texttt{deFinetti\_equivalence} (two-way equivalence)
+\item \texttt{deFinetti\_RyllNardzewski\_equivalence} (three-way)
+\item \texttt{conditionallyIID\_of\_contractable\_viaL2} ($L^2$ proof)
+\item \texttt{conditionallyIID\_of\_contractable\_viaKoopman} (Koopman proof)
 \end{itemize}
 
 \subsection{Running the Verification}
 
-To verify axiom hygiene yourself:
+To verify axiom hygiene:
 \begin{verbatim}
-cd exchangeability
 lake env lean paper_materials/PaperIntrospection.lean
 \end{verbatim}
-
-This file contains the \texttt{\#print axioms} commands and will display the axiom dependencies when run.
