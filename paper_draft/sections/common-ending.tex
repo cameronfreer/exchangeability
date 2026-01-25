@@ -47,25 +47,7 @@ for \emph{all} Borel sets in $\alpha^n$, not just those of the form $B_0 \times 
 
 \subsection{The Bridge to \texttt{ConditionallyIID}}
 
-\begin{lstlisting}
-theorem measure_eq_of_fin_marginals_eq
-    {mu nu : Measure (N -> alpha)} [IsFiniteMeasure mu] [IsFiniteMeasure nu]
-    (h : forall n S, MeasurableSet S -> mu (prefixCylinder S) = nu (prefixCylinder S)) :
-    mu = nu
-\end{lstlisting}
-
-This lemma, combined with the finite-dimensional product formula for cylinders, yields the full \texttt{ConditionallyIID} condition:
-
-\begin{lstlisting}
-theorem conditionallyIID_of_finite_product_formula
-    {nu : Omega -> Measure alpha}
-    (h_nu_prob : forall omega, IsProbabilityMeasure (nu omega))
-    (h_nu_meas : forall B, MeasurableSet B -> Measurable (fun omega => nu omega B))
-    (h_product : forall m (k : Fin m -> N), StrictMono k ->
-      forall (S : Set (Fin m -> alpha)), MeasurableSet S ->
-        mu (cylinder_X S) = integral mu (fun omega => (Measure.pi (fun _ => nu omega)) S)) :
-    ConditionallyIID mu X
-\end{lstlisting}
+The key bridge lemma \texttt{complete\_from\_directing\_measure} in \texttt{CommonEnding.lean} takes a directing measure satisfying the cylinder-level product formula and produces the full \texttt{ConditionallyIID} conclusion by $\pi$-system extension.
 
 \subsection{Relationship to Kolmogorov Extension}
 
