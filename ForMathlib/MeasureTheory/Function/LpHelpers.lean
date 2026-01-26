@@ -63,7 +63,6 @@ the integral of f²:
 
 This is a fundamental relationship used throughout probability theory, bridging
 the gap between ENNReal-valued Lp norms and Real-valued integrals. -/
-@[nolint unusedArguments]
 lemma eLpNorm_two_sq_eq_integral_sq [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : MemLp f 2 μ) :
     (eLpNorm f 2 μ).toReal ^ 2 = ∫ ω, (f ω) ^ 2 ∂μ := by
   have h_norm_eq : ∀ ω, ‖f ω‖ ^ 2 = (f ω) ^ 2 := fun ω => by rw [Real.norm_eq_abs, sq_abs]
@@ -105,9 +104,8 @@ lemma eLpNorm_lt_of_integral_sq_lt [IsFiniteMeasure μ] {f : Ω → ℝ} {r : �
 /-- **Functions bounded by a constant are in Lp.**
 
 If |f| ≤ M almost everywhere, then f ∈ Lp for any p ∈ [1, ∞) on a finite measure space. -/
-@[nolint unusedArguments]
 lemma memLp_of_abs_le_const [IsFiniteMeasure μ] {f : Ω → ℝ} {M : ℝ} (hf_meas : Measurable f)
-    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M) (p : ℝ≥0∞) (_ : 1 ≤ p) (_ : p ≠ ∞) : MemLp f p μ :=
+    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M) (p : ℝ≥0∞) : MemLp f p μ :=
   MemLp.of_bound hf_meas.aestronglyMeasurable M
     (hf_bdd.mono fun _ hω => (Real.norm_eq_abs _).le.trans hω)
 
@@ -116,7 +114,7 @@ lemma memLp_of_abs_le_const [IsFiniteMeasure μ] {f : Ω → ℝ} {M : ℝ} (hf_
 Special case: If f is bounded by M, then f is in L² on a probability space. -/
 lemma memLp_two_of_bounded [IsProbabilityMeasure μ] {f : Ω → ℝ} {M : ℝ} (hf_meas : Measurable f)
     (hf_bdd : ∀ ω, |f ω| ≤ M) : MemLp f 2 μ :=
-  memLp_of_abs_le_const hf_meas (ae_of_all μ hf_bdd) 2 (by norm_num) (by norm_num)
+  memLp_of_abs_le_const hf_meas (ae_of_all μ hf_bdd) 2
 
 /-! ### L² Inner Product Bounds -/
 
@@ -151,7 +149,6 @@ lemma setIntegral_le_eLpNorm_mul_measure [IsProbabilityMeasure μ] (A : Set Ω)
 
 For integrable functions f, g in L²(μ):
   |∫ f·g dμ| ≤ (∫ f² dμ)^(1/2) · (∫ g² dμ)^(1/2) -/
-@[nolint unusedArguments]
 lemma abs_integral_mul_le_L2 [IsFiniteMeasure μ] {f g : Ω → ℝ} (hf : MemLp f 2 μ)
     (hg : MemLp g 2 μ) : |∫ ω, f ω * g ω ∂μ|
       ≤ (∫ ω, (f ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by

@@ -58,12 +58,10 @@ their infimum.
 
 The technical challenge is constructing a common representative from the a.e.-equal witnesses.
 -/
-@[nolint unusedArguments]
 lemma aestronglyMeasurable_iInf_antitone
     {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
     {m : ℕ → MeasurableSpace α}
     (h_anti : Antitone m)
-    (_h_le : ∀ N, m N ≤ m₀)
     (f : α → ℝ)
     (hf : ∀ N, @MeasureTheory.AEStronglyMeasurable α ℝ _ (m N) m₀ f μ) :
     @MeasureTheory.AEStronglyMeasurable α ℝ _ (⨅ N, m N) m₀ f μ := by
@@ -119,10 +117,9 @@ then `g` is AEStronglyMeasurable[m] (with the witness being the limsup, which is
 
 This is the key lemma for "closedness" of L²[m] under L² limits:
 we extract an a.e.-convergent subsequence and apply this. -/
-@[nolint unusedArguments]
 lemma aestronglyMeasurable_sub_of_tendsto_ae
     {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
-    {m : MeasurableSpace α} (_hm : m ≤ m₀)
+    {m : MeasurableSpace α}
     {f : ℕ → α → ℝ} {g : α → ℝ}
     (hf_meas : ∀ n, @Measurable α ℝ m _ (f n))
     (hlim : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => f n x) Filter.atTop (nhds (g x))) :
