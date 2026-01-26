@@ -1,13 +1,13 @@
 \begin{abstract}
-We present a Lean~4 formalization of de Finetti's theorem: an infinite sequence of random variables on a standard Borel space is exchangeable if and only if it is conditionally i.i.d.\ given its tail $\sigma$-algebra. The formalization includes the full Kallenberg--Ryll-Nardzewski equivalence between exchangeability, contractability, and conditional i.i.d.\ structure.
+We present a Lean~4 formalization of de Finetti's theorem: an infinite sequence of random variables on a standard Borel space is exchangeable if and only if it is conditionally i.i.d.---that is, there exists a measurable directing kernel $\nu$ such that all finite-dimensional distributions are mixtures of product measures. The formalization includes the full Kallenberg--Ryll-Nardzewski equivalence between exchangeability, contractability, and conditional i.i.d.\ structure.
 
-Three independent proofs of the hard direction are formalized:
+Three independent proofs of the key implication (contractable $\Rightarrow$ conditionally i.i.d.) are formalized:
 \begin{enumerate}
-\item Reverse martingale convergence (Kallenberg's ``third proof''),
+\item Reverse martingale convergence, constructing $\nu$ as the conditional law of $X_0$ given the tail $\sigma$-algebra (Kallenberg's ``third proof''),
 \item Elementary $L^2$ correlation bounds (Kallenberg's ``second proof''), and
 \item The Mean Ergodic Theorem via Koopman operators (Kallenberg's ``first proof'').
 \end{enumerate}
-All three proofs share a common interface and a common final step using $\pi$-system uniqueness.
+All three proofs implement the same specification and share a common final step using $\pi$-system uniqueness.
 
 The formalization comprises approximately 43,500 lines of Lean~4 code across 112 files, builds against mathlib, and uses only the standard axioms (propositional extensionality, quotient soundness, and the axiom of choice). Beyond the mathematical contribution, we discuss lessons learned about structuring multiple proofs of the same theorem in a proof assistant, and the interplay between different mathematical styles (probabilistic, analytic, dynamical) within a unified formal framework.
 
