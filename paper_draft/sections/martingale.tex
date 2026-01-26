@@ -1,0 +1,104 @@
+\section{Route 1: Reverse Martingale Convergence}
+\label{sec:martingale}
+
+The martingale proof is Kallenberg's ``third proof'' and serves as the default in our formalization. It is the most general, working for arbitrary standard Borel state spaces without $L^2$ assumptions.
+
+\subsection{Key Ideas}
+
+The proof rests on two pillars:
+\begin{enumerate}
+\item \textbf{Contraction-independence lemma} (Kallenberg's Lemma~1.3): If $(Y, W) \deq (Y, W')$ and $\sigma(W) \subseteq \sigma(W')$, then $Y$ and $W'$ are conditionally independent given $\sigma(W)$.
+
+\item \textbf{Reverse martingale convergence}: For a decreasing sequence of $\sigma$-algebras $\cF_0 \supseteq \cF_1 \supseteq \cdots$, the conditional expectations $\E[f | \cF_n]$ converge a.e.\ to $\E[f | \cF_\infty]$, where $\cF_\infty = \bigcap_n \cF_n$.
+\end{enumerate}
+
+\subsection{The Tail $\sigma$-Algebra}
+
+For a sequence $X : \N \to \Omega \to \alpha$, define:
+\begin{align*}
+\cF_{\ge n} &= \sigma(X_n, X_{n+1}, X_{n+2}, \ldots) \\
+\cF_\infty &= \bigcap_{n \in \N} \cF_{\ge n}
+\end{align*}
+
+The tail $\sigma$-algebra $\cF_\infty$ captures the ``asymptotic'' information in the sequence---events that do not depend on any finite initial segment.
+
+\begin{lstlisting}
+def tailShift (α : Type*) [MeasurableSpace α] : MeasurableSpace (ℕ → α) :=
+  iInf (fun n : ℕ =>
+    MeasurableSpace.comap
+      (fun (ω : ℕ → α) => fun k => ω (n + k))
+      (inferInstance : MeasurableSpace (ℕ → α)))
+\end{lstlisting}
+
+\subsection{Directing Measure Construction}
+
+The directing measure is defined as the conditional distribution of $X_0$ given the tail $\sigma$-algebra:
+\[
+\nu(\omega)(B) = \E[\mathbf{1}_{X_0 \in B} | \cF_\infty](\omega)
+\]
+
+In Lean, this uses mathlib's \texttt{condExpKernel}:
+\begin{lstlisting}
+noncomputable def directingMeasure
+    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
+  (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
+\end{lstlisting}
+
+\subsection{Proof Skeleton}
+
+\paragraph{Step 1: Pair law equality from contractability.}
+For the shift operator $\theta : (\N \to \alpha) \to (\N \to \alpha)$ with $(\theta x)_n = x_{n+1}$, contractability implies:
+\[
+(X_k, \theta^{k+1} X) \deq (X_0, \theta^{k+1} X)
+\]
+for each $k \in \N$.
+
+\paragraph{Step 2: Apply contraction-independence.}
+Since $\sigma(\theta^{k+1} X) \subseteq \sigma(\theta^k X) \subseteq \cdots \subseteq \sigma(\theta X)$, the contraction-independence lemma yields:
+\[
+X_k \perp\!\!\!\perp_{\cF_\infty} \theta^{k+1} X
+\]
+
+\paragraph{Step 3: Conditional law equals directing measure.}
+The conditional law of $X_k$ given $\cF_\infty$ equals $\nu$---the same for all $k$:
+\[
+\E[\mathbf{1}_{X_k \in B} | \cF_\infty] = \nu(B) \quad \text{a.e.}
+\]
+
+\paragraph{Step 4: Product formula for cylinders.}
+Conditional independence gives:
+\[
+\E[\prod_i \mathbf{1}_{X_{k(i)} \in B_i} | \cF_\infty] = \prod_i \E[\mathbf{1}_{X_{k(i)} \in B_i} | \cF_\infty] = \prod_i \nu(B_i) \quad \text{a.e.}
+\]
+Integrating over $\Omega$ yields the product formula for cylinder sets.
+
+\paragraph{Step 5: Extend via $\pi$-system.}
+This is the common ending (Section~\ref{sec:common-ending}).
+
+\subsection{Key Lemmas}
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Lemma} & \textbf{File:Line} \\
+\hline
+\texttt{condexp\_convergence} & \texttt{CondExpConvergence.lean:48} \\
+\texttt{pair\_law\_eq\_of\_contractable} & \texttt{PairLawEquality.lean:153} \\
+\texttt{directingMeasure} & \texttt{DirectingMeasure.lean:53} \\
+\texttt{directingMeasure\_isProb} & \texttt{DirectingMeasure.lean:80} \\
+\texttt{finite\_product\_formula} & \texttt{FiniteProduct.lean:424} \\
+\texttt{conditionallyIID\_of\_contractable} & \texttt{TheoremViaMartingale.lean:70} \\
+\end{tabular}
+\end{center}
+
+\subsection{Why This Proof?}
+
+The martingale proof is the default because:
+\begin{itemize}
+\item It works for \textbf{general standard Borel state spaces}, not just $\R$.
+\item It uses \textbf{probabilistically natural} concepts (conditional expectations, martingales).
+\item It has \textbf{moderate dependencies}---less than Koopman, more than $L^2$.
+\item The construction of $\nu$ is \textbf{conceptually clean}: the conditional distribution given the tail.
+\end{itemize}

@@ -1,0 +1,87 @@
+\section{Related Work}
+\label{sec:related-work}
+
+\subsection{Mathematical Background}
+
+De Finetti's theorem has a rich history:
+\begin{itemize}
+\item \textbf{de Finetti}~\citep{definetti1931,definetti1937} proved the original result for $\{0,1\}$-valued sequences.
+\item \textbf{Hewitt--Savage}~\citep{hewittsavage1955} extended the theorem to general state spaces using symmetric measures.
+\item \textbf{Ryll-Nardzewski}~\citep{ryllnardzewski1957} gave an alternative extension using ergodic theory.
+\item \textbf{Aldous}~\citep{aldous1985} provided a comprehensive survey including the martingale proof.
+\item \textbf{Kallenberg}~\citep{kallenberg2005} unified the theory and presented the three proofs we formalize.
+\end{itemize}
+
+For general background on probability theory and measure theory, we refer to Kallenberg~\citep{kallenberg2002}.
+
+\subsection{Formalizations of Probability Theory}
+
+\paragraph{mathlib.}
+The Lean mathematical library~\citep{mathlib} provides extensive infrastructure for measure theory and probability. Key components we use include:
+\begin{itemize}
+\item Measure spaces and integration (\texttt{MeasureTheory})
+\item $L^p$ spaces (\texttt{MeasureTheory.Function.LpSpace})
+\item Conditional expectation (\texttt{MeasureTheory.Function.ConditionalExpectation})
+\item Probability kernels (\texttt{Probability.Kernel})
+\item Martingale theory (\texttt{Probability.Martingale})
+\end{itemize}
+
+\paragraph{Other proof assistants.}
+Probability theory has been formalized in various proof assistants:
+\begin{itemize}
+\item \textbf{Isabelle/HOL}: The Archive of Formal Proofs contains probability theory, including martingale convergence theorems.
+\item \textbf{Coq}: The Mathematical Components library and Coquelicot provide analysis foundations. The Infotheo library addresses information theory.
+\item \textbf{Mizar}: Contains extensive measure theory.
+\end{itemize}
+
+We are not aware of prior formalizations of de Finetti's theorem in any proof assistant.
+
+\subsection{Multiple Proofs in Formalizations}
+
+Formalizing multiple proofs of the same theorem is relatively rare. Notable examples include:
+\begin{itemize}
+\item \textbf{Fundamental theorem of algebra}: Multiple proofs exist in various proof assistants (algebraic, topological, analytic).
+\item \textbf{Prime number theorem}: Different approaches have been formalized.
+\item \textbf{Quadratic reciprocity}: Several proofs exist in Lean and other systems.
+\end{itemize}
+
+Our work contributes to this tradition by formalizing three proofs that use substantially different mathematical machinery (probabilistic, analytic, dynamical).
+
+\subsection{Bayesian Foundations}
+
+De Finetti's theorem is foundational for Bayesian statistics. The theorem justifies the Bayesian framework: if we believe observations are exchangeable (a symmetry assumption), then there exists a ``parameter'' (the directing measure) such that observations are conditionally i.i.d.\ given this parameter.
+
+Formalizations of Bayesian reasoning include:
+\begin{itemize}
+\item Work on probabilistic programming semantics.
+\item Formalization of conditional probability and Bayes' theorem.
+\end{itemize}
+
+Our formalization provides the measure-theoretic foundation for such developments.
+
+\subsection{Ergodic Theory in Proof Assistants}
+
+The Koopman proof route required developing ergodic theory infrastructure:
+\begin{itemize}
+\item Koopman operators and their properties
+\item The Mean Ergodic Theorem
+\item Shift-invariant $\sigma$-algebras
+\end{itemize}
+
+This infrastructure may be useful for future formalizations in ergodic theory, such as:
+\begin{itemize}
+\item Birkhoff's Ergodic Theorem (pointwise version)
+\item Ergodic decomposition
+\item Mixing and weak mixing
+\end{itemize}
+
+\subsection{Exchangeability Beyond Sequences}
+
+De Finetti's theorem has been extended to:
+\begin{itemize}
+\item \textbf{Partial exchangeability}: Sequences with group-indexed symmetry.
+\item \textbf{Arrays}: Exchangeable arrays (Aldous--Hoover theorem).
+\item \textbf{Graphs}: Exchangeable random graphs (graph limits).
+\end{itemize}
+
+These extensions are potential targets for future formalization work, building on the infrastructure developed here.

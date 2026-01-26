@@ -1,0 +1,103 @@
+\section{Definitions}
+\label{sec:definitions}
+
+We work in a standard measure-theoretic setting. Let $\Omega$ be a probability space with measure $\mu$, and let $\alpha$ be a standard Borel space (the state space). A \emph{stochastic process} is a sequence $X : \N \to \Omega \to \alpha$ of measurable functions.
+
+\subsection{Exchangeable}
+
+\begin{definition}[Exchangeable]
+A sequence $X : \N \to \Omega \to \alpha$ is \emph{exchangeable} (under $\mu$) if for every $n \in \N$ and every permutation $\sigma$ of $\{0, 1, \ldots, n-1\}$:
+\[
+(X_{\sigma(0)}, X_{\sigma(1)}, \ldots, X_{\sigma(n-1)}) \deq (X_0, X_1, \ldots, X_{n-1}).
+\]
+\end{definition}
+
+In Lean, this is expressed as equality of pushforward measures:
+\begin{lstlisting}
+def Exchangeable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ n (σ : Equiv.Perm (Fin n)),
+    Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
+      Measure.map (fun ω => fun i : Fin n => X i ω) μ
+\end{lstlisting}
+
+\subsection{Contractable}
+
+\begin{definition}[Contractable]
+A sequence $X$ is \emph{contractable} if every strictly increasing subsequence has the same distribution as the initial segment of the same length. Formally, for every $m \in \N$ and every strictly increasing $k : \{0, \ldots, m-1\} \to \N$:
+\[
+(X_{k(0)}, X_{k(1)}, \ldots, X_{k(m-1)}) \deq (X_0, X_1, \ldots, X_{m-1}).
+\]
+\end{definition}
+
+\begin{lstlisting}
+def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+    Measure.map (fun ω i => X (k i) ω) μ =
+      Measure.map (fun ω i => X i.val ω) μ
+\end{lstlisting}
+
+\begin{remark}
+Contractability is ostensibly weaker than exchangeability: it only requires invariance under ``thinning'' (selecting a subsequence in order), not under arbitrary reordering. The main theorem shows these conditions are equivalent for infinite sequences on standard Borel spaces.
+\end{remark}
+
+\subsection{Conditionally IID}
+
+\begin{definition}[Conditionally IID]
+A sequence $X$ is \emph{conditionally i.i.d.}\ if there exists a \emph{directing measure} $\nu : \Omega \to \mathrm{Measure}(\alpha)$ such that:
+\begin{enumerate}
+\item For each $\omega$, $\nu(\omega)$ is a probability measure on $\alpha$.
+\item The map $\omega \mapsto \nu(\omega)(B)$ is measurable for each measurable $B \subseteq \alpha$.
+\item For every strictly increasing $k : \{0, \ldots, m-1\} \to \N$:
+\[
+\Law(X_{k(0)}, \ldots, X_{k(m-1)}) = \int \nu(\omega)^{\otimes m} \, d\mu(\omega).
+\]
+\end{enumerate}
+\end{definition}
+
+\begin{lstlisting}
+def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
+  ∃ ν : Ω → Measure α,
+    (∀ ω, IsProbabilityMeasure (ν ω)) ∧
+    (∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)) ∧
+      ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
+        Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
+          = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
+\end{lstlisting}
+
+The third condition says that the finite-dimensional distributions are mixtures of product measures.
+
+\subsection{The Equivalence}
+
+\begin{theorem}[de Finetti--Ryll-Nardzewski]
+\label{thm:main}
+Let $X : \N \to \Omega \to \alpha$ be a sequence of measurable random variables on a standard Borel probability space, taking values in a standard Borel space $\alpha$. Then:
+\[
+\text{Contractable} \iff \text{Exchangeable} \iff \text{Conditionally i.i.d.}
+\]
+\end{theorem}
+
+The equivalence breaks into implications:
+\begin{center}
+\begin{tabular}{lll}
+Direction & Difficulty & Method \\
+\hline
+Exchangeable $\Rightarrow$ Contractable & Easy & Permutation extension \\
+Conditionally IID $\Rightarrow$ Exchangeable & Easy & Product measure invariance \\
+Contractable $\Rightarrow$ Conditionally IID & Hard & Three proof routes \\
+\end{tabular}
+\end{center}
+
+\paragraph{Lean API.}
+The public API exposes two theorems. First, the equivalence \texttt{Exchangeable $\leftrightarrow$ ConditionallyIID}:
+\begin{lstlisting}
+theorem deFinetti_equivalence : Exchangeable μ X ↔ ConditionallyIID μ X
+\end{lstlisting}
+Second, the full three-way equivalence as stated by Kallenberg (Theorem 1.1):
+\begin{lstlisting}
+theorem deFinetti_RyllNardzewski_equivalence :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
+\end{lstlisting}
+Combined with \texttt{deFinetti\_equivalence}, this yields the three-way equivalence of Theorem~\ref{thm:main}.
+
+\paragraph{Returning to the example.}
+For the exchangeable coin-flip sequence from Section~\ref{sec:introduction}, the directing measure $\nu(\omega)$ is the Bernoulli distribution with parameter $\theta(\omega)$---the ``latent bias.'' The theorem says every exchangeable $\{0,1\}$-sequence arises as a mixture of such Bernoulli product measures.

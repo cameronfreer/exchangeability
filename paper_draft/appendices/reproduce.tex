@@ -1,0 +1,136 @@
+\section{Reproducibility}
+\label{app:reproduce}
+
+This appendix provides instructions for building and verifying the formalization.
+
+\subsection{Prerequisites}
+
+\begin{itemize}
+\item \textbf{Lean 4}: Version 4.27.0-rc1 or compatible
+\item \textbf{Lake}: Version 5.0.0 or compatible (included with Lean)
+\item \textbf{Git}: For cloning the repository
+\end{itemize}
+
+\paragraph{Installing Lean.}
+Follow the instructions at \url{https://lean-lang.org/lean4/doc/setup.html} or use elan:
+\begin{verbatim}
+curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh
+\end{verbatim}
+
+\subsection{Building the Formalization}
+
+\paragraph{Clone the repository.}
+\begin{verbatim}
+git clone https://github.com/cameronfreer/exchangeability
+cd exchangeability
+\end{verbatim}
+
+\paragraph{Build the project.}
+\begin{verbatim}
+lake build
+\end{verbatim}
+
+Expected output:
+\begin{verbatim}
+Build completed successfully (3296 jobs).
+\end{verbatim}
+
+Build time is approximately 5 minutes on a modern machine.
+
+\paragraph{Build a specific module.}
+\begin{verbatim}
+lake build Exchangeability.DeFinetti.Theorem
+\end{verbatim}
+
+\subsection{Verifying the Main Theorems}
+
+\paragraph{Check theorem signatures.}
+Create a file \texttt{check.lean}:
+\begin{lstlisting}
+import Exchangeability.DeFinetti.Theorem
+
+#check @Exchangeability.DeFinetti.deFinetti
+#check @Exchangeability.DeFinetti.deFinetti_equivalence
+#check @Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence
+\end{lstlisting}
+
+Run:
+\begin{verbatim}
+lake env lean check.lean
+\end{verbatim}
+
+\paragraph{Verify axioms.}
+\begin{verbatim}
+lake env lean paper_materials/PaperIntrospection.lean
+\end{verbatim}
+
+This displays the axiom dependencies for all main theorems.
+
+\subsection{Repository Structure}
+
+\begin{verbatim}
+exchangeability/
+  lakefile.toml         -- Build configuration
+  lake-manifest.json    -- Dependency versions
+  Exchangeability/      -- Main source code
+    DeFinetti/          -- de Finetti theorem
+    Ergodic/            -- Ergodic theory
+    Probability/        -- Probability infrastructure
+    Tail/               -- Tail sigma-algebra
+    ...
+  blueprint/            -- Dependency graph and proof outline
+  paper/                -- Paper materials and LaTeX source
+  README.md             -- Overview documentation
+  STATUS.md             -- Completion status
+\end{verbatim}
+
+\subsection{Version Information}
+
+The formalization was developed and tested with:
+\begin{itemize}
+\item \textbf{Lean}: v4.27.0-rc1
+\item \textbf{Lake}: v5.0.0-src+2fcce72
+\item \textbf{mathlib4}: See \texttt{lake-manifest.json} for exact commit
+\end{itemize}
+
+\subsection{Troubleshooting}
+
+\paragraph{Cache download.}
+To speed up builds, download precompiled cache:
+\begin{verbatim}
+lake exe cache get
+\end{verbatim}
+
+\paragraph{Clean rebuild.}
+If builds fail, try a clean rebuild:
+\begin{verbatim}
+lake clean
+lake build
+\end{verbatim}
+
+\paragraph{mathlib version issues.}
+If there are version conflicts, update mathlib:
+\begin{verbatim}
+lake update
+lake exe cache get
+lake build
+\end{verbatim}
+
+\subsection{Continuous Integration}
+
+The repository includes CI configuration that:
+\begin{itemize}
+\item Builds the full project on each push
+\item Verifies that all theorems compile without \texttt{sorry}
+\item Checks for linting warnings
+\end{itemize}
+
+Build status is displayed in the repository README.
+
+\subsection{Contact}
+
+For questions or issues:
+\begin{itemize}
+\item Open an issue at \url{https://github.com/cameronfreer/exchangeability/issues}
+\item Email: \texttt{freer@mit.edu}
+\end{itemize}

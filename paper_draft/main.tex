@@ -1,0 +1,195 @@
+\documentclass[11pt]{article}
+
+% Page geometry
+\usepackage[margin=1in]{geometry}
+
+% Math packages
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{thmtools}
+
+% Font and typography - UTF-8 support
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+
+% Graphics and colors
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% Code listings for Lean
+\usepackage{listings}
+\lstdefinelanguage{Lean}{
+  morekeywords={def,theorem,lemma,example,structure,class,instance,where,
+    if,then,else,match,with,let,in,have,show,by,fun,forall,exists,
+    Prop,Type,Sort,import,open,namespace,end,variable,axiom,constant,
+    inductive,coinductive,mutual,noncomputable,private,protected,
+    section,set_option,universe,universes,attribute,local,
+    calc,sorry,admit},
+  sensitive=true,
+  morecomment=[l]{--},
+  morecomment=[n]{\{-}{-\}},
+  morestring=[b]",
+  literate=
+    {α}{$\alpha$}1
+    {β}{$\beta$}1
+    {γ}{$\gamma$}1
+    {δ}{$\delta$}1
+    {ε}{$\varepsilon$}1
+    {μ}{$\mu$}1
+    {ν}{$\nu$}1
+    {σ}{$\sigma$}1
+    {ω}{$\omega$}1
+    {Ω}{$\Omega$}1
+    {π}{$\pi$}1
+    {ξ}{$\xi$}1
+    {η}{$\eta$}1
+    {ζ}{$\zeta$}1
+    {φ}{$\varphi$}1
+    {ρ}{$\rho$}1
+    {τ}{$\tau$}1
+    {θ}{$\theta$}1
+    {λ}{$\lambda$}1
+    {→}{$\to$}1
+    {←}{$\leftarrow$}1
+    {↔}{$\leftrightarrow$}1
+    {⇒}{$\Rightarrow$}1
+    {⇔}{$\Leftrightarrow$}1
+    {∧}{$\land$}1
+    {∨}{$\lor$}1
+    {¬}{$\neg$}1
+    {∀}{$\forall$}1
+    {∃}{$\exists$}1
+    {∈}{$\in$}1
+    {∉}{$\notin$}1
+    {⊂}{$\subset$}1
+    {⊆}{$\subseteq$}1
+    {⊇}{$\supseteq$}1
+    {∪}{$\cup$}1
+    {∩}{$\cap$}1
+    {∘}{$\circ$}1
+    {·}{$\cdot$}1
+    {×}{$\times$}1
+    {≤}{$\le$}1
+    {≥}{$\ge$}1
+    {≠}{$\ne$}1
+    {∞}{$\infty$}1
+    {ℕ}{$\mathbb{N}$}1
+    {ℤ}{$\mathbb{Z}$}1
+    {ℝ}{$\mathbb{R}$}1
+    {ℚ}{$\mathbb{Q}$}1
+    {⟨}{$\langle$}1
+    {⟩}{$\rangle$}1
+    {⊗}{$\otimes$}1
+    {⊥}{$\perp$}1
+    {∂}{$\partial$}1
+    {:=}{$\coloneqq$}1
+    {=ᵐ}{$=^{\mathrm{ae}}$}2
+    {ₗᵢ}{{$_{\ell i}$}}2
+    {ₗ}{{$_\ell$}}1
+    {ᵢ}{{$_i$}}1
+    {₀}{{$_0$}}1
+    {₁}{{$_1$}}1
+    {₂}{{$_2$}}1
+    {ₙ}{{$_n$}}1
+    {ʼ}{{'}}1
+    {⁻¹}{{$^{-1}$}}2
+}
+
+\lstset{
+  language=Lean,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{red!60!black},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  framesep=3pt,
+  xleftmargin=3pt,
+  xrightmargin=3pt,
+  aboveskip=10pt,
+  belowskip=10pt
+}
+
+% Hyperlinks
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=green!50!black,urlcolor=purple!60!black]{hyperref}
+
+% Bibliography
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+% Theorem environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\Law}{\mathrm{Law}}
+\newcommand{\deq}{\stackrel{d}{=}}
+\newcommand{\aeq}{\stackrel{\text{a.e.}}{=}}
+\newcommand{\iid}{\text{i.i.d.}}
+\newcommand{\lean}[1]{\lstinline[language=Lean]|#1|}
+
+% Title information
+\title{De Finetti's Theorem in Lean~4:\\
+One Theorem, Three Proofs, One Interface}
+\author{Cameron E.\ Freer}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/abstract}
+
+\input{sections/introduction}
+
+\input{sections/definitions}
+
+\input{sections/roadmap}
+
+\input{sections/martingale}
+
+\input{sections/l2}
+
+\input{sections/koopman}
+
+\input{sections/common-ending}
+
+\input{sections/comparison}
+
+\input{sections/short-sections}
+
+\input{sections/related-work}
+
+\input{sections/conclusion}
+
+\bibliography{refs}
+
+\appendix
+
+\input{appendices/axioms}
+
+\input{appendices/snippets}
+
+\input{appendices/reproduce}
+
+\end{document}
