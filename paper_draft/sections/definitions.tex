@@ -86,3 +86,18 @@ Conditionally IID $\Rightarrow$ Exchangeable & Easy & Product measure invariance
 Contractable $\Rightarrow$ Conditionally IID & Hard & Three proof routes \\
 \end{tabular}
 \end{center}
+
+\paragraph{Lean API.}
+The public API exposes two theorems. First, the equivalence \texttt{Exchangeable $\leftrightarrow$ ConditionallyIID}:
+\begin{lstlisting}
+theorem deFinetti_equivalence : Exchangeable μ X ↔ ConditionallyIID μ X
+\end{lstlisting}
+Second, the full three-way equivalence as stated by Kallenberg (Theorem 1.1):
+\begin{lstlisting}
+theorem deFinetti_RyllNardzewski_equivalence :
+    Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X
+\end{lstlisting}
+Combined with \texttt{deFinetti\_equivalence}, this yields the three-way equivalence of Theorem~\ref{thm:main}.
+
+\paragraph{Returning to the example.}
+For the exchangeable coin-flip sequence from Section~\ref{sec:introduction}, the directing measure $\nu(\omega)$ is the Bernoulli distribution with parameter $\theta(\omega)$---the ``latent bias.'' The theorem says every exchangeable $\{0,1\}$-sequence arises as a mixture of such Bernoulli product measures.
