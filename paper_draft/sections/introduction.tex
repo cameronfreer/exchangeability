@@ -1,7 +1,7 @@
 \section{Introduction}
 \label{sec:introduction}
 
-De Finetti's theorem is a foundational result in probability theory that characterizes exchangeable sequences. In its modern form, due to Ryll-Nardzewski~\citep{ryllnardzewski1957} and Hewitt--Savage~\citep{hewittsavage1955}, the theorem states that an infinite sequence of random variables is exchangeable if and only if it is conditionally independent and identically distributed given its tail $\sigma$-algebra.
+De Finetti's theorem is a foundational result in probability theory that characterizes exchangeable sequences. In its modern form, due to Ryll-Nardzewski~\citep{ryllnardzewski1957} and Hewitt--Savage~\citep{hewittsavage1955}, the theorem states that an infinite sequence of random variables is exchangeable if and only if it is conditionally i.i.d.---that is, there exists a measurable \emph{directing kernel} $\nu$ such that all finite-dimensional distributions are mixtures of product measures $\nu^{\otimes m}$.
 
 \subsection{The Theorem}
 
@@ -16,6 +16,9 @@ De Finetti's theorem asserts that exchangeability is equivalent to the existence
 \Law(X_{k(0)}, \ldots, X_{k(m-1)}) = \int \nu(\omega)^{\otimes m} \, d\mu(\omega)
 \]
 for every strictly increasing sequence $k : \{0, \ldots, m-1\} \to \N$.
+
+\paragraph{A motivating example.}
+Consider an infinite sequence of coin flips $(X_0, X_1, \ldots)$ with an unknown bias $\theta \in [0,1]$. If $\theta$ is drawn from some prior distribution and then all flips are independent with $\Pr(X_i = 1) = \theta$, the sequence is exchangeable: the joint law of any finite subsequence depends only on how many heads appear, not which positions they occupy. De Finetti's theorem says the converse: \emph{any} exchangeable $\{0,1\}$-valued sequence arises this way. The directing measure $\nu$ is the ``latent parameter''---in this case, the random bias $\theta$.
 
 \subsection{Why Formalize De Finetti?}
 
@@ -34,9 +37,9 @@ De Finetti's theorem is significant for several reasons:
 This paper describes a Lean~4 formalization with the following contributions:
 
 \begin{enumerate}
-\item \textbf{Three independent proofs} of the hard direction (exchangeable $\Rightarrow$ conditionally i.i.d.), following Kallenberg's three approaches.
+\item \textbf{Three independent proofs} of the key implication (contractable $\Rightarrow$ conditionally i.i.d.), following Kallenberg's three approaches. De Finetti's theorem then follows via the easy reduction exchangeable $\Rightarrow$ contractable.
 
-\item \textbf{A unified interface} through which all three proofs deliver the same theorem statement, enabling comparison and substitution.
+\item \textbf{One interface, three implementations}: all three proofs implement the same specification---they produce a measurable directing kernel $\nu$ and establish cylinder-set factorization---then call a shared ``common ending'' that extends to the product $\sigma$-algebra via $\pi$-system uniqueness.
 
 \item \textbf{Clean separation} between the easy directions (which are shared) and the hard direction (which varies by proof route).
 
