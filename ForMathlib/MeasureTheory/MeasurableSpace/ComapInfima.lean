@@ -60,7 +60,7 @@ lemma comap_iInf_le {ι : Sort*} {α β : Type*} (f : α → β) (m : ι → Mea
   le_iInf fun i => MeasurableSpace.comap_mono (iInf_le m i)
 
 -- Extract witnesses for each comap and choose them uniformly
-private lemma comap_iInf_witnesses {ι : Type*} {α β : Type*} {f : α → β}
+private lemma comap_iInf_witnesses {ι : Sort*} {α β : Type*} {f : α → β}
     (m : ι → MeasurableSpace β) (s : Set α)
     (hs_all : ∀ i, MeasurableSet[MeasurableSpace.comap f (m i)] s) :
     ∃ (T : ι → Set β), (∀ i, MeasurableSet[m i] (T i)) ∧ (∀ i, s = f ⁻¹' (T i)) := by
@@ -74,14 +74,14 @@ private lemma comap_iInf_witnesses {ι : Type*} {α β : Type*} {f : α → β}
   exact ⟨T, hTmeas, hspre⟩
 
 -- All witnesses are equal when f is surjective
-private lemma comap_witnesses_eq_of_surjective {ι : Type*} {α β : Type*} {f : α → β}
+private lemma comap_witnesses_eq_of_surjective {ι : Sort*} {α β : Type*} {f : α → β}
     (hf : Function.Surjective f) (T : ι → Set β) (s : Set α)
     (hspre : ∀ i, s = f ⁻¹' (T i)) :
     ∀ i j, T i = T j := fun i j =>
   hf.preimage_injective (by rw [← hspre i, ← hspre j])
 
 -- A set is measurable in comap f (iInf m) if it's the preimage of a canonically measurable set
-private lemma measurableSet_comap_iInf_of_canonical {ι : Type*} [Nonempty ι]
+private lemma measurableSet_comap_iInf_of_canonical {ι : Sort*} [Nonempty ι]
     {α β : Type*} {f : α → β} (m : ι → MeasurableSpace β)
     (T0 : Set β) (hT0 : ∀ i, MeasurableSet[m i] T0) (s : Set α) (hs : s = f ⁻¹' T0) :
     MeasurableSet[MeasurableSpace.comap f (iInf m)] s := by
@@ -93,7 +93,7 @@ private lemma measurableSet_comap_iInf_of_canonical {ι : Type*} [Nonempty ι]
 
 This is the key lemma for showing that tail σ-algebras defined via coordinate pullbacks
 equal tail σ-algebras defined as pullbacks of path-space tails. -/
-theorem iInf_comap_eq_comap_iInf_of_surjective {ι : Type*} [Nonempty ι]
+theorem iInf_comap_eq_comap_iInf_of_surjective {ι : Sort*} [Nonempty ι]
     {α β : Type*} {f : α → β} (hf : Function.Surjective f)
     (m : ι → MeasurableSpace β) :
     iInf (fun i => MeasurableSpace.comap f (m i)) = MeasurableSpace.comap f (iInf m) := by
