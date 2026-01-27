@@ -1,0 +1,104 @@
+/-
+Copyright (c) 2026 Cameron Freer. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Cameron Freer
+-/
+import Mathlib.MeasureTheory.Constructions.Pi
+import Mathlib.MeasureTheory.MeasurableSpace.Pi
+import Mathlib.MeasureTheory.PiSystem
+import Mathlib.Probability.Kernel.Basic
+
+/-!
+# Measurability of Product Measure Kernels
+
+This file contains technical lemmas about measurability of product measure kernels.
+These lemmas support de Finetti-type theorems but are general-purpose results about
+measure theory on product spaces.
+
+## Main Results
+
+* `measurable_prod_ennreal`: Products of measurable ENNReal functions are measurable
+* `measurable_measure_pi`: Measurability of product measure kernels ω ↦ ∏ᵢ ν ω
+
+## Mathematical Context
+
+The key technique is π-system induction: proving measurability on rectangles (a π-system)
+and extending to all measurable sets via the π-λ theorem. The π-system and generating
+results come from `Mathlib.MeasureTheory.MeasurableSpace.Pi`:
+* `isPiSystem_pi`: Measurable rectangles form a π-system
+* `generateFrom_pi`: Product σ-algebra = generateFrom of rectangles
+
+## Suggested Mathlib Location
+
+`Mathlib.Probability.Kernel.Measurable` or `Mathlib.MeasureTheory.Constructions.Pi`
+
+## References
+
+* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*
+-/
+
+noncomputable section
+open scoped BigOperators MeasureTheory
+open MeasureTheory ProbabilityTheory Set
+
+variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+
+/-! ### Preliminary lemmas -/
+
+/-- The product of finitely many measurable ENNReal-valued functions is measurable.
+
+This is a wrapper around `Finset.measurable_prod` specialized to ENNReal. -/
+lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [MeasurableSpace Ω]
+    (f : ι → Ω → ENNReal) (hf : ∀ i, Measurable (f i)) :
+    Measurable fun ω => ∏ i, f i ω :=
+  Finset.measurable_prod _ fun i _ => hf i
+
+/-! ### Measurability of product measure kernels -/
+
+/-- The product measure kernel ω ↦ Measure.pi (fun _ => ν ω) is measurable.
+
+Given a measurable family of probability measures ν : Ω → Measure α, the product
+kernel ω ↦ ∏ᵢ ν ω (where i ranges over Fin m) is measurable as a measure-valued map.
+
+**Proof strategy**: Use π-system induction on rectangles:
+1. Rectangles generate the product σ-algebra (`generateFrom_pi`)
+2. Rectangles form a π-system (`isPiSystem_pi`)
+3. On rectangles, the product measure of `univ.pi B` equals ∏ᵢ ν ω (B i),
+   which is measurable in ω by `measurable_prod_ennreal`
+4. By the π-λ theorem, measurability on the generating π-system extends to all measurable sets
+
+This is a key lemma for proving the ConditionallyIID property in de Finetti's theorem. -/
+lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {m : ℕ}
+    (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
+    (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) :
+    Measurable fun ω => Measure.pi fun _ : Fin m => ν ω := by
+  classical
+  let κ : Ω → Measure (Fin m → α) := fun ω => Measure.pi fun _ : Fin m => ν ω
+  let 𝒞 : Set (Set (Fin m → α)) :=
+    Set.pi univ '' Set.pi univ fun _ : Fin m => {s : Set α | MeasurableSet s}
+
+  have h_gen : (inferInstance : MeasurableSpace (Fin m → α)) = MeasurableSpace.generateFrom 𝒞 :=
+    generateFrom_pi.symm
+  have h_pi : IsPiSystem 𝒞 := isPiSystem_pi
+
+  -- Values on rectangles are measurable
+  have h_basic : ∀ t ∈ 𝒞, Measurable fun ω => κ ω t := by
+    intro t ht
+    obtain ⟨B, hB, rfl⟩ := ht
+    simp only [mem_pi, mem_univ, mem_setOf_eq, true_implies] at hB
+    have rect : (fun ω => κ ω (Set.univ.pi B)) = fun ω => ∏ i : Fin m, ν ω (B i) := by
+      funext ω; simp only [κ, Measure.pi_pi]
+    have hmeas : Measurable fun ω => ∏ i : Fin m, ν ω (B i) :=
+      measurable_prod_ennreal (fun i ω => ν ω (B i)) (fun i => hν_meas (B i) (hB i))
+    simpa [κ, rect]
+
+  -- Each product measure is a probability measure
+  haveI hκ_prob : ∀ ω, IsProbabilityMeasure (κ ω) := by
+    intro ω
+    haveI : ∀ i : Fin m, IsProbabilityMeasure (ν ω) := fun _ => hν_prob ω
+    infer_instance
+
+  -- Apply π-λ theorem
+  exact Measurable.measure_of_isPiSystem_of_isProbabilityMeasure h_gen h_pi h_basic
+
