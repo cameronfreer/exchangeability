@@ -8,105 +8,71 @@ import Mathlib.Logic.Equiv.Fintype
 import Mathlib.GroupTheory.Perm.Basic
 
 /-!
-# Permutation Extension for Injective Functions
+# Extension of Injective Functions to Permutations
 
-This file proves that any injective function `k : Fin m → ℕ` with bounded range
-can be extended to a permutation of `Fin n`.
+This file proves that injective functions from `Fin m` to `Fin n` can be extended to permutations
+of `Fin n`.
 
 ## Main Results
 
-* `exists_perm_extending_injective`: Given an injective `k : Fin m → ℕ` with all values `< n`
-  and `m ≤ n`, there exists a permutation `σ : Perm (Fin n)` such that `σ(i) = k(i)` for all
-  `i < m`.
+* `Equiv.Perm.exists_extending_injective`: Any injective function `k : Fin m → Fin n` can be
+  extended to a permutation `σ : Perm (Fin n)` such that `σ (Fin.castLE hmn i) = k i` for all `i`.
 
-* `exists_perm_extending_strictMono`: The special case for strictly monotone functions.
+* `Equiv.Perm.exists_extending_strictMono`: The special case for strictly monotone functions.
 
-## Mathematical Context
+## Implementation Notes
 
-This is a key combinatorial lemma in the proof that **exchangeability implies contractability**
-for infinite sequences of random variables. The construction allows any injective
-subsequence to be realized as the image of the first m coordinates under some permutation.
+The construction uses `Equiv.extendSubtype` to extend an equivalence between subtypes to a
+permutation of the ambient type. We compose:
+- `(Fin.castLEquiv hmn).symm`: identifies `{x : Fin n | x.val < m}` with `Fin m`
+- `Equiv.ofInjective k hk`: identifies `Fin m` with the range of `k`
 
-**Intuition:** We partition both domain and codomain:
-- Domain: `{0,...,m-1}` ∪ `{m,...,n-1}` = `Fin n`
-- Codomain: `{k(0),...,k(m-1)}` ∪ complement = `Fin n`
-
-Map first `m` positions to `k`-values, then extend arbitrarily to remaining positions
-using `Equiv.extendSubtype`.
-
-## Suggested Mathlib Location
-
-`Mathlib.GroupTheory.Perm.Fintype` or `Mathlib.Combinatorics.Subseq`
-
-## References
-
-* Kallenberg (2005), *Probabilistic Symmetries and Invariance Principles*, Theorem 1.1
+Then `Equiv.extendSubtype` extends this to a full permutation.
 -/
+
+namespace Equiv.Perm
+
+/-- Any injective function `k : Fin m → Fin n` can be extended to a permutation of `Fin n`.
+
+The permutation agrees with `k` on the image of `Fin.castLE`: for all `i : Fin m`,
+we have `σ (Fin.castLE hmn i) = k i`. -/
+theorem exists_extending_injective {m n : ℕ} (k : Fin m → Fin n) (hk : Function.Injective k)
+    (hmn : m ≤ n) : ∃ σ : Perm (Fin n), ∀ i : Fin m, σ (Fin.castLE hmn i) = k i :=
+  let e := (Fin.castLEquiv hmn).symm.trans (Equiv.ofInjective k hk)
+  ⟨e.extendSubtype, fun i => Equiv.extendSubtype_apply_of_mem e (Fin.castLE hmn i) i.isLt⟩
+
+/-- Any strictly monotone function `k : Fin m → Fin n` can be extended to a permutation. -/
+theorem exists_extending_strictMono {m n : ℕ} (k : Fin m → Fin n) (hk : StrictMono k)
+    (hmn : m ≤ n) : ∃ σ : Perm (Fin n), ∀ i : Fin m, σ (Fin.castLE hmn i) = k i :=
+  exists_extending_injective k hk.injective hmn
+
+end Equiv.Perm
+
+/-! ### Backward-compatible API
+
+The following lemmas provide the original API using `k : Fin m → ℕ` with explicit bounds,
+for use in the exchangeability project. -/
 
 namespace Combinatorics
 
 variable {m n : ℕ}
 
-/-- For strictly monotone `k : Fin m → ℕ`, values dominate indices: `i ≤ k(i)` for all `i`. -/
-lemma strictMono_Fin_ge_id {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
-    i.val ≤ k i := by
-  -- Proof by strong induction on i.val
-  have : ∀ n (hn : n < m), n ≤ k ⟨n, hn⟩ := by
-    intro n
-    induction n with
-    | zero => intro _; exact Nat.zero_le _
-    | succ n ih =>
-        intro hn
-        exact Nat.succ_le_of_lt (Nat.lt_of_le_of_lt (ih (Nat.lt_of_succ_lt hn))
-          (hk (Fin.mk_lt_mk.mpr (Nat.lt_succ_self n))))
-  exact this i.val i.isLt
+/-- Any injective function `k : Fin m → ℕ` with bounded range can be extended to a permutation.
 
-/--
-Any injective function can be extended to a permutation.
-
-**Statement:** Given an injective `k : Fin m → ℕ` with all values `< n`
-and `m ≤ n`, there exists a permutation `σ : Perm (Fin n)` such that
-`σ(i) = k(i)` for all `i < m`.
-
-**Construction outline:**
-1. **Domain partition:** `{0,...,m-1}` ∪ `{m,...,n-1}` = `Fin n`
-2. **Codomain partition:** `{k(0),...,k(m-1)}` ∪ `complement` = `Fin n`
-3. Map first `m` positions to `k`-values: `σ(i) = k(i)` for `i < m`
-4. Extend arbitrarily to remaining positions using `Equiv.extendSubtype`
-
-This is the key combinatorial lemma enabling the implication
-**exchangeable → contractable**: any injective subsequence can be
-realized via a permutation.
--/
+Given `k : Fin m → ℕ` with `k i < n` for all `i` and `m ≤ n`, there exists `σ : Perm (Fin n)`
+such that `(σ ⟨i, _⟩).val = k i` for all `i < m`. -/
 theorem exists_perm_extending_injective (k : Fin m → ℕ)
     (hk_inj : Function.Injective k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
-    ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
-      (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i := by
-  let kFin : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
-  -- e_dom: first m elements of Fin n ≃ Fin m
-  let e_dom : {x : Fin n // (x : ℕ) < m} ≃ Fin m := (Fin.castLEquiv hmn).symm
-  -- e_cod: Fin m ≃ range of kFin (via injectivity)
-  have hkFin_inj : Function.Injective kFin := fun i j h => hk_inj (Fin.ext_iff.mp h)
-  let e_cod' : Fin m ≃ Set.range kFin := Equiv.ofInjective kFin hkFin_inj
-  -- Convert between range representation and existential predicate
-  let e_cod : Fin m ≃ {x : Fin n // ∃ i : Fin m, x = kFin i} :=
-    e_cod'.trans (Equiv.subtypeEquivRight fun x => by simp [Set.mem_range, eq_comm])
-  -- Compose and extend to full permutation
-  let σ : Equiv.Perm (Fin n) := Equiv.extendSubtype (e_dom.trans e_cod)
-  refine ⟨σ, fun i => ?_⟩
-  have h := Equiv.extendSubtype_apply_of_mem (e := e_dom.trans e_cod)
-    (x := Fin.castLE hmn i) i.isLt
-  simp only [Equiv.trans_apply, e_cod, e_cod', Equiv.ofInjective_apply, kFin] at h
-  exact congrArg Fin.val h
+    ∃ σ : Equiv.Perm (Fin n), ∀ i : Fin m, (σ ⟨i.val, i.isLt.trans_le hmn⟩).val = k i := by
+  obtain ⟨σ, hσ⟩ := Equiv.Perm.exists_extending_injective
+    (fun i => ⟨k i, hk_bound i⟩) (fun _ _ h => hk_inj (Fin.mk.inj h)) hmn
+  exact ⟨σ, fun i => congrArg Fin.val (hσ i)⟩
 
-/-- Any strictly increasing function can be extended to a permutation.
-
-This is a corollary of `exists_perm_extending_injective` since strict monotonicity
-implies injectivity. -/
+/-- Any strictly monotone function `k : Fin m → ℕ` with bounded range can be extended to a
+permutation. -/
 theorem exists_perm_extending_strictMono (k : Fin m → ℕ)
     (hk_mono : StrictMono k) (hk_bound : ∀ i, k i < n) (hmn : m ≤ n) :
-    ∃ (σ : Equiv.Perm (Fin n)), ∀ (i : Fin m),
-      (σ ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩).val = k i :=
+    ∃ σ : Equiv.Perm (Fin n), ∀ i : Fin m, (σ ⟨i.val, i.isLt.trans_le hmn⟩).val = k i :=
   exists_perm_extending_injective k hk_mono.injective hk_bound hmn
 
 end Combinatorics
