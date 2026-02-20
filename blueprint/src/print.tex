@@ -1,18 +1,9 @@
-% This file makes a printable version of the blueprint
-% It should include all the \usepackage needed for the pdf version.
-% The template version assume you want to use a modern TeX compiler
-% such as xeLaTeX or luaLaTeX including support for unicode
-% and Latin Modern Math font with standard bugfixes applied.
-% It also uses expl3 in order to support macros related to the dependency graph.
-% It also includes standard AMS packages (and their improved version
-% mathtools) as well as support for links with a sober decoration
-% (no ugly rectangles around links).
-% It is otherwise a very minimal preamble (you should probably at least
-% add cleveref and tikz-cd).
+% This file makes a printable version of the blueprint.
+% It uses XeLaTeX with unicode-math and article class for a compact layout.
 
-\documentclass[letter]{report}
+\documentclass[letter]{article}
 
-\usepackage{geometry}
+\usepackage[margin=1in]{geometry}
 
 \usepackage{expl3}
 
@@ -24,10 +15,26 @@
 \input{macros/common}
 \input{macros/print}
 
-\title{Exchangeability and de Finetti's theorem}
+\title{Exchangeability and de Finetti's Theorem:\\A Lean 4 Formalization Blueprint}
 \author{Cameron Freer}
+\date{}
 
 \begin{document}
+
 \maketitle
+
+\begin{abstract}
+This document provides the mathematical blueprint for a Lean~4 formalization of
+the de Finetti--Ryll-Nardzewski theorem on standard Borel spaces.
+We describe the definitions, lemmas, and proof structure underlying three
+independent proofs of the core implication---via reverse martingales,
+$L^2$ bounds, and the mean ergodic theorem---all sharing a uniform common ending.
+The formalization comprises approximately 43,500 lines of Lean across 112 files.
+\end{abstract}
+
+{\small\tableofcontents}
+
+\bigskip
+
 \input{content}
 \end{document}
