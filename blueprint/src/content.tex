@@ -599,3 +599,24 @@ and packages the result as a measurable directing kernel.
   \textbf{Remark:} The martingale proof constructs $\nu$ from the tail $\sigma$-algebra $\mathcal{T}$
   via $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$.
 \end{theorem}
+
+
+\chapter{Conclusion and Future Work}
+
+The formalization is complete: all three proof routes compile, share a common ending, and
+assemble into the full de Finetti--Ryll-Nardzewski equivalence.
+The Lean kernel verifies that only standard axioms are used.
+
+Several directions remain for future work:
+\begin{itemize}
+  \item \textbf{Upstreaming to mathlib.}
+    Reusable components---exchangeability and contractability definitions,
+    finite-marginal reindexing lemmas, conditional independence infrastructure---are
+    candidates for staged contribution to mathlib~\cite{mathlib}.
+  \item \textbf{Partial exchangeability.}
+    Extending the formalization to Aldous--Hoover-type results for
+    partially exchangeable arrays.
+  \item \textbf{Parametric families.}
+    Connecting the directing measure to exponential family theory
+    and Bayesian nonparametrics (e.g., Dirichlet process mixtures).
+\end{itemize}
