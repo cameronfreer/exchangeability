@@ -86,9 +86,12 @@ lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) :=
   by
-    rw [measurable_pi_iff]
-    intro i
-    simpa [prefixProj] using (measurable_pi_apply (δ := ℕ) (X := fun _ : ℕ => α) (a := (i : ℕ)))
+    simpa [prefixProj] using
+      (measurable_pi_lambda
+        (f := prefixProj (α := α) n)
+        (fun i => by
+          change Measurable fun c : ℕ → α => c (i : ℕ)
+          exact measurable_pi_apply (i : ℕ)))
 
 /--
 Cylinder set determined by the first `n` coordinates.
@@ -201,9 +204,8 @@ set_option linter.unusedSectionVars false
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) :=
   by
-    rw [measurable_pi_iff]
-    intro i
-    simpa [takePrefix] using (measurable_pi_apply (Fin.castLE hmn i))
+    simpa [takePrefix] using
+      (measurable_pi_lambda (f := takePrefix (α := α) hmn) (fun i => measurable_pi_apply (Fin.castLE hmn i)))
 
 @[measurability, nolint unusedArguments]
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
@@ -404,9 +406,8 @@ lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) :=
   by
-    rw [measurable_pi_iff]
-    intro i
-    simpa [reindex] using (measurable_pi_apply (π i))
+    simpa [reindex] using
+      (measurable_pi_lambda (f := reindex (α := α) π) (fun i => measurable_pi_apply (π i)))
 
 /--
 The path law (or joint distribution) of a stochastic process.

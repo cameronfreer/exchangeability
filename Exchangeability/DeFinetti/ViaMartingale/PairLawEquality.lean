@@ -181,11 +181,10 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
 
   -- Measurability of concat
   have h_concat_meas : Measurable concat := by
-    rw [measurable_pi_iff]
+    refine measurable_pi_lambda (f := concat) ?_
     intro n
     by_cases hn : n < r
-    · simpa [concat, hn] using
-        ((measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst)
+    · simpa [concat, hn] using ((measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst)
     · simpa [concat, hn] using ((measurable_pi_apply (n - r)).comp measurable_snd)
 
   -- Measurability of split
@@ -349,26 +348,19 @@ lemma comap_consRV_eq_sup
     obtain ⟨S, hS_meas, rfl⟩ := hs
     -- S is measurable in ℕ → α. We show consRV x t ⁻¹' S ∈ σ(x) ⊔ σ(t).
     -- Key: consRV x t factors through (x, t) via a measurable "cons" function.
-    -- Define consSeq : α × (ℕ → α) → (ℕ → α) by consSeq (a, f) n = if n = 0 then a else f (n-1)
-    let consSeq : α × (ℕ → α) → (ℕ → α) := fun ⟨a, f⟩ n =>
-      match n with
-      | 0 => a
-      | n + 1 => f n
+    -- Define consSeq via consRV on the pair space.
+    let consSeq : α × (ℕ → α) → (ℕ → α) := fun p =>
+      consRV (x := fun q : α × (ℕ → α) => q.1)
+        (t := fun q : α × (ℕ → α) => q.2) p
     -- consRV x t = consSeq ∘ (fun ω => (x ω, t ω))
     have h_factor : consRV x t = consSeq ∘ (fun ω => (x ω, t ω)) := by
       ext ω n
-      simp only [Function.comp_apply, consRV, consSeq]
-      cases n <;> rfl
+      cases n <;> simp [Function.comp_apply, consSeq, consRV]
     -- consSeq is measurable
     have h_consSeq_meas : Measurable consSeq := by
-      rw [measurable_pi_iff]
-      intro n
-      cases n with
-      | zero =>
-          simpa [consSeq] using
-            (measurable_fst : Measurable (fun x : α × (ℕ → α) => x.1))
-      | succ n =>
-          simpa [consSeq] using ((measurable_pi_apply (n : ℕ)).comp measurable_snd)
+      simpa [consSeq] using
+        (measurable_consRV (x := fun q : α × (ℕ → α) => q.1)
+          (t := fun q : α × (ℕ → α) => q.2) measurable_fst measurable_snd)
     -- So consRV x t ⁻¹' S = (fun ω => (x ω, t ω)) ⁻¹' (consSeq ⁻¹' S)
     rw [h_factor, Set.preimage_comp]
     -- consSeq ⁻¹' S is measurable in α × (ℕ → α)

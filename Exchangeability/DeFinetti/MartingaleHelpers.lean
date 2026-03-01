@@ -85,9 +85,8 @@ lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
 lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) :=
   by
-    rw [measurable_pi_iff]
-    intro n
-    simpa [shiftSeq] using (measurable_pi_apply (n + d))
+    simpa [shiftSeq] using
+      (measurable_pi_lambda (f := shiftSeq (β := β) d) (fun n => measurable_pi_apply (n + d)))
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :

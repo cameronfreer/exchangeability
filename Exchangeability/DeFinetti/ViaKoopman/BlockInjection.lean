@@ -143,9 +143,9 @@ lemma reindexBlock_apply (m n : ℕ) (j : Fin m → Fin n) (ω : ℕ → α) (i 
 lemma measurable_reindexBlock (m n : ℕ) (j : Fin m → Fin n) :
     Measurable (reindexBlock (α := α) m n j) :=
   by
-    rw [measurable_pi_iff]
-    intro i
-    simpa [reindexBlock] using (measurable_pi_apply (blockInjection m n j i))
+    simpa [reindexBlock] using
+      (measurable_pi_lambda (f := reindexBlock (α := α) m n j)
+        (fun i => measurable_pi_apply (blockInjection m n j i)))
 
 /-! ### Block Injection Properties for First m Coordinates -/
 

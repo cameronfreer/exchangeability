@@ -83,14 +83,11 @@ lemma projectPairSeq_embedPairSeq (p : α × (ℕ → α)) : projectPairSeq (emb
 
 @[measurability, fun_prop]
 lemma embedPairSeq_measurable : Measurable (embedPairSeq : α × (ℕ → α) → ℕ → α) := by
-  rw [measurable_pi_iff]
+  refine measurable_pi_lambda (f := embedPairSeq) ?_
   intro n
   cases n with
-  | zero =>
-      simpa [embedPairSeq] using
-        (measurable_fst : Measurable (fun x : α × (ℕ → α) => x.1))
-  | succ n =>
-      simpa [embedPairSeq] using ((measurable_pi_apply (n : ℕ)).comp measurable_snd)
+  | zero => exact (measurable_fst : Measurable (fun x : α × (ℕ → α) => x.1))
+  | succ n => exact ((measurable_pi_apply (n : ℕ)).comp measurable_snd)
 
 @[measurability, fun_prop]
 lemma projectPairSeq_measurable : Measurable (projectPairSeq : (ℕ → α) → α × (ℕ → α)) :=

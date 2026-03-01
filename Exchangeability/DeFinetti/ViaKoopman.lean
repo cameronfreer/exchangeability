@@ -394,7 +394,7 @@ lemma pathSpace_shift_preserving_of_contractable
     (hContract : Contractable μ X) :
     MeasurePreserving shift (μ.map (fun ω' i => X i ω')) (μ.map (fun ω' i => X i ω')) := by
   constructor
-  · exact shift_measurable
+  · fun_prop
   · -- Use contractability with k(i) = i + 1
     have hφ_meas : Measurable (fun ω' i => X i ω') :=
       by
@@ -657,7 +657,7 @@ lemma conditionallyIID_bind_of_contractable
   -- Apply CommonEnding.conditional_iid_from_directing_measure
   apply CommonEnding.conditional_iid_from_directing_measure
   -- 1. Coordinates are measurable
-  · exact fun i => measurable_pi_apply i
+  · fun_prop
   -- 2. ν is a probability measure at each point
   · intro ω
     exact ν_isProbabilityMeasure (μ := μ) ω
