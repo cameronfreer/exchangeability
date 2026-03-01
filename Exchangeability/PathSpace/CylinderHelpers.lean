@@ -162,7 +162,10 @@ lemma firstRCylinder_measurable_ambient
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     Measurable (firstRMap X r) :=
-  measurable_pi_lambda _ (fun i => hX i)
+  by
+    rw [measurable_pi_iff]
+    intro i
+    simpa [firstRMap] using hX i
 
 /-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
 lemma firstRSigma_le_ambient
@@ -190,9 +193,9 @@ lemma firstRSigma_mono
     simp [firstRMap, π]
   -- π is measurable (composition of coordinate projections)
   have hπ : Measurable π := by
-    exact
-      measurable_pi_lambda _ (fun i =>
-        measurable_pi_apply (show Fin s from ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩))
+    rw [measurable_pi_iff]
+    intro i
+    simpa [π] using (measurable_pi_apply (show Fin s from ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩))
   -- Preimage factors through composition
   rw [h_comp, Set.preimage_comp]
   exact ⟨π ⁻¹' u, hπ hu, rfl⟩
@@ -244,7 +247,9 @@ omit [MeasurableSpace α] in
 
 @[measurability, fun_prop]
 lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
-  exact measurable_pi_lambda _ (fun n => measurable_pi_apply (n + 1))
+  rw [measurable_pi_iff]
+  intro i
+  simpa [drop] using (measurable_pi_apply (i + 1))
 
 omit [MeasurableSpace α] in
 /-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/

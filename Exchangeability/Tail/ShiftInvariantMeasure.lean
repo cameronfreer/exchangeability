@@ -533,9 +533,7 @@ lemma setIntegral_comp_shift_eq
         z ⟨i.val + 1, by omega⟩
 
       have hproj_meas : Measurable proj := by
-        apply measurable_pi_lambda
-        intro i
-        exact measurable_pi_apply _
+        fun_prop
 
       have h_indices_mem : ∀ i : Fin d, indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ ∈ pt := by
         intro i

@@ -48,7 +48,10 @@ def pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] (X : ℕ �
 lemma measurable_pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] {X : ℕ → Ω → α}
     (hX_meas : ∀ n, Measurable (X n)) :
     Measurable (pathify X) :=
-  measurable_pi_lambda _ hX_meas
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [pathify] using hX_meas n
 
 /-- Law of the process as a probability measure on path space. -/
 def μ_path {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]

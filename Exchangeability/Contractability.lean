@@ -517,7 +517,7 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
 
     have hproj_meas : Measurable proj := by
-      exact measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
+      fun_prop
 
     -- Project both sides to the first m' + 1 coordinates
     have hproj_eq : Measure.map (proj ∘ fun ω j => X (σ j).val ω) μ =

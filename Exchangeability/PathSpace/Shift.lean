@@ -72,8 +72,9 @@ which is measurable by definition of the product σ-algebra.
 -/
 @[measurability, fun_prop]
 lemma shift_measurable [MeasurableSpace α] : Measurable (@shift α) := by
-  refine measurable_pi_lambda _ (fun i => ?_)
-  simpa [shift, Function.comp] using (measurable_pi_apply (i + 1))
+  rw [measurable_pi_iff]
+  intro i
+  simpa [shift] using (measurable_pi_apply (i + 1))
 
 /- Alternative name for `shift_measurable` (used in ergodic theory contexts). -/
 @[measurability, fun_prop]

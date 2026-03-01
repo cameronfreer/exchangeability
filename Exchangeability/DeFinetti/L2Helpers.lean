@@ -156,17 +156,9 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
     refine (measurable_eval_fin2 (i := fin2Zero)).prodMk ?_
     exact measurable_eval_fin2 (i := fin2One)
   have h_meas_k : Measurable fun ω => fun t : Fin 2 => X (k t) ω := by
-    refine measurable_pi_lambda _ ?_
-    intro t
-    by_cases ht : t = fin2Zero
-    · have : k t = i := by simp [k, ht]
-      simp [this]; exact hX_meas i
-    · have : k t = j := by simp [k, if_neg ht]
-      simp [this]; exact hX_meas j
+    fun_prop
   have h_meas_std : Measurable fun ω => fun t : Fin 2 => X t.val ω := by
-    refine measurable_pi_lambda _ ?_
-    intro t
-    simpa using hX_meas t.val
+    fun_prop
   have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
   have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
   have h_eval := congrArg (Measure.map eval) h_map
@@ -196,9 +188,7 @@ lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Meas
   have h_base := hX_contract n k hk
   set Φ : (Fin n → ℝ) → (Fin n → ℝ) := fun g i => f (g i)
   have hΦ_meas : Measurable Φ := by
-    refine measurable_pi_lambda _ ?_
-    intro i
-    simpa [Φ] using hf_meas.comp (measurable_pi_apply i)
+    fun_prop
   have h_meas_k : Measurable fun ω => fun i : Fin n => X (k i) ω := by
     fun_prop
   have h_meas_std : Measurable fun ω => fun i : Fin n => X i.val ω := by

@@ -88,24 +88,31 @@ lemma shiftProcess_apply (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) :
 /-- A process viewed as a full path is measurable. -/
 @[measurability, fun_prop]
 lemma measurable_path {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n)) : Measurable (path X) :=
-  measurable_pi_lambda _ hX
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [path] using hX n
 
 /-- Consing a head to a sequence is measurable if both pieces are measurable. -/
 @[measurability, fun_prop]
 lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
     Measurable x → Measurable t → Measurable (consRV x t) := by
   intro hx ht
-  exact measurable_pi_lambda _ (fun n => by
-    cases n with
-    | zero =>
-        simpa [consRV] using hx
-    | succ k =>
-        simpa [consRV] using (measurable_pi_apply k).comp ht)
+  rw [measurable_pi_iff]
+  intro n
+  cases n with
+  | zero =>
+      simpa [consRV] using hx
+  | succ k =>
+      simpa [consRV] using (measurable_pi_apply k).comp ht
 
 /-- Tail is measurable when the original sequence is measurable. -/
 @[measurability, fun_prop]
 lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) :=
-  measurable_pi_lambda _ (fun n => (measurable_pi_apply (n + 1)).comp ht)
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [tailRV] using (measurable_pi_apply (n + 1)).comp ht
 
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 

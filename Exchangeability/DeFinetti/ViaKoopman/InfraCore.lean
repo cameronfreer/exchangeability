@@ -173,15 +173,24 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
 
 @[measurability, fun_prop]
 lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) :=
-  measurable_pi_lambda _ fun n => measurable_pi_apply (Int.ofNat n)
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [restrictNonneg] using (measurable_pi_apply (Int.ofNat n))
 
 @[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) :=
-  measurable_pi_lambda _ fun n => measurable_pi_apply (n + 1)
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [shiftℤ] using (measurable_pi_apply (n + 1))
 
 @[measurability, fun_prop]
 lemma measurable_shiftℤInv : Measurable (shiftℤInv (α := α)) :=
-  measurable_pi_lambda _ fun n => measurable_pi_apply (n - 1)
+  by
+    rw [measurable_pi_iff]
+    intro n
+    simpa [shiftℤInv] using (measurable_pi_apply (n - 1))
 
 /-- Two-sided shift-invariant sets. A set is shift-invariant if it is measurable and equals its preimage under the shift. -/
 def IsShiftInvariantℤ (S : Set (Ωℤ[α])) : Prop :=

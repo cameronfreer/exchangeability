@@ -85,9 +85,9 @@ lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) :=
   by
-    exact
-      (measurable_pi_lambda (f := fun x : ℕ → α => fun i : Fin n => x i)
-        (fun i => (measurable_pi_apply (δ := ℕ) (X := fun _ : ℕ => α) (a := (i : ℕ)))))
+    rw [measurable_pi_iff]
+    intro i
+    simpa [prefixProj] using (measurable_pi_apply (δ := ℕ) (X := fun _ : ℕ => α) (a := (i : ℕ)))
 
 /--
 Cylinder set determined by the first `n` coordinates.
@@ -200,7 +200,9 @@ set_option linter.unusedSectionVars false
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) :=
   by
-    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (Fin.castLE hmn i))
+    rw [measurable_pi_iff]
+    intro i
+    simpa [takePrefix] using (measurable_pi_apply (Fin.castLE hmn i))
 
 @[nolint unusedArguments]
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
@@ -401,7 +403,9 @@ lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) :=
   by
-    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (π i))
+    rw [measurable_pi_iff]
+    intro i
+    simpa [reindex] using (measurable_pi_apply (π i))
 
 attribute [measurability, fun_prop] measurable_prefixProj takePrefix_measurable measurable_reindex
 
@@ -718,7 +722,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     have hμ_univ : μ Set.univ = 1 := measure_univ
     have hμX_univ : μX Set.univ = 1 := by
       have hX_meas : Measurable fun ω => fun i : ℕ => X i ω := by
-        exact measurable_pi_lambda _ (fun i => hX i)
+        simpa using (show Measurable (fun ω => fun i : ℕ => X i ω) from by fun_prop)
       dsimp [μX, pathLaw]
       rw [Measure.map_apply_of_aemeasurable (hX_meas.aemeasurable) MeasurableSet.univ]
       simp [hμ_univ]
