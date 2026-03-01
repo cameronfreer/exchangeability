@@ -90,10 +90,10 @@ lemma contractable_dist_eq_on_first_r_tail
       ext v; simp [A, Set.mem_iInter]
     rw [this]
     exact (h0 hB).inter (MeasurableSet.iInter fun i => hS i (hC i))
-  have hφ₁ : Measurable (fun ω i => X (s₁ i) ω) := measurable_pi_lambda _ fun i =>
-    i.cases (hX_meas m) fun j => by simp only [s₁, f]; exact hX_meas (m + (j.1 + 1))
-  have hφ₂ : Measurable (fun ω i => X (s₂ i) ω) := measurable_pi_lambda _ fun i =>
-    i.cases (hX_meas k) fun j => by simp only [s₂, f]; exact hX_meas (m + (j.1 + 1))
+  have hφ₁ : Measurable (fun ω i => X (s₁ i) ω) := by
+    fun_prop
+  have hφ₂ : Measurable (fun ω i => X (s₂ i) ω) := by
+    fun_prop
   calc μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       = μ ((fun ω i => X (s₁ i) ω) ⁻¹' A) := by rw [hpre₁]
     _ = (Measure.map (fun ω i => X (s₁ i) ω) μ) A := (Measure.map_apply hφ₁ hA).symm
