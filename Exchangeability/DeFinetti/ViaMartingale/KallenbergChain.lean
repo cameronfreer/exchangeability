@@ -83,16 +83,17 @@ lemma projectPairSeq_embedPairSeq (p : α × (ℕ → α)) : projectPairSeq (emb
 
 @[measurability]
 lemma embedPairSeq_measurable : Measurable (embedPairSeq : α × (ℕ → α) → ℕ → α) := by
-  rw [measurable_pi_iff]
+  refine measurable_pi_lambda _ ?_
   intro n
   cases n with
-  | zero => exact measurable_fst
-  | succ k => exact (measurable_pi_apply k).comp measurable_snd
+  | zero => simpa [embedPairSeq] using measurable_fst
+  | succ k => simpa [embedPairSeq] using (measurable_pi_apply k).comp measurable_snd
 
 @[measurability]
 lemma projectPairSeq_measurable : Measurable (projectPairSeq : (ℕ → α) → α × (ℕ → α)) :=
-  Measurable.prod (measurable_pi_apply 0)
-    (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1))
+  by
+    refine Measurable.prod (measurable_pi_apply (0 : ℕ)) ?_
+    exact measurable_pi_lambda _ (fun n => measurable_pi_apply (n + 1))
 
 /-- The injection `k, m, m+1, m+2, ...` for pair law argument.
 This is strictly increasing when k < m. -/
@@ -140,8 +141,8 @@ lemma pair_law_shift_eq_of_contractable
   let seqM : Ω → ℕ → α := fun ω i => X (pairInjection k m i) ω
   let seqN : Ω → ℕ → α := fun ω i => X (pairInjection k n i) ω
 
-  have hSeqM_meas : Measurable seqM := measurable_pi_iff.mpr fun _ => hX _
-  have hSeqN_meas : Measurable seqN := measurable_pi_iff.mpr fun _ => hX _
+  have hSeqM_meas : Measurable seqM := measurable_pi_lambda _ (fun i => hX (pairInjection k m i))
+  have hSeqN_meas : Measurable seqN := measurable_pi_lambda _ (fun i => hX (pairInjection k n i))
 
   -- Both reindexed sequences have the same distribution by contractability
   -- (π-system uniqueness on finite marginals)

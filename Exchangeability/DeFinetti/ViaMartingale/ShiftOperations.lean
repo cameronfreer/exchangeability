@@ -88,23 +88,24 @@ lemma shiftProcess_apply (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) :
 /-- A process viewed as a full path is measurable. -/
 @[measurability, fun_prop]
 lemma measurable_path {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n)) : Measurable (path X) :=
-  measurable_pi_iff.mpr hX
+  measurable_pi_lambda _ hX
 
 /-- Consing a head to a sequence is measurable if both pieces are measurable. -/
 @[measurability, fun_prop]
 lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
     Measurable x → Measurable t → Measurable (consRV x t) := by
   intro hx ht
-  rw [measurable_pi_iff]
-  intro n
-  cases n with
-  | zero => exact hx
-  | succ k => exact (measurable_pi_apply k).comp ht
+  exact measurable_pi_lambda _ (fun n => by
+    cases n with
+    | zero =>
+        simpa [consRV] using hx
+    | succ k =>
+        simpa [consRV] using (measurable_pi_apply k).comp ht)
 
 /-- Tail is measurable when the original sequence is measurable. -/
 @[measurability, fun_prop]
 lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) :=
-  measurable_pi_iff.mpr fun n => (measurable_pi_apply (n + 1)).comp ht
+  measurable_pi_lambda _ (fun n => (measurable_pi_apply (n + 1)).comp ht)
 
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
@@ -113,10 +114,11 @@ This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
 lemma comap_tailRV_le {t : Ω → ℕ → α} :
     MeasurableSpace.comap (tailRV t) inferInstance ≤
     MeasurableSpace.comap t inferInstance := by
+  have hShift : Measurable (fun s : ℕ → α => (fun n => s (n + 1))) :=
+    measurable_pi_lambda _ (fun n => measurable_pi_apply (n + 1))
   intro S hS
   obtain ⟨A, hA, rfl⟩ := hS
-  exact ⟨(fun s : ℕ → α => (fun n => s (n+1))) ⁻¹' A,
-    hA.preimage (measurable_pi_iff.mpr fun n => measurable_pi_apply (n + 1)), rfl⟩
+  exact ⟨(fun s : ℕ → α => (fun n => s (n + 1)) ) ⁻¹' A, hA.preimage hShift, rfl⟩
 
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
 
@@ -135,9 +137,7 @@ variable {X : ℕ → Ω → α}
 @[measurability, fun_prop]
 lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
-  classical
-  simpa [shiftRV] using
-    measurable_pi_iff.mpr (fun n => by simpa using hX (m + n))
+  simpa [shiftRV, path] using (measurable_path (fun n => hX (m + n)))
 
 /-! ### Shift Contractability -/
 

@@ -161,8 +161,6 @@ lemma measurable_alphaIicRat
     (hX_meas : ∀ i, Measurable (X i))
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
     Measurable (alphaIicRat X hX_contract hX_meas hX_L2) := by
-  refine measurable_pi_iff.2 ?_
-  intro q
-  exact alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ)
+  exact measurable_pi_lambda _ (fun q => alphaIic_measurable X hX_contract hX_meas hX_L2 (q : ℝ))
 
 end Exchangeability.DeFinetti.ViaL2

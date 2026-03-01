@@ -70,14 +70,9 @@ lemma shift_comp_shift : @shift α ∘ shift = fun ξ n => ξ (n + 2) := by
 Since `(shift ξ) i = ξ (i + 1)`, this is the projection onto coordinate `(i + 1)`,
 which is measurable by definition of the product σ-algebra.
 -/
-@[measurability]
+@[measurability, fun_prop]
 lemma shift_measurable [MeasurableSpace α] : Measurable (@shift α) := by
-  -- A function to a pi type is measurable iff each component is measurable
-  rw [measurable_pi_iff]
-  intro i
-  -- The i-th component of shift ξ is ξ (i + 1)
-  -- This is just the projection onto coordinate (i + 1)
-  exact measurable_pi_apply (i + 1)
+  exact measurable_pi_lambda _ (fun i => measurable_pi_apply (i + 1))
 
 /-- Alternative name for `shift_measurable` (used in ergodic theory contexts). -/
 @[measurability]

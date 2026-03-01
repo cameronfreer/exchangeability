@@ -181,12 +181,11 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
 
   -- Measurability of concat
   have h_concat_meas : Measurable concat := by
-    rw [measurable_pi_iff]; intro n
+    refine measurable_pi_lambda _ ?_
+    intro n
     by_cases hn : n < r
-    · simp only [concat, hn, dite_true]
-      exact (measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst
-    · simp only [concat, hn, dite_false]
-      exact (measurable_pi_apply (n - r : ℕ)).comp measurable_snd
+    · simpa [concat, hn] using (measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst
+    · simpa [concat, hn] using (measurable_pi_apply (n - r : ℕ)).comp measurable_snd
 
   -- Measurability of split
   have h_split_meas : Measurable split := by
@@ -360,10 +359,11 @@ lemma comap_consRV_eq_sup
       cases n <;> rfl
     -- consSeq is measurable
     have h_consSeq_meas : Measurable consSeq := by
-      rw [measurable_pi_iff]; intro n
-      cases n with
-      | zero => exact measurable_fst
-      | succ k => exact (measurable_pi_apply k).comp measurable_snd
+      exact measurable_pi_lambda _ (fun n =>
+        by
+          cases n with
+          | zero => simpa [consSeq] using measurable_fst
+          | succ k => simpa [consSeq] using (measurable_pi_apply k).comp measurable_snd)
     -- So consRV x t ⁻¹' S = (fun ω => (x ω, t ω)) ⁻¹' (consSeq ⁻¹' S)
     rw [h_factor, Set.preimage_comp]
     -- consSeq ⁻¹' S is measurable in α × (ℕ → α)
