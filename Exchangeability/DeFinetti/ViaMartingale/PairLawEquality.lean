@@ -189,9 +189,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
       exact (measurable_pi_apply (n - r : ℕ)).comp measurable_snd
 
   -- Measurability of split
-  have h_split_meas : Measurable split := Measurable.prod
-    (measurable_pi_iff.mpr fun i => measurable_pi_apply i.val)
-    (measurable_pi_iff.mpr fun n => measurable_pi_apply (r + n))
+  have h_split_meas : Measurable split := by
+    measurability
 
   -- Define concatenated sequences
   let seq0 : Ω → ℕ → α := fun ω => concat (U ω, W ω)
