@@ -83,7 +83,26 @@ lemma shiftProcess_apply (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) :
 
 /-! ### Measurability -/
 
+/-! ### Measurable combinators -/
+
+/-- A process viewed as a full path is measurable. -/
+@[measurability, fun_prop]
+lemma measurable_path {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n)) : Measurable (path X) :=
+  measurable_pi_iff.mpr hX
+
+/-- Consing a head to a sequence is measurable if both pieces are measurable. -/
+@[measurability, fun_prop]
+lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
+    Measurable x → Measurable t → Measurable (consRV x t) := by
+  intro hx ht
+  rw [measurable_pi_iff]
+  intro n
+  cases n with
+  | zero => exact hx
+  | succ k => exact (measurable_pi_apply k).comp ht
+
 /-- Tail is measurable when the original sequence is measurable. -/
+@[measurability, fun_prop]
 lemma measurable_tailRV {t : Ω → ℕ → α} (ht : Measurable t) : Measurable (tailRV t) :=
   measurable_pi_iff.mpr fun n => (measurable_pi_apply (n + 1)).comp ht
 

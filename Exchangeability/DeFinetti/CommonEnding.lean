@@ -380,14 +380,11 @@ This connects the map in the ConditionallyIID definition to the probability of e
 
 This is a direct application of `Measure.map_apply` from mathlib. -/
 lemma map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-    (m : ℕ) (k : Fin m → ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
+  (m : ℕ) (k : Fin m → ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
     (Measure.map (fun ω i => X (k i) ω) μ) B = μ {ω | (fun i => X (k i) ω) ∈ B} := by
   -- The function (fun ω i => X (k i) ω) is measurable as a composition of measurable functions
   have h_meas : Measurable (fun ω i => X (k i) ω) := by
-    -- Use measurable_pi_iff: a function to a pi type is measurable iff each component is
-    rw [measurable_pi_iff]
-    intro i
-    exact hX_meas (k i)
+    fun_prop
   -- Apply Measure.map_apply
   rw [Measure.map_apply h_meas hB]
   -- The preimage is definitionally equal to the set we want
@@ -501,9 +498,7 @@ private lemma map_coords_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMe
     (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i)) (m : ℕ) (k : Fin m → ℕ) :
     IsProbabilityMeasure (Measure.map (fun ω i => X (k i) ω) μ) := by
   have h_meas : Measurable (fun ω i => X (k i) ω) := by
-    rw [measurable_pi_iff]
-    intro i
-    exact hX_meas (k i)
+    fun_prop
   exact Measure.isProbabilityMeasure_map h_meas.aemeasurable
 
 -- Product of probability measures is a probability measure

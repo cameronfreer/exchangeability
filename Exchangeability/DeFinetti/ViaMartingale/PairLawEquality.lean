@@ -229,14 +229,11 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
         conv_rhs => rw [← h_final]
 
   -- Measurability of seq0 and seq1
-  have hU_meas : Measurable U := measurable_pi_iff.mpr fun i => hX i.val
-  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX (m + 1 + n)
+  have hU_meas : Measurable U := by measurability
+  have hW_meas : Measurable W := by measurability
   have hW'_meas : Measurable W' := by
-    simp only [W']
-    rw [measurable_pi_iff]; intro n
-    match n with
-    | 0 => exact hX r
-    | n' + 1 => exact hX (m + 1 + n')
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX r) hW_meas)
 
   have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prodMk hW_meas)
   have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prodMk hW'_meas)
@@ -319,10 +316,10 @@ lemma condExp_indicator_eq_of_contractable
 
   -- Measurability
   have hU : Measurable U := by measurability
-  have hW : Measurable W := measurable_pi_lambda _ fun n => hX_meas (m + 1 + n)
-  have hW' : Measurable W' := measurable_pi_lambda _ fun
-    | 0 => hX_meas r
-    | n + 1 => hX_meas (m + 1 + n)
+  have hW : Measurable W := by measurability
+  have hW' : Measurable W' := by
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW)
 
   -- Apply Kallenberg 1.3 with pair law and contraction σ(W) ⊆ σ(W')
   exact condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU hW hW'
@@ -480,13 +477,10 @@ lemma condExp_Xr_indicator_eq_of_contractable
 
   -- Measurability facts
   have hU_meas : Measurable U := by measurability
-  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX_meas (m + 1 + n)
+  have hW_meas : Measurable W := by measurability
   have hW'_meas : Measurable W' := by
-    -- consRV x t is measurable when x and t are measurable
-    rw [measurable_pi_iff]; intro n
-    cases n with
-    | zero => exact hX_meas r
-    | succ k => exact (measurable_pi_apply k).comp hW_meas
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW_meas)
 
   -- Step 5: Establish conditional independence U ⊥⊥_W X_r
   -- From drop-info E[1_{U∈A}|σ(W')] = E[1_{U∈A}|σ(W)], we derive CondIndep μ U (X r) W
