@@ -162,10 +162,8 @@ lemma firstRCylinder_measurable_ambient
 @[measurability, fun_prop]
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
-    Measurable (firstRMap X r) :=
-  by
-    simpa [firstRMap] using
-      (measurable_pi_lambda (f := firstRMap (X := X) r) (fun i => hX i))
+    Measurable (firstRMap X r) := by
+  unfold firstRMap; fun_prop
 
 /-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
 lemma firstRSigma_le_ambient
