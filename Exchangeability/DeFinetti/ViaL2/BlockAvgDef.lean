@@ -45,6 +45,7 @@ This is the building block for Kallenberg's L² convergence proof. -/
 def blockAvg (f : α → ℝ) (X : ℕ → Ω → α) (m n : ℕ) (ω : Ω) : ℝ :=
   (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))
 
+@[measurability]
 lemma blockAvg_measurable
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (f : α → ℝ) (X : ℕ → Ω → α)

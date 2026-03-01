@@ -49,6 +49,7 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 This is a wrapper around `Finset.measurable_prod` specialized to ENNReal.
 -/
+@[measurability, fun_prop]
 lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [MeasurableSpace Ω]
     (f : ι → Ω → ENNReal) (hf : ∀ i, Measurable (f i)) :
     Measurable fun ω => ∏ i, f i ω :=
@@ -160,6 +161,7 @@ This is a key lemma for proving the ConditionallyIID property in de Finetti's th
 yield measurable kernels, which is essential for disintegration theory and
 conditional independence.
 -/
+@[measurability, fun_prop]
 lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {m : ℕ}
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))

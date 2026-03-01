@@ -48,6 +48,7 @@ lemma productCylinder_eq_cylinder {m : ℕ} (fs : Fin m → α → ℝ) :
     productCylinder fs = cylinderFunction (fun coords => ∏ k, fs k (coords k)) := rfl
 
 /-- Measurability of cylinder functions. -/
+@[measurability]
 lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     (_hφ : Measurable φ) :
     Measurable (cylinderFunction φ) := by
@@ -56,6 +57,7 @@ lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     Measurable fun ω : ℕ → α => fun k : Fin m => ω k.val)
 
 /-- Measurability of product cylinders. -/
+@[measurability]
 lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
     (hmeas : ∀ k, Measurable (fs k)) :
     Measurable (productCylinder fs) := by

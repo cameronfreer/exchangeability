@@ -45,13 +45,14 @@ def pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] (X : ℕ �
     Ω → PathSpace α :=
   fun ω n => X n ω
 
+@[measurability]
 lemma measurable_pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] {X : ℕ → Ω → α}
     (hX_meas : ∀ n, Measurable (X n)) :
     Measurable (pathify X) :=
   by
-    rw [measurable_pi_iff]
-    intro n
-    simpa [pathify] using hX_meas n
+    have h : Measurable (fun ω => fun n => X n ω) := by
+      fun_prop
+    simpa [pathify] using h
 
 /-- Law of the process as a probability measure on path space. -/
 def μ_path {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
@@ -141,6 +142,7 @@ lemma contractable_shift_invariant_law {Ω : Type*} [MeasurableSpace Ω]
   rw [hX n k hk_strictMono]
 
 /-- Measurability of `shift` on path space. -/
+@[measurability, fun_prop]
 lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
   shift_measurable
 

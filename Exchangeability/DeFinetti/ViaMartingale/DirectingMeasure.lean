@@ -60,6 +60,7 @@ noncomputable def directingMeasure
 /-- `directingMeasure` evaluates measurably on measurable sets.
 
 Uses: `Kernel.measurable_coe` and `Measure.map_apply`. -/
+@[measurability]
 lemma directingMeasure_measurable_eval
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]

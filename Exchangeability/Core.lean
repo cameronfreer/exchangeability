@@ -82,6 +82,7 @@ omit [MeasurableSpace α] in
 lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
 
+@[measurability, fun_prop]
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) :=
   by
@@ -196,7 +197,7 @@ variable [MeasurableSpace α]
 -- this transitive dependency and incorrectly suggests omitting `[MeasurableSpace α]`.
 set_option linter.unusedSectionVars false
 
-@[nolint unusedArguments]
+@[measurability, fun_prop, nolint unusedArguments]
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) :=
   by
@@ -204,7 +205,7 @@ lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     intro i
     simpa [takePrefix] using (measurable_pi_apply (Fin.castLE hmn i))
 
-@[nolint unusedArguments]
+@[measurability, nolint unusedArguments]
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
     (hS : MeasurableSet S) : MeasurableSet (extendSet (α:=α) hmn S) :=
   (takePrefix_measurable (α:=α) hmn) hS
@@ -399,15 +400,13 @@ def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (�
 lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
     reindex (α:=α) π x i = x (π i) := rfl
 
-@[nolint unusedArguments]
+@[measurability, fun_prop, nolint unusedArguments]
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) :=
   by
     rw [measurable_pi_iff]
     intro i
     simpa [reindex] using (measurable_pi_apply (π i))
-
-attribute [measurability, fun_prop] measurable_prefixProj takePrefix_measurable measurable_reindex
 
 /--
 The path law (or joint distribution) of a stochastic process.

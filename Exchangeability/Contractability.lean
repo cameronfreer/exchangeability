@@ -369,7 +369,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   have hσ_val : (σ (ι i)).val = k i := by simpa [kFin] using congrArg Fin.val (hσ_apply i)
   simpa [ι] using hσ_val
 
-/-- Helper: relabeling coordinates by a finite permutation is measurable as a map
+/- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
 lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     Measurable (fun (h : Fin n → α) => fun i => h (σ i)) := by

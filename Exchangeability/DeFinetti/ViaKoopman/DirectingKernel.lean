@@ -47,6 +47,7 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 /-- Projection onto the first coordinate. -/
 def π0 : Ω[α] → α := fun ω => ω 0
 
+@[measurability, fun_prop]
 lemma measurable_pi0 : Measurable (π0 (α := α)) := measurable_pi_apply 0
 
 /-! ## Regular conditional distribution kernel -/
@@ -75,6 +76,7 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   fun ω => (rcdKernel (μ := μ)) ω
 
 /-- ν evaluation on measurable sets is measurable in the parameter. -/
+@[measurability]
 lemma ν_eval_measurable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     {s : Set α} (hs : MeasurableSet s) :
