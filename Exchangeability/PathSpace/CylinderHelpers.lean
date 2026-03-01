@@ -239,27 +239,26 @@ section CylinderBridge
 
 variable {α : Type*} [MeasurableSpace α]
 
-/-- Drop the first coordinate of a path. -/
-def drop (f : ℕ → α) : ℕ → α := fun n => f (n + 1)
+/-- Drop the first coordinate of a path (alias for `shift`). -/
+abbrev drop : (ℕ → α) → (ℕ → α) := shift
 
 omit [MeasurableSpace α] in
 @[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
-    drop f n = f (n + 1) := rfl
+    drop f n = f (n + 1) := shift_apply f n
 
 @[measurability, fun_prop]
-lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
-  simpa [drop] using (measurable_shift (α := α))
+lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := shift_measurable
 
 omit [MeasurableSpace α] in
-/-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/
+/-- `tailCylinder` is the preimage of a standard cylinder under `shift`. -/
 lemma tailCylinder_eq_preimage_cylinder
     {r : ℕ} {C : Fin r → Set α} :
     tailCylinder (α:=α) r C
-      = (drop : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
+      = (shift : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
   ext f
   constructor <;> intro hf
-  · simpa [tailCylinder, drop, cylinder]
-  · simpa [tailCylinder, drop, cylinder]
+  · simpa [tailCylinder, shift, cylinder]
+  · simpa [tailCylinder, shift, cylinder]
 
 omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
