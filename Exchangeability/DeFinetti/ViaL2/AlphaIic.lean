@@ -81,6 +81,7 @@ noncomputable def alphaIic
       (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose ω))
 
 /-- Measurability of the raw α_{Iic t}. -/
+@[measurability, fun_prop]
 lemma alphaIic_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

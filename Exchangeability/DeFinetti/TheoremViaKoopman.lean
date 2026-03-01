@@ -108,46 +108,12 @@ private lemma conditionallyIID_of_path_ciid
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (h : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i)) :
     ConditionallyIID μ X := by
-  -- Extract the directing measure ν' on path space
-  obtain ⟨ν', hν'_prob, hν'_meas, h_marginal⟩ := h
-  -- Define the pathify map φ : Ω → (ℕ → ℝ)
-  let φ : Ω → (ℕ → ℝ) := fun ω i => X i ω
-  have hφ_meas : Measurable φ := measurable_pi_lambda _ hX_meas
-  -- Define ν = ν' ∘ φ as the directing measure on Ω
-  let ν : Ω → Measure ℝ := fun ω => ν' (φ ω)
-  refine ⟨ν, ?_, ?_, ?_⟩
-  · -- IsProbabilityMeasure (ν ω) for all ω
-    intro ω
-    exact hν'_prob (φ ω)
-  · -- Measurability: ∀ B, MeasurableSet B → Measurable (fun ω => ν ω B)
-    intro B hB
-    exact (hν'_meas B hB).comp hφ_meas
-  · -- Marginal condition
-    intro m k hk
-    -- Use the fact that μ_path μ X = μ.map φ
-    have h_path_def : μ_path μ X = μ.map φ := rfl
-    -- Specialize h_marginal
-    specialize h_marginal m k hk
-    -- LHS transformation: coordinates on path space compose with φ
-    have h_lhs : Measure.map (fun ω' => fun i => ω' (k i)) (μ.map φ)
-               = Measure.map (fun ω => fun i => X (k i) ω) μ := by
-      rw [Measure.map_map]
-      · rfl
-      · exact measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
-      · exact hφ_meas
-    -- RHS transformation: bind distributes over map
-    -- (μ.map φ).bind g = join (map g (μ.map φ)) = join (map (g ∘ φ) μ) = μ.bind (g ∘ φ)
-    have h_rhs : (μ.map φ).bind (fun ω' => Measure.pi fun (_ : Fin m) => ν' ω')
-               = μ.bind (fun ω => Measure.pi fun (_ : Fin m) => ν ω) := by
-      simp only [Measure.bind]
-      congr 1
-      have h_meas_pi : Measurable fun ω' => Measure.pi fun (_ : Fin m) => ν' ω' :=
-        measurable_measure_pi ν' hν'_prob hν'_meas
-      rw [Measure.map_map h_meas_pi hφ_meas]
-      rfl
-    -- Combine
-    rw [h_path_def] at h_marginal
-    rw [← h_lhs, h_marginal, h_rhs]
+  have h_path_ciid :
+      ConditionallyIID (μ.map (pathify X))
+        (fun i (ω : ℕ → ℝ) => ω i) := by
+    simpa [Exchangeability.Bridge.μ_path] using h
+  simpa [Exchangeability.Bridge.μ_path] using
+    conditionallyIID_transfer (μ := μ) X hX_meas h_path_ciid
 
 @[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman

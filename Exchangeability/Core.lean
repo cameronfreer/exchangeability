@@ -84,7 +84,10 @@ lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
 
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) :=
-  measurable_pi_lambda _ (fun i => measurable_pi_apply (↑i : ℕ))
+  by
+    exact
+      (measurable_pi_lambda (f := fun x : ℕ → α => fun i : Fin n => x i)
+        (fun i => (measurable_pi_apply (δ := ℕ) (X := fun _ : ℕ => α) (a := (i : ℕ)))))
 
 /--
 Cylinder set determined by the first `n` coordinates.
@@ -196,7 +199,8 @@ set_option linter.unusedSectionVars false
 @[nolint unusedArguments]
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) :=
-  measurable_pi_lambda _ (fun i => measurable_pi_apply (Fin.castLE hmn i))
+  by
+    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (Fin.castLE hmn i))
 
 @[nolint unusedArguments]
 lemma extendSet_measurable {m n : ℕ} {S : Set (Fin m → α)} {hmn : m ≤ n}
@@ -396,9 +400,10 @@ lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
 @[nolint unusedArguments]
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) :=
-  measurable_pi_lambda _ (fun i => measurable_pi_apply (π i))
+  by
+    exact measurable_pi_lambda _ (fun i => measurable_pi_apply (π i))
 
-attribute [measurability] measurable_prefixProj takePrefix_measurable measurable_reindex
+attribute [measurability, fun_prop] measurable_prefixProj takePrefix_measurable measurable_reindex
 
 /--
 The path law (or joint distribution) of a stochastic process.
@@ -463,12 +468,12 @@ lemma fullyExchangeable_iff_pathLaw_invariant {μ : Measure Ω}
   constructor
   · intro hFull π
     rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
-      (measurable_pi_lambda _ (fun i => hX i))]
+      (by fun_prop)]
     exact hFull π
   · intro hPath π
     have := hPath π
     rwa [Measure.map_map (measurable_reindex (α:=α) (π:=π))
-      (measurable_pi_lambda _ (fun i => hX i))] at this
+      (by fun_prop)] at this
 
 /-!
 ### Auxiliary combinatorics: approximating infinite permutations
@@ -609,10 +614,10 @@ lemma marginals_perm_eq {μ : Measure Ω} (X : ℕ → Ω → α)
     have hm : n ≤ m := le_permBound (π:=π) (n:=n)
     set σ := approxPerm (π:=π) (n:=n) with hσ_def
     have hσ := hμ m σ
-    have hX₁ : Measurable fun ω => fun i : Fin m => X i ω :=
-      measurable_pi_lambda _ (fun i => hX i)
-    have hX₂ : Measurable fun ω => fun i : Fin m => X (σ i) ω :=
-      measurable_pi_lambda _ (fun i => hX _)
+    have hX₁ : Measurable fun ω => fun i : Fin m => X i ω := by
+      fun_prop
+    have hX₂ : Measurable fun ω => fun i : Fin m => X (σ i) ω := by
+      fun_prop
     have hproj : Measurable (takePrefix (α:=α) hm) := takePrefix_measurable (α:=α) hm
     have hmap₁ :=
       Measure.map_map (μ:=μ)
@@ -697,7 +702,7 @@ private lemma pathLaw_map_reindex_comm {μ : Measure Ω} {X : ℕ → Ω → α}
   rw [hμX]
   simp only [pathLaw]
   rw [Measure.map_map (measurable_reindex (α:=α) (π:=π))
-    (measurable_pi_lambda _ (fun i => hX i))]
+    (by fun_prop)]
   rfl
 
 @[nolint unusedArguments]
@@ -712,13 +717,18 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     let μX := pathLaw (α:=α) μ X
     have hμ_univ : μ Set.univ = 1 := measure_univ
     have hμX_univ : μX Set.univ = 1 := by
-      simp [μX, pathLaw, Measure.map_apply_of_aemeasurable,
-        (measurable_pi_lambda _ (fun i => hX i)).aemeasurable, hμ_univ]
+      have hX_meas : Measurable fun ω => fun i : ℕ => X i ω := by
+        exact measurable_pi_lambda _ (fun i => hX i)
+      dsimp [μX, pathLaw]
+      rw [Measure.map_apply_of_aemeasurable (hX_meas.aemeasurable) MeasurableSet.univ]
+      simp [hμ_univ]
     haveI : IsProbabilityMeasure μX := ⟨by simpa using hμX_univ⟩
     have hμXπ_univ :
         Measure.map (reindex (α:=α) π) μX Set.univ = 1 := by
-      simp [Measure.map_apply_of_aemeasurable,
-        (measurable_reindex (α:=α) (π:=π)).aemeasurable, hμX_univ]
+      rw [Measure.map_apply_of_aemeasurable
+        (by simpa using (measurable_reindex (α:=α) (π:=π)).aemeasurable)
+        MeasurableSet.univ]
+      simp [hμX_univ]
     haveI : IsProbabilityMeasure (Measure.map (reindex (α:=α) π) μX) :=
       ⟨by simpa using hμXπ_univ⟩
 

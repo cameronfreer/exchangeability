@@ -121,9 +121,11 @@ example :
   have hp : Measurable p := by
     exact (measurable_pi_apply (0 : Fin 2)).prod_mk (measurable_pi_apply (1 : Fin 2))
   have h_meas_left : Measurable (fun ω i : Fin 2 => X (σ i : ℕ) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (σ i : ℕ))
+    by
+      fun_prop
   have h_meas_right : Measurable (fun ω i : Fin 2 => X (i : ℕ) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (i : ℕ))
+    by
+      fun_prop
 
   have h := congrArg (fun ν => Measure.map p ν) hσ
   rw [Measure.map_map hp h_meas_left, Measure.map_map hp h_meas_right] at h

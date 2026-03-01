@@ -81,7 +81,7 @@ omit [MeasurableSpace β] in
 lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
     shiftSeq d f n = f (n + d) := rfl
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) :=
   measurable_pi_lambda _ (fun n => measurable_pi_apply (n + d))

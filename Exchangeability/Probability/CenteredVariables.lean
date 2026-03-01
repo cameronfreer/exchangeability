@@ -87,13 +87,13 @@ lemma centered_uniform_covariance
 
     -- h is measurable
     have h_meas : Measurable h := by
-      refine measurable_pi_lambda _ (fun i => (measurable_pi_apply i).sub measurable_const)
+      fun_prop
 
     -- Input functions are measurable
-    have hL_meas : Measurable (fun ω (i : Fin n) => f (X (k i) ω)) :=
-      measurable_pi_lambda _ (fun i => hf_meas.comp (hX_meas (k i)))
-    have hR_meas : Measurable (fun ω (i : Fin n) => f (X (↑i) ω)) :=
-      measurable_pi_lambda _ (fun i => hf_meas.comp (hX_meas i))
+    have hL_meas : Measurable (fun ω (i : Fin n) => f (X (k i) ω)) := by
+      fun_prop
+    have hR_meas : Measurable (fun ω (i : Fin n) => f (X (↑i) ω)) := by
+      fun_prop
 
     -- Apply map_map: map (h ∘ g) μ = map h (map g μ)
     calc Measure.map (fun ω i => f (X (k i) ω) - m) μ

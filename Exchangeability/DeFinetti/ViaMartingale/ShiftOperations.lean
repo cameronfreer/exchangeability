@@ -114,8 +114,8 @@ This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
 lemma comap_tailRV_le {t : Ω → ℕ → α} :
     MeasurableSpace.comap (tailRV t) inferInstance ≤
     MeasurableSpace.comap t inferInstance := by
-  have hShift : Measurable (fun s : ℕ → α => (fun n => s (n + 1))) :=
-    measurable_pi_lambda _ (fun n => measurable_pi_apply (n + 1))
+  have hShift : Measurable (fun s : ℕ → α => (fun n => s (n + 1))) := by
+    fun_prop
   intro S hS
   obtain ⟨A, hA, rfl⟩ := hS
   exact ⟨(fun s : ℕ → α => (fun n => s (n + 1)) ) ⁻¹' A, hA.preimage hShift, rfl⟩

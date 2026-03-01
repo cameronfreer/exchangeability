@@ -72,10 +72,11 @@ which is measurable by definition of the product σ-algebra.
 -/
 @[measurability, fun_prop]
 lemma shift_measurable [MeasurableSpace α] : Measurable (@shift α) := by
-  exact measurable_pi_lambda _ (fun i => measurable_pi_apply (i + 1))
+  refine measurable_pi_lambda _ (fun i => ?_)
+  simpa [shift, Function.comp] using (measurable_pi_apply (i + 1))
 
-/-- Alternative name for `shift_measurable` (used in ergodic theory contexts). -/
-@[measurability]
+/- Alternative name for `shift_measurable` (used in ergodic theory contexts). -/
+@[measurability, fun_prop]
 lemma measurable_shift [MeasurableSpace α] : Measurable (@shift α) := shift_measurable
 
 /-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.

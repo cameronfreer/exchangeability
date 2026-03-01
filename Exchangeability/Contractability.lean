@@ -144,13 +144,13 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
       (f:=fun ω => fun i : ℕ => X (π i) ω)
       (g:=proj)
       hproj_meas
-      (measurable_pi_lambda _ (fun i => hX_meas (π i)))
+      (by fun_prop)
   have hmap₂ :=
     Measure.map_map (μ:=μ)
       (f:=fun ω => fun i : ℕ => X i ω)
       (g:=proj)
       hproj_meas
-      (measurable_pi_lambda _ (fun i => hX_meas i))
+      (by fun_prop)
   have hprojσ :
       proj ∘ (fun ω => fun i : ℕ => X (π i) ω)
         = fun ω => fun i : Fin n => X (σ i) ω := by
@@ -457,9 +457,10 @@ private lemma exchangeable_preserves_projection {μ : Measure Ω} {X : ℕ → �
     Measure.map (proj ∘ fun ω j => X j.val ω) μ := by
   intro ι proj
   have hproj_meas : Measurable proj :=
-    measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
-  rw [← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas (σ j).val)),
-      ← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas j.val))]
+    by
+      fun_prop
+  rw [← Measure.map_map hproj_meas (by fun_prop),
+      ← Measure.map_map hproj_meas (by fun_prop)]
   exact congrArg (Measure.map proj) hexch
 
 /--
@@ -515,22 +516,26 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     let ι : Fin (m' + 1) → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
     let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
 
-    have hproj_meas : Measurable proj :=
-      measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
+    have hproj_meas : Measurable proj := by
+      exact measurable_pi_lambda _ (fun i => measurable_pi_apply (ι i))
 
     -- Project both sides to the first m' + 1 coordinates
     have hproj_eq : Measure.map (proj ∘ fun ω j => X (σ j).val ω) μ =
                      Measure.map (proj ∘ fun ω j => X j.val ω) μ := by
-      rw [← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas (σ j).val)),
-          ← Measure.map_map hproj_meas (measurable_pi_lambda _ (fun j => hX_meas j.val))]
+      rw [← Measure.map_map hproj_meas (by fun_prop),
+          ← Measure.map_map hproj_meas (by fun_prop)]
       exact congrArg (Measure.map proj) hexch
 
     -- The projected functions match our desired subsequences
     have hlhs_eq : (proj ∘ fun ω j => X (σ j).val ω) = (fun ω i => X (k i) ω) := by
-      ext ω i; simp only [proj, Function.comp_apply, ι]; rw [hσ i]
+      ext ω i
+      have hσi : (σ (ι i)).val = k i := by
+        simpa [ι] using hσ i
+      simp [proj, Function.comp_apply, hσi]
 
     have hrhs_eq : (proj ∘ fun ω j => X j.val ω) = (fun ω i => X i.val ω) := by
-      ext ω i; simp only [proj, Function.comp_apply, ι]
+      ext ω i
+      simp [proj, Function.comp_apply, ι]
 
     rwa [hlhs_eq, hrhs_eq] at hproj_eq
 

@@ -312,11 +312,14 @@ lemma pathSpace_contractable_of_contractable
   intro m k hk
   -- The path-space map is the pushforward of the original contractability
   have hφ_meas : Measurable (fun ω' i => X i ω') :=
-    measurable_pi_lambda _ (fun i => hX_meas i)
+    by
+      fun_prop
   have hk_meas : Measurable (fun (ω : Ω[α]) i => ω (k i)) :=
-    measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+    by
+      fun_prop
   have hid_meas : Measurable (fun (ω : Ω[α]) (i : Fin m) => ω i.val) :=
-    measurable_pi_lambda _ (fun i => measurable_pi_apply i.val)
+    by
+      fun_prop
   -- Rewrite using composition
   rw [Measure.map_map hk_meas hφ_meas, Measure.map_map hid_meas hφ_meas]
   -- The compositions give the original contractability
@@ -345,9 +348,11 @@ lemma measure_map_shift_eq_of_contractable
     Measure.map (fun ω' i => X (i + 1) ω') μ = Measure.map (fun ω' i => X i ω') μ := by
   -- Both measures are probability measures
   have hφ_meas : Measurable (fun ω' i => X i ω') :=
-    measurable_pi_lambda _ (fun i => hX_meas i)
+    by
+      fun_prop
   have hφ1_meas : Measurable (fun ω' i => X (i + 1) ω') :=
-    measurable_pi_lambda _ (fun i => hX_meas (i + 1))
+    by
+      fun_prop
   haveI h1 : IsProbabilityMeasure (Measure.map (fun ω' i => X (i + 1) ω') μ) :=
     Measure.isProbabilityMeasure_map hφ1_meas.aemeasurable
   haveI h2 : IsProbabilityMeasure (Measure.map (fun ω' i => X i ω') μ) :=
@@ -392,7 +397,8 @@ lemma pathSpace_shift_preserving_of_contractable
   · exact shift_measurable
   · -- Use contractability with k(i) = i + 1
     have hφ_meas : Measurable (fun ω' i => X i ω') :=
-      measurable_pi_lambda _ (fun i => hX_meas i)
+      by
+        fun_prop
     rw [Measure.map_map shift_measurable hφ_meas]
     -- shift ∘ φ = (fun ω i => X (i+1) ω)
     have h_comp : shift ∘ (fun ω' i => X i ω') = fun ω' i => X (i + 1) ω' := by
@@ -420,7 +426,8 @@ lemma conditionallyIID_transfer
   obtain ⟨ν_path, hν_prob, hν_meas, h_bind⟩ := hCIID_path
   -- Define the directing measure on original space via composition
   let φ : Ω → Ω[α] := fun ω' i => X i ω'
-  have hφ_meas : Measurable φ := measurable_pi_lambda _ (fun i => hX_meas i)
+  have hφ_meas : Measurable φ := by
+    fun_prop
   -- The directing measure on Ω is ν_path ∘ φ
   let ν : Ω → Measure α := fun ω => ν_path (φ ω)
   use ν
@@ -440,7 +447,8 @@ lemma conditionallyIID_transfer
     have h_lhs : Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ =
         Measure.map (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) (μ.map φ) := by
       have hk_meas : Measurable (fun (ω : Ω[α]) => fun i : Fin m => ω (k i)) :=
-        measurable_pi_lambda _ (fun i => measurable_pi_apply (k i))
+        by
+          fun_prop
       -- Use map_map forward: map f (map g μ) = map (f ∘ g) μ
       rw [Measure.map_map hk_meas hφ_meas]
       -- The composition (fun ω i => ω (k i)) ∘ φ = (fun ω i => X (k i) ω)
@@ -557,9 +565,11 @@ lemma indicator_product_bridge_contractable
   -- Step 5: Integral at ρ-indices equals integral at consecutive indices
   have h_ρ_to_consec : ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
     have hρ_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω (ρ j)) :=
-      measurable_pi_lambda _ (fun j => measurable_pi_apply (ρ j))
+      by
+        fun_prop
     have hconsec_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω j.val) :=
-      measurable_pi_lambda _ (fun j => measurable_pi_apply j.val)
+      by
+        fun_prop
     have hg_meas : Measurable (fun ω' : Fin m → α => ∏ j, fs_σ j (ω' j)) :=
       Finset.measurable_prod Finset.univ (fun j _ => (hfs_meas j).comp (measurable_pi_apply j))
     calc ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ

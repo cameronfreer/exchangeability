@@ -158,7 +158,7 @@ lemma firstRCylinder_measurable_ambient
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
 /-- The firstRMap is measurable when all coordinates are measurable. -/
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     Measurable (firstRMap X r) :=
@@ -192,9 +192,7 @@ lemma firstRSigma_mono
   have hπ : Measurable π := by
     exact
       measurable_pi_lambda _ (fun i =>
-        by
-          simp only [π]
-          exact measurable_pi_apply (show Fin s from ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩))
+        measurable_pi_apply (show Fin s from ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩))
   -- Preimage factors through composition
   rw [h_comp, Set.preimage_comp]
   exact ⟨π ⁻¹' u, hπ hu, rfl⟩
@@ -244,7 +242,7 @@ omit [MeasurableSpace α] in
 @[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
     drop f n = f (n + 1) := rfl
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
   exact measurable_pi_lambda _ (fun n => measurable_pi_apply (n + 1))
 
