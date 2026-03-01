@@ -45,7 +45,7 @@ def pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] (X : ℕ �
     Ω → PathSpace α :=
   fun ω n => X n ω
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_pathify {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α] {X : ℕ → Ω → α}
     (hX_meas : ∀ n, Measurable (X n)) :
     Measurable (pathify X) :=

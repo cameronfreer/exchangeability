@@ -228,8 +228,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
         conv_rhs => rw [← h_final]
 
   -- Measurability of seq0 and seq1
-  have hU_meas : Measurable U := by measurability
-  have hW_meas : Measurable W := by measurability
+  have hU_meas : Measurable U := by fun_prop
+  have hW_meas : Measurable W := by fun_prop
   have hW'_meas : Measurable W' := by
     simpa [W'] using
       (measurable_consRV (x := fun ω => X r ω) (t := W) (hX r) hW_meas)
@@ -314,8 +314,8 @@ lemma condExp_indicator_eq_of_contractable
   let W' := consRV (fun ω => X r ω) W
 
   -- Measurability
-  have hU : Measurable U := by measurability
-  have hW : Measurable W := by measurability
+  have hU : Measurable U := by fun_prop
+  have hW : Measurable W := by fun_prop
   have hW' : Measurable W' := by
     simpa [W'] using
       (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW)
@@ -472,8 +472,8 @@ lemma condExp_Xr_indicator_eq_of_contractable
   -- This uses condExp_indicator_eq_of_law_eq_of_comap_le (fully proved)
 
   -- Measurability facts
-  have hU_meas : Measurable U := by measurability
-  have hW_meas : Measurable W := by measurability
+  have hU_meas : Measurable U := by fun_prop
+  have hW_meas : Measurable W := by fun_prop
   have hW'_meas : Measurable W' := by
     simpa [W'] using
       (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW_meas)

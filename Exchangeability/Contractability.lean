@@ -138,7 +138,7 @@ lemma FullyExchangeable.exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
   let π := extendFinPerm σ
   have hπ := hX π
   let proj : (ℕ → α) → (Fin n → α) := fun f i => f i.val
-  have hproj_meas : Measurable proj := by measurability
+  have hproj_meas : Measurable proj := by fun_prop
   have hmap₁ :=
     Measure.map_map (μ:=μ)
       (f:=fun ω => fun i : ℕ => X (π i) ω)
@@ -373,7 +373,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
 from (Fin n → α) to itself (with product σ-algebra). -/
 lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     Measurable (fun (h : Fin n → α) => fun i => h (σ i)) := by
-  measurability
+  fun_prop
 
 /-- Helper lemma: Permuting the output coordinates doesn't change the measure.
 If f and g produce the same measure, then f ∘ σ and g ∘ σ produce the same measure. -/

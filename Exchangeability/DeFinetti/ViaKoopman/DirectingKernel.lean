@@ -76,7 +76,7 @@ noncomputable def ν {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   fun ω => (rcdKernel (μ := μ)) ω
 
 /-- ν evaluation on measurable sets is measurable in the parameter. -/
-@[measurability]
+@[measurability, fun_prop]
 lemma ν_eval_measurable
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     {s : Set α} (hs : MeasurableSet s) :
