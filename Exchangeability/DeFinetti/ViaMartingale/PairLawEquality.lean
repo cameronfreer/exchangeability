@@ -181,11 +181,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
 
   -- Measurability of concat
   have h_concat_meas : Measurable concat := by
-    refine measurable_pi_lambda (f := concat) ?_
-    intro n
-    by_cases hn : n < r
-    · simpa [concat, hn] using ((measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst)
-    · simpa [concat, hn] using ((measurable_pi_apply (n - r)).comp measurable_snd)
+    refine measurable_pi_lambda _ ?_
+    intro n; by_cases hn : n < r <;> simp [concat, hn] <;> fun_prop
 
   -- Measurability of split
   have h_split_meas : Measurable split := by fun_prop

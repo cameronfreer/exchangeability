@@ -95,11 +95,8 @@ lemma measurable_path {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n)) : M
 lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
     Measurable x → Measurable t → Measurable (consRV x t) := by
   intro hx ht
-  simpa [consRV] using
-    (measurable_pi_lambda (f := consRV x t) (fun n => by
-      cases n with
-      | zero => exact hx
-      | succ k => exact (measurable_pi_apply k).comp ht))
+  refine measurable_pi_lambda _ ?_
+  intro n; cases n <;> simp [consRV] <;> fun_prop
 
 /-- Tail is measurable when the original sequence is measurable. -/
 @[measurability, fun_prop]
