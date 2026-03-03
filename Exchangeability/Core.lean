@@ -240,8 +240,7 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
   -- Transport `S` along the inclusion into the initial segment.
   let ι : s → Fin N := fun x => ⟨x.1, h_mem x.1 x.2⟩
   let pull : (Fin N → α) → (∀ i : s, α) := fun x => fun y => x (ι y)
-  have hpull_meas : Measurable pull := by
-    measurability
+  have hpull_meas : Measurable pull := by fun_prop
   have hs_eq :
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
         prefixCylinder (α:=α) (pull ⁻¹' S) := by

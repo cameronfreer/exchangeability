@@ -88,7 +88,7 @@ lemma blockAvg_eq_cesaro_shifted {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α �
 
 /-! ### Measurability of Block Averages -/
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measurable f) :
     Measurable (blockAvg (α := α) m n k f) := by
   unfold blockAvg

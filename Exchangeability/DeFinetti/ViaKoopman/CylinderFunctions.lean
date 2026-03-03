@@ -53,7 +53,7 @@ lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
     (_hφ : Measurable φ) :
     Measurable (cylinderFunction φ) := by
   classical
-  simpa [cylinderFunction] using _hφ.comp (by measurability :
+  simpa [cylinderFunction] using _hφ.comp (by fun_prop :
     Measurable fun ω : ℕ → α => fun k : Fin m => ω k.val)
 
 /-- Measurability of product cylinders. -/
