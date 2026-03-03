@@ -22,7 +22,6 @@ Originally extracted from `MartingaleHelpers.lean` for broader reusability.
 * `finCylinder r C`: Cylinder for functions with domain `Fin r`
 * `firstRMap X r`: Map collecting the first `r` coordinates of a process
 * `firstRCylinder X r C`: Finite block cylinder event on the first `r` coordinates
-* `drop`: Drop the first coordinate of a path
 
 ## Main results
 
@@ -236,16 +235,6 @@ end FirstBlockCylinder
 section CylinderBridge
 
 variable {α : Type*} [MeasurableSpace α]
-
-/-- Drop the first coordinate of a path (alias for `shift`). -/
-abbrev drop : (ℕ → α) → (ℕ → α) := shift
-
-omit [MeasurableSpace α] in
-@[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
-    drop f n = f (n + 1) := shift_apply f n
-
-@[measurability, fun_prop]
-lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := shift_measurable
 
 omit [MeasurableSpace α] in
 /-- `tailCylinder` is the preimage of a standard cylinder under `shift`. -/
