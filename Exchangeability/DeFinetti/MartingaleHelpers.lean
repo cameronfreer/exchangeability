@@ -44,7 +44,7 @@ export PathSpace (tailCylinder tailCylinder_measurable cylinder finCylinder
   firstRCylinder_eq_preimage_finCylinder firstRCylinder_measurable_in_firstRSigma
   firstRCylinder_measurable_ambient measurable_firstRMap firstRSigma_le_ambient
   firstRSigma_mono firstRCylinder_zero mem_firstRCylinder_iff firstRCylinder_univ
-  firstRCylinder_inter drop drop_apply measurable_drop tailCylinder_eq_preimage_cylinder
+  firstRCylinder_inter tailCylinder_eq_preimage_cylinder
   mem_cylinder_iff mem_tailCylinder_iff cylinder_measurable_set cylinder_zero
   tailCylinder_zero' cylinder_univ tailCylinder_univ cylinder_inter)
 
@@ -81,10 +81,10 @@ omit [MeasurableSpace β] in
 lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
     shiftSeq d f n = f (n + d) := rfl
 
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_shiftSeq {d : ℕ} :
-    Measurable (shiftSeq (β:=β) d) :=
-  measurable_pi_lambda _ (fun n => measurable_pi_apply (n + d))
+    Measurable (shiftSeq (β:=β) d) := by
+  unfold shiftSeq; fun_prop
 
 lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
     {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :

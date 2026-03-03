@@ -88,6 +88,7 @@ lemma blockAvg_eq_cesaro_shifted {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α �
 
 /-! ### Measurability of Block Averages -/
 
+@[measurability, fun_prop]
 lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measurable f) :
     Measurable (blockAvg (α := α) m n k f) := by
   unfold blockAvg
@@ -287,9 +288,11 @@ lemma integral_prod_reindex_of_contractable
   have h_map := hContract m k hk
   -- The measurable function for mapping to Fin m → α
   have h_meas_orig : Measurable (fun ω (i : Fin m) => ω i.val : Ω[α] → (Fin m → α)) :=
-    measurable_pi_iff.mpr fun _ => measurable_pi_apply _
+    by
+      fun_prop
   have h_meas_reindex : Measurable (fun ω i => ω (k i) : Ω[α] → (Fin m → α)) :=
-    measurable_pi_iff.mpr fun _ => measurable_pi_apply _
+    by
+      fun_prop
   -- The integrand on Fin m → α
   let F : (Fin m → α) → ℝ := fun ω' => ∏ i, fs i (ω' i)
   have hF_meas_base : Measurable F :=

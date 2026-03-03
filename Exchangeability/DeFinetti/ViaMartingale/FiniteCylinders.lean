@@ -75,7 +75,7 @@ lemma finFutureSigma_le_futureFiltration
     simp only [Function.comp_apply, proj, shiftRV]
 
   -- Provide witness for comap: s ∈ futureFiltration means ∃ t', s = (shiftRV X (m+1)) ⁻¹' t'
-  refine ⟨proj ⁻¹' t, (by measurability : Measurable proj) ht, ?_⟩
+  refine ⟨proj ⁻¹' t, (by fun_prop : Measurable proj) ht, ?_⟩
 
   -- Show s = (shiftRV X (m+1)) ⁻¹' (proj ⁻¹' t)
   rw [← Set.preimage_comp, ← h_factor]
@@ -287,9 +287,9 @@ lemma contractable_triple_pushforward
     -- Convert to map equality
     -- First, prove measurability of the triple functions
     have h_meas_future : Measurable (fun ω => (Z_r ω, X r ω, Y_future ω)) :=
-      Measurable.prodMk (by measurability) (Measurable.prodMk (hX_meas r) (by measurability))
+      Measurable.prodMk (by fun_prop) (Measurable.prodMk (hX_meas r) (by fun_prop))
     have h_meas_tail : Measurable (fun ω => (Z_r ω, X r ω, Y_tail ω)) :=
-      Measurable.prodMk (by measurability) (Measurable.prodMk (hX_meas r) (by measurability))
+      Measurable.prodMk (by fun_prop) (Measurable.prodMk (hX_meas r) (by fun_prop))
     -- The rectangle is measurable
     have h_meas_rect : MeasurableSet ((Set.univ.pi A) ×ˢ B ×ˢ (Set.univ.pi C)) :=
       (MeasurableSet.univ_pi hA).prod (hB.prod (MeasurableSet.univ_pi hC))

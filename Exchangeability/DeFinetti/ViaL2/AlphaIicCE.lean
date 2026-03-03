@@ -81,6 +81,7 @@ Note: Previously had BorelSpace typeclass instance resolution issues.
 The conditional expectation `condExp μ (tailSigma X) f` is measurable by
 `stronglyMeasurable_condExp.measurable`, but Lean can't synthesize the required
 `BorelSpace` instance automatically. This should be straightforward to fix. -/
+@[measurability, fun_prop]
 lemma alphaIicCE_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

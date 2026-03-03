@@ -181,17 +181,11 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
 
   -- Measurability of concat
   have h_concat_meas : Measurable concat := by
-    rw [measurable_pi_iff]; intro n
-    by_cases hn : n < r
-    · simp only [concat, hn, dite_true]
-      exact (measurable_pi_apply (⟨n, hn⟩ : Fin r)).comp measurable_fst
-    · simp only [concat, hn, dite_false]
-      exact (measurable_pi_apply (n - r : ℕ)).comp measurable_snd
+    refine measurable_pi_lambda _ ?_
+    intro n; by_cases hn : n < r <;> simp [concat, hn] <;> fun_prop
 
   -- Measurability of split
-  have h_split_meas : Measurable split := Measurable.prod
-    (measurable_pi_iff.mpr fun i => measurable_pi_apply i.val)
-    (measurable_pi_iff.mpr fun n => measurable_pi_apply (r + n))
+  have h_split_meas : Measurable split := by fun_prop
 
   -- Define concatenated sequences
   let seq0 : Ω → ℕ → α := fun ω => concat (U ω, W ω)
@@ -203,7 +197,8 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
     by_cases hn : n < r
     · simp only [hn, dite_true, ite_true]
     · simp only [hn, dite_false, ite_false]
-      congr 1; omega
+      congr 1
+      omega
 
   -- seq1 ω n = X (φ₁ n) ω
   have h_seq1 : ∀ ω n, seq1 ω n = X (phi1 r m n) ω := fun ω n => by
@@ -229,14 +224,11 @@ lemma pair_law_eq_of_contractable [IsProbabilityMeasure μ]
         conv_rhs => rw [← h_final]
 
   -- Measurability of seq0 and seq1
-  have hU_meas : Measurable U := measurable_pi_iff.mpr fun i => hX i.val
-  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX (m + 1 + n)
+  have hU_meas : Measurable U := by fun_prop
+  have hW_meas : Measurable W := by fun_prop
   have hW'_meas : Measurable W' := by
-    simp only [W']
-    rw [measurable_pi_iff]; intro n
-    match n with
-    | 0 => exact hX r
-    | n' + 1 => exact hX (m + 1 + n')
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX r) hW_meas)
 
   have hseq0_meas : Measurable seq0 := h_concat_meas.comp (hU_meas.prodMk hW_meas)
   have hseq1_meas : Measurable seq1 := h_concat_meas.comp (hU_meas.prodMk hW'_meas)
@@ -318,11 +310,11 @@ lemma condExp_indicator_eq_of_contractable
   let W' := consRV (fun ω => X r ω) W
 
   -- Measurability
-  have hU : Measurable U := by measurability
-  have hW : Measurable W := measurable_pi_lambda _ fun n => hX_meas (m + 1 + n)
-  have hW' : Measurable W' := measurable_pi_lambda _ fun
-    | 0 => hX_meas r
-    | n + 1 => hX_meas (m + 1 + n)
+  have hU : Measurable U := by fun_prop
+  have hW : Measurable W := by fun_prop
+  have hW' : Measurable W' := by
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW)
 
   -- Apply Kallenberg 1.3 with pair law and contraction σ(W) ⊆ σ(W')
   exact condExp_indicator_eq_of_law_eq_of_comap_le U W W' hU hW hW'
@@ -352,22 +344,19 @@ lemma comap_consRV_eq_sup
     obtain ⟨S, hS_meas, rfl⟩ := hs
     -- S is measurable in ℕ → α. We show consRV x t ⁻¹' S ∈ σ(x) ⊔ σ(t).
     -- Key: consRV x t factors through (x, t) via a measurable "cons" function.
-    -- Define consSeq : α × (ℕ → α) → (ℕ → α) by consSeq (a, f) n = if n = 0 then a else f (n-1)
-    let consSeq : α × (ℕ → α) → (ℕ → α) := fun ⟨a, f⟩ n =>
-      match n with
-      | 0 => a
-      | n + 1 => f n
+    -- Define consSeq via consRV on the pair space.
+    let consSeq : α × (ℕ → α) → (ℕ → α) := fun p =>
+      consRV (x := fun q : α × (ℕ → α) => q.1)
+        (t := fun q : α × (ℕ → α) => q.2) p
     -- consRV x t = consSeq ∘ (fun ω => (x ω, t ω))
     have h_factor : consRV x t = consSeq ∘ (fun ω => (x ω, t ω)) := by
       ext ω n
-      simp only [Function.comp_apply, consRV, consSeq]
-      cases n <;> rfl
+      cases n <;> simp [Function.comp_apply, consSeq, consRV]
     -- consSeq is measurable
     have h_consSeq_meas : Measurable consSeq := by
-      rw [measurable_pi_iff]; intro n
-      cases n with
-      | zero => exact measurable_fst
-      | succ k => exact (measurable_pi_apply k).comp measurable_snd
+      simpa [consSeq] using
+        (measurable_consRV (x := fun q : α × (ℕ → α) => q.1)
+          (t := fun q : α × (ℕ → α) => q.2) measurable_fst measurable_snd)
     -- So consRV x t ⁻¹' S = (fun ω => (x ω, t ω)) ⁻¹' (consSeq ⁻¹' S)
     rw [h_factor, Set.preimage_comp]
     -- consSeq ⁻¹' S is measurable in α × (ℕ → α)
@@ -479,14 +468,11 @@ lemma condExp_Xr_indicator_eq_of_contractable
   -- This uses condExp_indicator_eq_of_law_eq_of_comap_le (fully proved)
 
   -- Measurability facts
-  have hU_meas : Measurable U := by measurability
-  have hW_meas : Measurable W := measurable_pi_iff.mpr fun n => hX_meas (m + 1 + n)
+  have hU_meas : Measurable U := by fun_prop
+  have hW_meas : Measurable W := by fun_prop
   have hW'_meas : Measurable W' := by
-    -- consRV x t is measurable when x and t are measurable
-    rw [measurable_pi_iff]; intro n
-    cases n with
-    | zero => exact hX_meas r
-    | succ k => exact (measurable_pi_apply k).comp hW_meas
+    simpa [W'] using
+      (measurable_consRV (x := fun ω => X r ω) (t := W) (hX_meas r) hW_meas)
 
   -- Step 5: Establish conditional independence U ⊥⊥_W X_r
   -- From drop-info E[1_{U∈A}|σ(W')] = E[1_{U∈A}|σ(W)], we derive CondIndep μ U (X r) W

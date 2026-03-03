@@ -121,9 +121,11 @@ example :
   have hp : Measurable p := by
     exact (measurable_pi_apply (0 : Fin 2)).prod_mk (measurable_pi_apply (1 : Fin 2))
   have h_meas_left : Measurable (fun ω i : Fin 2 => X (σ i : ℕ) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (σ i : ℕ))
+    by
+      fun_prop
   have h_meas_right : Measurable (fun ω i : Fin 2 => X (i : ℕ) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (i : ℕ))
+    by
+      fun_prop
 
   have h := congrArg (fun ν => Measure.map p ν) hσ
   rw [Measure.map_map hp h_meas_left, Measure.map_map hp h_meas_right] at h
@@ -162,7 +164,7 @@ example (m : ℝ) (hm : ∀ i, ∫ ω, X i ω ∂μ = m) (i : ℕ) :
       map_eq := h_map }
   -- Apply IdentDistrib.comp with g(x) = (x - m)²
   have h_comp : ProbabilityTheory.IdentDistrib (fun ω => (X i ω - m)^2) (fun ω => (X 0 ω - m)^2) μ μ :=
-    h_id.comp (by measurability : Measurable fun x => (x - m)^2)
+    h_id.comp (by fun_prop : Measurable fun x => (x - m)^2)
   -- Use IdentDistrib.integral_eq
   exact h_comp.integral_eq
 
@@ -182,7 +184,7 @@ example (m : ℝ) (hm : ∀ i, ∫ ω, X i ω ∂μ = m) {i j : ℕ} (hij : i < 
   have h_comp : ProbabilityTheory.IdentDistrib
       (fun ω => (X i ω - m) * (X j ω - m))
       (fun ω => (X 0 ω - m) * (X 1 ω - m)) μ μ :=
-    h_id.comp (by measurability : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+    h_id.comp (by fun_prop : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
   -- Use IdentDistrib.integral_eq
   exact h_comp.integral_eq
 
@@ -228,7 +230,7 @@ example (m : ℝ) (hm : ∀ i, ∫ ω, X i ω ∂μ = m) {i j : ℕ} (hij : i �
     have h_comp : ProbabilityTheory.IdentDistrib
         (fun ω => (X i ω - m) * (X j ω - m))
         (fun ω => (X 0 ω - m) * (X 1 ω - m)) μ μ :=
-      h_id.comp (by measurability : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+      h_id.comp (by fun_prop : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
     exact h_comp.integral_eq
   · -- Case i > j: use contractability with j < i, then symmetry of multiplication
     have hji : j < i := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h_lt) (hij.symm)
@@ -242,7 +244,7 @@ example (m : ℝ) (hm : ∀ i, ∫ ω, X i ω ∂μ = m) {i j : ℕ} (hij : i �
     have h_comp : ProbabilityTheory.IdentDistrib
         (fun ω => (X j ω - m) * (X i ω - m))
         (fun ω => (X 0 ω - m) * (X 1 ω - m)) μ μ :=
-      h_id.comp (by measurability : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
+      h_id.comp (by fun_prop : Measurable fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
     -- Use commutativity to swap: (X_i - m)(X_j - m) = (X_j - m)(X_i - m)
     calc ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
         = ∫ ω, (X j ω - m) * (X i ω - m) ∂μ := by simp only [mul_comm]

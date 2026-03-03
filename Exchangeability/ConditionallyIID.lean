@@ -237,10 +237,10 @@ theorem exchangeable_of_conditionallyIID {μ : Measure Ω} {X : ℕ → Ω → �
   have h_id : Measure.map (fun ω i => X i.val ω) μ =
               μ.bind (fun ω => Measure.pi fun _ : Fin n => ν ω) :=
     hν_eq n (fun i => i.val) (fun _ _ => id)
-  have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas i.val)
-  have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) :=
-    measurable_pi_lambda _ (fun i => measurable_pi_apply (σ i))
+  have hXvec_meas : Measurable (fun ω => fun i : Fin n => X i.val ω) := by
+    fun_prop
+  have hperm_meas : Measurable (fun f : Fin n → α => f ∘ σ) := by
+    fun_prop
   calc Measure.map (fun ω i => X (σ i).val ω) μ
       = Measure.map (fun f => f ∘ σ) (Measure.map (fun ω i => X i.val ω) μ) :=
           (Measure.map_map hperm_meas hXvec_meas).symm

@@ -150,6 +150,7 @@ lemma shiftInvariantSigma_measurable_shift_eq
       exact lt_irrefl _ this
 
 -- Helper: Measurability of iterated shifts follows from measurability of `shift`.
+@[measurability, fun_prop]
 lemma shift_iterate_measurable (n : ℕ) :
     Measurable (shift^[n] : Ω[α] → Ω[α]) := by
   simpa using measurable_shift.iterate n

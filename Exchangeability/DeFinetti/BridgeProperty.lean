@@ -87,7 +87,7 @@ lemma measure_eq_implies_lintegral_prod_eq
 
   -- Measurability of the mapping function
   have hf_meas : Measurable (fun ω => fun i : Fin m => X (k i) ω) := by
-    exact measurable_pi_iff.mpr fun i => hX_meas (k i)
+    measurability
 
   -- Characterization: ω in preimage ↔ ∀ i, X (k i) ω ∈ B i
   have hpre_mem : ∀ ω, ω ∈ ⋂ i : Fin m, (X (k i)) ⁻¹' (B i) ↔ ∀ i, X (k i) ω ∈ B i := by

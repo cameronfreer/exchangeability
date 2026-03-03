@@ -212,8 +212,7 @@ lemma cylinder_fintype {n : ℕ} :
   intro s hs
 
   -- Compute the LHS: (iidProduct ν).map (...) applied to rectangle Set.univ.pi s
-  have h_meas : Measurable (fun f : ℕ → α => fun i : Fin n => f i) := by
-    measurability
+  have h_meas : Measurable (fun f : ℕ → α => fun i : Fin n => f i) := by fun_prop
 
   calc (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) (Set.univ.pi s)
       = iidProduct ν ((fun f : ℕ → α => fun i : Fin n => f i) ⁻¹' (Set.univ.pi s)) := by
@@ -286,7 +285,7 @@ lemma perm_eq {σ : Equiv.Perm ℕ} :
   -- Need to show: (infinitePi ν).map (fun f => f ∘ σ) (Set.pi s t) = ∏ i ∈ s, ν (t i)
   rw [Measure.map_apply _ (.pi s.countable_toSet (fun _ _ => ht _))]
   swap
-  · measurability
+  · fun_prop
 
   -- The preimage under (fun f => f ∘ σ) of Set.pi s t
   -- We'll express this using Finset.map instead of Set.image for cleaner measure computation

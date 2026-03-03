@@ -52,8 +52,8 @@ lemma revFiltration_zero (X : ℕ → Ω → α) :
 
 lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m : ℕ) :
     revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
-  MeasurableSpace.comap_le_iff_le_map.mpr fun _ hs =>
-    (measurable_pi_iff.mpr fun n => hX (m + n)) hs
+  by
+    simpa [revFiltration] using (measurable_iff_comap_le.mp (measurable_shiftRV (X := X) hX (m := m)))
 
 /-! ### Tail σ-Algebra -/
 

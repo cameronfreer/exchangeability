@@ -64,7 +64,7 @@ lemma measurableSpace_pi_nat_le_iSup_fin {α : Type*} [MeasurableSpace α] :
   let g : (Fin (t.sup id + 1) → α) → (t → α) := fun h i => h ⟨i.val,
     Nat.lt_succ_of_le (Finset.le_sup (f := id) i.property)⟩
   exact ⟨g ⁻¹' S,
-    hS_meas.preimage (measurable_pi_lambda _ fun i => measurable_pi_apply _),
+    hS_meas.preimage (by fun_prop),
     Set.preimage_comp.symm⟩
 
 end PiFiniteProjections

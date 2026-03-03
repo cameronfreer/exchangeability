@@ -91,10 +91,10 @@ lemma condExp_shift_eq_condExp
         have h_preimage_0 : X 0 ⁻¹' s = (fun ω (i : Fin 1) => X i.val ω) ⁻¹' S := by
           ext ω
           simp only [Set.mem_preimage, Set.mem_setOf_eq, S, Fin.val_zero]
-        have h_meas_n1 : Measurable (fun ω (i : Fin 1) => X ((n + 1) + i.val) ω) :=
-          measurable_pi_lambda _ (fun i => hX_meas ((n + 1) + i.val))
-        have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) :=
-          measurable_pi_lambda _ (fun i => hX_meas i.val)
+        have h_meas_n1 : Measurable (fun ω (i : Fin 1) => X ((n + 1) + i.val) ω) := by
+          fun_prop
+        have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) := by
+          fun_prop
         rw [Measure.map_apply (hX_meas (n + 1)) hs, Measure.map_apply (hX_meas 0) hs]
         rw [h_preimage_n1, h_preimage_0]
         have h_eq := congrFun (congrArg (·.toOuterMeasure) h1) S

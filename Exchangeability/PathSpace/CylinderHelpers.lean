@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.MeasurableSpace.Constructions
+import Exchangeability.PathSpace.Shift
 
 /-!
 # Cylinder Sets on Path Space
@@ -21,7 +22,6 @@ Originally extracted from `MartingaleHelpers.lean` for broader reusability.
 * `finCylinder r C`: Cylinder for functions with domain `Fin r`
 * `firstRMap X r`: Map collecting the first `r` coordinates of a process
 * `firstRCylinder X r C`: Finite block cylinder event on the first `r` coordinates
-* `drop`: Drop the first coordinate of a path
 
 ## Main results
 
@@ -158,11 +158,11 @@ lemma firstRCylinder_measurable_ambient
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
 /-- The firstRMap is measurable when all coordinates are measurable. -/
-@[measurability]
+@[measurability, fun_prop]
 lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
-    Measurable (firstRMap X r) :=
-  measurable_pi_lambda _ (fun i => hX i)
+    Measurable (firstRMap X r) := by
+  unfold firstRMap; fun_prop
 
 /-- The first-r σ-algebra is a sub-σ-algebra of the ambient σ-algebra when coordinates are measurable. -/
 lemma firstRSigma_le_ambient
@@ -189,11 +189,7 @@ lemma firstRSigma_mono
     funext ω i
     simp [firstRMap, π]
   -- π is measurable (composition of coordinate projections)
-  have hπ : Measurable π := by
-    rw [measurable_pi_iff]
-    intro i
-    simp only [π]
-    exact measurable_pi_apply _
+  have hπ : Measurable π := by fun_prop
   -- Preimage factors through composition
   rw [h_comp, Set.preimage_comp]
   exact ⟨π ⁻¹' u, hπ hu, rfl⟩
@@ -236,30 +232,16 @@ section CylinderBridge
 
 variable {α : Type*} [MeasurableSpace α]
 
-/-- Drop the first coordinate of a path. -/
-def drop (f : ℕ → α) : ℕ → α := fun n => f (n + 1)
-
 omit [MeasurableSpace α] in
-@[simp] lemma drop_apply (f : ℕ → α) (n : ℕ) :
-    drop f n = f (n + 1) := rfl
-
-@[measurability]
-lemma measurable_drop : Measurable (drop : (ℕ → α) → (ℕ → α)) := by
-  rw [measurable_pi_iff]
-  intro n
-  simp only [drop]
-  exact measurable_pi_apply (n + 1)
-
-omit [MeasurableSpace α] in
-/-- `tailCylinder` is the preimage of a standard cylinder under `drop`. -/
+/-- `tailCylinder` is the preimage of a standard cylinder under `shift`. -/
 lemma tailCylinder_eq_preimage_cylinder
     {r : ℕ} {C : Fin r → Set α} :
     tailCylinder (α:=α) r C
-      = (drop : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
+      = (shift : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
   ext f
   constructor <;> intro hf
-  · simpa [tailCylinder, drop, cylinder]
-  · simpa [tailCylinder, drop, cylinder]
+  · simpa [tailCylinder, shift, cylinder]
+  · simpa [tailCylinder, shift, cylinder]
 
 omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :

@@ -83,10 +83,10 @@ lemma tailSigma_shift_invariant_for_contractable
   let ν₂ := Measure.map (fun ω i => X i ω) μ
 
   -- Both are probability measures
-  have h_meas_shifted : Measurable (fun ω i => X (1 + i) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (1 + i))
-  have h_meas_orig : Measurable (fun ω i => X i ω) :=
-    measurable_pi_lambda _ hX_meas
+  have h_meas_shifted : Measurable (fun ω i => X (1 + i) ω) := by
+    fun_prop
+  have h_meas_orig : Measurable (fun ω i => X i ω) := by
+    fun_prop
   haveI : IsProbabilityMeasure ν₁ := Measure.isProbabilityMeasure_map h_meas_shifted.aemeasurable
   haveI : IsProbabilityMeasure ν₂ := Measure.isProbabilityMeasure_map h_meas_orig.aemeasurable
 
@@ -197,10 +197,10 @@ private lemma setIntegral_cylinder_eq
   let C' : Set Ω := {ω | (fun i => X (N + i.val) ω) ∈ S}
   have hC_C' : C' = {ω | (fun i => X (N + i.val) ω) ∈ S} := rfl
 
-  have hσ_meas : Measurable (fun ω i => X (σ i) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (σ i))
-  have hτ_meas : Measurable (fun ω i => X (τ i) ω) :=
-    measurable_pi_lambda _ (fun i => hX_meas (τ i))
+  have hσ_meas : Measurable (fun ω i => X (σ i) ω) := by
+    fun_prop
+  have hτ_meas : Measurable (fun ω i => X (τ i) ω) := by
+    fun_prop
 
   have hσ_0 : σ ⟨0, by omega⟩ = k + 1 := by simp only [σ, ↓reduceIte]
   have hτ_0 : τ ⟨0, by omega⟩ = 0 := by simp only [τ, ↓reduceIte]
@@ -251,7 +251,7 @@ private lemma setIntegral_cylinder_eq
 
   have hC'_meas : MeasurableSet C' := by
     apply MeasurableSet.preimage _hS
-    exact measurable_pi_lambda _ (fun i => hX_meas (N + i.val))
+    fun_prop
 
   have h_ind_eq : ∀ (h : α → ℝ) (ω : Ω),
       C'.indicator (fun ω => h (X 0 ω)) ω = h (X 0 ω) * (C'.indicator 1 ω) := by
@@ -284,7 +284,7 @@ private lemma setIntegral_cylinder_eq
           apply Measurable.mul
           · exact hf_meas.comp (measurable_pi_apply _)
           · apply Measurable.indicator measurable_const
-            exact MeasurableSet.preimage _hS (measurable_pi_lambda _ (fun i => measurable_pi_apply _))
+            exact MeasurableSet.preimage _hS (by fun_prop)
     _ = ∫ z, g z ∂(Measure.map (fun ω i => X (τ i) ω) μ) := by rw [h_eq]
     _ = ∫ ω, g (fun i => X (τ i) ω) ∂μ := by
           rw [← integral_map hτ_meas.aemeasurable]
@@ -292,7 +292,7 @@ private lemma setIntegral_cylinder_eq
           apply Measurable.mul
           · exact hf_meas.comp (measurable_pi_apply _)
           · apply Measurable.indicator measurable_const
-            exact MeasurableSet.preimage _hS (measurable_pi_lambda _ (fun i => measurable_pi_apply _))
+            exact MeasurableSet.preimage _hS (by fun_prop)
     _ = ∫ ω, f (X 0 ω) * (C'.indicator 1 ω) ∂μ := by
           apply integral_congr_ae
           filter_upwards with ω
@@ -337,10 +337,10 @@ lemma setIntegral_comp_shift_eq
       ext s hs
       let S : Set (Fin 1 → α) := {g | g 0 ∈ s}
       have hS : MeasurableSet S := measurable_pi_apply 0 hs
-      have h_meas_k1 : Measurable (fun ω (i : Fin 1) => X ((k + 1) + i.val) ω) :=
-        measurable_pi_lambda _ (fun i => hX_meas ((k + 1) + i.val))
-      have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) :=
-        measurable_pi_lambda _ (fun i => hX_meas i.val)
+      have h_meas_k1 : Measurable (fun ω (i : Fin 1) => X ((k + 1) + i.val) ω) := by
+        fun_prop
+      have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) := by
+        fun_prop
       rw [Measure.map_apply (hX_meas (k + 1)) hs, Measure.map_apply (hX_meas 0) hs]
       have h_pre_k1 : X (k + 1) ⁻¹' s = (fun ω (i : Fin 1) => X ((k + 1) + i.val) ω) ⁻¹' S := by
         ext ω
@@ -506,10 +506,10 @@ lemma setIntegral_comp_shift_eq
       have hσ_0 : σ ⟨0, by omega⟩ = k + 1 := by simp only [σ, ↓reduceDIte]
       have hτ_0 : τ ⟨0, by omega⟩ = 0 := by simp only [τ, ↓reduceDIte]
 
-      have hσ_meas : Measurable (fun ω i => X (σ i) ω) :=
-        measurable_pi_lambda _ (fun i => hX_meas (σ i))
-      have hτ_meas : Measurable (fun ω i => X (τ i) ω) :=
-        measurable_pi_lambda _ (fun i => hX_meas (τ i))
+      have hσ_meas : Measurable (fun ω i => X (σ i) ω) := by
+        fun_prop
+      have hτ_meas : Measurable (fun ω i => X (τ i) ω) := by
+        fun_prop
 
       have hσ_succ : ∀ i : Fin d, σ ⟨i.val + 1, by omega⟩ =
           N + indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ := by
@@ -533,9 +533,7 @@ lemma setIntegral_comp_shift_eq
         z ⟨i.val + 1, by omega⟩
 
       have hproj_meas : Measurable proj := by
-        apply measurable_pi_lambda
-        intro i
-        exact measurable_pi_apply _
+        fun_prop
 
       have h_indices_mem : ∀ i : Fin d, indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩ ∈ pt := by
         intro i
