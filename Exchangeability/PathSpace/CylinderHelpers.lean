@@ -189,11 +189,7 @@ lemma firstRSigma_mono
     funext ω i
     simp [firstRMap, π]
   -- π is measurable (composition of coordinate projections)
-  have hπ : Measurable π := by
-    simpa [π] using
-      (measurable_pi_lambda (f := π)
-        (fun i => measurable_pi_apply (show Fin s from ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩))
-      )
+  have hπ : Measurable π := by fun_prop
   -- Preimage factors through composition
   rw [h_comp, Set.preimage_comp]
   exact ⟨π ⁻¹' u, hπ hu, rfl⟩
