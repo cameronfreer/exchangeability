@@ -106,9 +106,7 @@ lemma condExp_shift_eq_condExp
       have h_int_map : Integrable f (Measure.map (X 0) μ) :=
         (integrable_map_measure hf_aesm_0 (hX_meas 0).aemeasurable).mpr hf_int
       rw [← h_map_eq] at h_int_map
-      have hf_aesm_n1 : AEStronglyMeasurable f (Measure.map (X (n + 1)) μ) :=
-        hf_meas.aestronglyMeasurable
-      exact (integrable_map_measure hf_aesm_n1 (hX_meas (n + 1)).aemeasurable).mp h_int_map
+      exact Integrable.comp_measurable h_int_map (hX_meas (n + 1))
 
     -- Apply uniqueness of conditional expectation
     -- The sub-σ-algebra condition
@@ -116,15 +114,11 @@ lemma condExp_shift_eq_condExp
       simp only [tailFamily]
       apply iSup_le
       intro k
-      have h_eq : (fun ω => X (0 + k) ω) = X k := by simp only [Nat.zero_add]
-      rw [h_eq]
-      exact (hX_meas k).comap_le)
+      exact measurable_iff_comap_le.mp (hX_meas (0 + k)))
 
     -- σ-finiteness of trimmed measure (automatic for probability measures)
-    haveI h_finite : IsFiniteMeasure (μ.trim h_le) := by
-      constructor
-      rw [trim_measurableSet_eq h_le MeasurableSet.univ]
-      exact measure_lt_top μ Set.univ
+    haveI h_finite : IsFiniteMeasure (μ.trim h_le) :=
+      isFiniteMeasure_trim h_le
     haveI : SigmaFinite (μ.trim h_le) := @IsFiniteMeasure.toSigmaFinite _ _ _ h_finite
 
     -- Use ae_eq_condExp_of_forall_setIntegral_eq

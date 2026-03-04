@@ -215,17 +215,10 @@ private lemma setIntegral_cylinder_eq
 
   have hS_σ : ∀ ω, ((fun i : Fin (M + 2) => X (σ ⟨i.val + 1, by omega⟩) ω) ∈ S) ↔ ω ∈ C' := by
     intro ω
-    simp only [Set.mem_setOf_eq, C']
-    constructor
-    · intro h; convert h using 1
-    · intro h; convert h using 1
+    rfl
 
   have hS_τ : ∀ ω, ((fun i : Fin (M + 2) => X (τ ⟨i.val + 1, by omega⟩) ω) ∈ S) ↔ ω ∈ C' := by
-    intro ω
-    simp only [Set.mem_setOf_eq, C']
-    constructor
-    · intro h; convert h using 1
-    · intro h; convert h using 1
+    assumption
 
   have hg_σ : ∀ ω, g (fun i => X (σ i) ω) = f (X (k + 1) ω) * (C'.indicator 1 ω) := by
     intro ω
@@ -275,9 +268,7 @@ private lemma setIntegral_cylinder_eq
           filter_upwards with ω
           exact h_ind_eq_k ω
     _ = ∫ ω, g (fun i => X (σ i) ω) ∂μ := by
-          apply integral_congr_ae
-          filter_upwards with ω
-          rw [hg_σ]
+          rfl
     _ = ∫ z, g z ∂(Measure.map (fun ω i => X (σ i) ω) μ) := by
           rw [integral_map hσ_meas.aemeasurable]
           apply Measurable.aestronglyMeasurable
@@ -294,9 +285,7 @@ private lemma setIntegral_cylinder_eq
           · apply Measurable.indicator measurable_const
             exact MeasurableSet.preimage _hS (by fun_prop)
     _ = ∫ ω, f (X 0 ω) * (C'.indicator 1 ω) ∂μ := by
-          apply integral_congr_ae
-          filter_upwards with ω
-          rw [hg_τ]
+          rfl
     _ = ∫ ω, C'.indicator (fun ω => f (X 0 ω)) ω ∂μ := by
           apply integral_congr_ae
           filter_upwards with ω
@@ -573,9 +562,7 @@ lemma setIntegral_comp_shift_eq
           have hω_ft := (Set.mem_iInter.mp (Set.mem_iInter.mp hω
             (indices.get ⟨i.val, by rw [h_len]; exact i.isLt⟩))) h_idx_mem
           rw [(hTj _ h_idx_mem).2] at hω_ft
-          simp only [Set.mem_preimage] at hω_ft
-          rw [hσ_succ i]
-          exact hω_ft
+          assumption
         · intro hS_mem
           simp only [C, Set.mem_iInter]
           intro j hj

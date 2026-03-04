@@ -220,11 +220,7 @@ lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Se
     firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
   ext ω
   simp [firstRCylinder, Set.mem_inter_iff]
-  constructor
-  · intro ⟨hC, hD⟩ i
-    exact ⟨hC i, hD i⟩
-  · intro h
-    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+  exact Iff.symm forall_and
 
 end FirstBlockCylinder
 
@@ -238,10 +234,7 @@ lemma tailCylinder_eq_preimage_cylinder
     {r : ℕ} {C : Fin r → Set α} :
     tailCylinder (α:=α) r C
       = (shift : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
-  ext f
-  constructor <;> intro hf
-  · simpa [tailCylinder, shift, cylinder]
-  · simpa [tailCylinder, shift, cylinder]
+  rfl
 
 omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
@@ -283,11 +276,7 @@ lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
     cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
   ext f
   simp [cylinder, Set.mem_inter_iff]
-  constructor
-  · intro ⟨hC, hD⟩ i
-    exact ⟨hC i, hD i⟩
-  · intro h
-    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
+  exact Iff.symm forall_and
 
 end CylinderBridge
 

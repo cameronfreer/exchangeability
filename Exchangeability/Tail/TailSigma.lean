@@ -99,13 +99,7 @@ namespace MeasurableSpace
 lemma preimage_injective_of_surjective {α β} {f : α → β}
     (hf : Function.Surjective f) :
   Function.Injective (fun (s : Set β) => f ⁻¹' s) := by
-  intro s t hpre
-  have : f ⁻¹' s = f ⁻¹' t := hpre
-  ext y
-  rcases hf y with ⟨x, rfl⟩
-  -- compare membership in equal preimages
-  have := congrArg (fun A => x ∈ A) this
-  simpa using this
+  exact Function.Surjective.preimage_injective hf
 
 /-- If `f` is surjective, then `map f (comap f m) = m`. -/
 lemma map_comap_eq_of_surjective {α β} {f : α → β}
@@ -120,10 +114,7 @@ lemma map_comap_eq_of_surjective {α β} {f : α → β}
     rcases hS with ⟨T, hT, hpre⟩
     -- injectivity of preimage under surjectivity identifies `S = T`
     have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
-    have : S = T := by
-      apply hinj
-      exact hpre.symm
-    simpa [this]
+    lia
   · -- unit inequality `m ≤ map f (comap f m)`
     intro hS
     change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S)
