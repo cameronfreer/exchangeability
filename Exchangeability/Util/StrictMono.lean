@@ -169,9 +169,6 @@ lemma injective_implies_strictMono_perm
     exact Subtype.ext_iff.mp h3.symm
   -- Goal: (fun i => k (σ.symm i)) i < (fun i => k (σ.symm i)) j
   -- This simplifies to: k (σ.symm i) < k (σ.symm j)
-  simp only
-  rw [h_eq_i, h_eq_j]
-  -- sorted is an OrderIso, so it's strictly monotone
-  exact sorted.strictMono hij
+  simp_all
 
 end Exchangeability.Util.StrictMono

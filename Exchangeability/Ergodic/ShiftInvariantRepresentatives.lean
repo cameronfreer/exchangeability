@@ -102,10 +102,7 @@ def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
 lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
     Measurable (gRep g0) := by
   have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by
-    intro n
-    have hreal : Measurable fun ω => g0 (shift^[n] ω) :=
-      hg0.comp (shift_iterate_measurable (α := α) n)
-    exact measurable_coe_real_ereal.comp hreal
+    fun_prop
   have h_meas_ereal : Measurable fun ω => gLimsupE g0 ω := by
     simpa [gLimsupE] using (Measurable.limsup hstep)
   have : Measurable fun ω => (gLimsupE g0 ω).toReal := by
@@ -131,11 +128,7 @@ lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
   have hlim :
       limsup (fun n : ℕ => (g0 (shift^[n] ω) : EReal)) atTop
         = (g0 ω : EReal) := by
-    have hfunext :
-        (fun n : ℕ => (g0 (shift^[n] ω) : EReal))
-          = fun _ => (g0 ω : EReal) := by
-      funext n; simpa using congrArg (fun y : ℝ => (y : EReal)) (hconst n)
-    simp [hfunext, limsup_const]
+    simp_all
   simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
 
 lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
@@ -241,9 +234,7 @@ private lemma exists_shiftInvariantFullMeasureSet
 
   have hSinf_full : μ Sinfᶜ = 0 := by
     have h_forall : ∀ n : ℕ, ∀ᵐ ω ∂μ, ω ∈ (shift^[n]) ⁻¹' S0 := by
-      intro n
-      have : μ (((shift^[n]) ⁻¹' S0)ᶜ) = 0 := hpre_full n
-      simpa [ae_iff] using this
+      assumption
     have hSinf_ae : ∀ᵐ ω ∂μ, ω ∈ Sinf := by
       simpa [Sinf, hSinf_def, Set.mem_iInter] using (ae_all_iff.mpr h_forall)
     simpa [ae_iff] using hSinf_ae
@@ -310,12 +301,8 @@ private lemma exists_shiftInvariantFullMeasureSet
     have hmeasure_diff : μ ((shift ⁻¹' Sstar) \ Sstar) = 0 :=
       measure_mono_null hsubset_diff hSstar_full
     have hsubset : Sstar ⊆ shift ⁻¹' Sstar := hSstar_forward
-    have hzero : Sstar \ shift ⁻¹' Sstar = (∅ : Set (Ω[α])) := by
-      ext ω; constructor
-      · intro hω
-        have : ω ∈ shift ⁻¹' Sstar := hsubset hω.1
-        exact False.elim (hω.2 this)
-      · intro hω; simpa using hω.elim
+    have hzero : Sstar \ shift ⁻¹' Sstar = (∅ : Set (Ω[α])) :=
+      Set.diff_eq_empty.mpr hSstar_forward
     have hsymm :
         symmDiff (shift ⁻¹' Sstar) Sstar
           = ((shift ⁻¹' Sstar) \ Sstar) ∪ (Sstar \ shift ⁻¹' Sstar) := rfl
@@ -345,9 +332,7 @@ lemma mkShiftInvariantRep
   obtain ⟨S, hS_meas, _hSymm, hS_null, hS_subset, hS_point⟩ :=
     exists_shiftInvariantFullMeasureSet (μ := μ) hσ g0 hg0_meas hshift_g0
   have hforward : ∀ ω ∈ S, shift ω ∈ S := by
-    intro ω hω
-    have : ω ∈ shift ⁻¹' S := hS_subset hω
-    simpa [Set.mem_preimage] using this
+    assumption
   have hS_ae : ∀ᵐ ω ∂μ, ω ∈ S := by
     simpa [ae_iff] using hS_null
   have hconst_on_S : ∀ ω ∈ S, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω := by

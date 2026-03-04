@@ -77,9 +77,7 @@ lemma Lp.coeFn_smul' (c : ℝ) (f : Lp ℝ 2 μ) :
   -- Mathlib has Lp.coeFn_smul: ⇑(c • f) =ᵐ[μ] c • ⇑f
   -- For real numbers, c • x = c * x
   have := Lp.coeFn_smul c f
-  filter_upwards [this] with ω h
-  simp only [Pi.smul_apply] at h
-  exact h
+  assumption
 
 /-- Coercion distributes through finite sums in Lp (a.e.). -/
 lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
@@ -133,16 +131,11 @@ lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
     push_neg at h_contra
     apply hω
     -- The sums are equal if all summands are equal
-    congr 1
-    ext i
-    exact h_contra i
+    exact Fintype.sum_congr (fun a => fs a ω) (fun a => gs a ω) h_contra
 
   -- Each set in the union has measure zero
   have h_null : ∀ i, μ {ω | fs i ω ≠ gs i ω} = 0 := by
-    intro i
-    have := h i
-    rw [Filter.EventuallyEq, Filter.Eventually, mem_ae_iff] at this
-    exact this
+    assumption
 
   -- Measure of finite union of null sets is zero
   -- Note: {x | ∑ i, fs i x = ∑ i, gs i x}ᶜ = {x | ∑ i, fs i x ≠ ∑ i, gs i x}

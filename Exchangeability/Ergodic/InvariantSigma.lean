@@ -341,27 +341,7 @@ lemma metProjectionShift_tendsto
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) _root_.id n f)
       atTop (𝓝 (metProjectionShift (μ := μ) hσ f)) := by
-  classical
-  let K : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ := koopman shift hσ
-  have hnorm : ‖K‖ ≤ (1 : ℝ) := by
-    refine ContinuousLinearMap.opNorm_le_bound _ (by norm_num) ?_
-    intro g
-    have hiso : Isometry (koopman shift hσ) := koopman_isometry shift hσ
-    have hg : ‖K g‖ = ‖g‖ := by
-      simpa [K] using Isometry.norm_map_of_map_zero hiso (map_zero _) g
-    simp [hg]
-  have hclosed := fixedSubspace_closed (μ := μ) hσ
-  haveI : CompleteSpace (fixedSubspace hσ) := hclosed.completeSpace_coe
-  haveI : (fixedSubspace hσ).HasOrthogonalProjection :=
-    Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-  have hS : (LinearMap.eqLocus K.toLinearMap 1) = fixedSubspace hσ := rfl
-  -- Set up the instance context for the eqLocus subspace
-  have : CompleteSpace (LinearMap.eqLocus K.toLinearMap 1) := by
-    rw [hS]; exact hclosed.completeSpace_coe
-  have : (LinearMap.eqLocus K.toLinearMap 1).HasOrthogonalProjection := by
-    rw [hS]; exact Submodule.HasOrthogonalProjection.ofCompleteSpace (fixedSubspace hσ)
-  have hlimit := ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
-  convert hlimit using 1
+  exact birkhoffAverage_tendsto_metProjection shift hσ f
 
 /-- The range of `metProjectionShift` equals the fixed subspace. -/
 lemma metProjectionShift_range_fixedSubspace

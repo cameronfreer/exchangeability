@@ -63,9 +63,7 @@ lemma abs_prod_sub_prod_le {m : ℕ} (f g : Fin m → ℝ)
       _ = |f 0 - g 0| + ∑ i : Fin n, |f i.succ - g i.succ| := by ring
 
 /-- Helper: |a - b| ≤ |a| + |b|. -/
-lemma abs_sub_le_abs_add (a b : ℝ) : |a - b| ≤ |a| + |b| := by
-  calc |a - b| = |a + (-b)| := by ring_nf
-    _ ≤ |a| + |-b| := abs_add_le a (-b)
-    _ = |a| + |b| := by rw [abs_neg]
+lemma abs_sub_le_abs_add (a b : ℝ) : |a - b| ≤ |a| + |b| :=
+  abs_sub a b
 
 end Exchangeability.Util
