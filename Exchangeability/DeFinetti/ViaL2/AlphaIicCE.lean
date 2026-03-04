@@ -336,17 +336,8 @@ lemma alphaIicCE_right_continuous_at
       push_neg at hxt
       simp only [Set.indicator_apply, Set.mem_Iic, not_le.mpr hxt, ↓reduceIte]
       -- u_n → t and X 0 ω > t, so eventually u_n < X 0 ω
-      have h_ev : ∀ᶠ n in Filter.atTop, (u n : ℝ) < X 0 ω := by
-        have : Filter.Tendsto (fun n => (u n : ℝ)) Filter.atTop (nhds t) := u_tendsto
-        rw [Metric.tendsto_atTop] at this
-        specialize this ((X 0 ω) - t) (by linarith)
-        obtain ⟨N, hN⟩ := this
-        apply Filter.eventually_atTop.mpr
-        use N
-        intro n hn
-        specialize hN n hn
-        rw [Real.dist_eq, abs_lt] at hN
-        linarith
+      have h_ev : ∀ᶠ n in Filter.atTop, (u n : ℝ) < X 0 ω :=
+        Tendsto.eventually_lt_const hxt u_tendsto
       apply Filter.Tendsto.congr' _ tendsto_const_nhds
       filter_upwards [h_ev] with n hn
       simp only [Set.mem_Iic, not_le.mpr hn, ↓reduceIte]
@@ -410,12 +401,7 @@ lemma alphaIicCE_right_continuous_at
     -- h_eq: condExpL1(fs n) ω = alphaIicCE (u n) ω for all n
     -- h_eq_lim: condExpL1(f) ω = alphaIicCE t ω
     rw [← h_eq_lim]
-    have h_eq_fun : (fun n => (↑(condExpL1 hm_le μ (fs (ns n))) : Ω → ℝ) ω) =
-        (fun n => alphaIicCE X hX_contract hX_meas hX_L2 (u (ns n) : ℝ) ω) := by
-      ext n
-      exact h_eq (ns n)
-    rw [← h_eq_fun]
-    exact h_conv
+    exact Tendsto.congr (fun x => h_eq (ns x)) h_conv
 
   -- 3j: The sequence alphaIicCE (u_n) is antitone (since u_n is decreasing and alphaIicCE is monotone)
   have h_antitone_ae : ∀ᵐ ω ∂μ, ∀ m n : ℕ, m ≤ n →
@@ -481,9 +467,7 @@ lemma alphaIicCE_right_continuous_at
       -- The limit is unique
       exact tendsto_nhds_unique h_conv_to_inf h_conv
 
-    calc ⨅ n : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u n : ℝ) ω
-        ≤ ⨅ k : ℕ, alphaIicCE X hX_contract hX_meas hX_L2 (u (ns k) : ℝ) ω := h1
-      _ = alphaIicCE X hX_contract hX_meas hX_L2 t ω := h2
+    exact le_of_le_of_eq h1 h2
 
   -- Step 4: Combine everything
   filter_upwards [h_infs_le_ae, h_inf_le_lim] with ω h_infs_le h_inf
@@ -668,10 +652,7 @@ lemma alphaIicCE_iInf_rat_gt_eq
           have hr' : q < r := by exact_mod_cast hr
           have h_bdd_below : BddBelow (Set.range fun s : Set.Ioi q =>
               alphaIicCE X hX_contract hX_meas hX_L2 (s : ℝ) ω) := by
-            use 0
-            intro x hx
-            obtain ⟨s, rfl⟩ := hx
-            exact (h_bdd s.val).1
+            assumption
           exact ciInf_le h_bdd_below ⟨r, hr'⟩
       _ ≤ alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := h_right_cont
 

@@ -130,14 +130,10 @@ lemma contractable_covariance_structure
     -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
     have h_eq_dist := contractable_single_marginal_eq (X := X) hX_contract hX_meas k
     -- Transfer integral via equal distributions
-    have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
-      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
-        aestronglyMeasurable_id
-      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
-    have h_int_0 : ∫ ω, X 0 ω ∂μ = ∫ x, x ∂(Measure.map (X 0) μ) := by
-      have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X 0) μ) :=
-        aestronglyMeasurable_id
-      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
+    have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) :=
+      Eq.symm (Probability.IntegrationHelpers.integral_pushforward_id (hX_meas k))
+    have h_int_0 : ∫ ω, X 0 ω ∂μ = ∫ x, x ∂(Measure.map (X 0) μ) :=
+      Eq.symm (Probability.IntegrationHelpers.integral_pushforward_id (hX_meas 0))
     rw [h_int_k, h_eq_dist, ← h_int_0]
 
   -- Define σSq as the variance of X_0
@@ -152,14 +148,10 @@ lemma contractable_covariance_structure
     -- The variance with k's mean equals variance with m (since they're equal)
     show ∫ ω, (X k ω - m)^2 ∂μ = σSq
     -- Transform X_k integral to X_0 integral via measure map
-    have h_int_k : ∫ ω, (X k ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X k) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X k) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
-      exact (integral_map (hX_meas k).aemeasurable h_ae).symm
-    have h_int_0 : ∫ ω, (X 0 ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X 0) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X 0) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
-      exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
+    have h_int_k : ∫ ω, (X k ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X k) μ) :=
+      Eq.symm (Probability.IntegrationHelpers.integral_pushforward_sq_diff (hX_meas k) m)
+    have h_int_0 : ∫ ω, (X 0 ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X 0) μ) :=
+      Eq.symm (Probability.IntegrationHelpers.integral_pushforward_sq_diff (hX_meas 0) m)
     rw [h_int_k, h_eq_dist, ← h_int_0]
 
   -- Define ρ from the covariance of (X_0, X_1)
@@ -183,8 +175,8 @@ lemma contractable_covariance_structure
         have h_int_ij : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X i ω, X j ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X i ω, X j ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X i ω, X j ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X i ω - m) * (X j ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X i ω, X j ω)) := rfl
@@ -193,8 +185,8 @@ lemma contractable_covariance_structure
         have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
@@ -213,8 +205,8 @@ lemma contractable_covariance_structure
         have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X j ω, X i ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X j ω, X i ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X j ω, X i ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X j ω - m) * (X i ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X j ω, X i ω)) := rfl
@@ -223,8 +215,8 @@ lemma contractable_covariance_structure
         have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
@@ -268,27 +260,18 @@ lemma contractable_covariance_structure
           have h_nonneg₁ : ∀ᵐ ω ∂μ, 0 ≤ |X 1 ω - m| := ae_of_all μ (fun ω => abs_nonneg _)
           have h_key : ∫ ω, |X 0 ω - m| * |X 1 ω - m| ∂μ
               ≤ (∫ ω, |X 0 ω - m| ^ (2:ℝ) ∂μ) ^ ((2:ℝ)⁻¹) * (∫ ω, |X 1 ω - m| ^ (2:ℝ) ∂μ) ^ ((2:ℝ)⁻¹) := by
-            have hpq : (2:ℝ).HolderConjugate 2 := by
-              constructor
-              · norm_num
-              · norm_num
-              · norm_num
+            have hpq : (2:ℝ).HolderConjugate 2 :=
+              Real.HolderConjugate.two_two
             have hf₀' : MemLp (fun ω => |X 0 ω - m|) (ENNReal.ofReal 2) μ := by
               have h2 : (ENNReal.ofReal 2 : ENNReal) = (2 : ENNReal) := by norm_num
               rw [h2]
               have : MemLp (fun ω => ‖X 0 ω - m‖) 2 μ := hf₀.norm
-              have h_eq : (fun ω => ‖X 0 ω - m‖) =ᵐ[μ] (fun ω => |X 0 ω - m|) := by
-                filter_upwards with ω
-                exact Real.norm_eq_abs _
-              exact MemLp.ae_eq h_eq this
+              assumption
             have hf₁' : MemLp (fun ω => |X 1 ω - m|) (ENNReal.ofReal 2) μ := by
               have h2 : (ENNReal.ofReal 2 : ENNReal) = (2 : ENNReal) := by norm_num
               rw [h2]
               have : MemLp (fun ω => ‖X 1 ω - m‖) 2 μ := hf₁.norm
-              have h_eq : (fun ω => ‖X 1 ω - m‖) =ᵐ[μ] (fun ω => |X 1 ω - m|) := by
-                filter_upwards with ω
-                exact Real.norm_eq_abs _
-              exact MemLp.ae_eq h_eq this
+              assumption
             have := MeasureTheory.integral_mul_le_Lp_mul_Lq_of_nonneg hpq h_nonneg₀ h_nonneg₁ hf₀' hf₁'
             convert this using 2 <;> norm_num
           convert h_key using 2
@@ -298,16 +281,10 @@ lemma contractable_covariance_structure
             = Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) * Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
           have h4 : (∫ ω, |X 0 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) = Real.sqrt (∫ ω, (X 0 ω - m)^2 ∂μ) := by
             rw [Real.sqrt_eq_rpow]
-            congr 1
-            congr 1
-            funext ω
-            rw [sq_abs]
+            simpa
           have h5 : (∫ ω, |X 1 ω - m| ^ 2 ∂μ) ^ (1/2 : ℝ) = Real.sqrt (∫ ω, (X 1 ω - m)^2 ∂μ) := by
             rw [Real.sqrt_eq_rpow]
-            congr 1
-            congr 1
-            funext ω
-            rw [sq_abs]
+            simpa
           rw [h4, h5]
         calc |∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ|
             ≤ ∫ ω, |(X 0 ω - m) * (X 1 ω - m)| ∂μ := h_tri
@@ -366,11 +343,7 @@ lemma contractable_covariance_structure
         rw [hi, hj]
         ring
       -- Integral of a.e. zero function is zero
-      have h_integrable : Integrable (fun ω => (X i ω - m) * (X j ω - m)) μ := by
-        have h_i : MemLp (fun ω => X i ω - m) 2 μ := (hX_L2 i).sub (memLp_const m)
-        have h_j : MemLp (fun ω => X j ω - m) 2 μ := (hX_L2 j).sub (memLp_const m)
-        exact h_i.integrable_mul h_j
-      exact integral_eq_zero_of_ae h_ae_prod
+      exact integral_eq_const h_ae_prod
 
     -- ρ = 0 works
     use m, σSq, 0
@@ -433,14 +406,9 @@ private lemma reindexed_weights_prob
           (fun i : Fin nS => wS ((eβ i).1))
           (fun b => wS b.1) (by intro i; rfl)
       have h_sum_attach :
-          ∑ b : {t // t ∈ S}, wS b.1 = ∑ t ∈ S, wS t := by
-        exact Finset.sum_attach (s := S) (f := fun t => wS t)
-      have h_sum_w :
-          ∑ i : Fin nS, w i = ∑ i : Fin nS, wS ((eβ i).1) := by
-        refine Finset.sum_congr rfl fun i _ => ?_
-        exact h_w_def i
-      simp [h_sum_w]
-      exact h_sum_equiv.trans h_sum_attach
+          ∑ b : {t // t ∈ S}, wS b.1 = ∑ t ∈ S, wS t :=
+        Finset.sum_attach (s := S) (f := fun t => wS t)
+      grind only
     simp [h_equiv, h_sum_one]
   · intro i
     rw [h_w_def]
@@ -546,10 +514,7 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
       refine Finset.sum_congr rfl ?_
-      intro t ht
-      have : (pS t - qS t) * Y t ω = pS t * Y t ω - qS t * Y t ω := by
-        ring
-      simpa [δ] using this
+      exact fun x a => sub_mul (pS x) (qS x) (Y x ω)
     have h_split :
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
@@ -697,15 +662,8 @@ lemma l2_bound_two_windows_uniform
     exact ⟨⟨t, h_subset_n ht⟩⟩
   have h_nS_pos : 0 < nS := Fintype.card_pos_iff.mpr hβ_nonempty
   have h_sup_le :
-      (⨆ i : Fin nS, |p i - q i|) ≤ 1 / (k : ℝ) := by
-    classical
-    haveI : Nonempty (Fin nS) := Fin.pos_iff_nonempty.mp h_nS_pos
-    refine ciSup_le ?_
-    intro i
-    have hmem : idx i ∈ S := h_idx_mem i
-    have hδ_bound := hδ_abs_le (idx i) hmem
-    have hδ_eq : δ (idx i) = p i - q i := by simp [δ, p, q, idx]
-    simpa [hδ_eq] using hδ_bound
+      (⨆ i : Fin nS, |p i - q i|) ≤ 1 / (k : ℝ) :=
+    ciSup_le fun x => hδ_abs_le (idx x) (h_idx_mem x)
 
   -- Injectivity of the indexing map
   have h_idx_ne : ∀ {i j : Fin nS}, i ≠ j → idx i ≠ idx j := by
@@ -795,10 +753,7 @@ lemma l2_bound_two_windows_uniform
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, (pS t * Y t ω - qS t * Y t ω) := by
       refine Finset.sum_congr rfl ?_
-      intro t ht
-      have : (pS t - qS t) * Y t ω = pS t * Y t ω - qS t * Y t ω := by
-        ring
-      simpa [δ] using this
+      exact fun x a => sub_mul (pS x) (qS x) (Y x ω)
     have h_split :
         ∑ t ∈ S, δ t * Y t ω =
           ∑ t ∈ S, pS t * Y t ω - ∑ t ∈ S, qS t * Y t ω := by
@@ -826,7 +781,7 @@ lemma l2_bound_two_windows_uniform
 
   have h_factor_nonneg :
       0 ≤ 2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) := by
-    have hσ_nonneg : 0 ≤ (Real.sqrt σSqf) ^ 2 := by exact sq_nonneg _
+    have hσ_nonneg : 0 ≤ (Real.sqrt σSqf) ^ 2 := sq_nonneg _
     have hρ_nonneg : 0 ≤ 1 - ρf := sub_nonneg.mpr hρ_bd.2
     have : 0 ≤ (2 : ℝ) := by norm_num
     exact mul_nonneg (mul_nonneg this hσ_nonneg) hρ_nonneg
@@ -834,14 +789,8 @@ lemma l2_bound_two_windows_uniform
   have h_bound_sup :
       2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) *
         (⨆ i : Fin nS, |p i - q i|) ≤
-      2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) := by
-    have h :=
-      (mul_le_mul_of_nonneg_left h_sup_le h_factor_nonneg :
-          (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) *
-              (⨆ i : Fin nS, |p i - q i|)
-            ≤ (2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf)) * (1 / (k : ℝ)))
-    simpa [mul_comm, mul_left_comm, mul_assoc]
-      using h
+      2 * (Real.sqrt σSqf) ^ 2 * (1 - ρf) * (1 / (k : ℝ)) :=
+    PosMulMono.mul_le_mul_of_nonneg_left h_factor_nonneg h_sup_le
 
   -- Final bound
   have h_sqrt_sq : (Real.sqrt σSqf) ^ 2 = σSqf := Real.sq_sqrt hσSq_nonneg
@@ -852,9 +801,7 @@ lemma l2_bound_two_windows_uniform
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ =
         ∫ ω, (∑ i : Fin nS, p i * ξ i ω - ∑ i : Fin nS, q i * ξ i ω)^2 ∂μ := by
     congr 1
-    funext ω
-    simpa using
-      congrArg (fun x : ℝ => x ^ 2) (h_goal_fin ω)
+    exact funext fun x => congrFun (congrArg HPow.hPow (h_goal_fin x)) 2
 
   have h_int_le_sup :
       ∫ ω,
@@ -1144,16 +1091,7 @@ lemma l2_bound_long_vs_tail
           · have hM_nonneg : 0 ≤ M := by
               have : |f 0| ≤ M := hM 0
               exact le_trans (abs_nonneg _) this
-            have : 0 ≤ M + M := by linarith
-            have h_sum_bound : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M + M := by
-              linarith [h1, h2]
-            have : -(M + M) ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              have h_nonneg : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                                   |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
-              linarith [h_nonneg, hM_nonneg]
-            linarith [h_sum_bound]
+            grind only [= abs.eq_1, = max_def]
           · linarith [h1, h2]
       _ = (2 * M)^2 := by ring
       _ ≤ (4 * M)^2 := by
@@ -1517,8 +1455,8 @@ theorem subseq_ae_of_L1
     exact this
 
   -- Step 2: eLpNorm convergence implies convergence in measure
-  have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
-    exact tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero
+  have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf :=
+    tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero
       (fun n => (h_alpha_meas n).aestronglyMeasurable)
       h_alpha_inf_meas.aestronglyMeasurable
       h_eLpNorm_tendsto
