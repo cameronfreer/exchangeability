@@ -78,12 +78,7 @@ theorem weighted_sums_converge_L1
 
   -- A n m is measurable for all n, m
   have hA_meas : ∀ n m, Measurable (A n m) := by
-    intro n m
-    simp only [A]
-    apply Measurable.const_mul
-    apply Finset.measurable_sum
-    intro k _
-    exact hf_meas.comp (hX_meas _)
+    fun_prop
 
   -- A n m is in L¹ for all n, m (bounded measurable on probability space)
   have hA_memLp : ∀ n m, MemLp (A n m) 1 μ := by
@@ -101,8 +96,8 @@ theorem weighted_sums_converge_L1
             by_cases hm : m = 0
             · simp [hm]
             · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
-              have h_inv_pos : 0 < 1 / (m : ℝ) := by
-                exact div_pos (by norm_num) hm_pos
+              have h_inv_pos : 0 < 1 / (m : ℝ) :=
+                div_pos (by norm_num) hm_pos
               have h_abs_sum :
                   |∑ k : Fin m, f (X (n + k.val + 1) ω)|
                     ≤ ∑ k : Fin m, |f (X (n + k.val + 1) ω)| :=
@@ -117,9 +112,8 @@ theorem weighted_sums_converge_L1
                         |∑ k : Fin m, f (X (n + k.val + 1) ω)| := by
                       simp [abs_mul]
                 _ ≤ (1 / (m : ℝ)) *
-                        ∑ k : Fin m, |f (X (n + k.val + 1) ω)| := by
-                      exact
-                        (mul_le_mul_of_nonneg_left h_abs_sum
+                        ∑ k : Fin m, |f (X (n + k.val + 1) ω)| :=
+                      (mul_le_mul_of_nonneg_left h_abs_sum
                           (le_of_lt h_inv_pos))
         _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, M := by
             classical
@@ -184,10 +178,7 @@ theorem weighted_sums_converge_L1
   have hfX_L2' : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
     intro i
     obtain ⟨M, hM⟩ := hf_bdd
-    apply MemLp.of_bound (hfX_meas' i).aestronglyMeasurable M
-    filter_upwards with ω
-    simp [Real.norm_eq_abs]
-    exact hM (X i ω)
+    exact memLp_two_of_bounded (hfX_meas' i) fun ω => hM (X i ω)
 
   -- **Phase 2: Compute covariance structure once and pass to both lemmas**
   -- This eliminates the need to prove Cf = Cf_tail (they're the same by construction!)
@@ -475,13 +466,8 @@ theorem weighted_sums_converge_L1
     -- Convert the real inequality to one in `ℝ≥0∞`.
     have h_lt :
         eLpNorm (fun ω => A 0 m ω - G ω) 1 μ
-          < ENNReal.ofReal ε := by
-      have h_ofReal :
-          ENNReal.ofReal (ENNReal.toReal
-            (eLpNorm (fun ω => A 0 m ω - G ω) 1 μ)) < ENNReal.ofReal ε :=
-        ENNReal.ofReal_lt_ofReal_iff hε |>.mpr htoReal
-      rw [ENNReal.ofReal_toReal hfin] at h_ofReal
-      exact h_ofReal
+          < ENNReal.ofReal ε :=
+      (ENNReal.lt_ofReal_iff_toReal_lt hfin).mpr htoReal
     rw [h_eq]
     exact h_lt
 
@@ -583,8 +569,8 @@ theorem weighted_sums_converge_L1
     calc eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ
         ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
             eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := h_triangle
-      _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 2) := by
-            exact ENNReal.add_lt_add h_term1 h_term2
+      _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 2) :=
+            ENNReal.add_lt_add h_term1 h_term2
       _ = ENNReal.ofReal ε := by
             rw [← ENNReal.ofReal_add hε2_pos.le hε2_pos.le]; norm_num
 

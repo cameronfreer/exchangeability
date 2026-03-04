@@ -46,8 +46,8 @@ lemma clip01_range (x : ℝ) : 0 ≤ clip01 x ∧ clip01 x ≤ 1 := by
     · exact min_le_left _ _
 
 /-- `clip01` is 1-Lipschitz. -/
-lemma clip01_1Lipschitz : LipschitzWith 1 clip01 := by
-  exact (LipschitzWith.id.const_min 1).const_max 0
+lemma clip01_1Lipschitz : LipschitzWith 1 clip01 :=
+  (LipschitzWith.id.const_min 1).const_max 0
 
 /-- Pointwise contraction from the 1-Lipschitzness. -/
 lemma abs_clip01_sub_le (x y : ℝ) : |clip01 x - clip01 y| ≤ |x - y| := by

@@ -83,11 +83,7 @@ lemma lintegral_prod_prob_eq_ofReal_integral
     -- turn each factor into ofReal of its toReal (since it's ≤ 1 < ∞)
     have hfactor :
         ∀ i : Fin m, ν ω (C i) = ENNReal.ofReal ((ν ω (C i)).toReal) := by
-      intro i
-      -- 0 ≤ μ(C) ≤ 1 ⇒ finite ⇒ ofReal_toReal
-      have hle1 : ν ω (C i) ≤ 1 := prob_le_one
-      have hfin : ν ω (C i) ≠ ⊤ := ne_of_lt (lt_of_le_of_lt hle1 ENNReal.one_lt_top)
-      exact (ENNReal.ofReal_toReal hfin).symm
+      norm_num
     -- product of ofReals = ofReal of product
     rw [Finset.prod_congr rfl (fun i _ => hfactor i)]
     exact (ENNReal.ofReal_prod_of_nonneg (fun i _ => ENNReal.toReal_nonneg)).symm
@@ -271,10 +267,8 @@ lemma finite_product_formula_id
         (h_filtration := futureFiltration_antitone X)
         (h_le := fun n => futureFiltration_le X n hX_meas)
         (f := (Set.indicator (C i) (fun _ => (1:ℝ))) ∘ X 0)
-        (h_f_int := by
-          simpa using
-            Exchangeability.Probability.integrable_indicator_comp
-              (μ := μ) (X := X 0) (hX := hX_meas 0) (hB := hC i))
+        (h_f_int :=
+          Probability.integrable_indicator_comp (hX_meas 0) (hC i))
       simpa [← tailSigmaFuture_eq_iInf, tailSigmaFuture_eq_tailSigma] using this
 
     -- Tail factorization for the product indicator (a.e. equality)
@@ -344,9 +338,7 @@ lemma finite_product_formula_id
       have hme : Measurable (fun ω => fun i : Fin m => X i ω) := by
         fun_prop
       rw [Measure.map_apply hme MeasurableSet.univ]
-      have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := Set.preimage_univ
-      rw [this]
-      exact measure_univ
+      norm_num
     haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
       constructor
       -- Need to show: (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ = 1
@@ -372,20 +364,7 @@ lemma finite_product_formula_id
   -- Since both are probability measures and agree on rectangles, they are equal
 
   -- Define covering family (constant sequence of Set.univ)
-  let Bseq : ℕ → Set (Fin m → α) := fun _ => Set.univ
-
-  have h1B : ⋃ n, Bseq n = Set.univ := by
-    simp only [Bseq, Set.iUnion_const]
-
-  have h2B : ∀ n, Bseq n ∈ Rectangles := fun n =>
-    ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, by ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto⟩
-
-  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ :=
-    fun n => by simp only [Bseq]; exact measure_ne_top _ Set.univ
-
-  -- Apply Measure.ext_of_generateFrom_of_iUnion
-  exact Measure.ext_of_generateFrom_of_iUnion
-    Rectangles Bseq h_gen h_pi h1B h2B hμB h_agree
+  exact ext_of_generate_finite Rectangles h_gen h_pi h_agree h_univ
 
 /-- **Finite product formula for strictly monotone subsequences**.
 

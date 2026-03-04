@@ -65,13 +65,8 @@ lemma contractable_dist_eq_on_first_r_tail
   have hs₂ : StrictMono s₂ := strictMono_fin_cases (n:=r) (f:=f) hf_mono hk_lt
   have hmap_eq :
       Measure.map (fun ω i => X (s₁ i) ω) μ
-        = Measure.map (fun ω i => X (s₂ i) ω) μ := by
-    calc
-      Measure.map (fun ω i => X (s₁ i) ω) μ
-          = Measure.map (fun ω (i : Fin (r+1)) => X i.1 ω) μ := by
-            simpa [s₁] using hX (r+1) s₁ hs₁
-      _   = Measure.map (fun ω i => X (s₂ i) ω) μ := by
-            simpa [s₂] using (hX (r+1) s₂ hs₂).symm
+        = Measure.map (fun ω i => X (s₂ i) ω) μ :=
+    Contractable.allStrictMono_eq hX (r + 1) s₁ s₂ hs₁ hs₂
   let A : Set (Fin (r+1) → α) :=
     {v | v 0 ∈ B ∧ ∀ i : Fin r, v (Fin.succ i) ∈ C i}
   have hpre₁ :
@@ -115,19 +110,7 @@ lemma preimage_rect_future
     let ψ := fun ω => (X k ω, shiftRV X (m + 1) ω)
     ψ ⁻¹' (B ×ˢ cylinder (α:=α) r C)
       = {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i} := by
-  classical
-  intro ψ
-  ext ω; constructor <;> intro h
-  · rcases h with ⟨hB, hC⟩
-    refine ⟨?_, ?_⟩
-    · simpa [ψ]
-    · intro i
-      simpa only using (hC : (shiftRV X (m + 1) ω) ∈ cylinder (α:=α) r C) i
-  · rcases h with ⟨hB, hC⟩
-    refine ⟨?_, ?_⟩
-    · simpa [ψ]
-    · intro i
-      simpa only [ψ, shiftRV] using hC i
+  rfl
 
 /-- **Finite-dimensional equality on future rectangles with standard cylinders.**
 For `k ≤ m` and measurable `B`, the measures of
@@ -160,9 +143,7 @@ lemma contractable_dist_eq_on_rectangles_future
     μ {ω | X m ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i}
       =
     μ {ω | X k ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
-    have := contractable_dist_eq_on_first_r_tail
-        (μ:=μ) (X:=X) hX hX_meas k m r hk B hB C hC
-    convert this using 2
+    exact contractable_dist_eq_on_first_r_tail hX hX_meas k m r hk B hB C hC
   -- Show the sets are equal modulo arithmetic (m + 1 + i = m + (i + 1))
   have hset_eq (j : ℕ) : {ω | X j ω ∈ B ∧ ∀ i : Fin r, X (m + 1 + i.1) ω ∈ C i}
                        = {ω | X j ω ∈ B ∧ ∀ i : Fin r, X (m + (i.1 + 1)) ω ∈ C i} := by
@@ -280,11 +261,7 @@ lemma measure_ext_of_future_rectangles
         rw [this]
         apply MeasurableSpace.measurableSet_generateFrom
         refine ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
-        ext ⟨a, f⟩
-        simp only [Set.mem_prod, Set.mem_univ, and_true]
-        show a ∈ A ↔ a ∈ A ∧ f ∈ MartingaleHelpers.cylinder 0 (fun _ => Set.univ)
-        rw [MartingaleHelpers.cylinder]
-        simp
+        norm_num
 
       have h_snd : ∀ (r : ℕ) (C : Fin r → Set α),
           (∀ i, MeasurableSet (C i)) →

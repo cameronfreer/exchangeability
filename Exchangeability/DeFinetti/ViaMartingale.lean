@@ -139,10 +139,7 @@ lemma integral_eq_of_map_eq
   have h1 := integral_map_eq hMeas hg
   have h2 : Integrable g (Measure.map T' μ) := hLaw ▸ hg
   have h3 := integral_map_eq hMeas' h2
-  calc ∫ ω, g (T ω) ∂μ
-      = ∫ y, g y ∂(Measure.map T μ) := h1
-    _ = ∫ y, g y ∂(Measure.map T' μ) := by rw [hLaw]
-    _ = ∫ ω, g (T' ω) ∂μ := h3.symm
+  lia
 
 /-- **Helper:** Generalized test function lemma without ψ factor.
 
@@ -327,16 +324,7 @@ lemma integral_mul_condexp_adjoint_Linfty
       ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
     = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
     -- Kill α/β noise by naming the product once and for all
-    set F : Ω → ℝ := fun ω => μ[g | m] ω * ξ ω with hF
-
-    -- Apply the CE integral identity to F (and orient it the way we need)
-    have h_goal :
-        ∫ (ω : Ω), μ[g | m] ω * ξ ω ∂μ
-      = ∫ (ω : Ω), μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
-      simpa [hF] using
-        (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm) (f := F)).symm
-
-    exact h_goal.symm
+    exact integral_condExp hm
 
   calc
     ∫ ω, g ω * μ[ξ | m] ω ∂μ

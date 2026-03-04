@@ -45,9 +45,7 @@ lemma window_card (n k : ℕ) : (window n k).card = k := by
   refine (Finset.card_image_iff.mpr ?_).trans ?_
   · intro a ha b hb h
     have h' : n + a = n + b := by
-      apply Nat.succ.inj
-      simp only [Nat.succ_eq_add_one] at h ⊢
-      omega
+      exact Nat.add_right_cancel h
     exact Nat.add_left_cancel h'
   · simp only [Finset.card_range]
 
@@ -77,12 +75,7 @@ lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
   have h_inj :
       ∀ a ∈ Finset.range k, ∀ b ∈ Finset.range k,
         (n + a + 1 = n + b + 1 → a = b) := by
-    intro a ha b hb h
-    have h' : a + 1 = b + 1 := by
-      have : n + (a + 1) = n + (b + 1) := by
-        omega
-      exact Nat.add_left_cancel this
-    exact Nat.succ.inj h'
+    lia
   -- Convert the window sum to a range sum via the image definition
   have h_sum_range :
       ∑ t ∈ Finset.image (fun i => n + i + 1) (Finset.range k), g t
@@ -98,8 +91,8 @@ lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
     refine (Finset.sum_bij (fun (i : Fin k) _ => i.val)
         (fun i _ => by
           simp [Finset.mem_range, i.is_lt])
-        (fun i hi j hj h => by
-          exact Fin.ext h)
+        (fun i hi j hj h =>
+          Fin.ext h)
         (fun b hb => ?_)
         (fun i _ => rfl)).symm
     · rcases Finset.mem_range.mp hb with hb_lt

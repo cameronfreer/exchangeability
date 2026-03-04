@@ -142,18 +142,7 @@ lemma extreme_members_equal_on_tail
       =ᵐ[μ]
     μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] := by
   -- Preimage formulation to match KallenbergChain API
-  have h_pre : ∀ n, Set.indicator B (fun _ => (1 : ℝ)) ∘ X n =
-      Set.indicator (X n ⁻¹' B) (fun _ => (1 : ℝ)) := fun n => by
-    ext ω; simp only [Function.comp_apply, Set.indicator]; rfl
-  simp only [h_pre]
-  -- CE(X_k | rev (m+1)) = CE(X_k | tail) via Kallenberg chain + convergence
-  have h_m := condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.lt_succ_self m) hB
-  have h_0 := condExp_indicator_revFiltration_eq_tail hX hX_meas (Nat.zero_lt_succ m) hB
-  -- CE(X_m | rev (m+1)) = CE(X_0 | rev (m+1)) via contractability
-  have h_eq : μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)]
-      =ᵐ[μ] μ[Set.indicator (X 0 ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X (m + 1)] := by
-    convert condexp_convergence hX hX_meas 0 m (Nat.zero_le m) B hB using 2
-  exact h_m.symm.trans (h_eq.trans h_0)
+  exact extreme_members_equal_on_tail_via_tower hX hX_meas m B hB
 
 
 section reverse_martingale

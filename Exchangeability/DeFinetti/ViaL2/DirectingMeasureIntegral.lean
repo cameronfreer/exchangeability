@@ -202,9 +202,7 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
       -- Since alphaIicRat n → 1, for large n we have alphaIicRat n > b
       have h_nat : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω (n : ℚ))
           atTop (𝓝 1) := by
-        unfold alphaIicRat
-        simp only [Rat.cast_natCast]
-        exact h_top
+        assumption
       rw [Metric.tendsto_atTop] at h_nat
       obtain ⟨N, hN⟩ := h_nat (1 - b) hε
       have h_contra := hb (Set.mem_range.mpr ⟨N, rfl⟩)
@@ -275,10 +273,8 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
       rw [h_ae_rat q]
       -- Goal: ⨅ r : Set.Ioi q, alphaIic (r : ℝ) ω ≤ alphaIicCE (q : ℝ) ω
       have h_eq : ⨅ r : Set.Ioi q, alphaIic X hX_contract hX_meas hX_L2 (r : ℝ) ω =
-          ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω := by
-        congr 1
-        ext ⟨r, hr⟩
-        exact h_ae_rat r
+          ⨅ r : Set.Ioi q, alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω :=
+        iInf_congr fun i => h_ae_rat ↑i
       rw [h_eq, h_iInf_rat_gt_CE q]
     · -- value ≤ iInf: use monotonicity
       apply le_ciInf
@@ -324,10 +320,8 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
 
   -- Step 1: Rewrite the infimum using h_ae_rat
   have h_infimum_eq : (⨅ q : {q : ℚ // t < q}, alphaIic X hX_contract hX_meas hX_L2 (q : ℝ) ω) =
-      ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
-    congr 1
-    ext ⟨q, _⟩
-    exact h_ae_rat q
+      ⨅ q : {q : ℚ // t < q}, alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω :=
+    iInf_congr fun i => h_ae_rat ↑i
 
   rw [h_infimum_eq]
 
@@ -538,9 +532,7 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
         | zero =>
           -- partialSum 0 = 0, which is a constant
           have h_zero : partialSum 0 = fun _ => 0 := by
-            funext ω
-            show ∑ n ∈ Finset.range 0, _ = 0
-            simp only [Finset.range_zero, Finset.sum_empty]
+            rfl
           rw [h_zero]
           exact aestronglyMeasurable_const
         | succ n ih =>
@@ -686,12 +678,8 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
   let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
   have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
     @borel_eq_generateFrom_Iic ℝ _ _ _ _
-  have h_pi_S : IsPiSystem S := by
-    intro u hu v hv _
-    obtain ⟨s, rfl⟩ := hu
-    obtain ⟨t, rfl⟩ := hv
-    use min s t
-    exact Set.Iic_inter_Iic.symm
+  have h_pi_S : IsPiSystem S :=
+    isPiSystem_Iic
 
   have h_induction : ∀ t (htm : MeasurableSet t), t ∈ G := fun t htm =>
     MeasurableSpace.induction_on_inter h_gen h_pi_S
@@ -755,9 +743,7 @@ lemma integral_simpleFunc_tailAEStronglyMeasurable
       have h_real_eq : ∀ ω, (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c}) =
           ∫ x, (φ ⁻¹' {c}).indicator 1 x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω) := by
-        intro ω
-        haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-        exact (integral_indicator_one h_preimage_meas).symm
+        exact fun ω => Eq.symm (integral_indicator_one h_preimage_meas)
       have h_term_aesm : @AEStronglyMeasurable Ω ℝ _ (TailSigma.tailSigma X) _
           (fun ω => (directing_measure X hX_contract hX_meas hX_L2 ω).real (φ ⁻¹' {c})) μ := by
         have := integral_indicator_borel_tailAEStronglyMeasurable X hX_contract hX_meas hX_L2
@@ -1202,12 +1188,8 @@ lemma setIntegral_directing_measure_indicator_eq
   let S : Set (Set ℝ) := Set.range (Set.Iic : ℝ → Set ℝ)
   have h_gen : (inferInstance : MeasurableSpace ℝ) = MeasurableSpace.generateFrom S :=
     @borel_eq_generateFrom_Iic ℝ _ _ _ _
-  have h_pi_S : IsPiSystem S := by
-    intro u hu v hv _
-    obtain ⟨r, rfl⟩ := hu
-    obtain ⟨t, rfl⟩ := hv
-    use min r t
-    exact Set.Iic_inter_Iic.symm
+  have h_pi_S : IsPiSystem S :=
+    isPiSystem_Iic
 
   have h_induction : ∀ t (htm : MeasurableSet t), t ∈ G := fun t htm =>
     MeasurableSpace.induction_on_inter h_gen h_pi_S
@@ -1818,9 +1800,7 @@ lemma directing_measure_integral_via_chain
             simp only [hω, sub_self, abs_zero, Pi.zero_apply]
           · -- Integrability: α_g - condExp is in L¹
             have hα_g_int : Integrable α_g μ := hα_g_L2.integrable one_le_two
-            have hcond_int : Integrable (μ[g ∘ X 0 | TailSigma.tailSigma X]) μ :=
-              integrable_condExp
-            exact (hα_g_int.sub hcond_int).norm
+            fun_prop
 
         -- Triangle inequality: g-averages → α_g in L¹
         have hg_to_alpha_g : ∀ ε > 0, ∃ M_idx : ℕ, ∀ m ≥ M_idx,
@@ -1836,10 +1816,7 @@ lemma directing_measure_integral_via_chain
                   apply integral_mono_of_nonneg (ae_of_all μ (fun _ => abs_nonneg _))
                   · apply Integrable.add
                     · have hg_avg_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
-                        apply Measurable.const_mul
-                        apply Finset.measurable_sum
-                        intro k _
-                        exact hg_meas.comp (hX_meas (k.val + 1))
+                        fun_prop
                       have hg_avg_bdd : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)| ≤ 1 := by
                         intro ω
                         by_cases hm : m = 0
@@ -1853,9 +1830,7 @@ lemma directing_measure_integral_via_chain
                             _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
                       have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
                         apply ae_of_all μ
-                        intro ω
-                        rw [Real.norm_eq_abs]
-                        exact hg_avg_bdd ω
+                        assumption
                       refine (Integrable.of_bound hg_avg_meas.aestronglyMeasurable 1 hg_avg_bdd').sub integrable_condExp |>.norm
                     · refine (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
                   · apply ae_of_all μ
@@ -1870,10 +1845,7 @@ lemma directing_measure_integral_via_chain
                 ∫ ω, |μ[g ∘ X 0 | TailSigma.tailSigma X] ω - α_g ω| ∂μ := by
                   apply integral_add
                   · have hg_avg_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)) := by
-                      apply Measurable.const_mul
-                      apply Finset.measurable_sum
-                      intro k _
-                      exact hg_meas.comp (hX_meas (k.val + 1))
+                      fun_prop
                     have hg_avg_bdd : ∀ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)| ≤ 1 := by
                       intro ω
                       by_cases hm : m = 0
@@ -1887,9 +1859,7 @@ lemma directing_measure_integral_via_chain
                           _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
                     have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
                       apply ae_of_all μ
-                      intro ω
-                      rw [Real.norm_eq_abs]
-                      exact hg_avg_bdd ω
+                      assumption
                     exact (Integrable.of_bound hg_avg_meas.aestronglyMeasurable 1 hg_avg_bdd').sub integrable_condExp |>.norm
                   · exact (integrable_condExp.sub (hα_g_L2.integrable one_le_two)).norm
             _ = ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) -
@@ -1942,10 +1912,7 @@ lemma directing_measure_integral_via_chain
 
         -- First convert L¹ convergence to eLpNorm convergence
         have hA_meas : ∀ m, Measurable (A m) := fun m => by
-          apply Measurable.const_mul
-          apply Finset.measurable_sum
-          intro k _
-          exact hf_meas.comp (hX_meas (k.val + 1))
+          fun_prop
 
         have hA_bdd : ∀ m ω, |A m ω| ≤ M := fun m ω => by
           simp only [A]

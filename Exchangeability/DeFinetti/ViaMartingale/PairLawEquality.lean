@@ -128,9 +128,7 @@ omit [MeasurableSpace Ω] [MeasurableSpace α] in
 lemma phi1_after_r (r m k : ℕ) (hr : r ≤ m) :
     phi1 r m (r + 1 + k) = m + 1 + k := by
   simp only [phi1]
-  have h : ¬(r + 1 + k ≤ r) := by omega
-  simp only [h, ↓reduceIte]
-  omega
+  lia
 
 /-- **Key lemma:** Contractability gives pair-law equality `(U, W) =^d (U, W')`.
 
@@ -354,9 +352,7 @@ lemma comap_consRV_eq_sup
       cases n <;> simp [Function.comp_apply, consSeq, consRV]
     -- consSeq is measurable
     have h_consSeq_meas : Measurable consSeq := by
-      simpa [consSeq] using
-        (measurable_consRV (x := fun q : α × (ℕ → α) => q.1)
-          (t := fun q : α × (ℕ → α) => q.2) measurable_fst measurable_snd)
+      fun_prop
     -- So consRV x t ⁻¹' S = (fun ω => (x ω, t ω)) ⁻¹' (consSeq ⁻¹' S)
     rw [h_factor, Set.preimage_comp]
     -- consSeq ⁻¹' S is measurable in α × (ℕ → α)
@@ -526,9 +522,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
         @Measurable.comp Ω (ℕ → α) α mW' _ _ (fun f => f 0) W'
           (measurable_pi_apply 0) hW'_ident
       -- X r = fun ω => W' ω 0 by definition of consRV
-      have h_eq : (X r) = (fun ω => W' ω 0) := funext fun ω => by simp only [W', consRV]
-      rw [h_eq]
-      exact h0_meas
+      assumption
     have hIndB_mW'_meas : @Measurable Ω ℝ mW' _ indB :=
       (measurable_const.indicator hB_Xr).comp hXr_mW'_meas
     have hIndB_stronglyMeas_mW' : StronglyMeasurable[mW'] indB :=
@@ -544,9 +538,7 @@ lemma condExp_Xr_indicator_eq_of_contractable
 
     -- Step 4: Apply drop-info: E[indA | mW'] * indB =ᵐ E[indA | mW] * indB
     have h_step2 : μ[indA | mW'] * indB =ᵐ[μ] μ[indA | mW] * indB := by
-      filter_upwards [h_drop] with ω hω
-      simp only [Pi.mul_apply]
-      rw [hω]
+      exact EventuallyEq.mul_right h_drop_raw
 
     -- Combine steps
     have h_step12 : μ[indA * indB | mW'] =ᵐ[μ] μ[indA | mW] * indB :=

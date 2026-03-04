@@ -222,9 +222,7 @@ lemma kallenberg_L2_bound
       -- Equivalent to: |covOffDiag| ≤ σSq (since σSq > 0)
 
       have hσSq_pos : 0 < σSq := by
-        cases (hσSq_nonneg.lt_or_eq) with
-        | inl h_lt => exact h_lt
-        | inr h_eq => exact (h h_eq.symm).elim
+        exact lt_of_le_of_ne' hσSq_nonneg h
 
       -- Apply Cauchy-Schwarz: |∫ f·g| ≤ (∫ f²)^(1/2) · (∫ g²)^(1/2)
       have h_cs : |covOffDiag| ≤ σSq := by
@@ -250,8 +248,8 @@ lemma kallenberg_L2_bound
                       symm
                       exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                 _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                _ = eLpNorm (Z 0) 2 μ := by
-                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                _ = eLpNorm (Z 0) 2 μ :=
+                      eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
             -- Now transfer MemLp using equal eLpNorm
             have : eLpNorm (Z 0) 2 μ < ⊤ := by
               rw [h_Lpnorm_eq]
@@ -276,8 +274,8 @@ lemma kallenberg_L2_bound
                       exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                 _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                 _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                _ = eLpNorm (Z k) 2 μ := by
-                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                _ = eLpNorm (Z k) 2 μ :=
+                      eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
             -- Now transfer MemLp using equal eLpNorm
             have : eLpNorm (Z 1) 2 μ < ⊤ := by
               rw [h_Lpnorm_eq]
@@ -291,8 +289,8 @@ lemma kallenberg_L2_bound
 
         -- Apply Cauchy-Schwarz
         calc |∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ|
-            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
-                exact Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
+            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) :=
+                Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
           _ = (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
                 -- Use equal distributions: Z 1 has same variance as Z 0
                 congr 1
@@ -415,8 +413,8 @@ lemma kallenberg_L2_bound
                           = eLpNorm id 2 (Measure.map (Z k) μ) := by
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                        _ = eLpNorm (Z 0) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                        _ = eLpNorm (Z 0) 2 μ :=
+                              eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
                     have : eLpNorm (Z 0) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -434,8 +432,8 @@ lemma kallenberg_L2_bound
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                         _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                        _ = eLpNorm (Z k) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm (Z k) 2 μ :=
+                              eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                     have : eLpNorm (Z 1) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -494,8 +492,8 @@ lemma kallenberg_L2_bound
                           = eLpNorm id 2 (Measure.map (Z k) μ) := by
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                        _ = eLpNorm (Z 0) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                        _ = eLpNorm (Z 0) 2 μ :=
+                              eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
                     have : eLpNorm (Z 0) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -513,8 +511,8 @@ lemma kallenberg_L2_bound
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                         _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                        _ = eLpNorm (Z k) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm (Z k) 2 μ :=
+                              eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                     have : eLpNorm (Z 1) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -619,8 +617,8 @@ lemma kallenberg_L2_bound
                   symm
                   exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
             _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-            _ = eLpNorm (Z 0) 2 μ := by
-                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+            _ = eLpNorm (Z 0) 2 μ :=
+                  eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
         have : eLpNorm (Z 0) 2 μ < ⊤ := by
           rw [h_Lpnorm_eq]
           exact hZk_L2.eLpNorm_lt_top
@@ -642,8 +640,8 @@ lemma kallenberg_L2_bound
                   exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
             _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
             _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-            _ = eLpNorm (Z k) 2 μ := by
-                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+            _ = eLpNorm (Z k) 2 μ :=
+                  eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
         have : eLpNorm (Z 1) 2 μ < ⊤ := by
           rw [h_Lpnorm_eq]
           exact hZk_L2.eLpNorm_lt_top
@@ -1349,14 +1347,10 @@ private lemma cesaro_cauchy_rho_lt
 
     -- Show measurability
     have h_meas_n : Measurable (fun ω => blockAvg f X 0 n ω) := by
-      simp only [blockAvg]
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
+      fun_prop
 
     have h_meas_n' : Measurable (fun ω => blockAvg f X 0 n' ω) := by
-      simp only [blockAvg]
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
+      fun_prop
 
     have h_meas_diff : Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
       h_meas_n.sub h_meas_n'
@@ -1368,57 +1362,14 @@ private lemma cesaro_cauchy_rho_lt
       intro ω
       -- Each blockAvg is bounded by 1 (average of values bounded by 1)
       have hn_bdd : |blockAvg f X 0 n ω| ≤ 1 := by
-        simp only [blockAvg]
-        -- Strategy: |n⁻¹ * ∑ f_i| ≤ n⁻¹ * ∑ |f_i| ≤ n⁻¹ * n = 1
-        rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
-        have h_sum_bound : |(Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ n := by
-          calc |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-              ≤ (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-                exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (Finset.range n).sum (fun k => 1) := by
-                apply Finset.sum_le_sum
-                intro k _
-                simp only [zero_add]
-                exact hf_bdd (X k ω)
-            _ = n := by
-                simp only [Finset.sum_const, Finset.card_range, nsmul_one]
-        calc (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-            ≤ (n : ℝ)⁻¹ * n := by
-              apply mul_le_mul_of_nonneg_left
-              · exact_mod_cast h_sum_bound
-              · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-          _ = 1 := by
-              field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn_pos)]
+        exact blockAvg_abs_le_one f X hf_bdd 0 n ω
       have hn'_bdd : |blockAvg f X 0 n' ω| ≤ 1 := by
-        simp only [blockAvg]
-        -- Same strategy as hn_bdd
-        rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n'))]
-        have h_sum_bound : |(Finset.range n').sum (fun k => f (X (0 + k) ω))| ≤ n' := by
-          calc |(Finset.range n').sum (fun k => f (X (0 + k) ω))|
-              ≤ (Finset.range n').sum (fun k => |f (X (0 + k) ω)|) := by
-                exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (Finset.range n').sum (fun k => 1) := by
-                apply Finset.sum_le_sum
-                intro k _
-                simp only [zero_add]
-                exact hf_bdd (X k ω)
-            _ = n' := by
-                simp only [Finset.sum_const, Finset.card_range, nsmul_one]
-        calc (n' : ℝ)⁻¹ * |(Finset.range n').sum (fun k => f (X (0 + k) ω))|
-            ≤ (n' : ℝ)⁻¹ * n' := by
-              apply mul_le_mul_of_nonneg_left
-              · exact_mod_cast h_sum_bound
-              · exact inv_nonneg.mpr (Nat.cast_nonneg n')
-          _ = 1 := by
-              field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn'_pos)]
+        exact blockAvg_abs_le_one f X hf_bdd 0 n' ω
       calc |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
           ≤ |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω| := by
             -- Triangle inequality: |a - b| ≤ |a| + |b|
             -- Derive from |a + b| ≤ |a| + |b| by writing a - b = a + (-b)
-            calc |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
-                = |blockAvg f X 0 n ω + (-(blockAvg f X 0 n' ω))| := by rw [sub_eq_add_neg]
-              _ ≤ |blockAvg f X 0 n ω| + |-(blockAvg f X 0 n' ω)| := abs_add_le _ _
-              _ = |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω| := by rw [abs_neg]
+            exact abs_sub (blockAvg f X 0 n ω) (blockAvg f X 0 n' ω)
         _ ≤ 1 + 1 := add_le_add hn_bdd hn'_bdd
         _ = 2 := by norm_num
 
@@ -1619,26 +1570,14 @@ private lemma blockAvg_cauchy_in_L2
 
               -- Now substitute known values
               have h_var_i : ∫ ω, (Z i ω) ^ 2 ∂μ = σSq := by
-                calc ∫ ω, (Z i ω) ^ 2 ∂μ
-                    = ∫ ω, (Z 0 ω) ^ 2 ∂μ := hZ_var_uniform i
-                  _ = σSq := rfl
+                exact Real.ext_cauchy (congrArg Real.cauchy (hZ_var_uniform i))
 
               have h_var_0 : ∫ ω, (Z 0 ω) ^ 2 ∂μ = σSq := rfl
 
               have h_cov : ∫ ω, Z i ω * Z 0 ω ∂μ = σSq * ρ := by
                 calc ∫ ω, Z i ω * Z 0 ω ∂μ
                     = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
-                      by_cases hi1 : i = 1
-                      · simp [hi1]
-                        congr 1 with ω
-                        ring
-                      · -- Use hZ_cov_uniform for i ≠ 0, i ≠ 1
-                        -- Use hZ_cov_uniform: ∫ Z 0 * Z i = ∫ Z 0 * Z 1 (then use commutativity)
-                        have h_swap : ∫ ω, Z i ω * Z 0 ω ∂μ = ∫ ω, Z 0 ω * Z i ω ∂μ := by
-                          congr 1 with ω; ring
-                        calc ∫ ω, Z i ω * Z 0 ω ∂μ
-                            = ∫ ω, Z 0 ω * Z i ω ∂μ := h_swap
-                          _ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := hZ_cov_uniform 0 i (Ne.symm hi)
+                      exact Real.ext_cauchy (congrArg Real.cauchy (hZ_cov_uniform i 0 hi))
                   _ = covZ := rfl
                   _ = σSq * ρ := by
                       rw [hρ_eq]
@@ -2350,9 +2289,7 @@ lemma cesaro_to_condexp_L2
       -- blockAvg is bounded since f is bounded
       apply memLp_two_of_bounded
       · -- Measurable: blockAvg is a finite sum of measurable functions
-        show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
-        exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-          hf_meas.comp (hX_meas (0 + k))) _
+        fun_prop
       intro ω
       -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
       show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
@@ -2750,10 +2687,8 @@ lemma cesaro_to_condexp_L2
       TailSigma.tailSigma_le X hX_meas
 
     -- Step 2: SigmaFinite for trimmed measure (automatic for probability measures)
-    haveI h_finite : IsFiniteMeasure (μ.trim hm) := by
-      constructor
-      rw [trim_measurableSet_eq hm MeasurableSet.univ]
-      exact measure_lt_top μ Set.univ
+    haveI h_finite : IsFiniteMeasure (μ.trim hm) :=
+      isFiniteMeasure_trim hm
     haveI : SigmaFinite (μ.trim hm) := @IsFiniteMeasure.toSigmaFinite _ _ _ h_finite
 
     -- Step 3: Integrability of f ∘ X 0 (bounded function on probability space)
@@ -2852,10 +2787,8 @@ lemma cesaro_to_condexp_L2
         exact h_blockAvg_eq n hn
       -- The limit of an eventually constant sequence equals that constant
       have h_lim_eq_const : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
-          atTop (𝓝 (∫ ω in A, f (X 0 ω) ∂μ)) := by
-        apply tendsto_const_nhds.congr'
-        filter_upwards [h_const] with n hn
-        exact hn.symm
+          atTop (𝓝 (∫ ω in A, f (X 0 ω) ∂μ)) :=
+        tendsto_nhds_of_eventually_eq h_const
       exact tendsto_nhds_unique h_setInt_tendsto h_lim_eq_const
 
     -- Condition 3: α_f is tail-measurable
@@ -2957,13 +2890,7 @@ lemma cesaro_to_condexp_L1
           norm_cast
       _ = (∫ a, ‖(blockAvg f X 0 n - α_f) a‖ ^ (2 : ℝ) ∂μ) := by norm_num
       _ = ∫ ω, (blockAvg f X 0 n ω - α_f ω) ^ 2 ∂μ := by
-          apply integral_congr_ae
-          filter_upwards with a
-          -- LHS: ‖(f - g) a‖ ^ (2:ℝ), RHS: (f a - g a) ^ 2
-          -- Step 1: Convert ‖x‖^(2:ℝ) → |x|^2 (natural power)
-          rw [Real.rpow_two, Real.norm_eq_abs]
-          -- Step 2: |x|^2 = x^2 (sq_abs), then unfold Pi.sub
-          simp only [sq_abs, Pi.sub_apply]
+          simpa
 
   -- STEP 2: Apply L2_tendsto_implies_L1_tendsto_of_bounded
   have hf_meas : ∀ n, Measurable (blockAvg f X 0 n) := by
@@ -3062,14 +2989,7 @@ theorem tendsto_integral_indicator_Iic
     rcases lt_trichotomy (X ω) t with h_lt | h_eq | h_gt
     · -- Case 1: X ω < t
       have hev : ∀ᶠ n in atTop, Xn n ω < t := by
-        rw [Metric.tendsto_atTop] at hω_tendsto
-        have ε_pos : 0 < (t - X ω) / 2 := by linarith
-        obtain ⟨N, hN⟩ := hω_tendsto ((t - X ω) / 2) ε_pos
-        refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
-        have := hN n hn
-        rw [Real.dist_eq] at this
-        have : Xn n ω - X ω < (t - X ω) / 2 := abs_sub_lt_iff.mp this |>.1
-        linarith
+        exact Tendsto.eventually_lt_const h_lt hω_tendsto
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
       filter_upwards [hev] with n hn
       simp only [Set.indicator, Set.mem_Iic]
@@ -3077,15 +2997,8 @@ theorem tendsto_integral_indicator_Iic
     · -- Case 2: X ω = t (excluded by continuity assumption)
       exact absurd h_eq hω_neq
     · -- Case 3: X ω > t
-      have hev : ∀ᶠ n in atTop, t < Xn n ω := by
-        rw [Metric.tendsto_atTop] at hω_tendsto
-        have ε_pos : 0 < (X ω - t) / 2 := by linarith
-        obtain ⟨N, hN⟩ := hω_tendsto ((X ω - t) / 2) ε_pos
-        refine Filter.eventually_atTop.mpr ⟨N, fun n hn => ?_⟩
-        have := hN n hn
-        rw [Real.dist_eq] at this
-        have : X ω - Xn n ω < (X ω - t) / 2 := abs_sub_lt_iff.mp this |>.2
-        linarith
+      have hev : ∀ᶠ n in atTop, t < Xn n ω :=
+        Tendsto.eventually_const_lt h_gt hω_tendsto
       apply Filter.Tendsto.congr' (EventuallyEq.symm _) tendsto_const_nhds
       filter_upwards [hev] with n hn
       simp only [Set.indicator, Set.mem_Iic]
@@ -3235,11 +3148,7 @@ lemma cesaro_convergence_all_shifts
       lt_of_lt_of_le hM1_lt (Nat.cast_le.mpr hm1)
     rcases Nat.eq_zero_or_pos m with rfl | hm_pos
     · -- m = 0 case: contradiction since 4n/ε ≥ 0 but h_big says < 0
-      simp only [Nat.cast_zero] at h_big
-      have h1 : (0 : ℝ) ≤ 4 * n := by positivity
-      have h2 : (0 : ℝ) < ε := hε
-      have h3 : (0 : ℝ) ≤ (4 * n) / ε := by positivity
-      linarith
+      grind only
     have hmpos : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
     have h_rearragne : 4 * n < m * ε := by
       have := mul_lt_mul_of_pos_right h_big hε

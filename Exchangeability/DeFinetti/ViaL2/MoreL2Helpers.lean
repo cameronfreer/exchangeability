@@ -338,14 +338,7 @@ lemma directing_measure_measurable
       -- {Iic t | t ∈ ℝ} is a π-system
       -- For any Iic s, Iic t: if (Iic s) ∩ (Iic t) is nonempty, then it's in S
       -- (Iic s) ∩ (Iic t) = Iic (min s t)
-      intro u hu v hv _
-      -- u ∈ S means u = Iic s for some s
-      -- v ∈ S means v = Iic t for some t
-      obtain ⟨s, rfl⟩ := hu
-      obtain ⟨t, rfl⟩ := hv
-      -- Need to show: Iic s ∩ Iic t ∈ S
-      use min s t
-      exact Set.Iic_inter_Iic.symm
+      exact isPiSystem_Iic
 
     -- Apply the π-λ theorem
     have h_induction : ∀ t (htm : MeasurableSet t), C t htm := fun t htm =>
@@ -407,22 +400,15 @@ lemma ae_eq_of_tendsto_L1 {μ : Measure Ω} [IsProbabilityMeasure μ]
       ((hg_int.sub (hf_int n)).abs).add (((hf_int n).sub hh_int).abs)
     have h_int_triangle : ∫ ω, |g ω - h ω| ∂μ ≤ ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by
       calc ∫ ω, |g ω - h ω| ∂μ
-          ≤ ∫ ω, (|g ω - f n ω| + |f n ω - h ω|) ∂μ := by
-            exact integral_mono h_abs_int h_sum_int (fun ω => h_triangle ω)
-        _ = ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by
-            exact integral_add (hg_int.sub (hf_int n)).abs ((hf_int n).sub hh_int).abs
+          ≤ ∫ ω, (|g ω - f n ω| + |f n ω - h ω|) ∂μ :=
+            integral_mono h_abs_int h_sum_int (fun ω => h_triangle ω)
+        _ = ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ :=
+            integral_add (hg_int.sub (hf_int n)).abs ((hf_int n).sub hh_int).abs
 
     have h_symm : ∫ ω, |g ω - f n ω| ∂μ = ∫ ω, |f n ω - g ω| ∂μ := by
       congr 1; ext ω; rw [abs_sub_comm]
 
-    have h_lt : ∫ ω, |g ω - h ω| ∂μ < 2 * ε := by
-      calc ∫ ω, |g ω - h ω| ∂μ ≤ ∫ ω, |g ω - f n ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := h_int_triangle
-        _ = ∫ ω, |f n ω - g ω| ∂μ + ∫ ω, |f n ω - h ω| ∂μ := by rw [h_symm]
-        _ < ε + ε := by linarith [hN₁ n hn₁, hN₂ n hn₂]
-        _ = 2 * ε := by ring
-
-    simp only [hε_def] at h_lt
-    linarith
+    grind only
 
   have h_nonneg_ae : 0 ≤ᵐ[μ] fun ω => |g ω - h ω| := by
     filter_upwards with ω; exact abs_nonneg _
@@ -1027,8 +1013,8 @@ lemma weighted_sums_converge_L1_one_sub
         calc ∫ ω, |alpha_sub ω - (alpha_1 ω - alpha ω)| ∂μ
             ≤ ∫ ω, (|(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| +
                 |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| +
-                |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) ∂μ := by
-              exact integral_mono h_abs_int h_sum_int h_pw
+                |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω|) ∂μ :=
+              integral_mono h_abs_int h_sum_int h_pw
           _ = ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, (1 - f (X (k.val + 1) ω)) - alpha_sub ω| ∂μ +
               ∫ ω, |(1 / (m : ℝ)) * ∑ _k : Fin m, (1 : ℝ) - alpha_1 ω| ∂μ +
               ∫ ω, |(1 / (m : ℝ)) * ∑ k : Fin m, f (X (k.val + 1) ω) - alpha ω| ∂μ := by
@@ -1324,9 +1310,7 @@ lemma integral_alphaIic_eq_marginal
         by_cases hε_top : ε = ⊤
         · refine ⟨0, fun m _ => ?_⟩
           rw [hε_top]
-          conv_lhs => rw [show (fun ω => ‖(A m - limit) ω‖ₑ) = (fun ω => ‖A m ω - limit ω‖ₑ) from rfl]
-          rw [← ofReal_integral_norm_eq_lintegral_enorm (h_diff_int m)]
-          exact le_top
+          exact OrderTop.le_top (∫⁻ (x : Ω), ‖(A m - limit) x‖ₑ ∂μ)
         · -- ε ≠ ⊤ case: use L¹ convergence
           obtain ⟨M, hM⟩ := Metric.tendsto_atTop.mp h_tendsto_L1 ε.toReal
             (ENNReal.toReal_pos hε.ne' hε_top)
@@ -1487,18 +1471,7 @@ def constrainedFunctionEquiv {N n : ℕ} (i j : Fin (n+1)) (hij : i ≠ j) :
   left_inv := fun ⟨φ, hφ⟩ => by
     simp only [Subtype.mk.injEq]
     funext k
-    by_cases hk : k = j
-    · simp only [hk, dite_true]
-      conv_rhs => rw [← hφ]
-      congr 1
-      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨i, hij⟩
-      simp only [Subtype.ext_iff] at h
-      exact h
-    · simp only [hk, dite_false]
-      congr 1
-      have h := (finSuccAboveEquiv j).apply_symm_apply ⟨k, hk⟩
-      simp only [Subtype.ext_iff] at h
-      exact h
+    simp_all
   right_inv := fun ψ => by
     funext k
     simp only
@@ -1546,14 +1519,7 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
   -- For m = 0 or m = 1, there are no non-injective maps
   cases m with
   | zero =>
-    have : IsEmpty {φ : Fin 0 → Fin N // ¬Function.Injective φ} := by
-      constructor
-      intro ⟨φ, hφ⟩
-      simp only [Function.Injective] at hφ
-      push_neg at hφ
-      obtain ⟨i, _, _, _⟩ := hφ
-      exact Fin.elim0 i
-    simp [Fintype.card_eq_zero]
+    rfl
   | succ n =>
     cases n with
     | zero =>
@@ -1622,14 +1588,7 @@ lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
     simp only [pow_zero, div_one]
     -- For m = 0, the set is empty (all functions are vacuously injective)
     have h : ∀ N, Fintype.card {φ : Fin 0 → Fin N // ¬Function.Injective φ} = 0 := by
-      intro N
-      rw [Fintype.card_eq_zero_iff]
-      constructor
-      intro ⟨φ, hφ⟩
-      simp only [Function.Injective] at hφ
-      push_neg at hφ
-      obtain ⟨i, _, _, _⟩ := hφ
-      exact Fin.elim0 i
+      tauto
     simp only [h, Nat.cast_zero]
     exact tendsto_const_nhds
   | succ n =>
@@ -1744,9 +1703,7 @@ lemma prod_tendsto_L1_of_L1_tendsto
     calc ∫ ω, |∏ i : Fin m, f n i ω - ∏ i : Fin m, g i ω| ∂μ
         ≤ ∫ ω, ∑ i : Fin m, |f n i ω - g i ω| ∂μ := h_int_bound
       _ = ∑ i : Fin m, ∫ ω, |f n i ω - g i ω| ∂μ := by
-          rw [integral_finset_sum]
-          intro i _
-          exact h_diff_int n i
+          exact integral_finset_sum Finset.univ fun i a => h_diff_int n i
   · exact h_sum_tendsto
 
 /-- Block index function is strictly monotone.
