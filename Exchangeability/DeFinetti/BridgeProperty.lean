@@ -209,9 +209,7 @@ lemma indicator_product_bridge
       = ∫⁻ ω, ∏ j : Fin m, ν ω (B (σ j)) ∂μ := by
     congr 1; funext ω
     symm
-    have hsup : {a : Fin m | σ a ≠ a} ⊆ (Finset.univ : Finset (Fin m)) := by
-      simp only [Finset.coe_univ, Set.subset_univ]
-    exact Equiv.Perm.prod_comp σ Finset.univ (fun j => ν ω (B j)) hsup
+    exact Fintype.prod_equiv σ (fun x => (ν ω) (B (σ x))) (fun x => (ν ω) (B x)) (congrFun rfl)
 
   -- Now use the strictly monotone case with reindexed B
   rw [hL, hR]

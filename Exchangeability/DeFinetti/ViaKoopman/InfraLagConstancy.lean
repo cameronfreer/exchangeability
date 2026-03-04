@@ -355,11 +355,7 @@ lemma disjointOffsetSwap_id_beyond (S : Finset ℕ) (offset : ℕ) (hS : ∀ i �
     (n : ℕ) (hn : S.sup id + offset < n) : disjointOffsetSwap S offset hS n = n := by
   simp only [disjointOffsetSwap, Equiv.coe_fn_mk]
   have h1 : n ∉ S := by
-    intro habs
-    have hsup : (id n : ℕ) ≤ S.sup id := Finset.le_sup (f := id) habs
-    simp only [id_eq] at hsup
-    have : n ≤ S.sup id := hsup
-    linarith
+    grind only
   simp only [h1, ↓reduceIte]
   split_ifs with h
   · exfalso

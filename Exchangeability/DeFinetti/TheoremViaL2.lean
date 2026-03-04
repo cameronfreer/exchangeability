@@ -91,8 +91,8 @@ theorem deFinetti_RyllNardzewski_equivalence_viaL2
       ViaL2.directing_measure_satisfies_requirements X hX_meas hContract hX_L2
 
     -- Apply CommonEnding to complete the proof
-    have hCIID : ConditionallyIID μ X := by
-      exact CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
+    have hCIID : ConditionallyIID μ X :=
+      CommonEnding.complete_from_directing_measure X hX_meas hContract ν hν_prob hν_meas h_bridge
 
     constructor
     · -- (i) → (ii): Contractable → Exchangeable (via ConditionallyIID)
@@ -138,7 +138,7 @@ theorem conditionallyIID_of_contractable_viaL2
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  exact (deFinetti_RyllNardzewski_equivalence_viaL2 μ X hX_meas hX_L2).mp hContract |>.2
+    ConditionallyIID μ X :=
+  (deFinetti_RyllNardzewski_equivalence_viaL2 μ X hX_meas hX_L2).mp hContract |>.2
 
 end Exchangeability.DeFinetti

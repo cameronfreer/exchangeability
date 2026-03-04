@@ -404,9 +404,7 @@ lemma ae_pullback_iff
         rw [hmp.measure_preimage hSmeas.nullMeasurableSet]
         exact this
       -- identify the preimage set with the set for the composed functions
-      have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := by
-        simpa using this
-      exact (ae_iff).2 this
+      assumption
     · intro h
       have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := (ae_iff).1 h
       -- convert back using the same preimage identity and measure-preserving fact

@@ -47,11 +47,7 @@ lemma quantize_err_le {C ε x : ℝ} (hε : 0 < ε) :
   have h2 : v < ((⌊v / ε⌋ : ℝ) + 1) * ε := by
     calc v = (v / ε) * ε := by field_simp
        _ < ((⌊v / ε⌋ : ℝ) + 1) * ε := by nlinarith [hε, h_ceil]
-  have h3 : v - (⌊v / ε⌋ : ℝ) * ε < ε := by linarith
-  rw [abs_sub_le_iff]
-  constructor
-  · linarith
-  · linarith
+  grind only [= abs.eq_1, = max_def]
 
 /-- Quantized values are bounded by C + 1 when ε ≤ 1. -/
 lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε ≤ 1) :

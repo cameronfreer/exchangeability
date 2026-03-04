@@ -125,11 +125,7 @@ lemma L1_cesaro_convergence
     have hM' : |g x| < (M : ℝ) := by
       have : (Nat.ceil |g x| : ℝ) < M := by exact_mod_cast hM
       exact lt_of_le_of_lt (Nat.le_ceil _) this
-    simp [g_M]
-    have h_abs : -(M : ℝ) < g x ∧ g x < (M : ℝ) := abs_lt.mp hM'
-    have h1 : -(M : ℝ) < g x := h_abs.1
-    have h2 : g x < (M : ℝ) := h_abs.2
-    simp [min_eq_left (le_of_lt h2), max_eq_left (le_of_lt h1)]
+    grind only [= abs.eq_1, = max_def, = min_def]
 
   -- For each ω, ∫|g(ω j) - g_M M (ω j)| → 0
   have h_trunc_L1 : Tendsto (fun M => ∫ ω, |g (ω 0) - g_M M (ω 0)| ∂μ) atTop (𝓝 0) := by
@@ -174,9 +170,7 @@ lemma L1_cesaro_convergence
       ((hg_meas.comp (measurable_pi_apply 0)).sub
         ((hg_M_meas M).comp (measurable_pi_apply 0))).norm.aestronglyMeasurable
     have h_dom' : ∀ M, (fun ω => ‖g (ω 0) - g_M M (ω 0)‖) ≤ᵐ[μ] (fun ω => 2 * ‖g (ω 0)‖) := by
-      intro M
-      filter_upwards [h_dom M] with ω h
-      simpa [Real.norm_eq_abs] using h
+      assumption
     have h_point' : ∀ᵐ ω ∂μ, Tendsto (fun M => ‖g (ω 0) - g_M M (ω 0)‖) atTop (𝓝 0) := by
       filter_upwards [h_point] with ω h
       simpa [Real.norm_eq_abs] using h

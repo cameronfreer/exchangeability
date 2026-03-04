@@ -244,14 +244,7 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
   have hs_eq :
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
         prefixCylinder (α:=α) (pull ⁻¹' S) := by
-    ext x
-    classical
-    have hpull : pull (prefixProj (α:=α) N x) = s.restrict x := by
-      funext y
-      rcases y with ⟨y, hy⟩
-      simp only [pull, prefixProj, Finset.restrict]
-      rfl
-    simp [MeasureTheory.cylinder, prefixCylinder, hpull]
+    rfl
   refine hs_eq ▸ prefixCylinder_mem_prefixCylinders (α:=α) ?_
   exact hpull_meas hS
 
@@ -438,8 +431,8 @@ lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
         rw [Measure.map_map (measurable_prefixProj (α:=α) (n:=n)) hreindex]
     _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
         (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
-    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ := by
-        exact Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) (by fun_prop)
+    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ :=
+        Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) (by fun_prop)
     _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := rfl
 
 /--
@@ -539,10 +532,7 @@ def approxEquiv :
       ext
       simp
     · intro y
-      rcases y with ⟨y, hy⟩
-      rcases hy with ⟨j, hj⟩
-      ext
-      simp [hj]
+      norm_num
 
 /--
 A finite permutation of `Fin (permBound π n)` that agrees with `π` on `{0,...,n-1}`.
@@ -673,18 +663,7 @@ private lemma exchangeable_finite_marginals_eq_reindexed {μ : Measure Ω}
   have h2 := pathLaw_map_prefix_perm (α:=α) μ X hX π n
   have hperm := marginals_perm_eq (μ:=μ) (X:=X) hX hEx π n
   -- LHS equals the unpermed marginal
-  have hlhs :
-      Measure.map (prefixProj (α:=α) n) μX =
-        Measure.map (fun ω => fun i : Fin n => X i ω) μ := by
-    rwa [hμX]
-  -- RHS equals the permuted marginal
-  have hrhs :
-      Measure.map (prefixProj (α:=α) n)
-          (Measure.map (reindex (α:=α) π) μX) =
-        Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := by
-    rwa [hμX]
-  rw [hlhs, hrhs]
-  exact (congrArg (fun ν => ν S) hperm).symm
+  lia
 
 -- The path law of a reindexed sequence equals reindexing the path law.
 private lemma pathLaw_map_reindex_comm {μ : Measure Ω} {X : ℕ → Ω → α}

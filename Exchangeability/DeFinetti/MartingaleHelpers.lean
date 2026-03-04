@@ -97,8 +97,8 @@ lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
   · rintro ⟨haP, hrest⟩ x hx
     by_cases hxa : x = a
     · simpa [hxa] using haP
-    · have hx' : x ∈ s.erase a := by
-        exact Finset.mem_erase.mpr ⟨hxa, hx⟩
+    · have hx' : x ∈ s.erase a :=
+        Finset.mem_erase.mpr ⟨hxa, hx⟩
       exact hrest _ hx'
 
 end SequenceShift
@@ -156,10 +156,7 @@ lemma strictMono_fin_cases
   | succ i =>
     cases j using Fin.cases with
     | zero =>
-      have : (Fin.succ i : Fin (n + 1)).1 < 0 := by
-        set_option linter.unnecessarySimpa false in
-        simpa [Fin.lt_def] using hij
-      exact absurd this (Nat.not_lt.mpr (Nat.zero_le _))
+      trivial
     | succ j =>
       have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij
       simpa using hf hij'
@@ -185,8 +182,6 @@ lemma indicator_comp_preimage
     {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (f : Ω → α) (B : Set α) (c : ℝ) :
     (B.indicator (fun _ => c)) ∘ f = (f ⁻¹' B).indicator (fun _ => c) := by
-  ext ω
-  simp only [Function.comp_apply, Set.indicator, Set.mem_preimage]
   rfl
 
 /-- Binary indicator takes values in {0, 1}. -/
@@ -195,9 +190,7 @@ lemma indicator_binary
     {Ω : Type*} [MeasurableSpace Ω]
     (A : Set Ω) (ω : Ω) :
     A.indicator (fun _ => (1 : ℝ)) ω = 0 ∨ A.indicator (fun _ => (1 : ℝ)) ω = 1 := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h]
+  exact Set.indicator_eq_zero_or_self A (fun x => 1) ω
 
 /-- Indicator is bounded by its constant. -/
 @[nolint unusedArguments]
@@ -215,9 +208,7 @@ lemma indicator_nonneg
     {Ω : Type*} [MeasurableSpace Ω]
     (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
     0 ≤ A.indicator (fun _ => c) ω := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h, hc]
-  · simp [Set.indicator, h]
+  exact Set.indicator_nonneg (fun a a_1 => hc) ω
 
 end IndicatorAlgebra
 

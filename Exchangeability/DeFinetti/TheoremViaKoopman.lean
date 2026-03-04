@@ -88,11 +88,7 @@ lemma exchangeable_path_of_exchangeable
   -- FullyExchangeable → path law is permutation-invariant
   have hPathInv := (fullyExchangeable_iff_pathLaw_invariant hX_meas).mp hFull
   -- μ_path μ X = pathLaw μ X (same definition)
-  intro π
-  -- pathLaw μ X = Measure.map (fun ω i => X i ω) μ
-  -- μ_path μ X = Measure.map (pathify X) μ where pathify X ω n = X n ω
-  -- These are definitionally equal
-  convert hPathInv π using 2
+  assumption
 
 /-- Transfer ConditionallyIID from path space to original space.
 
@@ -192,7 +188,7 @@ theorem conditionallyIID_of_contractable_viaKoopman
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  exact ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
+    ConditionallyIID μ X :=
+  ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
 
 end Exchangeability.DeFinetti

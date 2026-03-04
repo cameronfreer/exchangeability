@@ -99,9 +99,7 @@ lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
 @[nolint unusedArguments]
 lemma MeasurePreserving.iterate' (hT : MeasurePreserving shift μ μ) (k : ℕ) :
     MeasurePreserving (shift^[k]) μ μ := by
-  induction k with
-  | zero => exact MeasurePreserving.id μ
-  | succ k ih => simp only [Function.iterate_succ']; exact hT.comp ih
+  exact MeasurePreserving.iterate hT k
 
 /-- General evaluation formula for shift iteration. -/
 @[nolint unusedArguments]
@@ -220,9 +218,7 @@ lemma optionB_Step3b_L2_to_L1
         have h_memLp1 : MemLp f 1 μ := by
           refine ⟨h_memLp2.aestronglyMeasurable, ?_⟩
           calc eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
-                apply eLpNorm_le_eLpNorm_of_exponent_le
-                · norm_num
-                · exact h_memLp2.aestronglyMeasurable
+                assumption
              _ < ⊤ := h_memLp2.eLpNorm_lt_top
         exact memLp_one_iff_integrable.mp h_memLp1
       -- Apply eLpNorm_one_le_eLpNorm_two_toReal
@@ -474,9 +470,7 @@ lemma optionB_Step4c_triangle
           rw [hB_def]
           simp [hn]
           -- (1/n) * ∑_{j < n} g(ω j) is measurable
-          refine Measurable.const_mul ?_ _
-          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact Measurable.comp hg_meas (measurable_pi_apply j)
+          fun_prop
         have hB_bd_ae : ∀ᵐ ω ∂μ, ‖B n ω‖ ≤ Cg := ae_of_all μ (fun ω => le_trans (Real.norm_eq_abs _).le (hB_bd ω))
         exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd_ae⟩
     -- |B n - Y| is integrable as difference of integrable functions
@@ -540,18 +534,13 @@ lemma optionB_Step4c_triangle
             _ = 2 * Cg := by ring
       have hA_meas : Measurable (A n) := by
         rw [hA_def]
-        simp
-        refine Measurable.const_mul ?_ _
-        refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
-        exact Measurable.comp hg_meas (measurable_pi_apply j)
+        fun_prop
       have hB_meas : Measurable (B n) := by
         rw [hB_def]
         by_cases hn : n = 0
         · simp [hn]
         · simp [hn]
-          refine Measurable.const_mul ?_ _
-          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact Measurable.comp hg_meas (measurable_pi_apply j)
+          fun_prop
       have hAB_bd_ae : ∀ᵐ ω ∂μ, ‖|A n ω - B n ω|‖ ≤ 2 * Cg :=
         ae_of_all μ (fun ω => by simp [Real.norm_eq_abs]; exact hAB_bd ω)
       exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd_ae⟩
@@ -751,8 +740,8 @@ theorem optionB_L1_convergence_bounded
     -- Use helper lemma: condexpL2 = condExp a.e.
     have h1 := condexpL2_ae_eq_condExp fL2
     -- condExp preserves a.e. equality
-    have h2 : μ[fL2 | mSI] =ᵐ[μ] μ[G | mSI] := by
-      exact MeasureTheory.condExp_congr_ae hfL2_eq
+    have h2 : μ[fL2 | mSI] =ᵐ[μ] μ[G | mSI] :=
+      MeasureTheory.condExp_congr_ae hfL2_eq
     simp only [Y]
     exact h1.trans h2
 
@@ -773,10 +762,7 @@ theorem optionB_L1_convergence_bounded
     have hG_meas : Measurable G := by
       simp only [G]
       exact hg_meas.comp (measurable_pi_apply 0)
-    have hG_bd_ae : ∀ᵐ ω ∂μ, ‖G ω‖ ≤ Cg := ae_of_all μ (fun ω => by
-      simp [G, Real.norm_eq_abs]
-      exact hCg_bd (ω 0))
-    exact ⟨hG_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hG_bd_ae⟩
+    exact integrable_of_bounded_measurable hG_meas Cg fun ω => hCg_bd (ω 0)
 
   have hY_int : Integrable Y μ := by
     -- Y = μ[G | mSI], and condExp preserves integrability

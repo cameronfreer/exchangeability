@@ -335,9 +335,7 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
           ext; simp [ι]
       , right_inv := by
           intro i
-          cases i with
-          | mk i hi =>
-            simp [ι] }
+          rfl }
   -- Equivalence between the image of `k` and `Fin m`.
   -- For injectivity of k, we use that it's strictly monotone
   have hk_inj : Function.Injective kFin :=
@@ -409,11 +407,8 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
 
 /-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
 lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
-    Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ := by
-  ext x
-  simp only [Finset.mem_image, Finset.mem_univ, true_and, iff_true]
-  use σ.symm x
-  simp
+    Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ :=
+  Finset.image_univ_equiv σ
 
 /--
 Helper lemma: All values of a strictly monotone function are bounded by its last value plus one.

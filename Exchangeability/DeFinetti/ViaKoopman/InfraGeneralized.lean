@@ -279,10 +279,7 @@ lemma Integrable.of_abs_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure 
       _ ≤ C * |g ω| := mul_le_mul_of_nonneg_right (h_bound ω) (abs_nonneg _)
   -- Use Integrable.mono' with dominating function C * |g|
   refine Integrable.mono' (hg.norm.const_mul C) hfg_meas ?_
-  filter_upwards with ω
-  simp only [Real.norm_eq_abs, Pi.mul_apply, abs_of_nonneg hC]
-  calc |f ω * g ω| = |f ω| * |g ω| := abs_mul _ _
-    _ ≤ C * |g ω| := mul_le_mul_of_nonneg_right (h_bound ω) (abs_nonneg _)
+  assumption
 
 /-- **Generalized lag-constancy for products** (extends `condexp_lag_constant_from_exchangeability`).
 

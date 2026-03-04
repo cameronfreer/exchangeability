@@ -154,11 +154,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- Prove integrability of A n m
     have hA_int : Integrable (A n m) μ := by
       have hA_meas_nm : Measurable (A n m) := by
-        simp only [A]
-        apply Measurable.const_mul
-        apply Finset.measurable_sum
-        intro k _
-        exact (indIic_measurable t).comp (hX_meas _)
+        fun_prop
       refine Integrable.of_bound hA_meas_nm.aestronglyMeasurable 1 ?_
       filter_upwards with ω
       unfold A
@@ -562,9 +558,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- A n m is a Cesàro average of indIic ∘ X, which are measurable
     -- Each indIic ∘ X_i is measurable, sum is measurable, scalar mult is measurable
     refine Measurable.aestronglyMeasurable ?_
-    show Measurable fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
-    refine Measurable.const_mul ?_ _
-    exact Finset.measurable_sum _ (fun k _ => (indIic_measurable t).comp (hX_meas _))
+    fun_prop
 
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g
@@ -776,8 +770,6 @@ lemma alphaIicCE_L1_tendsto_zero_atBot
       -- Rewrite composition as indicator on preimage
       have h_comp : (indIic (-(n : ℝ))) ∘ (X 0)
           = (X 0 ⁻¹' Set.Iic (-(n : ℝ))).indicator (fun _ => (1 : ℝ)) := by
-        ext ω
-        simp only [indIic, Function.comp_apply, Set.indicator_apply]
         rfl
       rw [h_comp, integral_indicator (measurableSet_preimage (hX_meas 0) measurableSet_Iic),
           setIntegral_one_eq_measureReal]
@@ -878,8 +870,6 @@ lemma alphaIicCE_L1_tendsto_one_atTop
       -- Rewrite composition as indicator on preimage
       have h_comp : (Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) ∘ (X 0)
           = (X 0 ⁻¹' Set.Ioi (n : ℝ)).indicator (fun _ => (1 : ℝ)) := by
-        ext ω
-        simp only [Function.comp_apply, Set.indicator_apply]
         rfl
       rw [h_comp, integral_indicator (measurableSet_preimage (hX_meas 0) measurableSet_Ioi),
           setIntegral_one_eq_measureReal]
@@ -1263,61 +1253,22 @@ lemma alphaIicCE_ae_tendsto_one_atTop
       use 0
       intro n _
       -- Show: 1 - ∫ (1 - f) = ∫ f
-      have h_f_int : Integrable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
-        refine Integrable.of_bound (stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le) 1 ?_
-        filter_upwards [alphaIicCE_nonneg_le_one X hX_contract hX_meas hX_L2 (n : ℝ)] with ω hω
-        rw [Real.norm_eq_abs, abs_of_nonneg hω.1]
-        exact hω.2
+      have h_f_int : Integrable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ :=
+        Integrable.mono' h_int (h_meas n) (h_bound_ae n)
       calc 1 - ∫ ω, (1 - alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) ∂μ
           = 1 - (∫ ω, 1 ∂μ - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
               rw [integral_sub (integrable_const 1) h_f_int]
           _ = 1 - (μ.real Set.univ - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
               rw [integral_const, smul_eq_mul, mul_one]
           _ = 1 - (1 - ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ) := by
-              simp only [Measure.real]
-              rw [measure_univ]
-              simp
+              norm_num
           _ = ∫ ω, alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω ∂μ := by ring
     rw [← tendsto_nhds_unique h_lim h_int_conv]
 
   -- Conclude U_fun = 1 a.e.
   have hU_ae_one : U_fun =ᵐ[μ] 1 := by
     have hU_int : Integrable U_fun μ := by
-      have hU_nonneg : 0 ≤ᵐ[μ] U_fun := by
-        filter_upwards [h_bound] with ω h_bound_ω
-        -- U_fun ω = sup of values all ≥ 0, so U_fun ω ≥ value at 0 ≥ 0
-        refine le_trans ?_ (le_ciSup ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩ (0 : ℕ))
-        exact (h_bound_ω 0).1
-      have hU_bound : ∀ᵐ ω ∂μ, ‖U_fun ω‖ ≤ 1 := by
-        filter_upwards [hU_nonneg, h_bound] with ω hω_nn h_bound_ω
-        rw [Real.norm_eq_abs, abs_of_nonneg hω_nn]
-        -- U_fun ω = ⨆ n, f(n) where each f(n) ≤ 1, so U_fun ω ≤ 1
-        -- Use that 1 is an upper bound for all values
-        calc U_fun ω
-            = ⨆ (n : ℕ), alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω := rfl
-          _ ≤ 1 := by
-              apply ciSup_le
-              intro n
-              exact (h_bound_ω n).2
-      have hU_meas : AEStronglyMeasurable U_fun μ := by
-        -- Each alphaIicCE (n:ℝ) is AEStronglyMeasurable (conditional expectation)
-        have h_meas_n : ∀ (n : ℕ), AEStronglyMeasurable (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω) μ := by
-          intro n
-          unfold alphaIicCE
-          exact stronglyMeasurable_condExp.aestronglyMeasurable.mono hm_le
-        -- They converge a.e. to U_fun (by monotone convergence)
-        have h_conv_ae_n : ∀ᵐ ω ∂μ, Tendsto (fun (n : ℕ) => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω)
-            atTop (𝓝 (U_fun ω)) := by
-          filter_upwards [h_ae_conv, h_bound, h_mono] with ω ⟨L, hL⟩ h_bound_ω h_mono_ω
-          have hU_is_sup : L = U_fun ω := by
-            apply tendsto_nhds_unique hL
-            apply tendsto_atTop_ciSup h_mono_ω
-            exact ⟨1, fun y hy => by obtain ⟨k, hk⟩ := hy; rw [← hk]; exact (h_bound_ω k).2⟩
-          rw [← hU_is_sup]
-          exact hL
-        -- Apply aestronglyMeasurable_of_tendsto_ae
-        exact aestronglyMeasurable_of_tendsto_ae atTop h_meas_n h_conv_ae_n
-      exact Integrable.of_bound hU_meas 1 hU_bound
+      exact integrable_of_integral_eq_one hU_integral_one
     -- Show U_fun = 1 a.e. by showing 1 - U_fun = 0 a.e.
     have h_diff_nonneg : 0 ≤ᵐ[μ] fun ω => 1 - U_fun ω := by
       filter_upwards [hU_le_one] with ω hω

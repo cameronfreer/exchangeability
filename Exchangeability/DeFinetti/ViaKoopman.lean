@@ -271,17 +271,11 @@ private theorem conditionallyIID_of_contractable_path
     have h_integrands_eq : ∀ i, (fun ω' : Ω[α] => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i)
         (1 : Ω[α] → ℝ) ω') = (fun ω' => fs i (ω' 0)) := by
       intro i
-      ext ω'
-      -- Both are indicator functions that evaluate to 1 iff ω' 0 ∈ sets i
-      simp only [fs]
       rfl
     have h_rhs_eq : (fun ω => ∏ i : Fin m,
         μ[(fun ω' => Set.indicator ((fun ω'' => ω'' 0) ⁻¹' sets i) (1 : Ω[α] → ℝ) ω') | mSI] ω)
         = (fun ω => ∏ i : Fin m, μ[(fun ω' => fs i (ω' 0)) | mSI] ω) := by
-      ext ω
-      apply Finset.prod_congr rfl
-      intro i _
-      simp only [h_integrands_eq i]
+      rfl
     -- Combine using h_fact
     rw [h_prod_eq, h_rhs_eq]
     exact h_fact
@@ -458,10 +452,8 @@ lemma conditionallyIID_transfer
     have h_rhs : μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) =
         (μ.map φ).bind (fun ω => Measure.pi fun _ : Fin m => ν_path ω) := by
       simp only [Measure.bind, ν]
-      have h_pi_meas : Measurable (fun ω' : Ω[α] => Measure.pi fun _ : Fin m => ν_path ω') := by
-        apply measurable_measure_pi
-        · intro ω; exact hν_prob ω
-        · intro s hs; exact hν_meas s hs
+      have h_pi_meas : Measurable (fun ω' : Ω[α] => Measure.pi fun _ : Fin m => ν_path ω') :=
+        measurable_measure_pi ν_path hν_prob hν_meas
       rw [Measure.map_map h_pi_meas hφ_meas]
       rfl
     rw [h_lhs, h_rhs]
@@ -563,22 +555,8 @@ lemma indicator_product_bridge_contractable
   have h_ind_integral : ∀ j ω, ∫ x, fs_σ j x ∂(ν (μ := μ) ω) = ((ν (μ := μ) ω) (B (σ j))).toReal :=
     fun j ω => integral_indicator_one (hB_meas (σ j))
   -- Step 5: Integral at ρ-indices equals integral at consecutive indices
-  have h_ρ_to_consec : ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
-    have hρ_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω (ρ j)) :=
-      by
-        fun_prop
-    have hconsec_meas : Measurable (fun (ω : Ω[α]) (j : Fin m) => ω j.val) :=
-      by
-        fun_prop
-    have hg_meas : Measurable (fun ω' : Fin m → α => ∏ j, fs_σ j (ω' j)) :=
-      Finset.measurable_prod Finset.univ (fun j _ => (hfs_meas j).comp (measurable_pi_apply j))
-    calc ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ
-        = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω (ρ j)) μ) := by
-            rw [integral_map hρ_meas.aemeasurable hg_meas.aestronglyMeasurable]
-      _ = ∫ ω', (fun ω'' => ∏ j, fs_σ j (ω'' j)) ω' ∂(Measure.map (fun ω j => ω j.val) μ) := by
-            rw [h_contr_ρ]
-      _ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ := by
-            rw [integral_map hconsec_meas.aemeasurable hg_meas.aestronglyMeasurable]
+  have h_ρ_to_consec : ∫ ω, ∏ j, fs_σ j (ω (ρ j)) ∂μ = ∫ ω, ∏ j, fs_σ j (ω j.val) ∂μ :=
+    Eq.symm (integral_prod_reindex_of_contractable hContract fs_σ hfs_meas hfs_bd hρ_mono)
   -- Define auxiliary functions for lintegral conversion
   let F_ρ : Ω[α] → ℝ := fun ω => ∏ j, fs_σ j (ω (ρ j))
   let G : Ω[α] → ℝ := fun ω => ∏ j, ((ν (μ := μ) ω) (B (σ j))).toReal

@@ -118,8 +118,8 @@ example :
 
   -- Push forward both sides by the measurable map extracting the first two coordinates.
   let p : (Fin 2 → ℝ) → ℝ × ℝ := fun y => (y 0, y 1)
-  have hp : Measurable p := by
-    exact (measurable_pi_apply (0 : Fin 2)).prod_mk (measurable_pi_apply (1 : Fin 2))
+  have hp : Measurable p :=
+    (measurable_pi_apply (0 : Fin 2)).prod_mk (measurable_pi_apply (1 : Fin 2))
   have h_meas_left : Measurable (fun ω i : Fin 2 => X (σ i : ℕ) ω) :=
     by
       fun_prop

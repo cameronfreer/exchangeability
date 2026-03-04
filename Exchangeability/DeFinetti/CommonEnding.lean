@@ -193,12 +193,8 @@ lemma prod_eq_one_iff_of_zero_one {ι : Type*} [Fintype ι] {f : ι → ENNReal}
 /-- The product of finitely many terms, each bounded by 1, is bounded by 1.
 This is useful for products of indicator functions. -/
 lemma prod_le_one_of_le_one {ι : Type*} [Fintype ι] {f : ι → ENNReal}
-    (hf : ∀ i, f i ≤ 1) : ∏ i, f i ≤ 1 := by
-  apply Finset.prod_le_one
-  · intro i _
-    exact zero_le _
-  · intro i _
-    exact hf i
+    (hf : ∀ i, f i ≤ 1) : ∏ i, f i ≤ 1 :=
+  Finset.prod_le_one' fun i a => hf i
 
 -- Note: measurable_prod_ennreal has been moved to Exchangeability.Probability.MeasureKernels
 
@@ -240,9 +236,7 @@ lemma product_bounded {ι : Type*} [Fintype ι] {α : Type*}
         _ ≤ M' a * s.prod M' :=
             mul_le_mul_of_nonneg_left ih (hM'_nonneg a)
         _ = Finset.prod (insert a s) M' := by rw [Finset.prod_insert ha]
-  refine ⟨Finset.univ.prod M', ?_⟩
-  intro x
-  simpa using key Finset.univ x
+  exact Exists.intro (Finset.univ.prod M') (key Finset.univ)
 
 
 /- ### Key Bridge Lemma
@@ -327,9 +321,7 @@ private lemma measure_via_indicator_integral (μ : Measure Ω) (X : ℕ → Ω �
   have hconst := lintegral_const (μ := μ.restrict E) (c := 1)
   have hconst' : ∫⁻ ω, 1 ∂μ.restrict E = μ E := by
     simp [Measure.restrict_apply, hconst]
-  have hμE : μ E = ∫⁻ ω, E.indicator (fun _ => 1) ω ∂μ := by
-    simpa [hconst'] using hlin.symm
-  rw [hμE, ← hProdEqIndicator]
+  lia
 
 -- Product of measures on rectangles equals Measure.pi evaluation
 private lemma product_measure_on_rectangle {Ω α : Type*} [MeasurableSpace α]
@@ -365,11 +357,7 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     exact product_measure_on_rectangle ν hν_prob m B ω
 
   -- Chain the equalities: μ E = integral of indicators = integral of products = integral of pi
-  calc μ {ω | ∀ i, X (k i) ω ∈ B i}
-      = ∫⁻ ω, ∏ i : Fin m,
-          ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ := lhs_eq
-    _ = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := h_bridge
-    _ = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := rhs_eq
+  lia
 
 -- Note: rectangles_isPiSystem has been moved to Exchangeability.Probability.MeasureKernels
 
@@ -424,10 +412,7 @@ lemma measure_eq_of_agree_on_pi_system {Ω : Type*} [MeasurableSpace Ω]
     μ = ν := by
   -- For probability measures, μ univ = ν univ = 1
   have h_univ : μ Set.univ = ν Set.univ := by
-    by_cases h : Set.univ ∈ C
-    · exact h_agree Set.univ h
-    · -- Both are probability measures, so both measure univ as 1
-      simp [measure_univ]
+    norm_num
   exact ext_of_generate_finite C hC_gen hC_pi h_agree h_univ
 
 /-!
@@ -504,13 +489,8 @@ private lemma map_coords_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMe
 -- Product of probability measures is a probability measure
 private lemma pi_of_prob_is_prob {μ : Measure Ω} [IsProbabilityMeasure μ]
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω)) (m : ℕ) :
-    ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) := by
-  intro ω
-  constructor
-  have h : (Set.univ : Set (Fin m → α)) = Set.univ.pi (fun (_ : Fin m) => Set.univ) := by
-    ext x; simp
-  rw [h, Measure.pi_pi]
-  simp [measure_univ]
+    ∀ ω, IsProbabilityMeasure (Measure.pi fun _ : Fin m => ν ω) :=
+  fun ω => Measure.pi.instIsProbabilityMeasure fun x => ν ω
 
 -- Bind of probability measure with probability kernels is probability
 private lemma bind_pi_isProbabilityMeasure {μ : Measure Ω} [IsProbabilityMeasure μ]

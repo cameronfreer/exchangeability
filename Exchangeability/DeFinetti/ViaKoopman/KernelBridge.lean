@@ -201,22 +201,7 @@ lemma Kernel.IndepFun.comp
   -- For sets s, t in the target σ-algebras, we need to show:
   -- ∀ s ∈ σ(f∘X), ∀ t ∈ σ(g∘Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
 
-  intro s t hs ht
-  -- s is measurable w.r.t. comap (f ∘ X), so s = (f ∘ X)⁻¹(S) for some measurable S ⊆ ℝ
-  -- This means s = X⁻¹(f⁻¹(S)), so s is in comap X
-  -- Similarly t is in comap Y
-
-  -- We need to show s ∈ comap X and t ∈ comap Y
-  -- Key fact: if s is measurable w.r.t. comap (f ∘ X), then s is measurable w.r.t. comap X
-  -- because comap (f ∘ X) ≤ comap X
-
-  have hs' : MeasurableSet[MeasurableSpace.comap X inferInstance] s :=
-    comap_comp_le X f hf s hs
-
-  have ht' : MeasurableSet[MeasurableSpace.comap Y inferInstance] t :=
-    comap_comp_le Y g hg t ht
-
-  exact hXY s t hs' ht'
+  exact ProbabilityTheory.Kernel.IndepFun.comp hXY hf hg
 
 /-- **Bridge lemma**: The Mean Ergodic Theorem projection equals conditional expectation
 onto the shift-invariant σ-algebra.

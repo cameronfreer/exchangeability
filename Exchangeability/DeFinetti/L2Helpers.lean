@@ -99,15 +99,7 @@ lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i
   have h_eval := congrArg (Measure.map eval) h_map
   have h_comp := h_left.trans (h_eval.trans h_right)
   -- Evaluate the compositions explicitly.
-  have h_comp_simp :
-      (fun ω => eval (fun j : Fin 1 => X (k j) ω)) = fun ω => X i ω := by
-    funext ω
-    simp [eval, k, fin1Zero]
-  have h_comp_simp' :
-      (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
-    funext ω
-    simp [eval, fin1Zero]
-  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+  assumption
 
 /-- **Strict monotonicity for two-point subsequence selection.**
 
@@ -163,15 +155,7 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
   have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
   have h_eval := congrArg (Measure.map eval) h_map
   have h_comp := h_left.trans (h_eval.trans h_right)
-  have h_comp_simp :
-      (fun ω => eval (fun t : Fin 2 => X (k t) ω)) = fun ω => (X i ω, X j ω) := by
-    funext ω
-    simp [eval, k, fin2Zero, fin2One]
-  have h_comp_simp' :
-      (fun ω => eval (fun t : Fin 2 => X t.val ω)) = fun ω => (X 0 ω, X 1 ω) := by
-    funext ω
-    simp [eval, fin2Zero, fin2One]
-  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+  assumption
 
 set_option linter.unusedSectionVars false in
 /-- **Contractability is preserved under measurable postcomposition.**
@@ -222,9 +206,7 @@ private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
   have h'' : |a| * |b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
     have : |a| * |b| * 2 ≤ |a| ^ 2 + |b| ^ 2 := h'
     linarith [show (0 : ℝ) < 2 by norm_num]
-  have h''' : |a * b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
-    simpa [abs_mul] using h''
-  simpa [sq_abs, pow_two, add_comm, add_left_comm, add_assoc] using h'''
+  simp_all
 
 end CovarianceHelpers
 /-!
@@ -258,10 +240,7 @@ lemma toReal_lt_of_lt_ofReal {x : ENNReal} {ε : ℝ}
     (_hx : x ≠ ⊤) (hε : 0 ≤ ε) :
     x < ENNReal.ofReal ε → ENNReal.toReal x < ε := by
   intro h
-  have : ENNReal.toReal x < ENNReal.toReal (ENNReal.ofReal ε) :=
-    ENNReal.toReal_strict_mono (ENNReal.ofReal_ne_top) h
-  simp [ENNReal.toReal_ofReal hε] at this
-  exact this
+  exact (ENNReal.lt_ofReal_iff_toReal_lt _hx).mp h
 
 /-- **Arithmetic bound for convergence rates: √(Cf/m) < ε/2 when m is large.**
 
@@ -369,9 +348,7 @@ lemma eLpNorm_two_from_integral_sq_le
   -- Goal is (∫ ‖g‖²)^(1/2) ≤ C^(1/2)
   -- Note: the ‖g‖^2 in the integral is with ^(2:ℕ), need to be careful with types
   have h_int_le' : (∫ ω, ‖g ω‖ ^ (2:ℝ) ∂μ) ≤ C := by
-    convert h_int_le using 2
-    ext ω
-    simp [sq]
+    simpa
   gcongr
 
 end LpUtilities
@@ -380,12 +357,7 @@ end LpUtilities
 
 Since Fin 1 has only one element, the premise `i < j` is impossible. -/
 private lemma fin1_strictMono_vacuous (k : Fin 1 → ℕ) : StrictMono k := by
-  intro i j hij
-  exfalso
-  have hi : i = 0 := Fin.eq_zero i
-  have hj : j = 0 := Fin.eq_zero j
-  rw [hi, hj] at hij
-  exact LT.lt.false hij
+  exact Subsingleton.strictMono k
 
 /-- **Single marginals have identical distribution in contractable sequences.**
 
@@ -417,11 +389,7 @@ lemma contractable_single_marginal_eq
   have h_eval := congrArg (Measure.map eval) h_map
   have h_comp := h_left.trans (h_eval.trans h_right)
   -- Simplify the compositions
-  have h_comp_left : (fun ω => eval (fun j : Fin 1 => X (κ j) ω)) = fun ω => X k ω := by
-    funext ω; simp [eval, κ]
-  have h_comp_right : (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
-    funext ω; simp [eval]
-  simpa [Function.comp, h_comp_left, h_comp_right] using h_comp
+  assumption
 
 -- Helper lemmas for Fin index gymnastics in two-window bounds.
 -- These lemmas isolate the technical reindexing and cardinality proofs needed for
@@ -477,9 +445,7 @@ lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
       have : b.val < 2 * k := b.isLt
       omega
     · ext
-      simp
-      have : k ≤ b.val := hb
-      omega
+      exact Nat.sub_add_cancel hb
 
 /-- Cardinality of `{i : Fin(2k) | i.val ≥ k}` is k. -/
 lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
@@ -519,9 +485,7 @@ lemma sum_filter_fin_val_ge_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : �
     constructor
     · intro hi
       use ⟨i.val - k, by omega⟩
-      ext
-      simp
-      omega
+      simp_all
     · rintro ⟨j, _, rfl⟩
       simp
   rw [h_eq, Finset.sum_image]
@@ -541,9 +505,7 @@ lemma sum_last_block_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (g :
     constructor
     · intro hi
       use ⟨i.val - n, by omega⟩
-      ext
-      simp
-      omega
+      simp_all
     · rintro ⟨j, _, rfl⟩
       simp
   rw [h_eq, Finset.sum_image]

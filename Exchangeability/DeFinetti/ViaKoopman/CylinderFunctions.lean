@@ -84,13 +84,8 @@ lemma productCylinder_bounded {m : ℕ} {fs : Fin m → α → ℝ}
     have := hbound k (ω k.val)
     exact this.trans (le_max_left _ _)
   have h_nonneg : ∀ k : Fin m, 0 ≤ |fs k (ω k.val)| := fun _ => abs_nonneg _
-  have hprod : ∏ k : Fin m, |fs k (ω k.val)| ≤ ∏ k : Fin m, C k := by
-    simpa using
-      (Finset.prod_le_prod (s := Finset.univ)
-        (f := fun k : Fin m => |fs k (ω k.val)|)
-        (g := fun k : Fin m => C k)
-        (fun k _ => h_nonneg k)
-        (fun k _ => h_abs_le k))
+  have hprod : ∏ k : Fin m, |fs k (ω k.val)| ≤ ∏ k : Fin m, C k :=
+    Finset.prod_le_prod (fun i a => h_nonneg i) fun i a => h_abs_le i
   have habs_eq : |productCylinder fs ω| = ∏ k : Fin m, |fs k (ω k.val)| := by
     simp [productCylinder, Finset.abs_prod]
   exact (by simpa [habs_eq] using hprod)

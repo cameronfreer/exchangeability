@@ -105,14 +105,7 @@ lemma condexp_precomp_iterate_eq
         ∫ ω, s.indicator f (shiftk ω) ∂μ
           = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ := by
       refine integral_congr_ae (ae_of_all _ ?_)
-      intro ω
-      by_cases hω : ω ∈ s
-      · have h_shiftk_mem : shiftk ω ∈ s := (h_mem_equiv ω).mpr hω
-        simp [Set.indicator, hω, h_shiftk_mem]
-      · have h_shiftk_mem : shiftk ω ∉ s := by
-          intro hcontr
-          exact hω ((h_mem_equiv ω).mp hcontr)
-        simp [Set.indicator, hω, h_shiftk_mem]
+      exact fun a => Set.indicator_eq_indicator (h_mem_equiv a) rfl
     have h_indicator_eq :
         ∫ ω, s.indicator f ω ∂μ
           = ∫ ω, s.indicator (fun ω => f (shiftk ω)) ω ∂μ :=
@@ -163,9 +156,7 @@ lemma cesaro_ce_eq_condexp
               (Finset.range (n + 1)).sum (fun j => g (ω j))) | mSI] ω) := by
     have h_smul := condExp_smul (μ := μ) (m := mSI) (1 / (n + 1 : ℝ))
       (fun ω => (Finset.range (n + 1)).sum (fun j => g (ω j)))
-    filter_upwards [h_smul] with ω hω
-    simp only [A, Pi.smul_apply, smul_eq_mul] at hω ⊢
-    exact hω
+    assumption
 
   -- Push CE through the finite sum
   have h_sum :
