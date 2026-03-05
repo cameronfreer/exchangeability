@@ -120,10 +120,8 @@ lemma condProb_integral_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
   -- Rewrite as an integral over `B ∩ A` of the constant 1.
   have h_indicator :
       ∫ ω in B, A.indicator (fun _ : Ω => (1 : ℝ)) ω ∂μ
-        = ∫ ω in B ∩ A, (1 : ℝ) ∂μ := by
-    simpa [Set.inter_comm, Set.inter_left_comm, Set.inter_assoc]
-      using setIntegral_indicator (μ := μ) (s := B) (t := A)
-        (f := fun _ : Ω => (1 : ℝ)) hA
+        = ∫ ω in B ∩ A, (1 : ℝ) ∂μ :=
+    setIntegral_indicator hA
   -- Evaluate the integral of 1 over the set.
   have h_const : ∫ ω in B ∩ A, (1 : ℝ) ∂μ = (μ (B ∩ A)).toReal := by
     simp [Measure.real_def, Set.inter_comm]

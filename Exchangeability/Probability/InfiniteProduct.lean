@@ -227,9 +227,7 @@ lemma cylinder_fintype {n : ℕ} :
         simp only [Set.mem_setOf_eq, Set.mem_pi]
         constructor
         · intro hf i (hi : i ∈ Finset.range n)
-          have hi' : i < n := Finset.mem_range.mp hi
-          simp only [hi', dite_true]
-          exact hf ⟨i, hi'⟩
+          exact (mem_dite_univ_right (i < n) (fun h => s ⟨i, h⟩) (f i)).mpr fun h => hf ⟨i, h⟩
         · intro hf ⟨i, hi⟩
           have hi' : i ∈ Finset.range n := Finset.mem_range.mpr hi
           specialize hf i hi'
@@ -309,10 +307,7 @@ lemma perm_eq {σ : Equiv.Perm ℕ} :
     refine Finset.prod_congr rfl fun i _ => ?_
     rw [Equiv.toEmbedding_apply, σ.symm_apply_apply]
   · intro j hj
-    simp only [Finset.mem_map, Equiv.toEmbedding_apply] at hj
-    obtain ⟨i, hi, rfl⟩ := hj
-    rw [show t (σ.symm (σ i)) = t i by rw [σ.symm_apply_apply]]
-    exact ht i
+    grind only
 
 end iidProduct
 

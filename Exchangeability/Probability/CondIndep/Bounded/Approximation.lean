@@ -518,9 +518,7 @@ lemma tendsto_condExp_L1_of_dominated
     filter_upwards [hfn_bdd n, hf_bdd] with ω hn hf
     calc |fn n ω - f ω|
         ≤ |fn n ω| + |f ω| := by
-          have := abs_add_le (fn n ω) (-(f ω))
-          simp only [abs_neg, ← sub_eq_add_neg] at this
-          exact this
+          exact abs_sub (fn n ω) (f ω)
       _ ≤ M + M := add_le_add hn hf
       _ = 2 * M := by ring
   have h_L1 := tendsto_L1_of_pointwise_dominated μ M hM_nn hfn_int hf_int h_bound h_tendsto

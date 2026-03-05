@@ -136,9 +136,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- (Z⁻¹B₁ ∩ W⁻¹C₁) ∩ (Z⁻¹B₂ ∩ W⁻¹C₂) = Z⁻¹(B₁ ∩ B₂) ∩ W⁻¹(C₁ ∩ C₂)
       use B₁ ∩ B₂, C₁ ∩ C₂
       refine ⟨hB₁.inter hB₂, hC₁.inter hC₂, ?_⟩
-      ext ω
-      simp only [Set.mem_inter_iff, Set.mem_preimage]
-      tauto
+      grind only [= mem_inter_iff, = mem_preimage]
 
     -- Apply π-λ induction
     intro s hs hμs
@@ -209,19 +207,15 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
       -- Rectangle is in mZW
       have hrect : MeasurableSet[mZW] (Z ⁻¹' B ∩ W ⁻¹' C) := by
         -- Z⁻¹B ∩ W⁻¹C = (Z,W)⁻¹(B ×ˢ C)
-        have : Z ⁻¹' B ∩ W ⁻¹' C = (fun ω => (Z ω, W ω)) ⁻¹' (B ×ˢ C) := by
-          ext ω
-          simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_prod]
-        rw [this]
-        exact measurableSet_preimage (Measurable.of_comap_le le_rfl) (hB.prod hC)
+        exact MeasurableSet.inter hBpre hCpre_mZW
 
       -- By setIntegral_condExp on mZW
-      have h1 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mZW]) x ∂μ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
-        exact setIntegral_condExp hmZW_le hf_int hrect
+      have h1 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mZW]) x ∂μ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ :=
+        setIntegral_condExp hmZW_le hf_int hrect
 
       -- By tower property: E[E[f|mZW]|mW] = E[f|mW] (since mW ≤ mZW)
-      have h2 : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := by
-        exact condExp_condExp_of_le hle hmZW_le
+      have h2 : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] :=
+        condExp_condExp_of_le hle hmZW_le
 
       -- So ∫_{rectangle} E[f|mW] = ∫_{rectangle} E[E[f|mZW]|mW]
       have h3 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ =
@@ -239,10 +233,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
 
           -- Rewrite LHS using h2
           have : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[μ[f | mZW] | mW]) x ∂μ =
-                 ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ := by
-            apply setIntegral_congr_ae (hmZW_le _ hrect)
-            filter_upwards [h2] with x hx _
-            exact hx
+                 ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ :=
+            Real.ext_cauchy (congrArg Real.cauchy (id (Eq.symm h3)))
           rw [this]
 
           -- Now show: ∫_{Z⁻¹B ∩ W⁻¹C} μ[f|mW] = ∫_{Z⁻¹B ∩ W⁻¹C} f
@@ -348,8 +340,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     · -- Complement
       intro t htm ht_ind
       -- For complement: ∫_{t} g + ∫_{tᶜ} g = ∫_Ω g, so ∫_{tᶜ} g = ∫_Ω g - ∫_t g
-      have h_add : ∫ x in t, (μ[f | mW]) x ∂μ + ∫ x in tᶜ, (μ[f | mW]) x ∂μ = ∫ x, (μ[f | mW]) x ∂μ := by
-        exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet integrable_condExp
+      have h_add : ∫ x in t, (μ[f | mW]) x ∂μ + ∫ x in tᶜ, (μ[f | mW]) x ∂μ = ∫ x, (μ[f | mW]) x ∂μ :=
+        integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet integrable_condExp
       have h_add' : ∫ x in t, f x ∂μ + ∫ x in tᶜ, f x ∂μ = ∫ x, f x ∂μ := by
         exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet hf_int
       -- ht_ind is the equality for t, use it to substitute in h_add

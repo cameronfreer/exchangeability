@@ -128,8 +128,6 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- f = (Set.indicator A (fun _ => 1)) ∘ Y
   have hf_indep : IndepFun f W μ := by
     have : f = (Set.indicator A (fun _ => (1 : ℝ))) ∘ Y := by
-      ext ω
-      simp only [Function.comp_apply, Set.indicator_apply]
       rfl
     rw [this]
     exact hY_W_indep.comp (measurable_const.indicator hA) measurable_id
@@ -137,8 +135,6 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- Step 2: g is a function of Z, so g ⊥ W
   have hg_indep : IndepFun g W μ := by
     have : g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
-      ext ω
-      simp only [Function.comp_apply, Set.indicator_apply]
       rfl
     rw [this]
     exact hZ_W_indep.comp (measurable_const.indicator hB) measurable_id
@@ -168,12 +164,8 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
   -- Since f is a function of Y and g is a function of Z, f ⊥ g follows from Y ⊥ Z
   have hfg_indep' : IndepFun f g μ := by
     have hf_comp : f = (Set.indicator A (fun _ => (1 : ℝ))) ∘ Y := by
-      ext ω
-      show f ω = Set.indicator A (fun _ => 1) (Y ω)
       rfl
     have hg_comp : g = (Set.indicator B (fun _ => (1 : ℝ))) ∘ Z := by
-      ext ω
-      show g ω = Set.indicator B (fun _ => 1) (Z ω)
       rfl
     rw [hf_comp, hg_comp]
     exact hYZ_indep.comp (measurable_const.indicator hA) (measurable_const.indicator hB)
@@ -238,8 +230,8 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
         ext ω
         simp [Pi.smul_apply, Pi.mul_apply]
         ring
-    _ =ᵐ[μ] μ[ c • (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ d • (Z ⁻¹' B).indicator (fun _ => 1) | mW ] := by
-        exact Filter.EventuallyEq.mul (condExp_smul c _ mW).symm (condExp_smul d _ mW).symm
+    _ =ᵐ[μ] μ[ c • (Y ⁻¹' A).indicator (fun _ => 1) | mW ] * μ[ d • (Z ⁻¹' B).indicator (fun _ => 1) | mW ] :=
+        Filter.EventuallyEq.mul (condExp_smul c _ mW).symm (condExp_smul d _ mW).symm
     _ =ᵐ[μ] μ[ (A.indicator (fun _ => c)) ∘ Y | mW ] * μ[ (B.indicator (fun _ => d)) ∘ Z | mW ] := by
         -- Prove c • (Y ⁻¹' A).indicator (fun _ => 1) = (A.indicator (fun _ => c)) ∘ Y
         have hY_ind : c • (Y ⁻¹' A).indicator (fun _ => 1) = (A.indicator (fun _ => c)) ∘ Y := by

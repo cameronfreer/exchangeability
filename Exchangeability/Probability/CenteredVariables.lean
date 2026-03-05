@@ -98,12 +98,12 @@ lemma centered_uniform_covariance
     -- Apply map_map: map (h ∘ g) μ = map h (map g μ)
     calc Measure.map (fun ω i => f (X (k i) ω) - m) μ
         = Measure.map (h ∘ (fun ω i => f (X (k i) ω))) μ := by congr
-      _ = Measure.map h (Measure.map (fun ω i => f (X (k i) ω)) μ) := by
-            exact (Measure.map_map h_meas hL_meas).symm
+      _ = Measure.map h (Measure.map (fun ω i => f (X (k i) ω)) μ) :=
+            (Measure.map_map h_meas hL_meas).symm
       _ = Measure.map h (Measure.map (fun ω i => f (X (↑i) ω)) μ) := by
             rw [h_eq]
-      _ = Measure.map (h ∘ (fun ω i => f (X (↑i) ω))) μ := by
-            exact Measure.map_map h_meas hR_meas
+      _ = Measure.map (h ∘ (fun ω i => f (X (↑i) ω))) μ :=
+            Measure.map_map h_meas hR_meas
       _ = Measure.map (fun ω (i : Fin n) => f (X (↑i) ω) - m) μ := by congr
 
   -- Step 3: Show uniform variance via contractability
@@ -318,8 +318,6 @@ lemma correlation_coefficient_bounded
     rw [abs_div, abs_of_pos hσ_pos]
     exact div_le_one_of_le₀ h_covZ_bd hσ_pos.le
 
-  constructor
-  · linarith [abs_le.mp h_ρ_abs]
-  · exact (abs_le.mp h_ρ_abs).2
+  exact abs_le.mp h_ρ_abs
 
 end Exchangeability.Probability.CenteredVariables

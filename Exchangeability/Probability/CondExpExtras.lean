@@ -110,11 +110,11 @@ lemma bounded_martingale_l2_eq {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
     calc
       ∫ ω, Var[X₂; μ | m₁] ω ∂μ
           = ∫ ω, (μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω
-                - (μ[X₂ | m₁] ω) ^ 2) ∂μ := by
-              exact integral_congr_ae hVar_decomp
+                - (μ[X₂ | m₁] ω) ^ 2) ∂μ :=
+              integral_congr_ae hVar_decomp
       _ = ∫ ω, μ[(fun ω => (X₂ ω) ^ 2) | m₁] ω ∂μ
-              - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ := by
-              exact integral_sub hInt_cond_sq hInt_Y_sq
+              - ∫ ω, (μ[X₂ | m₁] ω) ^ 2 ∂μ :=
+              integral_sub hInt_cond_sq hInt_Y_sq
       _ = ∫ ω, (X₂ ω) ^ 2 ∂μ - ∫ ω, (X₁ ω) ^ 2 ∂μ := by
         simp [hInt_cond_sq_eq, hInt_Y_sq_eq]
       _ = 0 := by
@@ -199,20 +199,12 @@ lemma integral_pair_eq_of_joint_eq {μ : Measure Ω}
       Integrable φ (Measure.map fζ μ) := by
     simpa [fη, fζ, h_dist] using hφ_int
   have h_eta :
-      ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ p, φ p ∂(Measure.map fη μ) := by
-    simpa [fη] using
-      (MeasureTheory.integral_map (μ := μ) (φ := fη) (f := φ)
-        hfη hφ).symm
+      ∫ ω, φ (ξ ω, η ω) ∂μ = ∫ p, φ p ∂(Measure.map fη μ) :=
+    Eq.symm (integral_map hfη hφ)
   have h_zeta :
-      ∫ ω, φ (ξ ω, ζ ω) ∂μ = ∫ p, φ p ∂(Measure.map fζ μ) := by
-    simpa [fζ] using
-      (MeasureTheory.integral_map (μ := μ) (φ := fζ) (f := φ)
-        hfζ hφ_meas_zeta).symm
-  calc
-    ∫ ω, φ (ξ ω, η ω) ∂μ
-        = ∫ p, φ p ∂(Measure.map fη μ) := h_eta
-    _ = ∫ p, φ p ∂(Measure.map fζ μ) := by simp [fη, fζ, h_dist]
-    _ = ∫ ω, φ (ξ ω, ζ ω) ∂μ := h_zeta.symm
+      ∫ ω, φ (ξ ω, ζ ω) ∂μ = ∫ p, φ p ∂(Measure.map fζ μ) :=
+    Eq.symm (integral_map hfζ hφ_meas_zeta)
+  lia
 
 /-- If `(ξ, η)` and `(ξ, ζ)` share the same joint law, then for every measurable `g` and
 measurable set `s`, the mixed moments `E[g(ξ) · 𝟙_{η ∈ s}]` and `E[g(ξ) · 𝟙_{ζ ∈ s}]` agree. -/
@@ -409,10 +401,8 @@ theorem condExp_project_of_condIndepFun
     specialize hCI A B hA hB
     -- Key: (Y ⁻¹' A).indicator 1 * (Z ⁻¹' B).indicator 1 = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator 1
     have h_prod_eq : (Y ⁻¹' A).indicator (1 : Ω → ℝ) * (Z ⁻¹' B).indicator (1 : Ω → ℝ) =
-        (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) := by
-      ext x
-      convert (Set.inter_indicator_mul (s := Y ⁻¹' A) (t := Z ⁻¹' B) (fun _ : Ω => (1 : ℝ)) (fun _ => 1) x).symm
-      simp [mul_one]
+        (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (1 : Ω → ℝ) :=
+      Eq.symm inter_indicator_one
     rw [h_prod_eq]
     -- Now apply the CondIndepFun characterization. The convert automatically handles
     -- the notation matching between `1` and `fun ω => 1`
@@ -1144,10 +1134,8 @@ theorem condExp_project_of_condIndepFun
         simpa using h_norm_int.const_mul 2
 
       -- Measurability of f_n ∘ Y
-      have h_fn_meas : ∀ n, @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ := by
-        intro n
-        have : Measurable (f_n n) := (f_n n).measurable
-        exact this.aestronglyMeasurable.comp_measurable hY
+      have h_fn_meas : ∀ n, @AEStronglyMeasurable Ω ℝ _ mΩ mΩ (f_n n ∘ Y) μ :=
+        fun n => Integrable.aestronglyMeasurable (h_fn_int n)
 
       -- Step 1: Get L¹ convergence of conditional expectations using DCT
       have h_L1_conv : Filter.Tendsto
@@ -1275,8 +1263,8 @@ theorem condExp_project_of_condIndepFun
       calc
         ‖μ[ f_n n ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖
             = ‖μ[ f_n n ∘ Y | mW ] ω‖ * ‖μ[ (Z ⁻¹' B).indicator 1 | mW ] ω‖ := this
-        _ ≤ ‖μ[ f_n n ∘ Y | mW ] ω‖ := by
-              exact mul_le_of_le_one_right (norm_nonneg _) h_ind
+        _ ≤ ‖μ[ f_n n ∘ Y | mW ] ω‖ :=
+              mul_le_of_le_one_right (norm_nonneg _) h_ind
         _ ≤ μ[ (fun ω => ‖(f_n n ∘ Y) ω‖) | mW ] ω := by
               -- Jensen for conditional expectation
               simpa using (norm_condExp_le
@@ -1681,9 +1669,7 @@ theorem condExp_project_of_condIndepFun
                       ∫ x in S, g x * μ[(Z ⁻¹' B).indicator 1|mW] x ∂μ := by
       apply setIntegral_congr_ae (hmW_le _ hS)
       filter_upwards [h_factor] with ω hω _
-      simp only [Pi.mul_apply] at hω
-      rw [hg_def]
-      exact hω
+      assumption
 
     -- Finally, connect via condExp_mul_of_stronglyMeasurable_left with g
     -- Since g = μ[f∘Y|mW] is mW-strongly measurable, we can pull it through:
@@ -1728,10 +1714,7 @@ theorem condExp_project_of_condIndepFun
     -- Combine h_g_mult and h_tower_lhs
     have h_combine : S.indicator 1 * μ[g * (Z ⁻¹' B).indicator 1|mW] =ᵐ[μ]
                      S.indicator 1 * (g * μ[(Z ⁻¹' B).indicator 1|mW]) := by
-      filter_upwards [h_g_mult] with ω hω
-      by_cases hS : ω ∈ S
-      · simp [Set.indicator_of_mem hS, hω]
-      · simp [Set.indicator_of_notMem hS]
+      exact EventuallyEq.mul_left h_g_mult
 
     -- Integrate h_tower_lhs
     have h_int_lhs : ∫ x, S.indicator 1 x * (g x * (Z ⁻¹' B).indicator 1 x) ∂μ =
@@ -1856,8 +1839,8 @@ theorem condExp_project_of_condIndepFun
 
     -- Apply π-λ induction using induction_on_inter
     -- We need to show: ∀ S, @MeasurableSet Ω mZW S → (μ S < ⊤ → ∫_S g = ∫_S f(Y))
-    suffices ∀ S (hS : @MeasurableSet Ω mZW S), μ S < ⊤ → ∫ x in S, g x ∂μ = ∫ x in S, (f ∘ Y) x ∂μ by
-      exact this T hT hμT
+    suffices ∀ S (hS : @MeasurableSet Ω mZW S), μ S < ⊤ → ∫ x in S, g x ∂μ = ∫ x in S, (f ∘ Y) x ∂μ
+      this T hT hμT
 
     intro S hS
 
@@ -1892,8 +1875,8 @@ theorem condExp_project_of_condIndepFun
       -- Convert measurability from mZW to mΩ
       have hS'_meas_mΩ : @MeasurableSet Ω mΩ S' := hmZW_le _ hS'_meas
 
-      have hg_add : ∫ x in S', g x ∂μ + ∫ x in S'ᶜ, g x ∂μ = ∫ x, g x ∂μ := by
-        exact integral_add_compl hS'_meas_mΩ integrable_condExp
+      have hg_add : ∫ x in S', g x ∂μ + ∫ x in S'ᶜ, g x ∂μ = ∫ x, g x ∂μ :=
+        integral_add_compl hS'_meas_mΩ integrable_condExp
       have hf_add : ∫ x in S', (f ∘ Y) x ∂μ + ∫ x in S'ᶜ, (f ∘ Y) x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
         exact integral_add_compl hS'_meas_mΩ hf_int
 
@@ -1909,12 +1892,7 @@ theorem condExp_project_of_condIndepFun
       -- Apply h_rect_all to univ to get ∫ g = ∫ f∘Y
       have huniv_eq : ∫ x, g x ∂μ = ∫ x, (f ∘ Y) x ∂μ := by
         -- Key insight: univ = Z⁻¹(univ) ∩ W⁻¹(univ) ∈ 𝓡, so we can use h_rect_all!
-        have huniv_in_R : Set.univ ∈ 𝓡 := by
-          refine ⟨Set.univ, Set.univ, MeasurableSet.univ, MeasurableSet.univ, ?_⟩
-          ext ω
-          simp only [Set.mem_univ, Set.mem_inter_iff, Set.mem_preimage, true_and]
-        have h := h_rect_all Set.univ huniv_in_R (measure_lt_top μ Set.univ)
-        rwa [setIntegral_univ, setIntegral_univ] at h
+        exact integral_condExp hmW_le
 
       -- Now we can complete the calc
       calc ∫ x in S'ᶜ, g x ∂μ
@@ -1928,9 +1906,7 @@ theorem condExp_project_of_condIndepFun
 
       -- Each Sₙ has finite measure (since sum is finite)
       have hSeq_finite : ∀ n, μ (Sseq n) < ⊤ := by
-        intro n
-        calc μ (Sseq n) ≤ μ (⋃ i, Sseq i) := measure_mono (Set.subset_iUnion Sseq n)
-          _ < ⊤ := hμUnion
+        exact fun n => measure_lt_top μ (Sseq n)
 
       -- Apply IH to each Sₙ
       have hSeq_eq : ∀ n, ∫ x in Sseq n, g x ∂μ = ∫ x in Sseq n, (f ∘ Y) x ∂μ := by
@@ -1948,9 +1924,7 @@ theorem condExp_project_of_condIndepFun
             apply integral_iUnion hSeq_meas_mΩ hSeq_disj
             exact integrable_condExp.integrableOn
         _ = ∑' n, ∫ x in Sseq n, (f ∘ Y) x ∂μ := by
-            congr 1
-            ext n
-            exact hSeq_eq n
+            exact tsum_congr hSeq_eq
         _ = ∫ x in ⋃ n, Sseq n, (f ∘ Y) x ∂μ := by
             symm
             apply integral_iUnion hSeq_meas_mΩ hSeq_disj

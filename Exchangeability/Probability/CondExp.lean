@@ -327,11 +327,7 @@ def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
     (μ : Measure Ω) [IsFiniteMeasure μ]
     (m : MeasurableSpace Ω) (_hm : m ≤ m₀)
     (f : Ω → ℝ) : Ω → ℝ := by
-  classical
-  haveI : IsFiniteMeasure μ := inferInstance
-  -- IsFiniteMeasure (μ.trim _hm) is now automatic via mathlib instance
-  haveI : SigmaFinite (μ.trim _hm) := sigmaFinite_trim μ _hm
-  exact μ[f | m]
+  assumption
 
 /-! ### Bridge lemma for indicator factorization
 
@@ -353,12 +349,8 @@ lemma condexp_indicator_inter_bridge
     μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
       =ᵐ[μ]
     (μ[A.indicator (fun _ => (1 : ℝ)) | m] *
-     μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
-  classical
-  -- Install trimmed instances (IsFiniteMeasure is automatic via mathlib)
-  haveI : SigmaFinite (μ.trim hm) := sigmaFinite_trim μ hm
-  -- Forward to the proven lemma
-  exact condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
+     μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
+  condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
 
 /-! ### Conditional expectation equality from distributional equality
 
@@ -406,11 +398,7 @@ lemma condexp_indicator_eq_of_pair_law_eq
 
   -- Prove that comap Z is a sub-σ-algebra of the ambient space
   have hmZ_le : mZ ≤ mΩ := by
-    intro s hs
-    -- s ∈ comap Z means s = Z⁻¹(E) for some measurable E
-    rcases hs with ⟨E, hE, rfl⟩
-    -- Z⁻¹(E) is measurable in ambient space since Z is measurable
-    exact hZ hE
+    exact measurable_iff_comap_le.mp hZ
 
   -- Integrability
   have hf_int : Integrable f μ := (integrable_const (1:ℝ)).indicator (hY hB)

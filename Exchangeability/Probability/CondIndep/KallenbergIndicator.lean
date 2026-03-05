@@ -137,10 +137,8 @@ lemma condIndep_indicator_of_dropInfoY
     condExp_mul_of_stronglyMeasurable_right hIndB_stronglyMeas_mZW hProd_int hIndA_int
 
   -- Step 2: From h_drop, substitute condExp mW (indA) for condExp mZW (indA)
-  have h_step2 : μ[indA | mZW] * indB =ᵐ[μ] μ[indA | mW] * indB := by
-    filter_upwards [h_drop] with ω hω
-    simp only [Pi.mul_apply]
-    rw [hω]
+  have h_step2 : μ[indA | mZW] * indB =ᵐ[μ] μ[indA | mW] * indB :=
+    Filter.EventuallyEq.mul_right (dropY A hA)
 
   -- Combine step 1 and step 2
   have h_step12 : μ[indA * indB | mZW] =ᵐ[μ] μ[indA | mW] * indB :=

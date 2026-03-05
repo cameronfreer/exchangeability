@@ -153,19 +153,9 @@ lemma L2_tendsto_implies_L1_tendsto_of_bounded
       _ ≤ (∫ ω, (|f n ω - g ω|) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (1 : ℝ) ^ 2 ∂μ) ^ (1/2 : ℝ) := cs_abs
       _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (1 : ℝ) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
           congr 1
-          apply congr_arg (· ^ (1/2 : ℝ))
-          apply integral_congr_ae
-          filter_upwards with ω
-          exact sq_abs _
+          simpa
       _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) * 1 := by
-          congr 2
-          -- Show (∫ 1² ∂μ)^(1/2) = 1 for probability measure
-          have : ∫ ω, (1 : ℝ) ^ 2 ∂μ = 1 := by
-            simp only [one_pow, integral_const, smul_eq_mul, mul_one]
-            rw [Measure.real]
-            simp [measure_univ]
-          rw [this]
-          norm_num
+          simpa
       _ = (∫ ω, (f n ω - g ω) ^ 2 ∂μ) ^ (1/2 : ℝ) := by ring
 
   -- Step 3: Apply squeeze theorem

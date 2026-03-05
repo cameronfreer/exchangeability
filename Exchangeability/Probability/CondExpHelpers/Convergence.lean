@@ -35,14 +35,8 @@ lemma tendsto_condExpL1_domconv
     (h_int : Integrable bound μ)
     (hbound : ∀ n, ∀ᵐ x ∂μ, ‖fs n x‖ ≤ bound x)
     (hpt : ∀ᵐ x ∂μ, Filter.Tendsto (fun n => fs n x) Filter.atTop (nhds (f x))) :
-    Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f)) := by
-  classical
-  -- This is exactly mathlib's lemma; we just instantiate the parameters.
-  simpa using
-    (MeasureTheory.tendsto_condExpL1_of_dominated_convergence
-      (μ := μ) (hm := hm) (fs := fs) (f := f)
-      (bound_fs := bound) (hfs_meas := hfs_meas) (h_int_bound_fs := h_int)
-      (hfs_bound := hbound) (hfs := hpt))
+    Filter.Tendsto (fun n => condExpL1 hm μ (fs n)) Filter.atTop (nhds (condExpL1 hm μ f)) :=
+  tendsto_condExpL1_of_dominated_convergence hm bound hfs_meas h_int hbound hpt
 
 /-- From L¹ convergence of `condExpL1` to a.e. convergence of a subsequence of its representatives. -/
 lemma exists_subseq_ae_tendsto_of_condExpL1_tendsto

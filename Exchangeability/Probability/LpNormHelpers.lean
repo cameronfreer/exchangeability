@@ -161,9 +161,7 @@ lemma memLp_of_abs_le_const
     MemLp f p μ := by
   -- Use MemLp.of_bound from mathlib
   apply MemLp.of_bound hf_meas.aestronglyMeasurable M
-  apply Filter.Eventually.mono hf_bdd
-  intro ω hω
-  exact (Real.norm_eq_abs _).le.trans hω
+  assumption
 
 /-- **Block average of bounded function is in L².**
 

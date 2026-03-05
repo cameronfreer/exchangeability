@@ -192,7 +192,16 @@ noncomputable def metProjection {μ : Measure Ω} [IsProbabilityMeasure μ]
   classical
   let S := fixedSpace (koopman T hT)
   let K := koopman T hT
-  assumption
+  have hS_closed : IsClosed (S : Set (Lp ℝ 2 μ)) := by
+    have hset : (S : Set (Lp ℝ 2 μ)) = (fun x => K x - x) ⁻¹' {0} := by
+      ext x
+      simp only [Set.mem_preimage, Set.mem_singleton_iff, SetLike.mem_coe, sub_eq_zero]
+      rfl
+    rw [hset]
+    exact isClosed_singleton.preimage (K.continuous.sub continuous_id)
+  haveI : CompleteSpace S := hS_closed.completeSpace_coe
+  haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
+  exact S.subtypeL.comp S.orthogonalProjection
 
 /--
 **The Mean Ergodic Theorem:** Birkhoff averages converge in L² to the orthogonal projection
@@ -258,7 +267,9 @@ theorem birkhoffAverage_tendsto_metProjection
   haveI : S.HasOrthogonalProjection := Submodule.HasOrthogonalProjection.ofCompleteSpace S
   have h_tendsto :=
     ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
-  assumption
+  have hS_eq : S = fixedSpace (koopman T hT) := rfl
+  simp only [metProjection]
+  convert h_tendsto using 2
 
 /--
 The range of the projection from the Mean Ergodic Theorem equals the fixed-point subspace.

@@ -192,9 +192,7 @@ lemma tendsto_set_integral_mul_of_L1 {α : Type*} [MeasurableSpace α] {μ : Mea
             congr 1; ext ω
             -- Need: ↑‖fn n ω - f ω‖₊ * ↑(Real.toNNReal C) = ENNReal.ofReal C * ↑‖fn n ω - f ω‖₊
             rw [mul_comm]
-            simp only [ENNReal.ofReal_eq_coe_nnreal hC]
-            congr 1
-            exact congr_arg ENNReal.ofNNReal (Real.toNNReal_of_nonneg hC)
+            rfl
     -- Apply squeeze theorem with C * hL1 → C * 0 = 0
     have h_limit : Filter.Tendsto (fun n => ENNReal.ofReal C * ∫⁻ ω, ‖(fn n) ω - f ω‖₊ ∂μ)
         Filter.atTop (nhds 0) := by
