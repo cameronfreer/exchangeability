@@ -1,0 +1,72 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented a Lean~4 formalization of de Finetti's theorem---the result that tells us an exchangeable coin-flip sequence arises from a latent bias, and more generally that exchangeable sequences on standard Borel spaces are mixtures of i.i.d.\ sequences. The formalization includes three independent proofs of the key implication, each implementing the same specification and calling a shared common ending. This ``one interface, three implementations'' design demonstrates that substantial probability theory can be developed in modern proof assistants while preserving the mathematical insight that different proof techniques illuminate different aspects of the same theorem.
+
+\subsection{Summary of Contributions}
+
+\begin{enumerate}
+\item \textbf{Complete formalization} of the de Finetti--Ryll-Nardzewski equivalence:
+\[
+\text{Contractable} \iff \text{Exchangeable} \iff \text{Conditionally i.i.d.}
+\]
+
+\item \textbf{Three proof routes} using different mathematical machinery:
+\begin{itemize}
+\item Reverse martingale convergence (probabilistic)
+\item Elementary $L^2$ bounds (analytic)
+\item Mean Ergodic Theorem (dynamical)
+\end{itemize}
+
+\item \textbf{Unified interface} allowing comparison and substitution of proof strategies.
+
+\item \textbf{Clean separation} between shared infrastructure and route-specific code.
+
+\item \textbf{Axiom hygiene} verified by machine: only standard axioms.
+\end{enumerate}
+
+\subsection{Lessons Learned}
+
+\paragraph{Multiple proofs illuminate structure.}
+Formalizing three proofs forced us to identify what is truly shared (definitions, easy directions, $\pi$-system extension) versus what varies (directing measure construction, convergence arguments). This decomposition clarifies the mathematical structure.
+
+\paragraph{Different proofs stress different infrastructure.}
+The three routes exercise different parts of mathlib: probability kernels (martingale), $L^p$ spaces ($L^2$), Hilbert space projections (Koopman). This provides broad coverage and identified gaps in mathlib's probability infrastructure.
+
+\paragraph{Abstraction pays off.}
+The martingale proof is shorter than the $L^2$ proof despite being ``harder'' mathematically, because it leverages more powerful abstractions (conditional expectation kernels, martingale convergence). Elementary proofs can be longer in formalization.
+
+\paragraph{Design decisions matter.}
+Choosing which proof is the ``default'' is a design decision with trade-offs. We chose the martingale proof for generality; others might prefer the $L^2$ proof for lighter dependencies.
+
+\subsection{Future Work}
+
+\paragraph{Extensions of exchangeability.}
+The Aldous--Hoover theorem characterizes exchangeable arrays. Kallenberg's book contains further extensions to partial exchangeability. These are natural targets for future formalization.
+
+\paragraph{Contribution to mathlib.}
+Parts of this formalization may be suitable for inclusion in mathlib, particularly:
+\begin{itemize}
+\item The ergodic theory infrastructure (Koopman operators, Mean Ergodic Theorem)
+\item Conditional independence lemmas
+\item The main de Finetti theorem
+\end{itemize}
+
+\paragraph{Applications.}
+De Finetti's theorem underlies Bayesian nonparametrics. Formalizing applications such as Dirichlet process priors or P\'{o}lya urn models would connect this work to statistical practice.
+
+\paragraph{Finite versions.}
+Diaconis and Freedman~\citep{diaconisfreedman1980} proved quantitative versions of de Finetti's theorem for finite exchangeable sequences. These are more delicate and would extend the scope of the formalization.
+
+\subsection{Availability}
+
+The complete formalization is available at:
+\begin{center}
+\url{https://github.com/cameronfreer/exchangeability}
+\end{center}
+
+The repository includes build instructions, documentation, and the paper materials used to prepare this manuscript.
+
+\subsection{Acknowledgments}
+
+We thank the mathlib community for developing the measure-theoretic infrastructure on which this work builds.

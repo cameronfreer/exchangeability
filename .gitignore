@@ -46,3 +46,15 @@ blueprint/print/*.out
 blueprint/print/*.synctex.gz
 # Exception: allow symbol-defs.svg in blueprint
 !blueprint/web/symbol-defs.svg
+
+# Paper draft LaTeX build artifacts
+paper_draft/*.pdf
+paper_draft/*.aux
+paper_draft/*.bbl
+paper_draft/*.blg
+paper_draft/*.log
+paper_draft/*.out
+paper_draft/*.toc
+paper_draft/*.fls
+paper_draft/*.fdb_latexmk
+paper_draft/*.synctex.gz

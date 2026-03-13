@@ -1,0 +1,145 @@
+\section{Architecture, Verification, and Usability}
+\label{sec:short-sections}
+
+This section covers practical aspects of the formalization: code architecture, verification methodology, and the user-facing API.
+
+\subsection{Architecture}
+
+\paragraph{Module structure.}
+The codebase is organized into logical modules:
+
+\begin{verbatim}
+Exchangeability/
+  Contractability.lean       -- Exchangeable, Contractable, easy implications
+  ConditionallyIID.lean      -- ConditionallyIID definition and lemmas
+  Core.lean                  -- Pi-system machinery, cylinder sets
+  Tail/                      -- Tail sigma-algebra infrastructure
+  Probability/               -- Conditional expectation, kernels, independence
+  Ergodic/                   -- Koopman operators, Mean Ergodic Theorem
+  PathSpace/                 -- Shift operator on sequences
+  DeFinetti/
+    Theorem.lean             -- Public API (re-exports martingale proof)
+    TheoremViaMartingale.lean
+    TheoremViaL2.lean
+    TheoremViaKoopman.lean
+    CommonEnding.lean        -- Shared pi-system extension
+    ViaMartingale/           -- Martingale proof internals
+    ViaL2/                   -- L2 proof internals
+    ViaKoopman/              -- Koopman proof internals
+\end{verbatim}
+
+\paragraph{Separation of concerns.}
+Each proof route is self-contained in its subdirectory. Shared infrastructure (definitions, easy directions, common ending) is factored out. This design allows:
+\begin{itemize}
+\item Independent development and testing of each route.
+\item Clear identification of what each route contributes.
+\item Easy addition of future proof routes.
+\end{itemize}
+
+\paragraph{Public vs.\ internal API.}
+The public API is exposed through \texttt{DeFinetti/Theorem.lean}:
+\begin{lstlisting}
+-- Main theorem
+theorem deFinetti : Exchangeable mu X -> ConditionallyIID mu X
+
+-- Equivalence
+theorem deFinetti_equivalence : Exchangeable mu X <-> ConditionallyIID mu X
+
+-- Full Kallenberg 1.1
+theorem deFinetti_RyllNardzewski_equivalence :
+    Contractable mu X <-> Exchangeable mu X /\ ConditionallyIID mu X
+\end{lstlisting}
+
+Internal lemmas are not exported, keeping the public interface clean.
+
+\subsection{Verification}
+
+\paragraph{Build verification.}
+The entire library builds successfully with \texttt{lake build}:
+\begin{verbatim}
+$ lake build
+Build completed successfully (3296 jobs).
+\end{verbatim}
+
+\paragraph{Axiom hygiene.}
+All theorems depend only on standard mathlib axioms:
+\begin{lstlisting}
+#print axioms Exchangeability.DeFinetti.deFinetti
+-- 'Exchangeability.DeFinetti.deFinetti' depends on axioms:
+--   [propext, Classical.choice, Quot.sound]
+\end{lstlisting}
+
+These are:
+\begin{itemize}
+\item \texttt{propext}: Propositional extensionality (unavoidable in mathlib)
+\item \texttt{Classical.choice}: Axiom of choice (required for measure theory)
+\item \texttt{Quot.sound}: Quotient soundness (standard for quotient types)
+\end{itemize}
+
+No custom axioms are introduced. No \texttt{sorry} appears in any theorem.
+
+\paragraph{Introspection file.}
+The file \texttt{paper\_materials/PaperIntrospection.lean} provides machine-checkable verification:
+\begin{lstlisting}
+#check @Exchangeability.DeFinetti.deFinetti
+#check @Exchangeability.DeFinetti.deFinetti_equivalence
+#print axioms Exchangeability.DeFinetti.deFinetti
+\end{lstlisting}
+
+\subsection{Usability}
+
+\paragraph{Quick start.}
+To use the main theorem:
+\begin{lstlisting}
+import Exchangeability.DeFinetti.Theorem
+
+variable {Omega : Type*} [MeasurableSpace Omega] [StandardBorelSpace Omega]
+variable {alpha : Type*} [MeasurableSpace alpha] [StandardBorelSpace alpha] [Nonempty alpha]
+variable {mu : Measure Omega} [IsProbabilityMeasure mu]
+variable (X : N -> Omega -> alpha) (hX_meas : forall i, Measurable (X i))
+
+example (hExch : Exchangeable mu X) : ConditionallyIID mu X :=
+  Exchangeability.DeFinetti.deFinetti X hX_meas hExch
+\end{lstlisting}
+
+\paragraph{Working with \texttt{ConditionallyIID}.}
+The \texttt{ConditionallyIID} predicate is a \texttt{def} (existential), not a \texttt{structure}. To extract the directing measure:
+\begin{lstlisting}
+variable (hCIID : ConditionallyIID mu X)
+
+-- Get the directing measure
+def nu : Omega -> Measure alpha := hCIID.choose
+
+-- It's a probability measure
+example (omega : Omega) : IsProbabilityMeasure (nu omega) :=
+  hCIID.choose_spec.1 omega
+\end{lstlisting}
+
+\paragraph{Alternative proof routes.}
+For specialized applications:
+\begin{lstlisting}
+-- L2 proof (for R-valued, L2 integrable)
+import Exchangeability.DeFinetti.TheoremViaL2
+#check conditionallyIID_of_contractable_viaL2
+
+-- Koopman proof (for R-valued, L2 integrable)
+import Exchangeability.DeFinetti.TheoremViaKoopman
+#check conditionallyIID_of_contractable_viaKoopman
+\end{lstlisting}
+
+\subsection{Statistics}
+
+\begin{center}
+\begin{tabular}{lr}
+\textbf{Metric} & \textbf{Value} \\
+\hline
+Total Lean files & 112 \\
+Total lines of Lean code & $\sim$43,500 \\
+Build jobs & 3,296 \\
+Axioms used & 3 (standard) \\
+\end{tabular}
+\end{center}
+
+\subsection{Artifact Accessibility}
+
+The formalization is available at \url{https://github.com/cameronfreer/exchangeability} under an open-source license. Upon final publication, we will provide a Software Heritage persistent identifier (SWHID) for the code repository, as recommended by AFM guidelines.

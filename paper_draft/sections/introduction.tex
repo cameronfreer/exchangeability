@@ -1,0 +1,53 @@
+\section{Introduction}
+\label{sec:introduction}
+
+De Finetti's theorem is a foundational result in probability theory that characterizes exchangeable sequences. In its modern form, due to Ryll-Nardzewski~\citep{ryllnardzewski1957} and Hewitt--Savage~\citep{hewittsavage1955}, the theorem states that an infinite sequence of random variables is exchangeable if and only if it is conditionally i.i.d.---that is, there exists a measurable \emph{directing kernel} $\nu$ such that all finite-dimensional distributions are mixtures of product measures $\nu^{\otimes m}$.
+
+\subsection{The Theorem}
+
+Let $(X_0, X_1, X_2, \ldots)$ be a sequence of random variables taking values in a standard Borel space $\alpha$. The sequence is \emph{exchangeable} if its joint distribution is invariant under finite permutations of the indices:
+\[
+(X_{\sigma(0)}, X_{\sigma(1)}, \ldots, X_{\sigma(n-1)}) \deq (X_0, X_1, \ldots, X_{n-1})
+\]
+for every $n \in \N$ and every permutation $\sigma$ of $\{0, 1, \ldots, n-1\}$.
+
+De Finetti's theorem asserts that exchangeability is equivalent to the existence of a \emph{directing measure}---a random probability measure $\nu$ on $\alpha$ such that, conditionally on $\nu$, the sequence $(X_i)$ is i.i.d.\ with distribution $\nu$. Formally:
+\[
+\Law(X_{k(0)}, \ldots, X_{k(m-1)}) = \int \nu(\omega)^{\otimes m} \, d\mu(\omega)
+\]
+for every strictly increasing sequence $k : \{0, \ldots, m-1\} \to \N$.
+
+\paragraph{A motivating example.}
+Consider an infinite sequence of coin flips $(X_0, X_1, \ldots)$ with an unknown bias $\theta \in [0,1]$. If $\theta$ is drawn from some prior distribution and then all flips are independent with $\Pr(X_i = 1) = \theta$, the sequence is exchangeable: the joint law of any finite subsequence depends only on how many heads appear, not which positions they occupy. De Finetti's theorem says the converse: \emph{any} exchangeable $\{0,1\}$-valued sequence arises this way. The directing measure $\nu$ is the ``latent parameter''---in this case, the random bias $\theta$.
+
+\subsection{Why Formalize De Finetti?}
+
+De Finetti's theorem is significant for several reasons:
+
+\paragraph{Foundational importance.} The theorem provides the mathematical foundation for Bayesian statistics, justifying the use of prior distributions as encoding ``unknown parameters'' that govern i.i.d.\ sampling.
+
+\paragraph{Mathematical depth.} The proof requires substantial machinery: measure theory, conditional expectations, martingale convergence, and (depending on the proof route) ergodic theory or $L^2$ analysis.
+
+\paragraph{Multiple proof techniques.} Kallenberg~\citep{kallenberg2005} presents three distinct proofs, each using different mathematical machinery. Formalizing all three illuminates the relationships between probabilistic, analytic, and dynamical approaches.
+
+\paragraph{Verification of a classical result.} Despite its importance, de Finetti's theorem involves subtle measure-theoretic arguments that benefit from machine verification.
+
+\subsection{Contributions}
+
+This paper describes a Lean~4 formalization with the following contributions:
+
+\begin{enumerate}
+\item \textbf{Three independent proofs} of the key implication (contractable $\Rightarrow$ conditionally i.i.d.), following Kallenberg's three approaches. De Finetti's theorem then follows via the easy reduction exchangeable $\Rightarrow$ contractable.
+
+\item \textbf{One interface, three implementations}: all three proofs implement the same specification---they produce a measurable directing kernel $\nu$ and establish cylinder-set factorization---then call a shared ``common ending'' that extends to the product $\sigma$-algebra via $\pi$-system uniqueness.
+
+\item \textbf{Clean separation} between the easy directions (which are shared) and the hard direction (which varies by proof route).
+
+\item \textbf{Axiom hygiene}: all theorems depend only on \texttt{propext}, \texttt{Classical.choice}, and \texttt{Quot.sound}---the standard axioms used throughout mathlib.
+
+\item \textbf{Lessons learned} about managing multiple proof strategies in a proof assistant, and about the interplay between different mathematical styles.
+\end{enumerate}
+
+\subsection{Paper Outline}
+
+Section~\ref{sec:definitions} presents the formal definitions. Section~\ref{sec:roadmap} gives a roadmap of the proof structure. Sections~\ref{sec:martingale}, \ref{sec:l2}, and~\ref{sec:koopman} detail the three proof routes. Section~\ref{sec:common-ending} describes the shared $\pi$-system extension. Section~\ref{sec:comparison} compares the three approaches. Section~\ref{sec:short-sections} covers architecture, verification, and usability. Section~\ref{sec:related-work} discusses related work. Section~\ref{sec:conclusion} concludes with lessons learned.
