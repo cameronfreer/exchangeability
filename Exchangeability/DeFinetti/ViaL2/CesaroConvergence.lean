@@ -373,7 +373,7 @@ lemma kallenberg_L2_bound
       contradiction
 
     -- Case split on ordering
-    rcases hij'.lt_or_lt with h_lt | h_lt
+    rcases hij'.lt_or_gt with h_lt | h_lt
     · -- Case i' < j': Use contractable_map_pair directly
       have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
         (X := Z) hZ_contract hZ_meas h_lt
@@ -1116,13 +1116,9 @@ private lemma cesaro_cauchy_rho_lt
     -- Should simplify to: n' * ∑_{i<n} Z_i - n * ∑_{j<n'} Z_j
     -- Expand RHS: n * n' * (∑ (if i<n then n⁻¹ else 0) * Z_i - ∑ (if j<n' then n'⁻¹ else 0) * Z_j)
     -- Using n * n' * n⁻¹ = n' and indicator sums
-    calc (↑n * m_mean + ∑ x ∈ Finset.range n, Z x ω) * ↑n' +
-          ↑n * (-(m_mean * ↑n') - ∑ x ∈ Finset.range n', Z x ω)
-        = ↑n * m_mean * ↑n' + (∑ x ∈ Finset.range n, Z x ω) * ↑n' +
-          ↑n * (-(m_mean * ↑n')) + ↑n * (- ∑ x ∈ Finset.range n', Z x ω) := by ring
-      _ = ↑n * m_mean * ↑n' + ↑n' * ∑ x ∈ Finset.range n, Z x ω +
-          (-(↑n * m_mean * ↑n')) + (-(↑n * ∑ x ∈ Finset.range n', Z x ω)) := by ring
-      _ = ↑n' * ∑ x ∈ Finset.range n, Z x ω - ↑n * ∑ x ∈ Finset.range n', Z x ω := by ring
+    calc ↑n' * (↑n * m_mean + ∑ x ∈ Finset.range n, Z x ω - ↑n * m_mean) -
+          ↑n * ∑ x ∈ Finset.range n', Z x ω
+        = ↑n' * ∑ x ∈ Finset.range n, Z x ω - ↑n * ∑ x ∈ Finset.range n', Z x ω := by ring
       _ = ↑n * ↑n' * (∑ x : Fin m, (if ↑x < n then (↑n)⁻¹ else 0) * Z (↑x) ω -
                       ∑ x : Fin m, (if ↑x < n' then (↑n')⁻¹ else 0) * Z (↑x) ω) := by
         -- RHS: distribute n * n' and simplify conditionals
@@ -1527,7 +1523,7 @@ private lemma blockAvg_cauchy_in_L2
         σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt Cf rfl ε hε
 
     · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
-      have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (le_of_not_lt hρ_lt)
+      have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (not_lt.mp hρ_lt)
       -- When ρ = 1, Z_i = Z_0 a.e., so blockAvg values are equal a.e.
       -- Note: We only prove this for n, n' > 0, which suffices since we use N = 1 below.
       -- (The general case for all n, n' ∈ ℕ is also true, but not needed.)
@@ -1996,7 +1992,7 @@ lemma blockAvg_measurable_tailFamily
   -- tailFamily X m = iSup (fun j => comap (X (m + j)))
   -- X (m + k) ω = (fun j => X (m + j) ω) k, so it's the k-th coordinate
   -- of the shifted sequence, which is measurable by comap construction
-  simp only [TailSigma.tailFamily]
+  show Measurable[iSup (fun j : ℕ => MeasurableSpace.comap (fun ω => X (m + j) ω) inferInstance)] _
   apply Measurable.of_comap_le
   exact le_iSup (fun j => MeasurableSpace.comap (fun ω => X (m + j) ω) inferInstance) k
 

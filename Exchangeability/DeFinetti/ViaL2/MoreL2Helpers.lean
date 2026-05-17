@@ -1304,7 +1304,7 @@ lemma integral_alphaIic_eq_marginal
     -- Use tendstoInMeasure_of_tendsto_eLpNorm_of_ne_top with p = 1
     have h_A_int : ∀ m, Integrable (A m) μ := fun m => by
       refine ⟨(hA_meas m).aestronglyMeasurable, ?_⟩
-      apply hasFiniteIntegral_of_bounded (C := 1)
+      apply HasFiniteIntegral.of_bounded (C := 1)
       filter_upwards with ω
       rw [Real.norm_eq_abs]
       by_cases hm : m = 0
@@ -1383,7 +1383,7 @@ lemma integral_alphaIic_eq_marginal
     have h_int_sum : ∫ ω, A m ω ∂μ =
         (1/(m:ℝ)) * ∑ k : Fin m, ∫ ω, ind (X (0 + k.val + 1) ω) ∂μ := by
       simp only [A]
-      rw [integral_mul_left]
+      rw [integral_const_mul]
       congr 1
       rw [integral_finset_sum]
       intro k _

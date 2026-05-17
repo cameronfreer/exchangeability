@@ -317,7 +317,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               have hm_pos' : 0 < (m : ℝ) := Nat.cast_pos.mpr hm_pos
               rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos')]
         _ = (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω) - indIic t (X 0 ω)| ∂μ := by
-              rw [integral_mul_left]
+              rw [integral_const_mul]
         _ ≤ (1/(m:ℝ)) * ∫ ω, |indIic t (X m ω)| + |indIic t (X 0 ω)| ∂μ := by
               gcongr
               -- gcongr creates 3 goals: integrability of LHS, RHS, and pointwise inequality
