@@ -241,9 +241,9 @@ lemma comap_shift_eq_iSup_comap_coords (n : ℕ) :
   -- Distribute comap over supremum
   rw [MeasurableSpace.comap_iSup]
   -- Compose: (eval k) ∘ (shift n) = eval (n+k)
-  congr 1
-  ext k
+  refine iSup_congr (fun k => ?_)
   rw [MeasurableSpace.comap_comp]
+  rfl
 
 omit [MeasurableSpace Ω] in
 /-- Helper: Each `tailFamily X n` equals the pullback along the sample-path map of the
