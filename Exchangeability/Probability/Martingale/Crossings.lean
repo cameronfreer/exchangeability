@@ -591,7 +591,7 @@ lemma condExp_exists_ae_limit_antitone
           le' := fun _ => le_refl _
         }
         -- The process μ[f | 𝔽 n] is adapted to this constant filtration
-        have h_adapted : Adapted ℱ (fun n => μ[f | 𝔽 n]) := by
+        have h_adapted : StronglyAdapted ℱ (fun n => μ[f | 𝔽 n]) := by
           intro n
           exact stronglyMeasurable_condExp.mono (h_le n)
         -- Apply measurability for adapted processes
@@ -618,7 +618,7 @@ lemma condExp_exists_ae_limit_antitone
       mono' := fun _ _ _ => le_refl _
       le' := fun _ => le_refl _
     }
-    have h_adapted : Adapted ℱ (fun n => μ[f | 𝔽 n]) := by
+    have h_adapted : StronglyAdapted ℱ (fun n => μ[f | 𝔽 n]) := by
       intro n
       exact stronglyMeasurable_condExp.mono (h_le n)
     exact h_adapted.measurable_upcrossings hab'
