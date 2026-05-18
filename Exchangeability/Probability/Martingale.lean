@@ -18,7 +18,6 @@ of de Finetti's theorem.
 
 ## Main Results
 
-- `condExp_tendsto_iSup`: Lévy upward theorem (complete - wraps mathlib)
 - `condExp_tendsto_iInf`: Lévy downward theorem (to be proved)
 
 ## Module Structure

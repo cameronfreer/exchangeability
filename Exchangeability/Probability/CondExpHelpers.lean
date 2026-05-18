@@ -23,7 +23,6 @@ the three key lemmas about conditional independence and factorization.
 * `finset_sum_ae_eq`: Combine finitely many a.e.-equalities into a sum
 * `tendsto_condExpL1_domconv`: DCT for conditional expectation in L¹
 * `integrable_mul_of_bound_one`: Product with bounded factor is integrable
-* `sigma_factor_le`: Pullback σ-algebra inequality for factorizations
 
 ## Module Structure
 
