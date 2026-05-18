@@ -49,9 +49,10 @@ converges a.s. to E[f | ⨅ₙ 𝔽ₙ].
 4. Deduce: the sequence {E[f | 𝔽 n]} converges a.e.
 5. Identify the limit as E[f | ⨅ 𝔽 n] using tower property
 
-**Why not use OrderDual reindexing?** See `iSup_ofAntitone_eq_F0`: for antitone F,
-we have ⨆ i, F i.ofDual = F 0, not ⨅ n, F n. Applying Lévy's upward theorem would
-give convergence to the wrong limit. -/
+**Why not use OrderDual reindexing?** For antitone `F`, the supremum
+`⨆ i : ℕᵒᵈ, F i.ofDual` equals `F 0` (since `F 0` is the largest element of the chain),
+not `⨅ n, F n`. So applying Lévy's upward theorem to the dualised filtration would give
+convergence to `μ[f | F 0]`, the wrong limit. -/
 theorem condExp_tendsto_iInf
     [IsProbabilityMeasure μ]
     {𝔽 : ℕ → MeasurableSpace Ω}

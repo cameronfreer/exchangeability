@@ -195,15 +195,4 @@ lemma integral_pushforward_sq_diff
   rw [integral_map hf.aemeasurable]
   exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
 
-/-- **Integral of continuous function under pushforward.**
-
-For measurable f and continuous g:
-  ∫ x, g x d(f₊μ) = ∫ ω, g (f ω) dμ -/
-lemma integral_pushforward_continuous
-    {μ : Measure Ω} {f : Ω → ℝ} {g : ℝ → ℝ}
-    (hf : Measurable f) (hg : Continuous g) :
-    ∫ x, g x ∂(Measure.map f μ) = ∫ ω, g (f ω) ∂μ := by
-  rw [integral_map hf.aemeasurable]
-  exact hg.aestronglyMeasurable
-
 end Exchangeability.Probability.IntegrationHelpers

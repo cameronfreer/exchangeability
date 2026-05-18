@@ -3,7 +3,6 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.Probability.Martingale.OrderDual
 import Exchangeability.Probability.Martingale.Reverse
 import Exchangeability.Probability.Martingale.Crossings
 import Exchangeability.Probability.Martingale.Convergence
@@ -22,7 +21,6 @@ of de Finetti's theorem.
 
 ## Module Structure
 
-- `Martingale.OrderDual`: OrderDual infrastructure, why reindexing fails
 - `Martingale.Reverse`: Time-reversal infrastructure (revFiltration, revCEFinite)
 - `Martingale.Crossings`: Downcrossing machinery and upcrossing bounds
 - `Martingale.Convergence`: Main convergence theorems
