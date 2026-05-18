@@ -116,27 +116,6 @@ then E[X | σ(W)] = E[X] almost everywhere.
 This is the key property that makes independence "pass through" conditioning:
 knowing W provides no information about X when X ⊥ W.
 -/
-/-
-Note: Idempotence helper pending identification of correct mathlib lemma name.
-
-/-- Idempotence of conditional expectation on the target sub-σ-algebra.
-If f is m-measurable, then E[f|m] = f almost everywhere.
-This avoids hunting for the correct lemma name across mathlib versions. -/
-lemma condExp_idem'
-    (μ : Measure Ω) (m : MeasurableSpace Ω) (f : Ω → ℝ)
-    (hm : m ≤ _)
-    (hf_int : Integrable f μ)
-    (hf_sm : StronglyMeasurable[m] f) :
-    μ[f | m] =ᵐ[μ] f := by
-  -- Try the most common name first:
-  simpa using
-    (condexp_of_stronglyMeasurable  -- This name doesn't exist in current mathlib
-      (μ := μ) (m := m) (hm := hm) (hfmeas := hf_sm) (hfint := hf_int))
-  -- If this fails in your build, replace the line above with either:
-  -- (1) `condexp_of_aestronglyMeasurable'` (with `aestronglyMeasurable_of_stronglyMeasurable`)
-  -- (2) `condexp_condexp` specialized to `m₁ = m₂ := m`
--/
-
 @[nolint unusedArguments]
 lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
     {X : Ω → ℝ} {W : Ω → γ}

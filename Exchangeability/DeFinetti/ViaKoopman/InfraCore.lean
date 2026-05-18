@@ -552,12 +552,11 @@ lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measur
 
 /-- Idempotence of conditional expectation for m-measurable integrable functions.
 
-**Note**: Mathlib API candidates for this standard result:
-- `condExp_of_stronglyMeasurable` (needs StronglyMeasurable, not AEStronglyMeasurable)
-- Some version of `condexp_of_aestronglyMeasurable` (not found in current snapshot)
-- Direct proof via uniqueness characterization
-
-The statement is correct and will be used in rectangle-case proofs. -/
+Wraps mathlib's `condExp_of_aestronglyMeasurable'`. We keep the local name because the
+helper takes the weaker `AEStronglyMeasurable[m] f μ` rather than the
+`StronglyMeasurable[m] f` required by `condExp_of_stronglyMeasurable` (which gives
+*pointwise* equality rather than the a.e. equality stated here). Callers in
+rectangle-case proofs typically have only the AE version. -/
 lemma condExp_idempotent'
     {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ)

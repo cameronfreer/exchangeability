@@ -1439,12 +1439,10 @@ theorem condExp_project_of_condIndepFun
           =ᵐ[μ]
         (fun ω => μ[ f_n (ns n) ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
       intro n
-      -- The product of two condExps is mW-measurable
-      apply condExp_of_aestronglyMeasurable' hmW_le
-      · -- Product of two mW-strongly measurable functions is mW-strongly measurable
-        exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
-      · -- Integrability of the product
-        exact h_gs_subseq_int n
+      -- Product of two condExps is StronglyMeasurable[mW], so condExp gives exact equality
+      -- (`condExp_of_stronglyMeasurable`); convert to a.e. equality via `.of_eq`.
+      exact .of_eq (condExp_of_stronglyMeasurable hmW_le
+        (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp) (h_gs_subseq_int n))
 
     -- Now convert h_factorization_subseq using h_gs_is_mW_measurable
     have h_factorization_as_condExps : ∀ n,
@@ -1477,9 +1475,8 @@ theorem condExp_project_of_condIndepFun
         μ[ (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) | mW ]
           =ᵐ[μ]
         (fun ω => μ[ f ∘ Y | mW ] ω * μ[ (Z ⁻¹' B).indicator 1 | mW ] ω) := by
-      apply condExp_of_aestronglyMeasurable' hmW_le
-      · exact (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp).aestronglyMeasurable
-      · exact h_g_int
+      exact .of_eq (condExp_of_stronglyMeasurable hmW_le
+        (stronglyMeasurable_condExp.mul stronglyMeasurable_condExp) h_g_int)
 
     -- Combine to get the desired result
     exact h_condExps_equal.trans h_g_is_mW_measurable
