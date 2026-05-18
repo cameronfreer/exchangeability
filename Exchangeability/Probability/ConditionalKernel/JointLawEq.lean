@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.Kernel.CompProdEqIff
-import Exchangeability.Probability.ConditionalKernel.CondExpKernel
 import Exchangeability.Probability.TripleLawDropInfo.DropInfo
 
 /-!
