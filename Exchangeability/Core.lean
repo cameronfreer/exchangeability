@@ -679,8 +679,7 @@ theorem exchangeable_iff_fullyExchangeable {μ : Measure Ω}
     let μX := pathLaw (α:=α) μ X
     have hμ_univ : μ Set.univ = 1 := measure_univ
     have hμX_univ : μX Set.univ = 1 := by
-      have hX_meas : Measurable fun ω => fun i : ℕ => X i ω := by
-        simpa using (show Measurable (fun ω => fun i : ℕ => X i ω) from by fun_prop)
+      have hX_meas : Measurable fun ω => fun i : ℕ => X i ω := by fun_prop
       dsimp [μX, pathLaw]
       rw [Measure.map_apply_of_aemeasurable (hX_meas.aemeasurable) MeasurableSet.univ]
       simp [hμ_univ]

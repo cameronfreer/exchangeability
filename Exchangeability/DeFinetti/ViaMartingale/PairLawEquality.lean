@@ -353,10 +353,7 @@ lemma comap_consRV_eq_sup
       ext ω n
       cases n <;> simp [Function.comp_apply, consSeq, consRV]
     -- consSeq is measurable
-    have h_consSeq_meas : Measurable consSeq := by
-      simpa [consSeq] using
-        (measurable_consRV (x := fun q : α × (ℕ → α) => q.1)
-          (t := fun q : α × (ℕ → α) => q.2) measurable_fst measurable_snd)
+    have h_consSeq_meas : Measurable consSeq := by fun_prop
     -- So consRV x t ⁻¹' S = (fun ω => (x ω, t ω)) ⁻¹' (consSeq ⁻¹' S)
     rw [h_factor, Set.preimage_comp]
     -- consSeq ⁻¹' S is measurable in α × (ℕ → α)

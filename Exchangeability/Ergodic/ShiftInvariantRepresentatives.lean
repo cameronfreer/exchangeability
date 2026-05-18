@@ -101,11 +101,7 @@ def gRep (g0 : Ω[α] → ℝ) : Ω[α] → ℝ :=
 @[measurability, fun_prop]
 lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
     Measurable (gRep g0) := by
-  have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by
-    intro n
-    have hreal : Measurable fun ω => g0 (shift^[n] ω) :=
-      hg0.comp (shift_iterate_measurable (α := α) n)
-    exact measurable_coe_real_ereal.comp hreal
+  have hstep : ∀ n : ℕ, Measurable fun ω => (g0 (shift^[n] ω) : EReal) := by fun_prop
   have h_meas_ereal : Measurable fun ω => gLimsupE g0 ω := by
     simpa [gLimsupE] using (Measurable.limsup hstep)
   have : Measurable fun ω => (gLimsupE g0 ω).toReal := by

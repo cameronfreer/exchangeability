@@ -238,12 +238,7 @@ lemma blockAvg_tendsto_condExp
       -- 2. Use h_pres.map_eq to get ν = μ
       have h_smeas : StronglyMeasurable (fun ω : Ω[α] => |A n ω - Y ω|) := by
         -- A n is measurable (Cesàro average = const * finite sum of measurable functions)
-        have hA_meas : Measurable (A n) := by
-          simp only [A]
-          apply Measurable.const_mul
-          apply Finset.measurable_sum
-          intro j _
-          exact hf.comp (measurable_pi_apply j)
+        have hA_meas : Measurable (A n) := by fun_prop
         -- Y is the conditional expectation, measurable via shiftInvariantSigma_le
         have hY_meas : Measurable Y :=
           stronglyMeasurable_condExp.measurable.mono (shiftInvariantSigma_le (α := α)) le_rfl
