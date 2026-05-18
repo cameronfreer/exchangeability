@@ -14,7 +14,6 @@ This file contains bridge lemmas connecting kernel-level and measure-level indep
 ## Main results
 
 - `Kernel.IndepFun.ae_measure_indepFun`: Kernel independence implies measure-level integral factorization
-- `Kernel.IndepFun.comp`: Independence is preserved under composition with measurable functions
 - `metProjection_eq_condExpL2_shiftInvariant`: MET projection equals conditional expectation
 
 **Split from**: KernelIndependence.lean (lines 1-280)
@@ -177,46 +176,6 @@ lemma Kernel.IndepFun.ae_measure_indepFun
   haveI : IsProbabilityMeasure (κ a) := IsMarkovKernel.isProbabilityMeasure a
   exact h_indep.integral_fun_mul_eq_mul_integral
     hX.aestronglyMeasurable hY.aestronglyMeasurable
-
-/-- **Composition lemma**: Independence is preserved under composition with measurable functions.
-
-If X and Y are kernel-independent, then f ∘ X and g ∘ Y are also kernel-independent
-for any measurable functions f and g.
-
-**Proof strategy**:
-- Kernel.IndepFun X Y κ μ means Kernel.Indep (comap X) (comap Y) κ μ
-- For measurable f, comap (f ∘ X) ⊆ comap X (preimages under f∘X are preimages under X)
-- Independence of larger σ-algebras implies independence of sub-σ-algebras
--/
-lemma Kernel.IndepFun.comp
-    {α Ω β γ : Type*} [MeasurableSpace α] [MeasurableSpace Ω]
-    [MeasurableSpace β] [MeasurableSpace γ]
-    {κ : Kernel α Ω} {μ : Measure α}
-    {X : Ω → β} {Y : Ω → γ}
-    (hXY : Kernel.IndepFun X Y κ μ)
-    {f : β → ℝ} {g : γ → ℝ}
-    (hf : Measurable f) (hg : Measurable g) :
-    Kernel.IndepFun (f ∘ X) (g ∘ Y) κ μ := by
-  -- The key insight: Kernel.IndepFun is defined as independence of the comap σ-algebras
-  -- For sets s, t in the target σ-algebras, we need to show:
-  -- ∀ s ∈ σ(f∘X), ∀ t ∈ σ(g∘Y), ∀ᵐ a, κ a (s ∩ t) = κ a s * κ a t
-
-  intro s t hs ht
-  -- s is measurable w.r.t. comap (f ∘ X), so s = (f ∘ X)⁻¹(S) for some measurable S ⊆ ℝ
-  -- This means s = X⁻¹(f⁻¹(S)), so s is in comap X
-  -- Similarly t is in comap Y
-
-  -- We need to show s ∈ comap X and t ∈ comap Y
-  -- Key fact: if s is measurable w.r.t. comap (f ∘ X), then s is measurable w.r.t. comap X
-  -- because comap (f ∘ X) ≤ comap X
-
-  have hs' : MeasurableSet[MeasurableSpace.comap X inferInstance] s :=
-    comap_comp_le X f hf s hs
-
-  have ht' : MeasurableSet[MeasurableSpace.comap Y inferInstance] t :=
-    comap_comp_le Y g hg t ht
-
-  exact hXY s t hs' ht'
 
 /-- **Bridge lemma**: The Mean Ergodic Theorem projection equals conditional expectation
 onto the shift-invariant σ-algebra.
