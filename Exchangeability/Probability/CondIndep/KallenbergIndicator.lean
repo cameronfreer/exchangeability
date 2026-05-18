@@ -96,8 +96,9 @@ lemma condIndep_indicator_of_dropInfoY
     obtain ⟨S, hS_meas, rfl⟩ := hs
     exact hS_meas.preimage (hZ.prodMk hW)
 
-  -- SigmaFinite instance for trim (needed for condExp lemmas)
-  haveI hσZW : SigmaFinite (μ.trim hmZW_le) := sigmaFinite_trim_of_le μ hmZW_le
+  -- SigmaFinite instance for trim (needed for condExp lemmas); provided automatically
+  -- via mathlib's `isFiniteMeasure_trim` instance + `IsFiniteMeasure.toSigmaFinite`.
+  haveI hσZW : SigmaFinite (μ.trim hmZW_le) := inferInstance
 
   -- Integrability of indicators (bounded by 1)
   have hIndA_int : Integrable indA μ := (integrable_const 1).indicator (hA.preimage hY)

@@ -283,8 +283,7 @@ lemma alphaIicCE_right_continuous_at
   have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
     TailSigma.tailSigma_le X hX_meas
   haveI h_fact : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
-  haveI h_sf : SigmaFinite (μ.trim hm_le) :=
-    Exchangeability.Probability.sigmaFinite_trim μ hm_le
+  haveI h_sf : SigmaFinite (μ.trim hm_le) := inferInstance
 
   -- Step 1: Get decreasing rational sequence u_n → t with u_n > t
   obtain ⟨u, u_anti, u_gt, u_tendsto⟩ := Real.exists_seq_rat_strictAnti_tendsto t
