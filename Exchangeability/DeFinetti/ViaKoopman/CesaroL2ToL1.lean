@@ -95,14 +95,6 @@ lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
   hT.quasiMeasurePreserving.ae_eq_comp hfg
 
-/-- Iterate of a measure-preserving map is measure-preserving. -/
-@[nolint unusedArguments]
-lemma MeasurePreserving.iterate' (hT : MeasurePreserving shift μ μ) (k : ℕ) :
-    MeasurePreserving (shift^[k]) μ μ := by
-  induction k with
-  | zero => exact MeasurePreserving.id μ
-  | succ k ih => simp only [Function.iterate_succ']; exact hT.comp ih
-
 /-- General evaluation formula for shift iteration. -/
 @[nolint unusedArguments]
 lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
@@ -688,7 +680,7 @@ theorem optionB_L1_convergence_bounded
         (fun ω => g (ω k)) := by
       intro k
       -- fL2 = G a.e., and shift^[k] is measure-preserving
-      have hk_pres := MeasurePreserving.iterate' hσ k
+      have hk_pres := hσ.iterate k
       -- Pull hfL2_eq back along shift^[k] using measure-preserving property
       have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
           (fun ω => G (shift^[k] ω)) := by

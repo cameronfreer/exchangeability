@@ -57,26 +57,6 @@ survives conditioning on W.
    transfers to the conditional expectations.
 -/
 
--- Product of two unit indicator functions equals the indicator of the intersection.
-private lemma mul_indicator_one_eq_indicator_inter {Ω : Type*} (S T : Set Ω) :
-    (S.indicator (fun _ => (1 : ℝ))) * (T.indicator (fun _ => (1 : ℝ)))
-      = (S ∩ T).indicator (fun _ => (1 : ℝ)) := by
-  classical
-  ext ω
-  simp only [Pi.mul_apply]
-  by_cases hS : ω ∈ S <;> by_cases hT : ω ∈ T
-  · rw [Set.indicator_of_mem hS, Set.indicator_of_mem hT]
-    have : ω ∈ S ∩ T := ⟨hS, hT⟩
-    rw [Set.indicator_of_mem this]; norm_num
-  · rw [Set.indicator_of_mem hS, Set.indicator_of_notMem hT]
-    have : ω ∉ S ∩ T := fun h => hT h.2
-    rw [Set.indicator_of_notMem this]; norm_num
-  · rw [Set.indicator_of_notMem hS, Set.indicator_of_mem hT]
-    have : ω ∉ S ∩ T := fun h => hS h.1
-    rw [Set.indicator_of_notMem this]; norm_num
-  · rw [Set.indicator_of_notMem hS, Set.indicator_of_notMem hT]
-    have : ω ∉ S ∩ T := fun h => hS h.1
-    rw [Set.indicator_of_notMem this]; norm_num
 
 -- Product of indicators composed with functions equals indicator of product set composed with pair.
 private lemma mul_indicator_comp_pair_eq_indicator_prod {Ω α β : Type*}
@@ -159,7 +139,7 @@ theorem condIndep_of_indep_pair (μ : Measure Ω) [IsProbabilityMeasure μ]
   have hfg_meas : Measurable (f * g) := hf_meas.mul hg_meas
   have hfg_int : Integrable (f * g) μ := by
     rw [show f * g = (Y ⁻¹' A ∩ Z ⁻¹' B).indicator (fun _ => (1 : ℝ))
-          from mul_indicator_one_eq_indicator_inter (Y ⁻¹' A) (Z ⁻¹' B)]
+          from (Set.inter_indicator_one (s := Y ⁻¹' A) (t := Z ⁻¹' B)).symm]
     exact (integrable_const (1 : ℝ)).indicator ((hY hA).inter (hZ hB))
   have hfg_ce : μ[f * g | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[f * g]) :=
     condExp_const_of_indepFun μ hfg_meas hW hfg_indep hfg_int

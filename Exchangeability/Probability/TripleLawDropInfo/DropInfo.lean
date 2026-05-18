@@ -150,13 +150,13 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
     rw [Real.norm_eq_abs, abs_le]; constructor <;> linarith
 
   have hμ₁sq_int : Integrable (fun ω => μ₁ ω * μ₁ ω) μ :=
-    Integrable.bdd_mul' hμ₁_int hμ₁_int.aestronglyMeasurable hμ₁_bound
+    Integrable.bdd_mul hμ₁_int hμ₁_int.aestronglyMeasurable hμ₁_bound
 
   have hμ₂sq_int : Integrable (fun ω => μ₂ ω * μ₂ ω) μ :=
-    Integrable.bdd_mul' hμ₂_int hμ₂_int.aestronglyMeasurable hμ₂_bound
+    Integrable.bdd_mul hμ₂_int hμ₂_int.aestronglyMeasurable hμ₂_bound
 
   have hμ₂μ₁_int : Integrable (fun ω => μ₂ ω * μ₁ ω) μ :=
-    Integrable.bdd_mul' hμ₁_int hμ₂_int.aestronglyMeasurable hμ₂_bound
+    Integrable.bdd_mul hμ₁_int hμ₂_int.aestronglyMeasurable hμ₂_bound
 
   -- Step 4a: Cross term E[μ₂μ₁] = E[μ₁²] using pull-out + tower
   have h_cross : ∫ ω, μ₂ ω * μ₁ ω ∂μ = ∫ ω, μ₁ ω * μ₁ ω ∂μ := by
@@ -204,7 +204,7 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
       have h_sq_eq_mul : ∀ ω, (μ₂ ω - μ₁ ω)^2 = (μ₂ - μ₁) ω * (μ₂ - μ₁) ω := fun ω => by
         simp only [Pi.sub_apply]; ring
       simp_rw [h_sq_eq_mul]
-      exact Integrable.bdd_mul' h_diff_int h_diff_int.aestronglyMeasurable h_diff_bound
+      exact Integrable.bdd_mul h_diff_int h_diff_int.aestronglyMeasurable h_diff_bound
     exact (integral_eq_zero_iff_of_nonneg_ae h_nonneg h_sq_int).mp h_L2_zero
 
   -- (μ₂ - μ₁)² = 0 implies μ₂ = μ₁

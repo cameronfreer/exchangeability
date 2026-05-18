@@ -556,7 +556,7 @@ lemma integrable_mul_of_ae_bdd_left
   have hZ_norm : ∀ᵐ ω ∂μ, ‖Z ω‖ ≤ C := by
     filter_upwards [hC] with ω hω
     rwa [Real.norm_eq_abs]
-  exact Integrable.bdd_mul' hY hZ.aestronglyMeasurable hZ_norm
+  exact Integrable.bdd_mul hY hZ.aestronglyMeasurable hZ_norm
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
 the L¹ distance. This is a standard property following from Jensen's inequality. -/
