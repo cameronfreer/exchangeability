@@ -508,41 +508,17 @@ lemma lt_permBound_of_lt {i : ℕ} (hi : i < n) :
 lemma lt_permBound_fin {i : Fin n} :
     π i < permBound π n := lt_permBound_of_lt (π:=π) (n:=n) i.isLt
 
-/-- Equivalence between indices below n and indices in the image of a permutation.
-Used in the proof of exchangeability via permutation extension. -/
-def approxEquiv :
-    {x : Fin (permBound π n) // (x : ℕ) < n} ≃
-      {x : Fin (permBound π n) // ∃ j : Fin n, (x : ℕ) = π j} :=
-  by
-    classical
-    refine
-      { toFun := ?_, invFun := ?_, left_inv := ?_, right_inv := ?_ }
-    · intro x
-      have hx := x.property
-      let i : Fin n := ⟨x.1, hx⟩
-      have hi : (π i : ℕ) < permBound π n := lt_permBound_fin (π:=π) (n:=n) (i:=i)
-      refine ⟨⟨π i, hi⟩, ?_⟩
-      exact ⟨i, rfl⟩
-    · intro y
-      let j := Classical.choose y.property
-      have hj := Classical.choose_spec y.property
-      have hj_lt : (j : ℕ) < n := j.isLt
-      have hj_eq : π.symm y.1 = j := by
-        apply π.symm_apply_eq.2
-        exact hj
-      have hjm : (π.symm y.1 : ℕ) < permBound π n :=
-        lt_of_lt_of_le (by simp [hj_eq, hj_lt])
-          (le_permBound (π:=π) (n:=n))
-      refine ⟨⟨π.symm y.1, hjm⟩, ?_⟩
-      simp [hj_eq]
-    · intro x
-      ext
-      simp
-    · intro y
-      rcases y with ⟨y, hy⟩
-      rcases hy with ⟨j, hj⟩
-      ext
-      simp [hj]
+/-- Existence of a permutation of `Fin (permBound π n)` that agrees with `π` on
+`{0,...,n-1}`. The witness is extracted as `approxPerm` below via `Classical.choose`. -/
+private theorem exists_approxPerm :
+    ∃ σ : Equiv.Perm (Fin (permBound π n)), ∀ i : Fin n,
+      σ (Fin.castLE (le_permBound (π:=π) (n:=n)) i)
+        = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ :=
+  Equiv.Perm.exists_extending_pair
+    (f := Fin.castLE (le_permBound (π:=π) (n:=n)))
+    (g := fun i => ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩)
+    (Fin.castLE_injective _)
+    (fun _ _ hij => Fin.ext (π.injective (Fin.mk.inj hij)))
 
 /--
 A finite permutation of `Fin (permBound π n)` that agrees with `π` on `{0,...,n-1}`.
@@ -552,20 +528,13 @@ This extends the restriction of π to an equivalence on the finite type
 outside the range of π restricted to `{0,...,n-1}`.
 -/
 def approxPerm : Equiv.Perm (Fin (permBound π n)) :=
-  (approxEquiv (π:=π) (n:=n)).extendSubtype
+  Classical.choose (exists_approxPerm (π:=π) (n:=n))
 
 lemma approxPerm_apply_cast {i : Fin n} :
     approxPerm (π:=π) (n:=n)
         (Fin.castLE (le_permBound (π:=π) (n:=n)) i)
-      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ := by
-  classical
-  have hmem : ((Fin.castLE (le_permBound (π:=π) (n:=n)) i) : ℕ) < n :=
-    i.2
-  have := Equiv.extendSubtype_apply_of_mem
-      (e:=approxEquiv (π:=π) (n:=n))
-      (x:=Fin.castLE (le_permBound (π:=π) (n:=n)) i)
-      hmem
-  simpa using this
+      = ⟨π i, lt_permBound_fin (π:=π) (n:=n) (i:=i)⟩ :=
+  Classical.choose_spec (exists_approxPerm (π:=π) (n:=n)) i
 
 @[simp]
 lemma approxPerm_apply_cast_coe {i : Fin n} :
