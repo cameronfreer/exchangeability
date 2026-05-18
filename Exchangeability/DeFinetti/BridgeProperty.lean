@@ -114,7 +114,7 @@ lemma measure_eq_implies_lintegral_prod_eq
       simp only [hprod, Pi.one_apply]
     · -- ω is not in some preimage, so at least one factor is 0
       rw [indicator_of_notMem h]
-      rw [hpre_mem] at h; push_neg at h
+      rw [hpre_mem] at h; push Not at h
       obtain ⟨i, hi⟩ := h
       rw [Finset.prod_eq_zero (i := i) (hi := Finset.mem_univ i)]
       simp only [indicator_of_notMem hi, ENNReal.ofReal_zero]

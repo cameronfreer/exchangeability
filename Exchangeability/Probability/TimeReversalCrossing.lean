@@ -59,7 +59,7 @@ private lemma lowerCrossingTime_lt_upperCrossingTime_succ' {Ω : Type*} {a b : �
   have h_le : lowerCrossingTime a b f N n ω ≤ upperCrossingTime a b f N (n+1) ω :=
     lowerCrossingTime_le_upperCrossingTime_succ
   by_contra hge
-  push_neg at hge
+  push Not at hge
   have h_eq : lowerCrossingTime a b f N n ω = upperCrossingTime a b f N (n+1) ω :=
     le_antisymm h_le hge
   have h_neq' : lowerCrossingTime a b f N n ω ≠ N := h_eq ▸ h_neq

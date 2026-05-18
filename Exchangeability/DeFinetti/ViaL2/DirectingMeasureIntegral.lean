@@ -197,7 +197,7 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
       intro b hb
       -- b ≥ alphaIicRat n for all n, so b ≥ lim alphaIicRat n = 1
       by_contra h_not
-      push_neg at h_not
+      push Not at h_not
       have hε : 1 - b > 0 := by linarith
       -- Since alphaIicRat n → 1, for large n we have alphaIicRat n > b
       have h_nat : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω (n : ℚ))
@@ -235,7 +235,7 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
     · -- 0 is the greatest lower bound
       intro b hb
       by_contra h_not
-      push_neg at h_not
+      push Not at h_not
       have hε : b > 0 := h_not
       -- Since alphaIicRat (-n) → 0, for large n we have alphaIicRat (-n) < b
       have h_nat : Tendsto (fun n : ℕ => alphaIicRat X hX_contract hX_meas hX_L2 ω (-(n : ℚ)))
@@ -460,7 +460,7 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
           · simp [Set.indicator_of_mem hx, Set.indicator_of_notMem (Set.notMem_compl_iff.mpr hx)]
           · simp [Set.indicator_of_notMem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
-        rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
+        rw [integral_sub (integrable_const 1), integral_const, probReal_univ, one_smul]
         exact (integrable_const 1).indicator ht_meas
       simp_rw [h_eq]
       exact aestronglyMeasurable_const.sub ht_aesm
@@ -595,13 +595,13 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
                         rw [Set.indicator_of_notMem]
                         exact Set.disjoint_left.mp hdisj_mn hxm
                       · intro hm_not; exact absurd hm_mem hm_not
-                    · push_neg at hx
+                    · push Not at hx
                       have h_zero : ∀ n ∈ Finset.range N, (f n).indicator (fun _ => (1:ℝ)) x = 0 :=
                         fun n hn => Set.indicator_of_notMem (hx n hn) _
                       rw [Finset.sum_eq_zero h_zero]
                       exact zero_le_one
                   exact this
-            _ = 1 := by simp [measureReal_univ_eq_one]
+            _ = 1 := by simp [probReal_univ]
         have h_summable : Summable (fun n => ∫ x, (f n).indicator (fun _ => (1:ℝ)) x
             ∂(directing_measure X hX_contract hX_meas hX_L2 ω)) :=
           summable_of_sum_range_le h_nonneg h_partial_le
@@ -1003,7 +1003,7 @@ lemma setIntegral_directing_measure_indicator_eq
             · simp [Set.indicator_of_mem hx, Set.indicator_of_notMem (Set.notMem_compl_iff.mpr hx)]
             · simp [Set.indicator_of_notMem hx, Set.indicator_of_mem (Set.mem_compl hx)]
           simp_rw [h_ind_compl]
-          rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
+          rw [integral_sub (integrable_const 1), integral_const, probReal_univ, one_smul]
           exact (integrable_const 1).indicator ht_meas
         simp_rw [h_compl_eq]
         rw [integral_sub, integral_const]
@@ -1027,7 +1027,7 @@ lemma setIntegral_directing_measure_indicator_eq
                   · exact ae_of_all _ (fun x => by
                       simp only [Set.indicator_apply]
                       split_ifs <;> simp)
-              _ = 1 := by simp [measureReal_univ_eq_one]
+              _ = 1 := by simp [probReal_univ]
       have h_rhs_eq : ∫ ω in A, tᶜ.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ =
           ∫ ω in A, (1 : ℝ) ∂μ - ∫ ω in A, t.indicator (fun _ => (1:ℝ)) (X 0 ω) ∂μ := by
         have h_ind_compl : ∀ ω, tᶜ.indicator (fun _ => (1:ℝ)) (X 0 ω) =
@@ -1288,7 +1288,7 @@ lemma setIntegral_directing_measure_bounded_measurable_eq
               have := hφ_range n x
               rw [Set.mem_Icc] at this
               exact abs_le.mpr this
-        _ = M' := by simp [measureReal_univ_eq_one]
+        _ = M' := by simp [probReal_univ]
     · filter_upwards with ω
       -- ∫ φ_n dν(ω) → ∫ f dν(ω) by DCT on ν(ω)
       haveI hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
@@ -1549,7 +1549,7 @@ lemma directing_measure_integral_eq_condExp
           · exact ae_of_all _ (fun _ => abs_nonneg _)
           · exact integrable_const M'
           · exact ae_of_all _ hM'
-      _ = M' := by simp only [integral_const, measureReal_univ_eq_one, smul_eq_mul, one_mul]
+      _ = M' := by simp only [integral_const, probReal_univ, smul_eq_mul, one_mul]
 
   -- g is AEStronglyMeasurable w.r.t. ambient σ-algebra
   -- Uses monotone class theorem: measurability extends from Iic indicators to bounded measurable f.
@@ -1655,7 +1655,7 @@ lemma directing_measure_integral_via_chain
         apply le_antisymm _ (integral_nonneg (fun _ => abs_nonneg _))
         -- For any ε > 0, ∫|alpha| < ε (using hα_conv with cesaro = 0)
         by_contra h_pos
-        push_neg at h_pos
+        push Not at h_pos
         have hε : (0 : ℝ) < ∫ ω, |alpha ω| ∂μ := h_pos
         obtain ⟨M_idx, hM_idx⟩ := hα_conv 0 (∫ ω, |alpha ω| ∂μ) hε
         specialize hM_idx M_idx (le_refl _)

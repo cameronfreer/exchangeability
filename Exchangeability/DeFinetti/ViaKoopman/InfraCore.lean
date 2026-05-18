@@ -9,7 +9,7 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.SimpleFuncDense
 import Mathlib.Analysis.InnerProductSpace.Projection.Basic
 import Mathlib.Probability.Kernel.Condexp
-import Mathlib.Probability.Independence.Kernel
+import Mathlib.Probability.Independence.Kernel.IndepFun
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.InvariantSigma
 import Exchangeability.Ergodic.ProjectionLemmas

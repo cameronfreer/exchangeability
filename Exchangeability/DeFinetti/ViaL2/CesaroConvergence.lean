@@ -1221,7 +1221,7 @@ private lemma cesaro_cauchy_rho_lt
         rw [abs_sub_comm, abs_of_nonneg (sub_nonneg_of_le h), max_eq_right h]
         exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n))
       · -- Case: n⁻¹ > n'⁻¹, so max = n⁻¹
-        push_neg at h
+        push Not at h
         rw [abs_of_nonneg (sub_nonneg_of_le (le_of_lt h)), max_eq_left (le_of_lt h)]
         exact sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg n'))
     · -- Case 2: i.val < n ∧ i.val ≥ n'
@@ -1733,7 +1733,7 @@ private lemma blockAvg_cauchy_in_L2
       exact hε
 
   · -- Degenerate case: σSq = 0 → Z is constant a.e. → blockAvg constant a.e.
-    push_neg at hσ_pos
+    push Not at hσ_pos
     have hσSq_zero : σSq = 0 := by
       have hσSq_nonneg : 0 ≤ σSq := by
         simp only [σSq]
@@ -2058,7 +2058,7 @@ private lemma blockAvg_shift_tendsto
               exact Finset.sum_le_sum (fun k _ => hf_bdd (X (0 + k) ω))
           _ = (n : ℝ)⁻¹ * n := by simp
           _ = 1 := by field_simp [Nat.pos_iff_ne_zero.mp hn]
-    · push_neg at hn
+    · push Not at hn
       have : n = 0 := Nat.eq_zero_of_le_zero hn
       subst this
       have h_eq : blockAvg f X 0 0 = fun _ => 0 := by ext ω; simp [blockAvg]

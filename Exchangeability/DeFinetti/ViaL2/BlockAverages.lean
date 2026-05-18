@@ -207,7 +207,7 @@ lemma contractable_covariance_structure
         rw [hρ_def]
         field_simp [ne_of_gt hσSq_pos]
       · -- Case j < i: use symmetry
-        push_neg at h_ord
+        push Not at h_ord
         have h_ji : j < i := Nat.lt_of_le_of_ne h_ord (Ne.symm hij)
         have h_eq_dist := contractable_map_pair (X := X) hX_contract hX_meas h_ji
         have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
@@ -337,7 +337,7 @@ lemma contractable_covariance_structure
     exact ⟨m, σSq, ρ, hmean, hvar, hcov, hσSq_nonneg, hρ_bd⟩
 
   · -- Case: zero variance (all X_i are constant a.s.)
-    push_neg at hσSq_pos
+    push Not at hσSq_pos
     have hσSq_zero : σSq = 0 := le_antisymm hσSq_pos hσSq_nonneg
 
     -- When variance is 0, all X_i = m almost surely

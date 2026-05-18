@@ -1550,7 +1550,7 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
       constructor
       intro ⟨φ, hφ⟩
       simp only [Function.Injective] at hφ
-      push_neg at hφ
+      push Not at hφ
       obtain ⟨i, _, _, _⟩ := hφ
       exact Fin.elim0 i
     simp [Fintype.card_eq_zero]
@@ -1561,7 +1561,7 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
         constructor
         intro ⟨φ, hφ⟩
         simp only [Function.Injective] at hφ
-        push_neg at hφ
+        push Not at hφ
         obtain ⟨i, j, _, hij⟩ := hφ
         exact absurd (Subsingleton.elim i j) hij
       simp [Fintype.card_eq_zero]
@@ -1576,7 +1576,7 @@ lemma card_nonInjective_le (m N : ℕ) (_hN : 0 < N) :
                    true_and, collisionPairs]
         -- φ is not injective, so ∃ i ≠ j with φ i = φ j
         simp only [Function.Injective] at hφ
-        push_neg at hφ
+        push Not at hφ
         obtain ⟨i, j, heq, hne⟩ := hφ
         refine ⟨(i, j), ?_, heq⟩
         exact hne
@@ -1627,7 +1627,7 @@ lemma nonInjective_fraction_tendsto_zero (m : ℕ) :
       constructor
       intro ⟨φ, hφ⟩
       simp only [Function.Injective] at hφ
-      push_neg at hφ
+      push Not at hφ
       obtain ⟨i, _, _, _⟩ := hφ
       exact Fin.elim0 i
     simp only [h, Nat.cast_zero]

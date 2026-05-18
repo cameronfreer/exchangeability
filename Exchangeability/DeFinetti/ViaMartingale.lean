@@ -255,7 +255,7 @@ lemma ae_bound_condexp_of_ae_bound
   by_cases hC : 0 ≤ C
   · exact MeasureTheory.ae_bdd_condExp_of_ae_bdd (R := ⟨C, hC⟩) hgC
   · -- C < 0 contradicts |g ω| ≤ C since |g ω| ≥ 0
-    push_neg at hC
+    push Not at hC
     filter_upwards [hgC] with ω hω
     linarith [abs_nonneg (g ω)]
 

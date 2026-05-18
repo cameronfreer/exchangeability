@@ -281,7 +281,7 @@ lemma optionB_Step4b_AB_close
     -- B n ω = (1/n) * ∑_{k=0}^{n-1} g(ω k)
     -- Write ∑_{k=0}^n = ∑_{k=0}^{n-1} + g(ω n)
     rw [show Finset.range (n + 1) = Finset.range n ∪ {n} by
-          ext k; simp [Finset.mem_range, Nat.lt_succ]; omega,
+          ext k; simp [Finset.mem_range]; omega,
         Finset.sum_union (by simp : Disjoint (Finset.range n) {n}),
         Finset.sum_singleton]
     -- Now A n ω = (1/(n+1)) * (∑_{k<n} g(ω k) + g(ω n))

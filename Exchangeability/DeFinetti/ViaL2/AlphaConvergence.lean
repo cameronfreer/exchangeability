@@ -148,7 +148,7 @@ lemma alphaIic_ae_eq_alphaIicCE
             _ ≤ alpha ω - A n m ω := by linarith
             _ ≤ |A n m ω - alpha ω| := by rw [abs_sub_comm]; exact le_abs_self _
         · -- alpha ∈ [0,1], so clipping does nothing
-          push_neg at halpha halpha1
+          push Not at halpha halpha1
           rw [min_comm, min_eq_left halpha1, max_eq_right halpha]
 
     -- Prove integrability of A n m
@@ -202,7 +202,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               norm_num
             · by_cases h1 : 1 ≤ alpha ω
               · rw [min_eq_left h1, max_eq_right (by linarith : 0 ≤ (1:ℝ)), abs_of_nonneg (by linarith : 0 ≤ (1:ℝ))]
-              · push_neg at h h1
+              · push Not at h h1
                 rw [min_eq_right (le_of_lt h1), max_eq_right (le_of_lt h)]
                 exact abs_of_pos h |>.trans_le (le_of_lt h1)
           · exact (hA_int.sub halpha_int).abs
