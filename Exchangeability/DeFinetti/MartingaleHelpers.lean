@@ -39,14 +39,11 @@ namespace DeFinetti
 namespace MartingaleHelpers
 
 -- Re-export cylinder infrastructure from PathSpace for backward compatibility
-export PathSpace (tailCylinder tailCylinder_measurable cylinder finCylinder
-  finCylinder_measurable cylinder_measurable firstRMap firstRSigma firstRCylinder
-  firstRCylinder_eq_preimage_finCylinder firstRCylinder_measurable_in_firstRSigma
-  firstRCylinder_measurable_ambient measurable_firstRMap firstRSigma_le_ambient
-  firstRSigma_mono firstRCylinder_zero mem_firstRCylinder_iff firstRCylinder_univ
-  firstRCylinder_inter tailCylinder_eq_preimage_cylinder
-  mem_cylinder_iff mem_tailCylinder_iff cylinder_measurable_set cylinder_zero
-  tailCylinder_zero' cylinder_univ tailCylinder_univ cylinder_inter)
+export PathSpace (cylinder cylinder_measurable firstRMap firstRSigma firstRCylinder
+  firstRCylinder_measurable_in_firstRSigma firstRCylinder_measurable_ambient
+  measurable_firstRMap firstRSigma_le_ambient firstRSigma_mono firstRCylinder_zero
+  mem_firstRCylinder_iff firstRCylinder_univ firstRCylinder_inter mem_cylinder_iff
+  cylinder_measurable_set cylinder_zero cylinder_univ cylinder_inter)
 
 open MeasureTheory
 

@@ -42,30 +42,6 @@ open scoped MeasureTheory
 namespace Exchangeability
 namespace PathSpace
 
-section TailCylinders
-
-variable {α : Type*} [MeasurableSpace α]
-
-/-- Cylinder on the first `r` tail coordinates (shifted by one). -/
-def tailCylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
-  {f | ∀ i : Fin r, f (i.1 + 1) ∈ C i}
-
-set_option linter.unusedSectionVars false in
-/-- Basic measurability for tail cylinders. -/
-@[measurability]
-lemma tailCylinder_measurable {r : ℕ} {C : Fin r → Set α}
-    (hC : ∀ i, MeasurableSet (C i)) :
-    MeasurableSet (tailCylinder (α:=α) r C) := by
-  classical
-  simp only [tailCylinder, Set.setOf_forall]
-  exact MeasurableSet.iInter fun i => by
-    have : (fun f : ℕ → α => f (i.val + 1)) ⁻¹' C i = {f | f (i.1 + 1) ∈ C i} := by
-      ext f; simp [Set.mem_preimage]
-    rw [← this]
-    exact (hC i).preimage (measurable_pi_apply (i.val + 1))
-
-end TailCylinders
-
 section FutureCylinders
 
 variable {α : Type*}
@@ -74,23 +50,7 @@ variable {α : Type*}
 def cylinder (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
   {f | ∀ i : Fin r, f i ∈ C i}
 
-/-- Cylinder for functions with domain Fin r. -/
-def finCylinder (r : ℕ) (C : Fin r → Set α) : Set (Fin r → α) :=
-  {f | ∀ i : Fin r, f i ∈ C i}
-
 variable [MeasurableSpace α]
-
-@[measurability]
-lemma finCylinder_measurable {r : ℕ} {C : Fin r → Set α}
-    (hC : ∀ i, MeasurableSet (C i)) :
-    MeasurableSet (finCylinder r C) := by
-  classical
-  simp only [finCylinder, Set.setOf_forall]
-  exact MeasurableSet.iInter fun i => by
-    have : (fun f : Fin r → α => f i) ⁻¹' C i = {f | f i ∈ C i} := by
-      ext f; simp [Set.mem_preimage]
-    rw [← this]
-    exact (hC i).preimage (measurable_pi_apply i)
 
 @[measurability]
 lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
@@ -122,14 +82,6 @@ abbrev firstRSigma (X : ℕ → Ω → α) (r : ℕ) : MeasurableSpace Ω :=
 def firstRCylinder (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) : Set Ω :=
   {ω | ∀ i : Fin r, X i ω ∈ C i}
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- As expected, the block cylinder is the preimage of a finite cylinder
-   under the `firstRMap`. -/
-lemma firstRCylinder_eq_preimage_finCylinder
-    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) :
-    firstRCylinder X r C
-      = (firstRMap X r) ⁻¹' (finCylinder (α:=α) r C) := rfl
-
 omit [MeasurableSpace Ω] in
 /-- **Measurable in the first-`r` σ‑algebra.**
 If each `C i` is measurable in `α`, then the block cylinder is measurable in
@@ -139,10 +91,11 @@ lemma firstRCylinder_measurable_in_firstRSigma
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet[firstRSigma X r] (firstRCylinder X r C) := by
-  -- firstRSigma X r = comap (firstRMap X r)
-  -- A set is measurable in the comap iff it's a preimage of a measurable set
-  rw [firstRCylinder_eq_preimage_finCylinder]
-  exact ⟨_, finCylinder_measurable hC, rfl⟩
+  -- firstRSigma X r = comap (firstRMap X r); express firstRCylinder as a preimage.
+  refine ⟨{f : Fin r → α | ∀ i, f i ∈ C i}, ?_, rfl⟩
+  classical
+  rw [Set.setOf_forall]
+  exact MeasurableSet.iInter fun i => (hC i).preimage (measurable_pi_apply i)
 
 /-- **Measurable in the ambient σ‑algebra.**
 If each coordinate `X i` is measurable, then the block cylinder is measurable
@@ -233,23 +186,8 @@ section CylinderBridge
 variable {α : Type*} [MeasurableSpace α]
 
 omit [MeasurableSpace α] in
-/-- `tailCylinder` is the preimage of a standard cylinder under `shift`. -/
-lemma tailCylinder_eq_preimage_cylinder
-    {r : ℕ} {C : Fin r → Set α} :
-    tailCylinder (α:=α) r C
-      = (shift : (ℕ → α) → (ℕ → α)) ⁻¹' (cylinder (α:=α) r C) := by
-  ext f
-  constructor <;> intro hf
-  · simpa [tailCylinder, shift, cylinder]
-  · simpa [tailCylinder, shift, cylinder]
-
-omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
-
-omit [MeasurableSpace α] in
-@[simp] lemma mem_tailCylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
-    f ∈ tailCylinder (α:=α) r C ↔ ∀ i : Fin r, f (i.1 + 1) ∈ C i := Iff.rfl
 
 /-- The cylinder set is measurable when each component set is measurable. -/
 lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
@@ -263,19 +201,9 @@ omit [MeasurableSpace α] in
   ext f; simp [cylinder]
 
 omit [MeasurableSpace α] in
-/-- Empty tail cylinder is the whole space. -/
-@[simp] lemma tailCylinder_zero' : tailCylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
-  ext f; simp [tailCylinder]
-
-omit [MeasurableSpace α] in
 /-- Cylinder on universal sets is the whole space. -/
 lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
   ext f; simp [cylinder]
-
-omit [MeasurableSpace α] in
-/-- Tail cylinder on universal sets is the whole space. -/
-lemma tailCylinder_univ {r : ℕ} : tailCylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
-  ext f; simp [tailCylinder]
 
 omit [MeasurableSpace α] in
 /-- Cylinders form intersections coordinate-wise. -/
