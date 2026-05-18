@@ -130,16 +130,6 @@ lemma integrable_indicator_comp
   -- Bounded measurable function on finite measure space is integrable
   exact Integrable.of_bound h_meas.aestronglyMeasurable 1 h_bound
 
-/-! ### Cylinder helper for pair-law arguments -/
-
-/-- Standard cylinder on the first `r` coordinates starting at index 0.
-
-**NOTE**: This is intentionally duplicated from `PathSpace.CylinderHelpers.cylinder` to
-avoid a circular import. CondExp is a low-level module that cannot import PathSpace,
-but needs this definition for working with product measures on sequence spaces. -/
-def cylinder (α : Type*) (r : ℕ) (C : Fin r → Set α) : Set (ℕ → α) :=
-  {f | ∀ i : Fin r, f i ∈ C i}
-
 -- NOTE: AgreeOnFutureRectangles was removed - it was just wrapping measure equality.
 -- The real AgreeOnFutureRectangles definition (rectangle agreement implies equality)
 -- is in ViaMartingale.lean where it's actually used to prove measure equality from
