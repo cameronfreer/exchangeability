@@ -54,8 +54,8 @@ extension argument.
 
 The key technical challenge is constructing permutations that extend strictly monotone
 selections. Given `k : Fin m → ℕ` with `k(0) < k(1) < ... < k(m-1)`, we construct
-a permutation `σ : Perm (Fin n)` such that `σ(i) = k(i)` for `i < m`. This uses
-`Equiv.extendSubtype` to extend a bijection between subtypes to a full permutation.
+a permutation `σ : Perm (Fin n)` such that `σ(i) = k(i)` for `i < m`. This is a thin
+wrapper around mathlib's `Equiv.Perm.exists_extending_pair`.
 
 ## References
 
@@ -301,11 +301,9 @@ as the image of the first `m` positions. Since `k` is strictly increasing, it's
 injective, so its image has cardinality `m`. We can extend this to a full
 permutation by arbitrarily pairing up the remaining elements.
 
-**Construction outline:**
-1. **Domain partition:** `{0,...,m-1}` ∪ `{m,...,n-1}` = `Fin n`
-2. **Codomain partition:** `{k(0),...,k(m-1)}` ∪ `complement` = `Fin n`
-3. Map first `m` positions to `k`-values: `σ(i) = k(i)` for `i < m`
-4. Extend arbitrarily to remaining positions using `Equiv.extendSubtype`
+**Construction:** Thin wrapper around mathlib's `Equiv.Perm.exists_extending_pair`,
+applied to `f = Fin.castLE hmn` (initial-segment inclusion) and
+`g i = ⟨k i, hk_bound i⟩` (strictly monotone embedding via `k`).
 
 This is the key combinatorial lemma enabling `contractable_of_exchangeable`:
 any strictly increasing subsequence can be realized via a permutation.
