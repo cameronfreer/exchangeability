@@ -383,10 +383,10 @@ lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
     -- This follows from h_mono_t_rat!
     exact h_mono_t_rat q hq
 
-/-! ### Helper Lemmas for Monotone Class Extension
+/-! ### Helper lemmas for monotone class extension
 
-The following lemmas build up the π-λ argument needed for `directing_measure_integral_eq_condExp`.
-Each phase is factored out as a separate lemma with its own sorry to be filled.
+These lemmas build up the π-λ argument used by `directing_measure_integral_eq_condExp`,
+factored into three phases:
 
 **Phase A**: Indicators of Borel sets → tail-AEStronglyMeasurable
 **Phase B**: Simple functions → tail-AEStronglyMeasurable (via linearity)
