@@ -48,7 +48,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 
 ### Prerequisites
 
-- [Lean 4](https://leanprover.github.io/lean4/doc/setup.html) (this project uses `lean-toolchain` pinned to 4.27.0-rc1)
+- [Lean 4](https://leanprover.github.io/lean4/doc/setup.html) (see `lean-toolchain` for the pinned version)
 - [elan](https://github.com/leanprover/elan) (Lean version manager)
 
 ### Installation
