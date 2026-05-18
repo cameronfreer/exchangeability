@@ -196,13 +196,10 @@ lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
       measurable_prod_ennreal (fun i ω => ν ω (B i)) hfac
     simpa [κ, rect]
 
-  -- Each product measure is a probability measure
-  have hκ_prob : ∀ ω, IsProbabilityMeasure (κ ω) := by
-    intro ω
-    classical
+  -- Each product measure is a probability measure (via `Measure.pi.instIsProbabilityMeasure`)
+  have hκ_prob : ∀ ω, IsProbabilityMeasure (κ ω) := fun ω => by
     haveI : ∀ _ : Fin m, IsProbabilityMeasure (ν ω) := fun _ => hν_prob ω
-    simp only [κ]
-    infer_instance
+    simp only [κ]; infer_instance
 
   -- Apply π-λ theorem to extend measurability from rectangles to all measurable sets
   exact Measurable.measure_of_isPiSystem_of_isProbabilityMeasure

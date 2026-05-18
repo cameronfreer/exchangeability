@@ -278,12 +278,12 @@ lemma integral_mul_condexp_adjoint_Linfty
   classical
   -- Both products are integrable
   have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ :=
-    Integrable.bdd_mul' (MeasureTheory.integrable_condExp (m := m) (f := ξ))
+    Integrable.bdd_mul (MeasureTheory.integrable_condExp (m := m) (f := ξ))
       hg.aestronglyMeasurable hgC
   have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
     @ae_bound_condexp_of_ae_bound Ω m0 μ m hm _ _ _ hgC
   have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ :=
-    Integrable.bdd_mul' hξ
+    Integrable.bdd_mul hξ
       (MeasureTheory.integrable_condExp (m := m) (f := g)).aestronglyMeasurable hμgC
 
   -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
