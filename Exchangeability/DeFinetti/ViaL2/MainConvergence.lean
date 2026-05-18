@@ -805,55 +805,9 @@ theorem reverse_martingale_subsequence_convergence
   classical
   exact Helpers.subseq_ae_of_L1 alpha alpha_inf h_alpha_meas h_alpha_inf_meas h_integrable h_L1_conv
 
-/-- Placeholder: The α_n sequence is a reverse martingale with respect to the tail filtration.
-
-**Note**: This lemma's content is deferred to Step 5 (`alpha_is_conditional_expectation`).
-Once we identify α_n = E[f(X_{n+1}) | σ(X_{n+1}, X_{n+2}, ...)] in Step 5,
-the reverse martingale property follows immediately from the standard tower property
-of conditional expectation.
-
-This private placeholder exists only so the file compiles while we develop other parts.
--/
-@[nolint unusedArguments]
-private theorem alpha_is_reverse_martingale
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
-    (_hX_meas : ∀ i, Measurable (_X i))
-    (_α : ℕ → Ω → ℝ)
-    (_f : ℝ → ℝ) (_hf_meas : Measurable _f) :
-    True :=
-  trivial
-
-/-!
-## Step 4: Contractability + dominated convergence gives conditional expectation formula
--/
-
-/-- Placeholder: Using contractability and dominated convergence, we get:
-E[f(X_i) ; ∩I_k] = E[α_{k-1} ; ∩I_k] → E[α_∞ ; ∩I_k]
-
-**Kallenberg**: "By the contractability of ξ and dominated convergence we get, a.s. along ℕ
-for any i ∈ I:
-  E[f(ξ_i); ∩I_k] = E[α_{k-1}; ∩I_k] → E[α_∞; ∩I_k]"
-
-**Note**: Uses contractability to relate different time points.
-
-This private placeholder exists only so the file compiles while we develop other parts.
-The parameters document the intended signature for the full implementation.
--/
-@[nolint unusedArguments]
-private theorem contractability_conditional_expectation
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (_X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ _X)
-    (_hX_meas : ∀ i, Measurable (_X i))
-    (_f : ℝ → ℝ) (_hf_meas : Measurable _f)
-    (_alpha : ℕ → Ω → ℝ) (_alpha_inf : Ω → ℝ)
-    (_I_k : Set Ω)  -- Event ∩I_k in tail σ-algebra
-    (_h_conv : ∀ᵐ ω ∂μ, Tendsto (fun n => _alpha n ω) atTop (𝓝 (_alpha_inf ω))) :
-    True :=
-  trivial
-
-/-! Note: Step 5 theorem `alpha_is_conditional_expectation_packaged` has a complete
-proof in `MoreL2Helpers.lean` (at the `ViaL2` namespace level). It was removed from
-here since it wasn't used in the critical path. The critical path uses
-`directing_measure_satisfies_requirements` from MoreL2Helpers instead. -/
+/-! The critical path of the L² proof uses
+`directing_measure_satisfies_requirements` from `MoreL2Helpers.lean`; earlier
+`alpha_is_reverse_martingale` / `contractability_conditional_expectation` /
+`alpha_is_conditional_expectation_packaged` placeholders are not on that path
+and have been removed. -/
 
