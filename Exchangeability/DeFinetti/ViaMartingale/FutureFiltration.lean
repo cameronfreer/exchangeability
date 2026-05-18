@@ -105,10 +105,8 @@ case requires manual construction of spanning sets and is a mathlib gap. -/
 lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [MeasurableSpace α]
     {μ : @Measure Ω m₀} [IsFiniteMeasure μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    SigmaFinite (μ.trim (tailSigma_le X hX)) := by
-  classical
-  -- Use the infrastructure from CondExp.lean
-  exact Exchangeability.Probability.sigmaFinite_trim μ (tailSigma_le X hX)
+    SigmaFinite (μ.trim (tailSigma_le X hX)) :=
+  inferInstance
 
 /-! ### Helper lemmas for futureFiltration properties -/
 

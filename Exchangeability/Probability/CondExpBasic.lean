@@ -17,9 +17,6 @@ improve compilation speed.
 
 ## Main components
 
-### σ-Finiteness
-- `sigmaFinite_trim_of_le`: Trimmed measure inherits σ-finiteness from finite measures
-
 ### Indicators
 - `indicator_iUnion_tsum_of_pairwise_disjoint`: Union of disjoint indicators equals their sum
 
@@ -39,14 +36,6 @@ Note: Some lemmas in this section explicitly include `{m m₀ : MeasurableSpace 
 to work with multiple measurable space structures (e.g., for trimmed measures). This makes the
 section variable `[MeasurableSpace Ω]` unused for those lemmas, requiring `set_option
 linter.unusedSectionVars false`. -/
-
-set_option linter.unusedSectionVars false in
-/-- If `μ` is finite, then any trim of `μ` is σ-finite. -/
-@[nolint unusedArguments]
-lemma sigmaFinite_trim_of_le {m m₀ : MeasurableSpace Ω}
-    (μ : Measure Ω) [IsFiniteMeasure μ] (hm : m ≤ m₀) :
-    SigmaFinite (μ.trim hm) :=
-  (inferInstance : IsFiniteMeasure (μ.trim hm)).toSigmaFinite
 
 set_option linter.unusedSectionVars false in
 /-- For pairwise disjoint sets, the indicator of the union equals
