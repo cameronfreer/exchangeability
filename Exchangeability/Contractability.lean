@@ -467,7 +467,7 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
     have hexch := hX n σ
 
     -- Define embedding and projection
-    let ι : Fin (m' + 1) → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
+    let ι : Fin (m' + 1) → Fin n := Fin.castLE hmn
     let proj : (Fin n → α) → (Fin (m' + 1) → α) := fun f i => f (ι i)
 
     have hproj_meas : Measurable proj := by
