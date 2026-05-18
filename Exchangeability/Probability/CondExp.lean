@@ -130,7 +130,7 @@ lemma integrable_indicator_comp
   -- Bounded measurable function on finite measure space is integrable
   exact Integrable.of_bound h_meas.aestronglyMeasurable 1 h_bound
 
-/-! ### Pair-law ⇒ conditional indicator equality (stub) -/
+/-! ### Cylinder helper for pair-law arguments -/
 
 /-- Standard cylinder on the first `r` coordinates starting at index 0.
 
