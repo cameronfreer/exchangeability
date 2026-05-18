@@ -19,11 +19,9 @@ import Mathlib.Data.Finset.Sort
 import Mathlib.Analysis.SpecialFunctions.Choose
 
 /-!
-# Additional L² Helpers and Incomplete Lemmas
+# Additional L² helpers
 
-This file contains technical lemmas and placeholder definitions that support
-the L² proof of de Finetti's theorem. Some lemmas have `sorry` placeholders
-that will eventually be replaced with proper proofs from mathlib or local implementations.
+Technical lemmas supporting the L² proof of de Finetti's theorem.
 
 ## Contents
 
@@ -31,13 +29,7 @@ that will eventually be replaced with proper proofs from mathlib or local implem
 * L¹ convergence helpers
 * Boundedness helpers
 * AE strong measurability helpers
-* Deep results requiring further work (marked with sorry)
-
-## Note
-
-The incomplete lemmas in this file are placeholders for complex proofs that are deferred
-to allow the main proof structure to be complete. Each sorry can be replaced with
-a proper proof.
+* CDF/Stieltjes constructions used by `MainConvergence.lean`
 -/
 
 noncomputable section
@@ -50,10 +42,10 @@ open Exchangeability.Util.StrictMono (injective_implies_strictMono_perm)
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-! ## Forward declarations and placeholders
+/-! ## CDF construction via `stieltjesOfMeasurableRat`
 
-This section contains forward declarations and placeholder definitions for deep results.
-Each sorry can be replaced with a proper proof from mathlib or a local implementation.
+Wraps mathlib's measurable-rational-CDF infrastructure to give CDFs with the right
+boundary behavior at ±∞ for every ω (not just a.e.).
 -/
 
 -- Note: The definitions alphaIic, cdf_from_alpha, directing_measure, alphaIic_measurable,

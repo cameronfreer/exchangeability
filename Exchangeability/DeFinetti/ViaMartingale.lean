@@ -45,7 +45,6 @@ import Exchangeability.Probability.ConditionalKernel
 Kallenberg (2005) as the "third proof". This approach has **medium dependencies**.
 
 **Status**: COMPLETE - 0 sorries in this file. Builds successfully.
-Remaining sorries are in helper modules (`TripleLawDropInfo.lean`, `CondIndep.lean`).
 
 ## Proof approach
 
@@ -86,14 +85,10 @@ convergence:
   Lemma 1.3 and page 28: "Third proof of Theorem 1.1"
 * Aldous (1983), *Exchangeability and related topics*
 
-## Infrastructure Dependencies
+## Infrastructure dependencies
 
-This file is complete (0 sorries). Remaining sorries are in helper modules:
-
-- `TripleLawDropInfo.lean` (2 sorries) - Kallenberg Lemma 1.3 kernel uniqueness
-- `CondIndep.lean` (5 sorries) - Conditional independence from distributional equality
-
-See `VIAMARTINGALE_BLOCKERS.md` for detailed status.
+Helper modules `TripleLawDropInfo.lean` and `CondIndep.lean` supply the kernel
+uniqueness and distributional-equality bridges; both are now also complete.
 -/
 
 noncomputable section

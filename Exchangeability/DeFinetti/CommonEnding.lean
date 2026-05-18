@@ -682,7 +682,7 @@ theorem complete_from_directing_measure
             ENNReal.ofReal ((B i).indicator (fun _ => (1 : ℝ)) (X (k i) ω)) ∂μ
           = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ) :
     ConditionallyIID μ X := by
-  -- Use the skeleton lemma (to be completed later) to produce ConditionallyIID
+  -- Apply `conditional_iid_from_directing_measure` (factorization + bridge ⇒ ConditionallyIID).
   exact conditional_iid_from_directing_measure X hX_meas ν hν_prob hν_meas h_bridge
 
 -- Summary and next steps for the common ending are recorded in the project notes.

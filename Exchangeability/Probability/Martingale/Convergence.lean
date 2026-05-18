@@ -17,7 +17,6 @@ The two key results: Lévy's upward and downward theorems for conditional expect
 ## Main Results
 
 - `condExp_tendsto_iInf`: Lévy downward theorem (decreasing filtration)
-- `condExp_tendsto_iSup`: Lévy upward theorem (increasing filtration, wraps mathlib)
 
 ## References
 
@@ -65,62 +64,20 @@ theorem condExp_tendsto_iInf
       (𝓝 (μ[f | ⨅ n, 𝔽 n] ω)) :=
   ae_limit_is_condexp_iInf h_filtration h_le f h_f_int
 
-/-- **Conditional expectation converges along increasing filtration (Lévy's upward theorem).**
+/-! ## Implementation notes
 
-For an increasing filtration 𝔽ₙ and integrable f, the sequence
-  Mₙ := E[f | 𝔽ₙ]
-converges a.s. to E[f | ⨆ₙ 𝔽ₙ].
+`condExp_tendsto_iInf` is proved via the chain:
 
-**Implementation:** Direct wrapper around mathlib's `MeasureTheory.tendsto_ae_condExp`
-from `Mathlib.Probability.Martingale.Convergence`. -/
-@[nolint unusedArguments]
-theorem condExp_tendsto_iSup
-    [IsProbabilityMeasure μ]
-    {𝔽 : ℕ → MeasurableSpace Ω}
-    (h_filtration : Monotone 𝔽)
-    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (_h_f_int : Integrable f μ) :
-    ∀ᵐ ω ∂μ, Tendsto
-      (fun n => μ[f | 𝔽 n] ω)
-      atTop
-      (𝓝 (μ[f | ⨆ n, 𝔽 n] ω)) := by
-  classical
-  -- Package 𝔽 as a Filtration
-  let ℱ : Filtration ℕ (inferInstance : MeasurableSpace Ω) :=
-    { seq   := 𝔽
-      mono' := h_filtration
-      le'   := h_le }
-  -- Apply mathlib's Lévy upward theorem
-  exact MeasureTheory.tendsto_ae_condExp (μ := μ) (ℱ := ℱ) f
+1. `revFiltration`, `revCEFinite`: Time-reversal infrastructure (`Martingale/Reverse.lean`)
+2. `revCE_martingale`: Reversed process is a forward martingale
+3. `condExp_exists_ae_limit_antitone`: A.S. existence via upcrossing bounds
+   (`Martingale/Crossings.lean`)
+4. `uniformIntegrable_condexp_antitone`: Uniform integrability via de la Vallée-Poussin
+5. `ae_limit_is_condexp_iInf`: Limit identification via Vitali convergence + tower
+6. `condExp_tendsto_iInf`: Wraps step 5
 
-/-! ## Implementation Notes
-
-**Current Status:**
-
-- ✅ `condExp_tendsto_iSup` (Lévy upward): Complete wrapper around mathlib
-- 🚧 `condExp_tendsto_iInf` (Lévy downward): Structure in place, 3 sorries remain
-
-**Proof structure for downward theorem:**
-
-1. ✅ `revFiltration`, `revCE`: Time-reversal infrastructure for finite horizons
-2. ✅ `revCE_martingale`: Reversed process is a forward martingale
-3. 🚧 `condExp_exists_ae_limit_antitone`: A.S. existence via upcrossing bounds
-4. 🚧 `uniformIntegrable_condexp_antitone`: UI via de la Vallée-Poussin
-5. 🚧 `ae_limit_is_condexp_iInf`: Limit identification via Vitali + tower
-6. ✅ `condExp_tendsto_iInf`: Main theorem (wraps step 5)
-
-**Remaining work (3 sorries):**
-- Upcrossing bounds for reverse martingales (step 3)
-- de la Vallée-Poussin + Jensen for UI (step 4)
-- Vitali convergence + limit identification (step 5)
-
-See `PROOF_PLAN_condExp_tendsto_iInf.md` for detailed mathematical strategy.
-
-**Dependencies from Mathlib:**
-- ✅ `MeasureTheory.tendsto_ae_condExp`: Lévy upward (used)
-- ✅ `Filtration`: Filtration structure (used)
-- ✅ `condExp_condExp_of_le`: Tower property (used)
-- ❌ Reverse martingale convergence: Not available (proving it here)
-- Future work: Upcrossing inequality, Vitali convergence, de la Vallée-Poussin -/
+Mathlib dependencies: `Filtration`, `condExp_condExp_of_le` (tower property).
+Reverse martingale convergence is *not* available in mathlib; the chain above proves it
+locally for the Lévy downward case. -/
 
 end Exchangeability.Probability

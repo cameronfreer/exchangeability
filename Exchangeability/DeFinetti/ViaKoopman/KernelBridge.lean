@@ -35,9 +35,6 @@ variable {α : Type*} [MeasurableSpace α]
 
 local notation "mSI" => shiftInvariantSigma (α := α)
 
--- Alias needed for kernel integration
-alias condExp_eq_kernel_integral := ProbabilityTheory.condExp_ae_eq_integral_condExpKernel
-
 /-! ## Bridge lemmas for de Finetti's theorem
 
 These lemmas bridge kernel-level and measure-level independence concepts.

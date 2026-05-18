@@ -22,7 +22,6 @@ None - this file only contains helper lemmas.
 * `condExp_sum_finset`: Finite sum linearity of conditional expectation
 * `integrable_of_bounded_measurable`: Bounded measurable functions are integrable on finite measure spaces
 * `eLpNorm_one_le_eLpNorm_two_toReal`: L¹ norm bounded by L² norm on probability spaces
-* `ennreal_tendsto_toReal_zero`: ENNReal convergence to zero implies Real convergence
 -/
 
 open MeasureTheory Filter
@@ -117,10 +116,3 @@ lemma eLpNorm_one_le_eLpNorm_two_toReal
     _ = (eLpNorm f 1 μ).toReal := by rw [h_eq]
     _ ≤ (eLpNorm f 2 μ).toReal := ENNReal.toReal_mono h_fin h_mono
 
-/-- If `f → 0` in ENNReal, then `(toReal ∘ f) → 0` in `ℝ`. -/
-lemma ennreal_tendsto_toReal_zero {ι : Type*}
-    (f : ι → ENNReal) {a : Filter ι}
-    (hf : Tendsto f a (𝓝 (0 : ENNReal))) :
-    Tendsto (fun x => (f x).toReal) a (𝓝 (0 : ℝ)) := by
-  simpa [ENNReal.toReal_zero] using
-    (ENNReal.continuousAt_toReal ENNReal.zero_ne_top).tendsto.comp hf
