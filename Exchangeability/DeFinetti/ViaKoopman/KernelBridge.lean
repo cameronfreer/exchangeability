@@ -28,7 +28,6 @@ namespace Exchangeability.DeFinetti.ViaKoopman
 open MeasureTheory Filter Topology ProbabilityTheory
 open Exchangeability.Ergodic
 open Exchangeability.PathSpace
-open Exchangeability.DeFinetti.MartingaleHelpers (comap_comp_le)
 open scoped BigOperators
 
 variable {α : Type*} [MeasurableSpace α]

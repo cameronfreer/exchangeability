@@ -50,25 +50,6 @@ export PathSpace (tailCylinder tailCylinder_measurable cylinder finCylinder
 
 open MeasureTheory
 
-section ComapTools
-
-/-- If `g` is measurable, then `comap (g ∘ f) ≤ comap f`. -/
-@[nolint unusedArguments]
-lemma comap_comp_le
-    {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
-    (f : X → Y) (g : Y → Z) (hg : Measurable g) :
-    MeasurableSpace.comap (g ∘ f) (inferInstance : MeasurableSpace Z)
-      ≤ MeasurableSpace.comap f (inferInstance : MeasurableSpace Y) := by
-  intro s hs
-  -- s is a set in the comap (g ∘ f) algebra, so s = (g ∘ f) ⁻¹' t for some t
-  obtain ⟨t, ht, rfl⟩ := hs
-  -- Show (g ∘ f) ⁻¹' t is in comap f
-  refine ⟨g ⁻¹' t, hg ht, ?_⟩
-  ext x
-  simp [Set.mem_preimage, Function.comp_apply]
-
-end ComapTools
-
 section SequenceShift
 
 variable {β : Type*} [MeasurableSpace β]

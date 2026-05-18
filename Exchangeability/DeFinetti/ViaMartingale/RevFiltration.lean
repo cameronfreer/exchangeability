@@ -105,7 +105,7 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
     simp only [shiftRV, shiftSeq, Function.comp_apply]
     congr 1
     omega
-  rw [h_comp]
-  exact comap_comp_le (shiftRV X m) (shiftSeq k) measurable_shiftSeq
+  rw [h_comp, ← MeasurableSpace.comap_comp]
+  exact MeasurableSpace.comap_mono measurable_shiftSeq.comap_le
 
 end Exchangeability.DeFinetti.ViaMartingale
