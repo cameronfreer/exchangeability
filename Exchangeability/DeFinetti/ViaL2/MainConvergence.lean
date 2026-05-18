@@ -80,10 +80,7 @@ theorem weighted_sums_converge_L1
   have hA_meas : ∀ n m, Measurable (A n m) := by
     intro n m
     simp only [A]
-    apply Measurable.const_mul
-    apply Finset.measurable_sum
-    intro k _
-    exact hf_meas.comp (hX_meas _)
+    fun_prop
 
   -- A n m is in L¹ for all n, m (bounded measurable on probability space)
   have hA_memLp : ∀ n m, MemLp (A n m) 1 μ := by

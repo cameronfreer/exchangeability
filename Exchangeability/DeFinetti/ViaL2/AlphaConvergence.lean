@@ -153,12 +153,7 @@ lemma alphaIic_ae_eq_alphaIicCE
 
     -- Prove integrability of A n m
     have hA_int : Integrable (A n m) μ := by
-      have hA_meas_nm : Measurable (A n m) := by
-        simp only [A]
-        apply Measurable.const_mul
-        apply Finset.measurable_sum
-        intro k _
-        exact (indIic_measurable t).comp (hX_meas _)
+      have hA_meas_nm : Measurable (A n m) := by fun_prop
       refine Integrable.of_bound hA_meas_nm.aestronglyMeasurable 1 ?_
       filter_upwards with ω
       unfold A
@@ -562,9 +557,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     -- A n m is a Cesàro average of indIic ∘ X, which are measurable
     -- Each indIic ∘ X_i is measurable, sum is measurable, scalar mult is measurable
     refine Measurable.aestronglyMeasurable ?_
-    show Measurable fun ω => (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)
-    refine Measurable.const_mul ?_ _
-    exact Finset.measurable_sum _ (fun k _ => (indIic_measurable t).comp (hX_meas _))
+    fun_prop
 
   -- Step 3: Use uniqueness of L¹ limits to conclude a.e. equality
   -- If both f and g are L¹ limits of the same sequence, then f =ᵐ g

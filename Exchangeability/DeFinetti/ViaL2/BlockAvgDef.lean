@@ -54,13 +54,7 @@ lemma blockAvg_measurable
     Measurable (fun ω => blockAvg f X m n ω) := by
   classical
   unfold blockAvg
-  have hsum :
-      Measurable (fun ω =>
-        (Finset.range n).sum (fun k => f (X (m + k) ω))) :=
-    Finset.measurable_sum _ (by
-      intro k _
-      exact hf.comp (hX (m + k)))
-  simpa using (measurable_const.mul hsum : Measurable _)
+  fun_prop
 
 @[nolint unusedArguments]
 lemma blockAvg_abs_le_one
@@ -75,8 +69,8 @@ lemma blockAvg_abs_le_one
   have hsum_bound :
       |(Finset.range n).sum (fun k => f (X (m + k) ω))| ≤ (n : ℝ) := by
     calc |(Finset.range n).sum (fun k => f (X (m + k) ω))|
-        ≤ (Finset.range n).sum (fun k => |f (X (m + k) ω)|) := by
-          exact Finset.abs_sum_le_sum_abs (fun k => f (X (m + k) ω)) (Finset.range n)
+        ≤ (Finset.range n).sum (fun k => |f (X (m + k) ω)|) :=
+          Finset.abs_sum_le_sum_abs (fun k => f (X (m + k) ω)) (Finset.range n)
       _ ≤ (Finset.range n).sum (fun _ => (1 : ℝ)) := by
           apply Finset.sum_le_sum
           intro k _
@@ -84,7 +78,7 @@ lemma blockAvg_abs_le_one
       _ = n := by
           have : (Finset.range n).card = n := Finset.card_range n
           simp [this]
-  have hnonneg : 0 ≤ (n : ℝ)⁻¹ := by exact inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
+  have hnonneg : 0 ≤ (n : ℝ)⁻¹ := inv_nonneg.mpr (by exact_mod_cast Nat.zero_le n)
   calc
     |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (m + k) ω))|
         = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (m + k) ω))|

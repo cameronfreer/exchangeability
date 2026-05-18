@@ -1327,15 +1327,9 @@ private lemma cesaro_cauchy_rho_lt
     -- Use memLp_of_abs_le_const from LpNormHelpers
 
     -- Show measurability
-    have h_meas_n : Measurable (fun ω => blockAvg f X 0 n ω) := by
-      simp only [blockAvg]
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
+    have h_meas_n : Measurable (fun ω => blockAvg f X 0 n ω) := by fun_prop
 
-    have h_meas_n' : Measurable (fun ω => blockAvg f X 0 n' ω) := by
-      simp only [blockAvg]
-      exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-        hf_meas.comp (hX_meas (0 + k))) _
+    have h_meas_n' : Measurable (fun ω => blockAvg f X 0 n' ω) := by fun_prop
 
     have h_meas_diff : Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
       h_meas_n.sub h_meas_n'
@@ -2329,9 +2323,7 @@ lemma cesaro_to_condexp_L2
       -- blockAvg is bounded since f is bounded
       apply memLp_two_of_bounded
       · -- Measurable: blockAvg is a finite sum of measurable functions
-        show Measurable (fun ω => (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω)))
-        exact Measurable.const_mul (Finset.measurable_sum _ fun k _ =>
-          hf_meas.comp (hX_meas (0 + k))) _
+        fun_prop
       intro ω
       -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
       show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
