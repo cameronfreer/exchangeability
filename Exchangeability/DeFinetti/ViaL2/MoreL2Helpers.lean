@@ -1831,20 +1831,6 @@ lemma directing_measure_bridge
           rw [h_tail_eq]
   exact indicator_product_bridge X hX_contract hX_meas ν hν_prob hν_meas hν_law k hk B hB
 
-/-! ### Original proof structure (commented out due to incomplete lemmas)
-
-The original proof attempted to show:
-1. Reduce injective k to strictly monotone via permutation
-2. Use contractability for distributional equality
-3. Apply U-statistic expansion for product expectations
-4. Conclude via L¹ convergence of block averages
-
-Key intermediate lemmas that need completion:
-- h_pblock_vs_shifted: Bound on shifted averages
-- h_L1_shifted_ref: L¹ bound from L² via Cauchy-Schwarz
-- h_block_L1: Product L¹ convergence
--/
-
 /-- **Main packaging theorem for L² proof.**
 
 This theorem packages all the directing measure properties needed by
