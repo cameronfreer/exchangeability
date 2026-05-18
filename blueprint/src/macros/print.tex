@@ -1,14 +1,25 @@
-% In this file you should put macros to be used only by
+% In this file you should put macros to be used only by
 % the printed version. Of course they should have a corresponding
 % version in macros/web.tex.
 % Typically the printed version could have more fancy decorations.
-% This should be a very short file.
 %
 % This file starts with dummy macros that ensure the pdf
 % compiler will ignore macros provided by plasTeX that make
 % sense only for the web version, such as dependency graph
 % macros.
 
+% --- Chapter-to-section remapping (print only) ---
+% content.tex uses \chapter for web navigation; in the article-class
+% print PDF we remap to sections for a compact layout.
+% The article class has no \chapter, so we define it as \section.
+% We save the original \section and \subsection first, then remap.
+\makeatletter
+\let\print@origsection\section
+\let\print@origsubsection\subsection
+\newcommand{\chapter}[1]{\print@origsection{#1}}
+\renewcommand{\section}[1]{\print@origsubsection{#1}}
+\renewcommand{\subsection}[1]{\subsubsection{#1}}
+\makeatother
 
 % Dummy macros that make sense only for web version.
 \newcommand{\lean}[1]{}

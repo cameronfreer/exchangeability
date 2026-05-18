@@ -3,8 +3,12 @@
 
 \chapter{Introduction}
 
-This blueprint documents the formalization of \textbf{de Finetti's theorem} and the
+This document presents the mathematical blueprint for a Lean~4 formalization of
+\textbf{de Finetti's theorem} and the
 \textbf{de Finetti--Ryll-Nardzewski equivalence} for infinite sequences on \emph{standard Borel spaces}.
+It maps each definition and theorem in the formalization to its mathematical counterpart,
+records the proof-level dependency structure, and links to the corresponding Lean declarations.
+The companion web version of this blueprint renders an interactive dependency graph.
 
 The main result establishes a three-way equivalence between:
 \begin{itemize}
@@ -13,12 +17,53 @@ The main result establishes a three-way equivalence between:
   \item \textbf{Conditionally i.i.d.}: There exists a probability kernel such that finite marginals equal mixtures of product measures
 \end{itemize}
 
-We formalize \emph{all three proofs} from Kallenberg (2005):
+We formalize \emph{all three proofs} from Kallenberg~\cite{Kallenberg2005}:
 \begin{enumerate}
   \item \textbf{Koopman/Ergodic approach} using the Mean Ergodic Theorem
   \item \textbf{L$^2$ approach} using elementary contractability bounds
-  \item \textbf{Martingale approach} using reverse martingale convergence (after Aldous)
+  \item \textbf{Martingale approach} using reverse martingale convergence (after Aldous~\cite{Aldous1985})
 \end{enumerate}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Route} & \textbf{Key tool} & \textbf{Extra assumptions} & \textbf{Lines} \\
+\midrule
+Martingale & Reverse martingale convergence & None (general $\alpha$) & 3,770 \\
+L$^2$ & Ces\`aro $L^2$ bounds & $\alpha = \mathbb{R}$, square-integrable & 12,476 \\
+Koopman & Mean Ergodic Theorem & None (general $\alpha$) & 6,893 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Contributions.}
+The formalization comprises approximately 43,500 lines of Lean~4 across 112 files.
+All three proof routes share a uniform ``common ending'' that packages conditional factorization
+into a measurable directing kernel, avoiding duplication of measurability and product-measure
+uniqueness arguments.
+
+\paragraph{Setting and conventions.}
+Throughout, we fix a probability space $(\Omega, \mathcal{F}, \mu)$ and a sequence
+$X : \mathbb{N} \to \Omega \to \alpha$ of random variables taking values in
+a standard Borel space~$\alpha$ (assumed nonempty).
+Conditional expectations are with respect to~$\mu$;
+$L^2$ denotes $L^2(\Omega, \mu)$.
+Measurability is always with respect to the Borel $\sigma$-algebra on~$\alpha$
+and the ambient $\sigma$-algebra~$\mathcal{F}$ on~$\Omega$.
+
+\paragraph{Terminology.}
+Kallenberg~\cite{Kallenberg2005} uses \emph{contractable} for the subsequence-invariance property
+that some authors call \emph{spreadable} or \emph{subsymmetric}.
+We follow Kallenberg's terminology throughout.
+
+The remainder of this document is organized as follows:
+Foundations (core definitions, $\sigma$-algebra infrastructure),
+Elementary Implications (the two easy directions),
+Main Implication (three independent proofs of contractable $\Rightarrow$ conditionally i.i.d.),
+Shared Final Step (the common ending), and
+the de Finetti--Ryll-Nardzewski Equivalence (assembling the full result).
 
 
 \chapter{Foundations}
@@ -55,6 +100,12 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
   such that for any strictly monotone $k : \mathrm{Fin}(m) \to \mathbb{N}$, the joint distribution
   of $(X_{k(0)}, \ldots, X_{k(m-1)})$ equals the mixture $\mu.\mathrm{bind}(\omega \mapsto \nu(\omega)^{\otimes m})$.
 \end{definition}
+
+\paragraph{Example (Polya urn / Beta-Bernoulli).}
+Draw $p \sim \mathrm{Uniform}[0,1]$, then $X_i \mid p \sim \mathrm{Bernoulli}(p)$ independently.
+The sequence $(X_i)$ is exchangeable (by symmetry of the product) and conditionally i.i.d.\
+with directing measure $\nu(\omega) = \mathrm{Bernoulli}(p(\omega))$.
+De Finetti's theorem says every exchangeable $\{0,1\}$-valued sequence arises in this way.
 
 \section{\texorpdfstring{$\sigma$}{σ}-algebra Infrastructure}
 
@@ -106,7 +157,12 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
 \end{definition}
 
 
-\chapter{Easy Directions}
+\chapter{Elementary Implications}
+
+Two of the three implications are straightforward.
+Exchangeability implies contractability via a permutation extension argument,
+and the converse direction (conditionally i.i.d.\ implies exchangeable) follows from
+the symmetry of product measures.
 
 \section{Exchangeable implies Contractable}
 
@@ -139,11 +195,23 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
 
 \chapter{Main Implication: Contractable implies Conditionally i.i.d.}
 
-This is the deep direction of de Finetti's theorem. We formalize three independent proofs.
+This is the deep direction of de Finetti's theorem.
+Each proof route extracts a conditional factorization from the symmetry hypothesis, but uses
+different analytical tools: reverse martingale convergence, $L^2$ bounds, or the mean ergodic theorem.
+All three routes ultimately feed the shared final step described in the next chapter.
 
 \section{Via Martingale (Aldous' proof)}
 
 The martingale approach uses reverse martingale convergence to the tail $\sigma$-algebra.
+
+\paragraph{Key idea.}
+Contractability implies that conditional expectations of indicators
+$\mathbb{E}[\mathbf{1}_{X_k \in B} \mid \mathcal{F}_m]$ are independent of the index~$k$
+for $k \le m$.
+These form a reverse martingale with respect to the future filtration~$(\mathcal{F}_m)$.
+The reverse martingale convergence theorem yields $L^1$ convergence to
+$\mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}]$, from which the directing measure and
+conditional factorization are extracted.
 
 \subsection{Pair Law Equality}
 
@@ -267,6 +335,14 @@ This is Kallenberg's ``second proof'' and has the lightest dependencies.
 \textbf{Note:} This proof applies to \emph{real-valued} sequences ($X : \mathbb{N} \to \Omega \to \mathbb{R}$)
 with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
+\paragraph{Key idea.}
+Contractability forces the covariance $\mathrm{Cov}(f(X_i), f(X_j))$ to be constant
+for $i \ne j$, which gives $L^2$ bounds on block-average differences.
+Ces\`aro averaging and these bounds yield $L^2$ (hence $L^1$) convergence of
+empirical averages $\frac{1}{n}\sum f(X_i)$ to a limiting function.
+This limit, evaluated on indicator functions $f = \mathbf{1}_{(-\infty, t]}$, produces a CDF
+from which a Stieltjes probability measure (the directing measure) is constructed.
+
 \subsection{Block Averages and Covariance Structure}
 
 \begin{definition}[Block average (L$^2$ version)]
@@ -373,6 +449,14 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 The Koopman approach uses the Mean Ergodic Theorem via the shift operator on L$^2$.
 This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
 
+\paragraph{Key idea.}
+The shift map $\theta$ on path space $\alpha^{\mathbb{N}}$ induces a Koopman operator on $L^2$.
+For a shift-invariant measure, the mean ergodic theorem gives $L^2$ convergence of
+Birkhoff averages to the orthogonal projection onto the shift-invariant subspace, i.e.,
+the conditional expectation given the shift-invariant $\sigma$-algebra~$\mathcal{I}$.
+Contractability then implies that products of conditional expectations factor,
+yielding the conditional independence needed for the common ending.
+
 \subsection{Block Averages and Ergodic Theory}
 
 \begin{definition}[Block average]
@@ -467,10 +551,12 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
 \end{theorem}
 
 
-\chapter{Common Ending}
+\chapter{Shared Final Step}
 
-All three proofs converge to the same final step: extending from indicators to general sets
-via a monotone class argument.
+All three proofs converge to the same final step.
+Given conditional factorization on indicators (produced by any of the three routes above),
+the common ending extends it to full measurable sets via a $\pi$-system/monotone class argument
+and packages the result as a measurable directing kernel.
 
 \begin{lemma}[$\pi$-system uniqueness]
   \label{lem:pi_system}
@@ -496,7 +582,7 @@ via a monotone class argument.
 \end{theorem}
 
 
-\chapter{Main Theorem}
+\chapter{The de Finetti--Ryll-Nardzewski Equivalence}
 
 \begin{theorem}[de Finetti--Ryll-Nardzewski equivalence]
   \label{thm:deFinetti}
@@ -513,3 +599,24 @@ via a monotone class argument.
   \textbf{Remark:} The martingale proof constructs $\nu$ from the tail $\sigma$-algebra $\mathcal{T}$
   via $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$.
 \end{theorem}
+
+
+\chapter{Conclusion and Future Work}
+
+The formalization is complete: all three proof routes compile, share a common ending, and
+assemble into the full de Finetti--Ryll-Nardzewski equivalence.
+The Lean kernel verifies that only standard axioms are used.
+
+Several directions remain for future work:
+\begin{itemize}
+  \item \textbf{Upstreaming to mathlib.}
+    Reusable components---exchangeability and contractability definitions,
+    finite-marginal reindexing lemmas, conditional independence infrastructure---are
+    candidates for staged contribution to mathlib~\cite{mathlib}.
+  \item \textbf{Partial exchangeability.}
+    Extending the formalization to Aldous--Hoover-type results for
+    partially exchangeable arrays.
+  \item \textbf{Parametric families.}
+    Connecting the directing measure to exponential family theory
+    and Bayesian nonparametrics (e.g., Dirichlet process mixtures).
+\end{itemize}
