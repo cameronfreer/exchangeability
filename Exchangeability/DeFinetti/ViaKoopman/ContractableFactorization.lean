@@ -749,7 +749,7 @@ theorem condexp_product_factorization_contractable
             ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) ∂μ =
           (1 / ((n + 1) : ℝ)^m) * ∫ ω in s, ∑ j : Fin m → Fin (n + 1),
             ∏ i : Fin m, fs i (ω (i.val * (n + 1) + (j i).val)) ∂μ := by
-        rw [integral_mul_left]
+        rw [integral_const_mul]
 
       rw [h_rhs_eq]
 

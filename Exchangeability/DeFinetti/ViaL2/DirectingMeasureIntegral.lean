@@ -457,8 +457,8 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
             1 - t.indicator (fun _ => (1:ℝ)) x := by
           intro x
           by_cases hx : x ∈ t
-          · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
-          · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
+          · simp [Set.indicator_of_mem hx, Set.indicator_of_notMem (Set.notMem_compl_iff.mpr hx)]
+          · simp [Set.indicator_of_notMem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
         rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
         exact (integrable_const 1).indicator ht_meas
@@ -492,10 +492,10 @@ lemma integral_indicator_borel_tailAEStronglyMeasurable
               exact (hdisj n m (Ne.symm hm)).ne_of_mem hn hxm rfl
             rw [tsum_eq_single n]
             · simp [Set.indicator_of_mem hn]
-            · intro m hm; simp [Set.indicator_of_not_mem (h_unique m hm)]
-          · simp only [Set.indicator_of_not_mem hx]
+            · intro m hm; simp [Set.indicator_of_notMem (h_unique m hm)]
+          · simp only [Set.indicator_of_notMem hx]
             have : ∀ n, x ∉ f n := fun n hn => hx (Set.mem_iUnion.mpr ⟨n, hn⟩)
-            simp [Set.indicator_of_not_mem (this _)]
+            simp [Set.indicator_of_notMem (this _)]
         simp_rw [h_ind_union]
         -- integral of tsum = tsum of integrals (for nonneg functions)
         rw [integral_tsum]
@@ -1000,8 +1000,8 @@ lemma setIntegral_directing_measure_indicator_eq
               1 - t.indicator (fun _ => (1:ℝ)) x := by
             intro x
             by_cases hx : x ∈ t
-            · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
-            · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
+            · simp [Set.indicator_of_mem hx, Set.indicator_of_notMem (Set.notMem_compl_iff.mpr hx)]
+            · simp [Set.indicator_of_notMem hx, Set.indicator_of_mem (Set.mem_compl hx)]
           simp_rw [h_ind_compl]
           rw [integral_sub (integrable_const 1), integral_const, measureReal_univ_eq_one, one_smul]
           exact (integrable_const 1).indicator ht_meas
@@ -1034,8 +1034,8 @@ lemma setIntegral_directing_measure_indicator_eq
             1 - t.indicator (fun _ => (1:ℝ)) (X 0 ω) := by
           intro ω
           by_cases hx : X 0 ω ∈ t
-          · simp [Set.indicator_of_mem hx, Set.indicator_of_not_mem (Set.not_mem_compl_iff.mpr hx)]
-          · simp [Set.indicator_of_not_mem hx, Set.indicator_of_mem (Set.mem_compl hx)]
+          · simp [Set.indicator_of_mem hx, Set.indicator_of_notMem (Set.notMem_compl_iff.mpr hx)]
+          · simp [Set.indicator_of_notMem hx, Set.indicator_of_mem (Set.mem_compl hx)]
         simp_rw [h_ind_compl]
         rw [integral_sub, integral_const]
         · exact (integrable_const 1).integrableOn
@@ -1072,10 +1072,10 @@ lemma setIntegral_directing_measure_indicator_eq
                 intro m hm hxm; exact (hdisj n m (Ne.symm hm)).ne_of_mem hn hxm rfl
               rw [tsum_eq_single n]
               · simp [Set.indicator_of_mem hn]
-              · intro m hm; simp [Set.indicator_of_not_mem (h_unique m hm)]
-            · simp only [Set.indicator_of_not_mem hx]
+              · intro m hm; simp [Set.indicator_of_notMem (h_unique m hm)]
+            · simp only [Set.indicator_of_notMem hx]
               have : ∀ n, x ∉ f n := fun n hn => hx (Set.mem_iUnion.mpr ⟨n, hn⟩)
-              simp [Set.indicator_of_not_mem (this _)]
+              simp [Set.indicator_of_notMem (this _)]
           simp_rw [h_ind_union]
           rw [integral_tsum]
           · exact fun n => (measurable_const.indicator (hf n).1).aestronglyMeasurable
@@ -1159,10 +1159,10 @@ lemma setIntegral_directing_measure_indicator_eq
               intro m hm hxm; exact (hdisj n m (Ne.symm hm)).ne_of_mem hn hxm rfl
             rw [tsum_eq_single n]
             · simp [Set.indicator_of_mem hn]
-            · intro m hm; simp [Set.indicator_of_not_mem (h_unique m hm)]
-          · simp only [Set.indicator_of_not_mem hx]
+            · intro m hm; simp [Set.indicator_of_notMem (h_unique m hm)]
+          · simp only [Set.indicator_of_notMem hx]
             have : ∀ n, X 0 ω ∉ f n := fun n hn => hx (Set.mem_iUnion.mpr ⟨n, hn⟩)
-            simp [Set.indicator_of_not_mem (this _)]
+            simp [Set.indicator_of_notMem (this _)]
         simp_rw [h_ind_union]
         rw [integral_tsum]
         · intro n
@@ -1930,7 +1930,7 @@ lemma directing_measure_integral_via_chain
             _ = ∫ ω, |M| * |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ := by
                   congr 1; ext ω; rw [← mul_sub, abs_mul]
             _ = |M| * ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω) - α_g ω| ∂μ := by
-                  rw [integral_mul_left]
+                  rw [integral_const_mul]
             _ < |M| * (ε / (|M| + 1)) := by
                   gcongr; exact hM_idx m hm
             _ < (|M| + 1) * (ε / (|M| + 1)) := by

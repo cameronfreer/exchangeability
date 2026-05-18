@@ -435,7 +435,7 @@ lemma alphaIicCE_right_continuous_at
     -- u is strictly anti, so m ≤ n implies u n ≤ u m
     have h_u_le : (u n : ℝ) ≤ (u m : ℝ) := by
       rcases hmn.lt_or_eq with h | h
-      · exact le_of_lt (Rat.cast_lt.mpr (u_anti.lt_iff_lt.mpr h))
+      · exact le_of_lt (Rat.cast_lt.mpr (u_anti.lt_iff_gt.mpr h))
       · simp [h]
     exact h_mono m n h_u_le
 
