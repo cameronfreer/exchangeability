@@ -130,7 +130,7 @@ lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
     simp only [Set.mem_iUnion, Set.mem_setOf_eq] at hω ⊢
     -- If the sums differ, then some summand must differ
     by_contra h_contra
-    push_neg at h_contra
+    push Not at h_contra
     apply hω
     -- The sums are equal if all summands are equal
     congr 1

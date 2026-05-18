@@ -168,7 +168,7 @@ lemma prod_eq_zero_iff {ι : Type*} [Fintype ι] {f : ι → ENNReal} :
   constructor
   · intro h
     by_contra h_all_nonzero
-    push_neg at h_all_nonzero
+    push Not at h_all_nonzero
     have : ∀ i, f i ≠ 0 := h_all_nonzero
     have prod_ne_zero : ∏ i, f i ≠ 0 := Finset.prod_ne_zero_iff.mpr fun i _ => this i
     exact prod_ne_zero h

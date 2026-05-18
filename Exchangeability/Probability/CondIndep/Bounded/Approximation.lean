@@ -202,7 +202,7 @@ lemma approx_bounded_measurable (μ : Measure α) [IsProbabilityMeasure μ]
   · -- Case M < 0: contradiction since |f x| ≥ 0 > M always
     -- The hypothesis hf_bdd : ∀ᵐ x ∂μ, |f x| ≤ M with M < 0 is impossible
     -- since |f x| ≥ 0 for all x. This implies μ = 0, contradicting probability measure.
-    push_neg at hM_nonneg
+    push Not at hM_nonneg
     exfalso
     have h_ae_false : ∀ᵐ x ∂μ, False := by
       filter_upwards [hf_bdd] with x hx

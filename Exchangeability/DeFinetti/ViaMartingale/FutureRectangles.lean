@@ -54,7 +54,7 @@ lemma contractable_dist_eq_on_first_r_tail
   let f : Fin r → ℕ := fun i => m + (i.1 + 1)
   have hf_mono : StrictMono f := by
     intro i j hij
-    have hij' : i.1 < j.1 := (Fin.lt_iff_val_lt_val).1 hij
+    have hij' : i.1 < j.1 := Fin.lt_def.1 hij
     have : i.1 + 1 < j.1 + 1 := Nat.succ_lt_succ hij'
     simp only [f]; omega
   have hm_lt : ∀ i, m < f i := fun i => by simp only [f]; omega

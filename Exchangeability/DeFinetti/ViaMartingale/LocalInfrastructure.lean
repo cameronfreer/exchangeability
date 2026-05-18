@@ -95,7 +95,7 @@ lemma integrable_of_bounded_on_prob
     rw [Real.norm_eq_abs] at hx
     rwa [abs_le] at hx
   · -- If C < 0, then ‖h‖ ≤ C < 0 a.e. contradicts ‖h‖ ≥ 0
-    push_neg at hC
+    push Not at hC
     apply MeasureTheory.Integrable.of_mem_Icc 0 0 hmeas.aemeasurable
     filter_upwards [hB] with x hx
     rw [Set.mem_Icc]

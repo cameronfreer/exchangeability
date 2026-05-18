@@ -68,7 +68,7 @@ lemma eLpNorm_two_sq_eq_integral_sq
 
   -- Use the fundamental relationship for p = 2
   -- eLpNorm f p μ ^ p = ∫⁻ ‖f‖^p when p ≠ 0, ∞
-  rw [eLpNorm_eq_lintegral_rpow_enorm (by norm_num : (2 : ℝ≥0∞) ≠ 0)
+  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal (by norm_num : (2 : ℝ≥0∞) ≠ 0)
       (by norm_num : (2 : ℝ≥0∞) ≠ ∞)]
 
   -- Simplify: ENNReal.toReal 2 = 2, so we have ((∫⁻ ‖f‖² )^(1/2)).toReal²

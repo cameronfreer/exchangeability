@@ -332,7 +332,7 @@ lemma alphaIicCE_right_continuous_at
       simp only [h_ev, ↓reduceIte, hxt]
       exact tendsto_const_nhds
     · -- X 0 ω > t, so eventually X 0 ω > u_n (since u_n → t)
-      push_neg at hxt
+      push Not at hxt
       simp only [Set.indicator_apply, Set.mem_Iic, not_le.mpr hxt, ↓reduceIte]
       -- u_n → t and X 0 ω > t, so eventually u_n < X 0 ω
       have h_ev : ∀ᶠ n in Filter.atTop, (u n : ℝ) < X 0 ω := by

@@ -130,7 +130,7 @@ lemma cdf_from_alpha_bounds
     -- Then eventually f(s) ∈ (-ε, ε), so f(s) > -ε = f(t)/2.
     -- But also f(s) ≤ f(t) for s ≤ t, contradicting f(s) > f(t)/2 > f(t).
     by_contra h_neg
-    push_neg at h_neg
+    push Not at h_neg
     -- f(t) < 0, so ε := -f(t)/2 > 0
     set ε := -cdf_from_alpha X hX_contract hX_meas hX_L2 ω t / 2 with hε_def
     have hε_pos : 0 < ε := by simp [hε_def]; linarith
@@ -163,7 +163,7 @@ lemma cdf_from_alpha_bounds
     -- Similar argument: for any s > t, f(t) ≤ f(s) by monotonicity.
     -- As s → +∞, f(s) → 1, so f(t) ≤ 1.
     by_contra h_gt
-    push_neg at h_gt
+    push Not at h_gt
     -- f(t) > 1, so ε := (f(t) - 1)/2 > 0
     set ε := (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t - 1) / 2 with hε_def
     have hε_pos : 0 < ε := by simp [hε_def]; linarith
