@@ -14,7 +14,6 @@ into the downward theorem.
 
 ## Main Results
 
-- `Filtration.ofAntitone`: Package a decreasing sequence as an increasing filtration on ℕᵒᵈ
 - `iSup_ofAntitone_eq_F0`: For antitone F, ⨆ i, F i.ofDual = F 0 (not ⨅ n, F n!)
 -/
 
@@ -28,25 +27,6 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω : Type*}
-
-/-- Package a decreasing family of σ-algebras on `ℕ` as an increasing filtration on `ℕᵒᵈ`.
-
-For a decreasing sequence (𝔽 n) of σ-algebras, this creates an increasing filtration on
-`OrderDual ℕ` where `𝔾 i := 𝔽 (ofDual i)`. Since `i ≤ j` in `ℕᵒᵈ` iff `ofDual j ≤ ofDual i`
-in `ℕ`, antitonicity of 𝔽 becomes monotonicity of 𝔾. -/
-def Filtration.ofAntitone [MeasurableSpace Ω] (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
-    (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) :
-    Filtration (OrderDual ℕ) (inferInstance : MeasurableSpace Ω) where
-  seq := fun i => F (OrderDual.ofDual i)
-  mono' := by
-    intro i j hij
-    exact hF hij
-  le' := fun i => hle (OrderDual.ofDual i)
-
-@[simp]
-lemma Filtration.ofAntitone_apply [MeasurableSpace Ω] (F : ℕ → MeasurableSpace Ω) (hF : Antitone F)
-    (hle : ∀ n, F n ≤ (inferInstance : MeasurableSpace Ω)) (i : OrderDual ℕ) :
-    (Filtration.ofAntitone F hF hle) i = F (OrderDual.ofDual i) := rfl
 
 /-- For an antitone chain of σ-algebras, the supremum equals the first term.
 
