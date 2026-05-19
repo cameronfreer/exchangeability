@@ -487,54 +487,6 @@ lemma integrable_of_bounded [IsFiniteMeasure μ]
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
 
-/-- Product of integrable and bounded measurable functions is integrable. -/
-@[nolint unusedArguments]
-lemma integrable_of_bounded_mul [IsFiniteMeasure μ]
-    {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Measurable g)
-    (hbd : ∃ C, ∀ ω, |g ω| ≤ C) :
-    Integrable (f * g) μ := by
-  -- Rewrite as g * f to match Integrable.bdd_mul signature
-  have : f * g = fun ω => g ω * f ω := funext fun _ => mul_comm _ _
-  rw [this]
-  -- Convert pointwise bound to a.e. bound
-  obtain ⟨C, hC⟩ := hbd
-  have hbd_ae : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := by
-    filter_upwards with ω
-    exact (Real.norm_eq_abs _).symm ▸ hC ω
-  -- Apply Integrable.bdd_mul with g bounded, f integrable
-  exact Integrable.bdd_mul hf hg.aestronglyMeasurable hbd_ae
-
-/-- Conditional expectation preserves monotonicity (in absolute value).
-
-If |f| ≤ |g| everywhere, then |E[f|m]| ≤ E[|g||m]. -/
-@[nolint unusedArguments]
-lemma condExp_abs_le_of_abs_le [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
-    {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ)
-    (h : ∀ ω, |f ω| ≤ |g ω|) :
-    ∀ᵐ ω ∂μ, |μ[f|m] ω| ≤ μ[(fun ω' => |g ω'|)|m] ω := by
-  -- From |f| ≤ |g|, we get -|g| ≤ f ≤ |g|
-  -- |f| ≤ |g| means -|g| ≤ -|f|, and neg_abs_le gives -|f| ≤ f, so -|g| ≤ -|f| ≤ f
-  have h_lower : ∀ ω, -(|g ω|) ≤ f ω := fun ω =>
-    (neg_le_neg (h ω)).trans (neg_abs_le (f ω))
-  have h_upper : ∀ ω, f ω ≤ |g ω| := fun ω => (le_abs_self (f ω)).trans (h ω)
-
-  -- Apply monotonicity to get bounds on condExp
-  have hg_abs : Integrable (fun ω => |g ω|) μ := hg.abs
-  have lower_bd := condExp_mono (m := m) hg_abs.neg hf (ae_of_all μ h_lower)
-  have upper_bd := condExp_mono (m := m) hf hg_abs (ae_of_all μ h_upper)
-
-  -- Use linearity: μ[-|g||m] = -μ[|g||m]
-  have hneg_eq : μ[(fun ω => -(|g ω|))|m] =ᵐ[μ] fun ω => -(μ[(fun ω' => |g ω'|)|m] ω) :=
-    condExp_neg (fun ω => |g ω|) m
-
-  -- Combine: -μ[|g||m] ≤ μ[f|m] ≤ μ[|g||m] implies |μ[f|m]| ≤ μ[|g||m]
-  filter_upwards [lower_bd, upper_bd, hneg_eq] with ω hlower hupper hneg
-  -- hlower : μ[-|g||m] ω ≤ μ[f|m] ω, hneg : μ[-|g||m] ω = -μ[|g||m] ω
-  -- So: -μ[|g||m] ω ≤ μ[f|m] ω
-  have hlower' : -(μ[(fun ω' => |g ω'|)|m] ω) ≤ μ[f|m] ω := hneg ▸ hlower
-  exact abs_le.mpr ⟨hlower', hupper⟩
-
 /-- **Conditional expectation is L¹-nonexpansive** (load-bearing lemma).
 
 For integrable functions f, g, the conditional expectation is contractive in L¹:

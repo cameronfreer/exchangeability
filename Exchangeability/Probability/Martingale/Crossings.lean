@@ -81,28 +81,6 @@ lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   downcrossings (-b) (-a) (negProcess X) = upcrossings a b X := by
   unfold downcrossings downcrossingsBefore upcrossings; simp
 
-/-- Double reversal is identity when applied within bounds. -/
-lemma revProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
-    revProcess (revProcess X N) N n ω = X n ω := by
-  simp only [revProcess]
-  -- Goal: X (N - (N - n)) ω = X n ω
-  -- Use Nat.sub_sub_self: N - (N - n) = n when n ≤ N
-  rw [Nat.sub_sub_self hn]
-
-/-- Composition of reversal and negation simplifies: rev(neg(rev X)) = neg X -/
-lemma revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
-    revProcess (negProcess (revProcess X N)) N n ω = negProcess X n ω := by
-  simp only [revProcess, negProcess]
-  -- Goal: -(X (N - (N - n)) ω) = -(X n ω)
-  rw [Nat.sub_sub_self hn]
-
-/-- Full composition: neg(rev(neg(rev X))) = X -/
-lemma negProcess_revProcess_negProcess_revProcess {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (hn : n ≤ N) (ω : Ω) :
-    negProcess (revProcess (negProcess (revProcess X N)) N) n ω = X n ω := by
-  simp only [negProcess]
-  rw [revProcess_negProcess_revProcess X N n hn ω]
-  simp only [negProcess, neg_neg]
-
 /-- Helper: hitting respects pointwise equality on [n, m] -/
 lemma hitting_congr {Ω β : Type*} {u v : ℕ → Ω → β} {s : Set β} {n m : ℕ} {ω : Ω}
     (h : ∀ k, n ≤ k → k ≤ m → u k ω = v k ω) :
