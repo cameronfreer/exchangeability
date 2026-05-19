@@ -6,7 +6,6 @@ Authors: Cameron Freer
 import Exchangeability.Probability.CondIndep.Basic
 import Exchangeability.Probability.CondIndep.Indicator
 import Exchangeability.Probability.CondIndep.Bounded
-import Exchangeability.Probability.CondIndep.KallenbergIndicator
 
 /-!
 # Conditional Independence
@@ -18,5 +17,4 @@ This module re-exports all submodules for backwards compatibility.
 * `Basic`: Definition of `CondIndep` and basic properties
 * `Indicator`: Extension from unconditional independence to conditional independence
 * `Bounded`: Extension to bounded measurable functions via L¹ approximation
-* `KallenbergIndicator`: Kallenberg Lemma 1.3 infrastructure
 -/

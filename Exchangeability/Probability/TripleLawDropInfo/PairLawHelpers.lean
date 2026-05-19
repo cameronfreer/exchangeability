@@ -19,7 +19,6 @@ Kallenberg Lemma 1.3 (contraction-independence).
 ## Main results
 
 * `marginal_law_eq_of_pair_law`: From `(X,W) =^d (X,W')`, extract `W =^d W'`
-* `joint_measure_eq_of_pair_law`: Restricted measure equality from pair law
 * `integral_sq_condExp_eq_of_pair_law`: Square integrals equal via Doob-Dynkin
 
 ## References
@@ -45,34 +44,6 @@ lemma marginal_law_eq_of_pair_law
   have h2 : Measure.map W' μ = Measure.map Prod.snd (Measure.map (fun ω => (X ω, W' ω)) μ) := by
     rw [Measure.map_map measurable_snd (hX.prodMk hW')]; rfl
   rw [h1, h_law, ← h2]
-
-/-- From pair law equality, derive joint measure equality on the conditioning space.
-
-If `(X,W) =^d (X,W')`, then `map W (μ.restrict (X ⁻¹' A)) = map W' (μ.restrict (X ⁻¹' A))`.
-
-Intuitively: "the law of W restricted to {X ∈ A}" equals "the law of W' restricted to {X ∈ A}". -/
-lemma joint_measure_eq_of_pair_law
-    {μ : Measure Ω}
-    (X : Ω → α) (W W' : Ω → γ)
-    (hX : Measurable X) (hW : Measurable W) (hW' : Measurable W')
-    (h_law : Measure.map (fun ω => (X ω, W ω)) μ = Measure.map (fun ω => (X ω, W' ω)) μ)
-    {A : Set α} (hA : MeasurableSet A) :
-    Measure.map W (μ.restrict (X ⁻¹' A)) = Measure.map W' (μ.restrict (X ⁻¹' A)) := by
-  ext B hB
-  -- ν(B) = μ((X ⁻¹' A) ∩ (W ⁻¹' B)) = law(X,W)(A ×ˢ B)
-  rw [Measure.map_apply hW hB, Measure.map_apply hW' hB]
-  rw [Measure.restrict_apply (hW hB), Measure.restrict_apply (hW' hB)]
-  -- Note: restrict_apply gives (W ⁻¹' B) ∩ (X ⁻¹' A), so use commutativity
-  rw [Set.inter_comm (W ⁻¹' B), Set.inter_comm (W' ⁻¹' B)]
-  -- Show both equal (map (X,W) μ)(A ×ˢ B)
-  have h1 : (X ⁻¹' A) ∩ (W ⁻¹' B) = (fun ω => (X ω, W ω)) ⁻¹' (A ×ˢ B) := by
-    ext ω; simp [Set.mem_prod]
-  have h2 : (X ⁻¹' A) ∩ (W' ⁻¹' B) = (fun ω => (X ω, W' ω)) ⁻¹' (A ×ˢ B) := by
-    ext ω; simp [Set.mem_prod]
-  rw [h1, h2]
-  rw [← Measure.map_apply (hX.prodMk hW) (hA.prod hB)]
-  rw [← Measure.map_apply (hX.prodMk hW') (hA.prod hB)]
-  rw [h_law]
 
 /-- Helper for Kallenberg 1.3: Square integrals are equal via Doob-Dynkin factorization.
 
