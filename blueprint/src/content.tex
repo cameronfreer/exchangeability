@@ -285,19 +285,11 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
   for $i \ne j$.
 \end{lemma}
 
-\begin{lemma}[L$^2$ bound on window differences]
-  \label{lem:l2_bound_windows}
-  \lean{Exchangeability.DeFinetti.ViaL2.l2_bound_two_windows}
-  \leanok
-  \uses{lem:covariance_structure}
-  The L$^2$ norm of the difference between averages over disjoint windows is bounded.
-\end{lemma}
-
 \begin{lemma}[L$^2$ contractability bound]
   \label{lem:l2_bound}
   \lean{Exchangeability.DeFinetti.L2Approach.l2_contractability_bound}
   \leanok
-  \uses{lem:l2_bound_windows}
+  \uses{lem:covariance_structure}
   For contractable sequences, certain L$^2$ norms of block averages are bounded.
 \end{lemma}
 
@@ -329,26 +321,13 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 \subsection{Directing Measure Construction}
 
-\begin{lemma}[CDF from alpha bounds]
-  \label{lem:cdf_bounds}
-  \lean{Exchangeability.DeFinetti.ViaL2.cdf_from_alpha_bounds}
-  \leanok
-  The limiting function $\alpha(t, \omega)$ is a.e.\ in $[0,1]$.
-\end{lemma}
-
-\begin{lemma}[CDF monotonicity]
-  \label{lem:cdf_mono}
-  \lean{Exchangeability.DeFinetti.ViaL2.cdf_from_alpha_mono}
-  \leanok
-  The limiting function $\alpha(t, \omega)$ is monotone in $t$ for a.e.\ $\omega$.
-\end{lemma}
-
 \begin{lemma}[Directing measure is probability (L$^2$ version)]
   \label{lem:directing_measure_isProb_L2}
   \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_isProbabilityMeasure}
   \leanok
-  \uses{lem:cdf_bounds, lem:cdf_mono}
   The Stieltjes measure constructed from the limiting CDF is a probability measure a.e.
+  Monotonicity, bounds, and right-continuity of the underlying CDF are inherited
+  directly from mathlib's \texttt{stieltjesOfMeasurableRat} construction.
 \end{lemma}
 
 \begin{theorem}[Weighted sums converge in L$^1$]
