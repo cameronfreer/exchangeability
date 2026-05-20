@@ -51,21 +51,6 @@ lemma window_card (n k : ℕ) : (window n k).card = k := by
     exact Nat.add_left_cancel h'
   · simp only [Finset.card_range]
 
-/-- Characterization of window membership. -/
-lemma mem_window_iff {n k t : ℕ} :
-    t ∈ window n k ↔ ∃ i : ℕ, i < k ∧ t = n + i + 1 := by
-  classical
-  unfold window
-  constructor
-  · intro ht
-    rcases Finset.mem_image.mp ht with ⟨i, hi, rfl⟩
-    refine ⟨i, ?_, rfl⟩
-    simpa using hi
-  · intro h
-    rcases h with ⟨i, hi, rfl⟩
-    refine Finset.mem_image.mpr ?_
-    refine ⟨i, ?_, rfl⟩
-    simpa using hi
 
 /-- Sum over a window of length `k` can be reindexed as a sum over `Fin k`. -/
 lemma sum_window_eq_sum_fin {β : Type*} [AddCommMonoid β]
