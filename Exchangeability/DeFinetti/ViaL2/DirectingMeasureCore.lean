@@ -20,12 +20,12 @@ This file defines the core components of the directing measure construction:
 
 ## Main results
 
-* `cdf_from_alpha_mono`: F(ω,·) is monotone nondecreasing
-* `cdf_from_alpha_rightContinuous`: F(ω,·) is right-continuous
-* `cdf_from_alpha_bounds`: 0 ≤ F(ω,t) ≤ 1
 * `alphaIic_ae_tendsto_zero_at_bot`: a.e. limit 0 at -∞ for alphaIic
 * `alphaIic_ae_tendsto_one_at_top`: a.e. limit 1 at +∞ for alphaIic
 * `directing_measure_isProbabilityMeasure`: ν(ω) is a probability measure for each ω
+
+Monotonicity, right-continuity, and bounds on the CDF are inherited directly from
+mathlib's `stieltjesOfMeasurableRat`; no project-local wrappers are needed.
 
 ## References
 
@@ -64,133 +64,6 @@ noncomputable def cdf_from_alpha
       (alphaIicRat X hX_contract hX_meas hX_L2)
       (measurable_alphaIicRat X hX_contract hX_meas hX_L2)
       ω) t
-
-/-- F(ω,·) is monotone nondecreasing. -/
-lemma cdf_from_alpha_mono
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) :
-    Monotone (cdf_from_alpha X hX_contract hX_meas hX_L2 ω) := fun s t hst =>
-  (ProbabilityTheory.stieltjesOfMeasurableRat
-      (alphaIicRat X hX_contract hX_meas hX_L2)
-      (measurable_alphaIicRat X hX_contract hX_meas hX_L2)
-      ω).mono hst
-
-/-- Right-continuity in t: F(ω,t) = lim_{u↘t} F(ω,u). -/
-lemma cdf_from_alpha_rightContinuous
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) :
-    ∀ t, Filter.Tendsto (cdf_from_alpha X hX_contract hX_meas hX_L2 ω)
-      (𝓝[>] t) (𝓝 (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t)) := by
-  intro t
-  -- StieltjesFunction.right_continuous gives ContinuousWithinAt at Ici t
-  -- We need Tendsto at 𝓝[>] t = 𝓝[Ioi t] t
-  -- continuousWithinAt_Ioi_iff_Ici provides the equivalence
-  let f := ProbabilityTheory.stieltjesOfMeasurableRat
-      (alphaIicRat X hX_contract hX_meas hX_L2)
-      (measurable_alphaIicRat X hX_contract hX_meas hX_L2)
-      ω
-  have h_rc : ContinuousWithinAt f (Set.Ici t) t := f.right_continuous t
-  -- Convert ContinuousWithinAt (Ici) to ContinuousWithinAt (Ioi)
-  rw [← continuousWithinAt_Ioi_iff_Ici] at h_rc
-  exact h_rc
-
-/-- Bounds 0 ≤ F ≤ 1 (pointwise in ω,t). -/
-lemma cdf_from_alpha_bounds
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (ω : Ω) (t : ℝ) :
-    0 ≤ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t
-    ∧ cdf_from_alpha X hX_contract hX_meas hX_L2 ω t ≤ 1 := by
-  -- The stieltjesOfMeasurableRat construction produces a function with limits 0 at -∞ and 1 at +∞.
-  -- By monotonicity, all values are in [0,1].
-  let f := ProbabilityTheory.stieltjesOfMeasurableRat
-      (alphaIicRat X hX_contract hX_meas hX_L2)
-      (measurable_alphaIicRat X hX_contract hX_meas hX_L2)
-      ω
-  have h_tendsto_bot : Filter.Tendsto (f ·) Filter.atBot (𝓝 0) :=
-    ProbabilityTheory.tendsto_stieltjesOfMeasurableRat_atBot
-      (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
-  have h_tendsto_top : Filter.Tendsto (f ·) Filter.atTop (𝓝 1) :=
-    ProbabilityTheory.tendsto_stieltjesOfMeasurableRat_atTop
-      (measurable_alphaIicRat X hX_contract hX_meas hX_L2) ω
-  have h_mono : Monotone (f ·) := f.mono
-  constructor
-  · -- Lower bound: f(t) ≥ 0
-    -- For any s < t, f(s) ≤ f(t) by monotonicity.
-    -- As s → -∞, f(s) → 0, so 0 ≤ f(t).
-    -- Proof by contradiction: if f(t) < 0, pick ε = -f(t)/2 > 0.
-    -- Then eventually f(s) ∈ (-ε, ε), so f(s) > -ε = f(t)/2.
-    -- But also f(s) ≤ f(t) for s ≤ t, contradicting f(s) > f(t)/2 > f(t).
-    by_contra h_neg
-    push Not at h_neg
-    -- f(t) < 0, so ε := -f(t)/2 > 0
-    set ε := -cdf_from_alpha X hX_contract hX_meas hX_L2 ω t / 2 with hε_def
-    have hε_pos : 0 < ε := by simp [hε_def]; linarith
-    -- Eventually f(s) ∈ (-ε, ε)
-    have h_nhds : Set.Ioo (-ε) ε ∈ 𝓝 (0 : ℝ) := Ioo_mem_nhds (by linarith) hε_pos
-    have h_preimage := h_tendsto_bot h_nhds
-    rw [Filter.mem_map, Filter.mem_atBot_sets] at h_preimage
-    obtain ⟨N, hN⟩ := h_preimage
-    -- Take s = min N t, then s ≤ N and s ≤ t
-    let s := min N t
-    have hs_le_N : s ≤ N := min_le_left N t
-    have hs_le_t : s ≤ t := min_le_right N t
-    -- f(s) ∈ (-ε, ε)
-    have hs_in : f s ∈ Set.Ioo (-ε) ε := hN s hs_le_N
-    simp only [Set.mem_Ioo] at hs_in
-    -- f(s) ≤ f(t) by monotonicity
-    have hs_mono : f s ≤ f t := h_mono hs_le_t
-    -- Connect f t with cdf_from_alpha
-    have h_eq_t : (f : ℝ → ℝ) t = cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := rfl
-    -- Now we have: f(s) > -ε = f(t)/2 and f(s) ≤ f(t) < 0
-    have h1 : f s > -ε := hs_in.1
-    have h2 : -ε = cdf_from_alpha X hX_contract hX_meas hX_L2 ω t / 2 := by
-      simp [hε_def]; ring
-    -- f(s) > f(t)/2 and f(s) ≤ f(t) < 0
-    -- If f(t) < 0, then f(t)/2 > f(t), so f(s) > f(t)/2 > f(t) contradicts f(s) ≤ f(t).
-    have h_contra : cdf_from_alpha X hX_contract hX_meas hX_L2 ω t / 2 >
-                    cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := by linarith
-    linarith [h1, h2, hs_mono, h_eq_t, h_contra]
-  · -- Upper bound: f(t) ≤ 1
-    -- Similar argument: for any s > t, f(t) ≤ f(s) by monotonicity.
-    -- As s → +∞, f(s) → 1, so f(t) ≤ 1.
-    by_contra h_gt
-    push Not at h_gt
-    -- f(t) > 1, so ε := (f(t) - 1)/2 > 0
-    set ε := (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t - 1) / 2 with hε_def
-    have hε_pos : 0 < ε := by simp [hε_def]; linarith
-    -- Eventually f(s) ∈ (1-ε, 1+ε)
-    have h_nhds : Set.Ioo (1 - ε) (1 + ε) ∈ 𝓝 (1 : ℝ) := Ioo_mem_nhds (by linarith) (by linarith)
-    have h_preimage := h_tendsto_top h_nhds
-    rw [Filter.mem_map, Filter.mem_atTop_sets] at h_preimage
-    obtain ⟨N, hN⟩ := h_preimage
-    -- Take s = max N t, then s ≥ N and s ≥ t
-    let s := max N t
-    have hs_ge_N : N ≤ s := le_max_left N t
-    have hs_ge_t : t ≤ s := le_max_right N t
-    -- f(s) ∈ (1-ε, 1+ε)
-    have hs_in : f s ∈ Set.Ioo (1 - ε) (1 + ε) := hN s hs_ge_N
-    simp only [Set.mem_Ioo] at hs_in
-    -- f(t) ≤ f(s) by monotonicity
-    have hs_mono : f t ≤ f s := h_mono hs_ge_t
-    -- Connect f t with cdf_from_alpha
-    have h_eq_t : (f : ℝ → ℝ) t = cdf_from_alpha X hX_contract hX_meas hX_L2 ω t := rfl
-    -- f(s) < 1 + ε = 1 + (f(t) - 1)/2 = (f(t) + 1)/2
-    have h1 : f s < 1 + ε := hs_in.2
-    have h2 : 1 + ε = (cdf_from_alpha X hX_contract hX_meas hX_L2 ω t + 1) / 2 := by
-      simp [hε_def]; ring
-    -- f(t) ≤ f(s) < (f(t) + 1)/2
-    -- So f(t) < (f(t) + 1)/2, which means 2*f(t) < f(t) + 1, i.e., f(t) < 1.
-    -- But we assumed f(t) > 1, contradiction.
-    linarith [h1, h2, hs_mono, h_eq_t, h_gt]
 
 /-!
 ## A.e. endpoint limits for alphaIic
