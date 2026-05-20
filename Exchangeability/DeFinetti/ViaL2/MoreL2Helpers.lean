@@ -3,7 +3,6 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2.Clip01
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
@@ -25,10 +24,6 @@ Technical lemmas supporting the L² proof of de Finetti's theorem.
 
 ## Contents
 
-* Elementary helpers (clip01, Lipschitz properties)
-* L¹ convergence helpers
-* Boundedness helpers
-* AE strong measurability helpers
 * CDF/Stieltjes constructions used by `MainConvergence.lean`
 -/
 

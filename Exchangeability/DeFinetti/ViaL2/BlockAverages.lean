@@ -1359,10 +1359,6 @@ lemma antitone_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace 
     (X : ℕ → Ω → β) : Antitone (tailFamily X) :=
   Exchangeability.Tail.tailFamily_antitone X
 
-@[nolint unusedArguments]
-lemma tailSigma_le_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
-    (X : ℕ → Ω → β) (n : ℕ) : tailSigma X ≤ tailFamily X n :=
-  Exchangeability.Tail.tailProcess_le_tailFamily X n
 
 lemma tailSigma_le {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) (hX_meas : ∀ i, Measurable (X i)) :

@@ -142,14 +142,4 @@ lemma condExp_shift_eq_condExp
     -- g is tail-measurable
     · exact stronglyMeasurable_condExp.aestronglyMeasurable
 
-/-! ## Note on Cesàro Averages
-
-The lemma `cesaro_convergence_all_shifts` showing that shifted Cesàro averages
-`(1/m) ∑_{k=0}^{m-1} f(X_{n+k})` converge to `μ[f∘X₀ | tailSigma X]` for all `n ∈ ℕ`
-is implemented in `Exchangeability.DeFinetti.ViaL2.CesaroConvergence`.
-
-It was moved there to resolve a circular import: that file already imports this one,
-so the proof (which uses `cesaro_to_condexp_L1` from CesaroConvergence) lives there.
--/
-
 end Exchangeability.Tail.ShiftInvariance
