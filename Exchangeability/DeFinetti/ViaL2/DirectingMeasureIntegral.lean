@@ -253,11 +253,8 @@ lemma directing_measure_integral_via_chain
           simp only [Function.comp_apply, h_f_eq_Mg]
         -- Use condExp linearity: E[M * h | m] = M * E[h | m]
         have h_ae : μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X]
-            =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := by
-          -- Use condExp_smul with appropriate coercions
-          have h_smul := condExp_smul M (g ∘ X 0) (m := TailSigma.tailSigma X) (μ := μ)
-          simp only [smul_eq_mul, Pi.smul_apply] at h_smul
-          convert h_smul using 2 <;> ext ω <;> ring
+            =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω :=
+          condExp_smul M (g ∘ X 0) (m := TailSigma.tailSigma X) (μ := μ)
         calc μ[f ∘ X 0 | TailSigma.tailSigma X]
             = μ[fun ω => M * g (X 0 ω) | TailSigma.tailSigma X] := by rw [h_comp_eq]
           _ =ᵐ[μ] fun ω => M * μ[g ∘ X 0 | TailSigma.tailSigma X] ω := h_ae
