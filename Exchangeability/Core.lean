@@ -101,17 +101,6 @@ omit [MeasurableSpace α] in
 lemma mem_prefixCylinder {n : ℕ} {S : Set (Fin n → α)} {x : ℕ → α} :
     x ∈ prefixCylinder (α:=α) S ↔ prefixProj (α:=α) n x ∈ S := Iff.rfl
 
-omit [MeasurableSpace α] in
-@[simp]
-lemma prefixCylinder_univ {n : ℕ} :
-    prefixCylinder (α:=α) (Set.univ : Set (Fin n → α)) = (Set.univ) := by
-  simp [prefixCylinder]
-
-omit [MeasurableSpace α] in
-@[simp]
-lemma prefixCylinder_empty {n : ℕ} :
-    prefixCylinder (α:=α) (∅ : Set (Fin n → α)) = (∅) := rfl
-
 /--
 The collection of all prefix cylinders.
 
@@ -150,19 +139,9 @@ def takePrefix (hmn : m ≤ n) (x : Fin n → α) : Fin m → α :=
 
 omit [MeasurableSpace α] in
 @[simp]
-lemma takePrefix_apply {hmn : m ≤ n} (x : Fin n → α) (i : Fin m) :
-    takePrefix (α:=α) hmn x i = x (Fin.castLE hmn i) := rfl
-
-omit [MeasurableSpace α] in
-@[simp]
 lemma takePrefix_prefixProj {hmn : m ≤ n} (x : ℕ → α) :
     takePrefix (α:=α) hmn (prefixProj (α:=α) n x) = prefixProj (α:=α) m x := by
   ext i; simp [takePrefix]
-
-@[simp]
-lemma castLE_coe_nat {hmn : m ≤ n} (i : Fin m) :
-    ((Fin.castLE hmn i : Fin n) : ℕ) = i :=
-  Eq.refl i.1
 
 /--
 Extend a set from `Fin m → α` to `Fin n → α` by ignoring extra coordinates.

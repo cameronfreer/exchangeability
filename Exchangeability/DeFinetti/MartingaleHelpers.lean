@@ -54,30 +54,10 @@ variable {β : Type*} [MeasurableSpace β]
 /-- Shift a sequence by dropping the first `d` entries. -/
 def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
 
-omit [MeasurableSpace β] in
-@[simp]
-lemma shiftSeq_apply {d : ℕ} (f : ℕ → β) (n : ℕ) :
-    shiftSeq d f n = f (n + d) := rfl
-
 @[measurability, fun_prop]
 lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) := by
   unfold shiftSeq; fun_prop
-
-lemma forall_mem_erase {γ : Type*} [DecidableEq γ]
-    {s : Finset γ} {a : γ} {P : γ → Prop} (ha : a ∈ s) :
-    (∀ x ∈ s, P x) ↔ P a ∧ ∀ x ∈ s.erase a, P x := by
-  constructor
-  · intro h
-    refine ⟨h _ ha, ?_⟩
-    intro x hx
-    exact h _ (Finset.mem_of_mem_erase hx)
-  · rintro ⟨haP, hrest⟩ x hx
-    by_cases hxa : x = a
-    · simpa [hxa] using haP
-    · have hx' : x ∈ s.erase a := by
-        exact Finset.mem_erase.mpr ⟨hxa, hx⟩
-      exact hrest _ hx'
 
 end SequenceShift
 
@@ -85,39 +65,10 @@ section FinsetOrder
 
 open Finset
 
-lemma orderEmbOfFin_strictMono {s : Finset ℕ} :
-    StrictMono fun i : Fin s.card => s.orderEmbOfFin rfl i := by
-  classical
-  simpa using (s.orderEmbOfFin rfl).strictMono
-
 lemma orderEmbOfFin_mem {s : Finset ℕ} {i : Fin s.card} :
     s.orderEmbOfFin rfl i ∈ s := by
   classical
   simp [Finset.orderEmbOfFin_mem (s:=s) (h:=rfl) i]
-
-lemma orderEmbOfFin_surj {s : Finset ℕ} {x : ℕ} (hx : x ∈ s) :
-    ∃ i : Fin s.card, s.orderEmbOfFin rfl i = x := by
-  classical
-  -- orderEmbOfFin is an order isomorphism, hence bijective onto s
-  -- Use the fact that it's an injective function from a finite type to itself
-  have h_inj : Function.Injective (s.orderEmbOfFin rfl : Fin s.card → ℕ) :=
-    (s.orderEmbOfFin rfl).injective
-  have h_range_sub : ∀ i, s.orderEmbOfFin rfl i ∈ s := fun i => s.orderEmbOfFin_mem rfl i
-  -- Define a function to s viewed as a subtype
-  let f : Fin s.card → s := fun i => ⟨s.orderEmbOfFin rfl i, h_range_sub i⟩
-  have hf_inj : Function.Injective f := by
-    intro i j hij
-    exact h_inj (Subtype.ext_iff.mp hij)
-  -- Injective function between finite types of equal cardinality is surjective
-  haveI : Fintype s := Finset.fintypeCoeSort s
-  have hcard : Fintype.card (Fin s.card) = Fintype.card s := by simp
-  have hf_bij : Function.Bijective f := by
-    rw [Fintype.bijective_iff_injective_and_card]
-    exact ⟨hf_inj, hcard⟩
-  have hf_surj : Function.Surjective f := hf_bij.2
-  obtain ⟨i, hi⟩ := hf_surj ⟨x, hx⟩
-  use i
-  exact Subtype.ext_iff.mp hi
 
 /-- If `f : Fin n → ℕ` is strictly monotone and `a < f i` for all `i`,
 then `Fin.cases a f : Fin (n+1) → ℕ` is strictly monotone. -/
@@ -166,26 +117,6 @@ lemma indicator_comp_preimage
   ext ω
   simp only [Function.comp_apply, Set.indicator, Set.mem_preimage]
   rfl
-
-/-- Binary indicator takes values in {0, 1}. -/
-@[nolint unusedArguments]
-lemma indicator_binary
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A : Set Ω) (ω : Ω) :
-    A.indicator (fun _ => (1 : ℝ)) ω = 0 ∨ A.indicator (fun _ => (1 : ℝ)) ω = 1 := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h]
-
-/-- Indicator is bounded by its constant. -/
-@[nolint unusedArguments]
-lemma indicator_le_const
-    {Ω : Type*} [MeasurableSpace Ω]
-    (A : Set Ω) (c : ℝ) (hc : 0 ≤ c) (ω : Ω) :
-    A.indicator (fun _ => c) ω ≤ c := by
-  by_cases h : ω ∈ A
-  · simp [Set.indicator, h]
-  · simp [Set.indicator, h, hc]
 
 /-- Indicator is nonnegative when constant is nonnegative. -/
 @[nolint unusedArguments]

@@ -120,10 +120,6 @@ def ExchangeableAt (μ : Measure Ω) (X : ℕ → Ω → α) (n : ℕ) : Prop :=
     Measure.map (fun ω => fun i : Fin n => X (σ i) ω) μ =
       Measure.map (fun ω => fun i : Fin n => X i ω) μ
 
-/-- Exchangeability is equivalent to being exchangeable at every dimension. -/
-lemma exchangeable_iff_forall_exchangeableAt {μ : Measure Ω} {X : ℕ → Ω → α} :
-    Exchangeable μ X ↔ ∀ n, ExchangeableAt μ X n := Iff.rfl
-
 /--
 Full exchangeability implies exchangeability.
 
@@ -201,13 +197,6 @@ def Contractable (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
     Measure.map (fun ω i => X (k i) ω) μ =
       Measure.map (fun ω i => X i.val ω) μ
 
-/-- Helper lemma: If two index sequences are pointwise equal, then the corresponding
-subsequences have the same distribution. -/
-lemma contractable_same_range {μ : Measure Ω} {X : ℕ → Ω → α} {m : ℕ}
-    (k₁ k₂ : Fin m → ℕ) (h_range : ∀ i, k₁ i = k₂ i) :
-    Measure.map (fun ω i => X (k₁ i) ω) μ = Measure.map (fun ω i => X (k₂ i) ω) μ := by
-  simp only [h_range]
-
 /-- Contractability is preserved under prefix: if X is contractable, so is any finite prefix. -/
 lemma Contractable.prefix {μ : Measure Ω} {X : ℕ → Ω → α}
     (hX : Contractable μ X) (n : ℕ) :
@@ -270,21 +259,6 @@ lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
     Measure.map (fun ω i => X i.val ω) μ = Measure.map (fun ω i => X (k i) ω) μ :=
   (hX m k hk).symm
 
-/-- The infinite i.i.d. product measure exists for any probability measure.
-Constructed via Ionescu-Tulcea in `Exchangeability.Probability.InfiniteProduct`. -/
-lemma iidProduct_exists {ν₀ : Measure α} [IsProbabilityMeasure ν₀] :
-    ∃ μ : Measure (ℕ → α), IsProbabilityMeasure μ :=
-  ⟨Exchangeability.Probability.iidProduct ν₀, inferInstance⟩
-
-/-- The i.i.d. product of identical measures is permutation-invariant.
-This is a consequence of the construction via Ionescu-Tulcea. -/
-lemma iidProduct_perm_invariant {ν₀ : Measure α} [IsProbabilityMeasure ν₀]
-    (σ : Equiv.Perm ℕ) :
-    Measure.map (fun f : ℕ → α => f ∘ σ)
-      (Exchangeability.Probability.iidProduct ν₀) =
-      Exchangeability.Probability.iidProduct ν₀ :=
-  Exchangeability.Probability.iidProduct.perm_eq (ν:=ν₀) (σ:=σ)
-
 -- Re-export StrictMono utilities for backward compatibility
 open Util.StrictMono (strictMono_add_left strictMono_add_right
                        strictMono_Fin_ge_id fin_val_strictMono)
@@ -329,22 +303,6 @@ lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
     Measurable (fun (h : Fin n → α) => fun i => h (σ i)) := by
   fun_prop
 
-/-- Helper lemma: Permuting the output coordinates doesn't change the measure.
-If f and g produce the same measure, then f ∘ σ and g ∘ σ produce the same measure. -/
-lemma measure_map_comp_perm {μ : Measure Ω} {n : ℕ}
-    (f g : Ω → Fin n → α) (σ : Equiv.Perm (Fin n))
-    (h : Measure.map f μ = Measure.map g μ)
-    (hf : Measurable f) (hg : Measurable g) :
-    Measure.map (fun ω i => f ω (σ i)) μ =
-      Measure.map (fun ω i => g ω (σ i)) μ := by
-  let perm_map : (Fin n → α) → (Fin n → α) := (· ∘ σ)
-  calc Measure.map (fun ω i => f ω (σ i)) μ
-      = Measure.map perm_map (Measure.map f μ) :=
-          (Measure.map_map (measurable_perm_map (σ := σ)) hf).symm
-    _ = Measure.map perm_map (Measure.map g μ) := by rw [h]
-    _ = Measure.map (fun ω i => g ω (σ i)) μ :=
-          Measure.map_map (measurable_perm_map (σ := σ)) hg
-
 /-- Contractability implies the first m variables have the same joint distribution
 regardless of which m consecutive variables we pick (starting from position k). -/
 lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}
@@ -360,11 +318,6 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
     Measure.map (fun ω i => X (offset + k i) ω) μ =
       Measure.map (fun ω i => X i.val ω) μ :=
   hX m (fun i => offset + k i) (fun _ _ hij => Nat.add_lt_add_left (hk hij) offset)
-
-/-- For a permutation σ on Fin n, the range {σ(0), ..., σ(n-1)} equals {0, ..., n-1}. -/
-lemma perm_range_eq {n : ℕ} (σ : Equiv.Perm (Fin n)) :
-    Finset.image (fun i : Fin n => σ i) Finset.univ = Finset.univ :=
-  Finset.image_univ_equiv σ
 
 /--
 Helper lemma: All values of a strictly monotone function are bounded by its last value plus one.
@@ -390,29 +343,6 @@ private lemma strictMono_length_le_max_succ {m : ℕ} (k : Fin m → ℕ) (hk : 
   have h_mono : last.val ≤ k last := strictMono_Fin_ge_id hk last
   calc m = last.val + 1 := h_last_is_max.symm
        _ ≤ k last + 1 := Nat.add_le_add_right h_mono 1
-
-/--
-Helper lemma: Exchangeability is preserved when projecting to initial segments.
-
-If two measures on `Fin n → α` are equal by exchangeability, and we project both
-to `Fin m → α` (where `m ≤ n`), the projected measures remain equal.
--/
-private lemma exchangeable_preserves_projection {μ : Measure Ω} {X : ℕ → Ω → α}
-    (hX_meas : ∀ i, Measurable (X i)) {m n : ℕ} (hmn : m ≤ n)
-    (σ : Equiv.Perm (Fin n))
-    (hexch : Measure.map (fun ω (i : Fin n) => X (σ i).val ω) μ =
-             Measure.map (fun ω (i : Fin n) => X i.val ω) μ) :
-    let ι : Fin m → Fin n := fun i => ⟨i.val, Nat.lt_of_lt_of_le i.isLt hmn⟩
-    let proj : (Fin n → α) → (Fin m → α) := fun f i => f (ι i)
-    Measure.map (proj ∘ fun ω j => X (σ j).val ω) μ =
-    Measure.map (proj ∘ fun ω j => X j.val ω) μ := by
-  intro ι proj
-  have hproj_meas : Measurable proj :=
-    by
-      fun_prop
-  rw [← Measure.map_map hproj_meas (by fun_prop),
-      ← Measure.map_map hproj_meas (by fun_prop)]
-  exact congrArg (Measure.map proj) hexch
 
 /--
 **Main theorem:** Every exchangeable sequence is contractable.
