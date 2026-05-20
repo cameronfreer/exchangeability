@@ -380,36 +380,6 @@ lemma contractable_covariance_structure
       ring
     · norm_num
 
-
-/-- **Supremum of weight differences for two non-overlapping windows.**
-
-For two weight vectors representing uniform averages over disjoint windows of size k,
-the supremum of their pointwise differences is exactly 1/k. This is the key parameter
-in the L² contractability bound.
-
-Uses `ciSup_const` since ℝ is only a `ConditionallyCompleteLattice`. -/
-private lemma sup_two_window_weights {k : ℕ} (hk : 0 < k)
-    (p q : Fin (2 * k) → ℝ)
-    (hp : p = fun i => if i.val < k then 1 / (k : ℝ) else 0)
-    (hq : q = fun i => if i.val < k then 0 else 1 / (k : ℝ)) :
-    ⨆ i, |p i - q i| = 1 / (k : ℝ) := by
-  have h_eq : ∀ i : Fin (2 * k), |p i - q i| = 1 / (k : ℝ) := by
-    intro i
-    rw [hp, hq]
-    simp only
-    split_ifs <;> simp [abs_neg]
-  haveI : Nonempty (Fin (2 * k)) := ⟨⟨0, Nat.mul_pos (by decide : 0 < 2) hk⟩⟩
-  simp_rw [h_eq]
-  exact ciSup_const
-
-
--- Uniform version of l2_bound_two_windows: The constant Cf is the same for all
--- window positions. This follows because Cf = 2σ²(1-ρ) depends only on the covariance
--- structure of f∘X, which is uniform by contractability.
---
--- We use `l2_contractability_bound` from L2Approach directly by positing that f∘X has
--- a uniform covariance structure (which it must, by contractability).
-
 /-- **Helper: Reindexed weights preserve probability properties.**
 
 When reindexing weights from a finset S to Fin n via an equivalence,
@@ -945,72 +915,6 @@ lemma get_covariance_constant
 
   exact ⟨Cf, mf, σSqf, ρf, rfl, hCf_nonneg, hmean, hvar, hcov, hσSq_nonneg, hρ_bd.1, hρ_bd.2⟩
 
-/-- **L² bound wrapper for two starting windows**.
-
-For contractable sequences, the L² difference between averages starting at different
-indices n and m is uniformly small. This gives us the key uniform bound we need.
-
-NOTE: This wrapper is not used in the main proof. The uniform version with disjointness
-hypothesis is used instead. This wrapper is left for potential future use.
--/
-@[nolint unusedArguments]
-lemma l2_bound_two_windows
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-    (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-    (f : ℝ → ℝ) (hf_meas : Measurable f)
-    (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
-    (n m : ℕ) {k : ℕ} (hk : 0 < k)
-    (_hdisj : Disjoint (window n k) (window m k)) :
-    ∃ Cf : ℝ, 0 ≤ Cf ∧
-      ∫ ω, ((1/(k:ℝ)) * ∑ i : Fin k, f (X (n + i.val + 1) ω) -
-            (1/(k:ℝ)) * ∑ i : Fin k, f (X (m + i.val + 1) ω))^2 ∂μ
-        ≤ Cf / k := by
-  -- Get covariance constant and structure
-  obtain ⟨Cf, mf, σSqf, ρf, hCf_def, hCf_nonneg, hmean, hvar, hcov, hσSq_nn, hρ_bd1, hρ_bd2⟩ :=
-    get_covariance_constant X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-  -- Apply uniform bound with the covariance structure
-  refine ⟨Cf, hCf_nonneg, ?_⟩
-  exact l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-    Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩ n m k hk
-
-/-- Reindex the last `k`-block of a length-`m` sum.
-
-For `m,k : ℕ` with `0 < k ≤ m`, and any real constant `c` and function `F : ℕ → ℝ`,
-the sum over the last `k` positions of a length-`m` vector can be reindexed to a sum over `Fin k`:
-∑_{i<m} (1_{i ≥ m-k} · c) · F(i) = c · ∑_{j<k} F(m - k + j).
--/
-private lemma sum_tail_block_reindex
-    {m k : ℕ} (hk_pos : 0 < k) (hkm : k ≤ m)
-    (c : ℝ) (F : ℕ → ℝ) :
-    ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
-      = c * ∑ j : Fin k, F (m - k + j.val) := by
-  -- Split the sum into indices < m-k (which contribute 0) and indices ≥ m-k
-  calc ∑ i : Fin m, (if i.val < m - k then 0 else c) * F i.val
-      = ∑ i : Fin m, if i.val < m - k then 0 else c * F i.val := by
-          congr 1; ext i; split_ifs <;> ring
-    _ = ∑ i ∈ Finset.univ.filter (fun i : Fin m => ¬ i.val < m - k), c * F i.val := by
-          have : ∀ i : Fin m, (if i.val < m - k then 0 else c * F i.val) =
-                               (if ¬ i.val < m - k then c * F i.val else 0) := by
-            intro i; by_cases h : i.val < m - k <;> simp [h]
-          simp_rw [this]
-          rw [Finset.sum_filter]
-    _ = c * ∑ i ∈ Finset.univ.filter (fun i : Fin m => ¬ i.val < m - k), F i.val := by
-          rw [← Finset.mul_sum]
-    _ = c * ∑ j : Fin k, F (m - k + j.val) := by
-          congr 1
-          have h_sub : m - (m - k) = k := by omega
-          trans (∑ j : Fin (m - (m - k)), F ((m - k) + j.val))
-          · exact FinIndexHelpers.sum_filter_fin_val_ge_eq_sum_fin m (m - k) (by omega) F
-          · rw [h_sub]
-
-/-- Long average vs tail average bound: Comparing the average of the first m terms
-with the average of the last k terms (where k ≤ m) has the same L² contractability bound.
-
-This is the key lemma needed to complete the Cauchy argument in weighted_sums_converge_L1.
--/
-@[nolint unusedArguments]
 lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
@@ -1466,63 +1370,4 @@ lemma tailSigma_le {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
   Exchangeability.Tail.tailProcess_le_ambient X hX_meas
 
 end TailSigma
-
-/-! ## Helper axioms (early section)
-
-Axioms that don't depend on later definitions can go here.
--/
-
-namespace Helpers
-
-open Exchangeability.Probability.IntegrationHelpers
-
-/-- **THEOREM (Subsequence a.e. convergence from L¹):**
-If `αₙ → α` in L¹ (with measurability), there is a subsequence converging to `α`
-almost everywhere.
-
-This follows from the standard result that L¹ convergence implies convergence in measure,
-and convergence in measure implies existence of an a.e. convergent subsequence. -/
-theorem subseq_ae_of_L1
-  {Ω : Type*} [MeasurableSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (alpha : ℕ → Ω → ℝ) (alpha_inf : Ω → ℝ)
-  (h_alpha_meas : ∀ n, Measurable (alpha n))
-  (h_alpha_inf_meas : Measurable alpha_inf)
-  (h_integrable : ∀ n, Integrable (fun ω => alpha n ω - alpha_inf ω) μ)
-  (h_L1_conv : ∀ ε > 0, ∃ N, ∀ n ≥ N, ∫ ω, |alpha n ω - alpha_inf ω| ∂μ < ε) :
-  ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-    ∀ᵐ ω ∂μ, Tendsto (fun k => alpha (φ k) ω) atTop (𝓝 (alpha_inf ω)) := by
-  -- Step 1: Convert L¹ convergence to convergence in eLpNorm
-  -- Use the fact that for integrable functions, eLpNorm 1 = ofReal (∫ |·|)
-  -- Then transfer convergence via continuous_ofReal
-  have h_eLpNorm_tendsto : Tendsto (fun n => eLpNorm (alpha n - alpha_inf) 1 μ) atTop (𝓝 0) := by
-    -- First show the Bochner integral tends to 0
-    have h_integral_tendsto : Tendsto (fun n => ∫ ω, |alpha n ω - alpha_inf ω| ∂μ) atTop (𝓝 0) := by
-      rw [Metric.tendsto_atTop]
-      intro ε hε
-      obtain ⟨N, hN⟩ := h_L1_conv ε hε
-      use N
-      intro n hn
-      rw [Real.dist_eq, sub_zero, abs_of_nonneg]
-      · exact hN n hn
-      · exact integral_nonneg (fun ω => abs_nonneg _)
-
-    -- Now transfer convergence via eLpNorm_one_eq_integral_abs and continuity of ofReal
-    have : Tendsto (fun n => ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ)) atTop (𝓝 0) := by
-      rw [← ENNReal.ofReal_zero]
-      exact ENNReal.tendsto_ofReal h_integral_tendsto
-    have h_eq : ∀ n, eLpNorm (alpha n - alpha_inf) 1 μ = ENNReal.ofReal (∫ ω, |alpha n ω - alpha_inf ω| ∂μ) := by
-      intro n; exact eLpNorm_one_eq_integral_abs (h_integrable n)
-    simp only [h_eq]
-    exact this
-
-  -- Step 2: eLpNorm convergence implies convergence in measure
-  have h_tendstoInMeasure : TendstoInMeasure μ alpha atTop alpha_inf := by
-    exact tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero
-      (fun n => (h_alpha_meas n).aestronglyMeasurable)
-      h_alpha_inf_meas.aestronglyMeasurable
-      h_eLpNorm_tendsto
-
-  -- Step 3: Extract almost-everywhere convergent subsequence
-  exact h_tendstoInMeasure.exists_seq_tendsto_ae
 

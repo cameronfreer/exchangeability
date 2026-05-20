@@ -1437,24 +1437,6 @@ lemma blockAvgFrozen_abs_le_one {Ω : Type*} [MeasurableSpace Ω]
     |blockAvgFrozen f X n ω| ≤ 1 :=
   blockAvg_abs_le_one f X hf_bdd 0 n ω
 
-lemma blockAvgFrozen_diff_memLp_two {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsProbabilityMeasure μ]
-    (f : ℝ → ℝ) (X : ℕ → Ω → ℝ)
-    (hf : Measurable f) (hX : ∀ i, Measurable (X i))
-    (hf_bdd : ∀ x, |f x| ≤ 1) (n n' : ℕ) :
-    MemLp (fun ω => blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω) 2 μ := by
-  apply memLp_two_of_bounded (M := 2)
-  · exact (blockAvgFrozen_measurable f X hf hX n).sub (blockAvgFrozen_measurable f X hf hX n')
-  intro ω
-  have hn  : |blockAvgFrozen f X n  ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n  ω
-  have hn' : |blockAvgFrozen f X n' ω| ≤ 1 := blockAvgFrozen_abs_le_one f X hf_bdd n' ω
-  calc |blockAvgFrozen f X n ω - blockAvgFrozen f X n' ω|
-      = |blockAvgFrozen f X n ω + (- blockAvgFrozen f X n' ω)| := by rw [sub_eq_add_neg]
-    _ ≤ |blockAvgFrozen f X n ω| + |- blockAvgFrozen f X n' ω| := abs_add_le _ _
-    _ = |blockAvgFrozen f X n ω| + |blockAvgFrozen f X n' ω| := by rw [abs_neg]
-    _ ≤ 1 + 1 := add_le_add hn hn'
-    _ = 2 := by norm_num
-
 /-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
 
 Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
