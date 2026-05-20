@@ -9,7 +9,6 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Basic
 import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Function.LpSpace.Complete
 import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
-import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondExp
 
 open scoped Classical

@@ -16,7 +16,6 @@ import Exchangeability.Core
 import Exchangeability.Contractability
 import Exchangeability.ConditionallyIID
 import Exchangeability.Probability.CondExp
-import Exchangeability.Probability.CondExpHelpers
 import Exchangeability.Probability.CondIndep
 import Exchangeability.Probability.Martingale
 import Exchangeability.Probability.TripleLawDropInfo
@@ -36,7 +35,6 @@ import Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra
 import Exchangeability.DeFinetti.ViaMartingale.Factorization
 import Exchangeability.DeFinetti.ViaMartingale.FiniteProduct
 import Exchangeability.Probability.MeasureKernels
-import Exchangeability.Probability.ConditionalKernel
 
 /-!
 # de Finetti's Theorem via Reverse Martingales
