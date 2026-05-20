@@ -31,37 +31,16 @@ open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
-/-!
-## Bridge Lemma: Integral against directing measure equals conditional expectation
+/-- **Base case:** For Iic indicators, the directing measure integral equals `alphaIicCE`.
 
-This is the key Kallenberg insight: the directing measure ν(ω) is the conditional distribution
-of X₀ given the tail σ-algebra. Therefore:
-
-  ∫ f dν(ω) = E[f(X₀) | tail](ω)  a.e.
-
-**Proof Strategy:**
-1. **Base case (Iic indicators):** By Stieltjes construction,
-   `∫ 1_{Iic t} dν(ω) = alphaIic t ω = alphaIicCE t ω = E[1_{Iic t}(X₀)|tail](ω)` a.e.
-
-2. **Extension:** Iic sets form a π-system generating the Borel σ-algebra.
-   By measure extensionality, two probability measures agreeing on Iic agree everywhere.
-   The same linearity/continuity argument extends to all bounded measurable f.
-
-This lemma is the bridge that allows us to go from:
-- `cesaro_to_condexp_L2`: α = E[f(X₀)|tail]
-to:
-- `directing_measure_integral`: α = ∫f dν
-
-by transitivity.
--/
-
-/-- **Base case:** For Iic indicators, the directing measure integral equals alphaIicCE.
-
-This follows from:
+Proof outline:
 1. Stieltjes construction: `∫ 1_{Iic t} dν(ω) = (ν(Iic t)).toReal`
 2. Measure value: `(ν(Iic t)).toReal = stieltjesOfMeasurableRat t`
 3. Stieltjes extension: `stieltjesOfMeasurableRat t = alphaIic t` a.e.
-4. Identification: `alphaIic t =ᵐ alphaIicCE t` -/
+4. Identification: `alphaIic t =ᵐ alphaIicCE t`
+
+Both the kernel bridge (`directing_measure_ae_eq_condExpKernel_map`) and the bounded-
+measurable extension in `DirectingMeasureIntegral` consume this Iic identification. -/
 lemma directing_measure_integral_Iic_ae_eq_alphaIicCE
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
