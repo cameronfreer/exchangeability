@@ -336,7 +336,7 @@ lemma directing_measure_integral_via_chain
                                 gcongr; exact Finset.abs_sum_le_sum_abs _ _
                             _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
                                 gcongr with k _; exact hg_bdd _
-                            _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+                            _ = 1 := by simp [Finset.sum_const]; field_simp [hm]
                       have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
                         apply ae_of_all μ
                         intro ω
@@ -367,7 +367,7 @@ lemma directing_measure_integral_via_chain
                               gcongr; exact Finset.abs_sum_le_sum_abs _ _
                           _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1:ℝ) := by
                               gcongr with k _; exact hg_bdd _
-                          _ = 1 := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+                          _ = 1 := by simp [Finset.sum_const]; field_simp [hm]
                     have hg_avg_bdd' : ∀ᵐ ω ∂μ, ‖(1/(m:ℝ)) * ∑ k : Fin m, g (X (k.val+1) ω)‖ ≤ 1 := by
                       apply ae_of_all μ
                       intro ω
@@ -436,7 +436,7 @@ lemma directing_measure_integral_via_chain
                     gcongr; exact Finset.abs_sum_le_sum_abs _ _
               _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, M := by
                     gcongr with k _; exact hM _
-              _ = M := by simp [Finset.sum_const, Finset.card_fin]; field_simp [hm]
+              _ = M := by simp [Finset.sum_const]; field_simp [hm]
 
         have hAalpha_integrable : ∀ m, Integrable (fun ω => A m ω - alpha ω) μ := fun m =>
           (Integrable.of_bound (hA_meas m).aestronglyMeasurable M (ae_of_all μ (hA_bdd m))).sub
