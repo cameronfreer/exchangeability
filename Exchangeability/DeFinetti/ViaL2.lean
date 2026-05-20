@@ -7,6 +7,7 @@ import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
 import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
+import Exchangeability.DeFinetti.ViaL2.DirectingMeasureBridge
 import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 
 /-!
