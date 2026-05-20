@@ -1152,46 +1152,6 @@ lemma directing_measure_integral
   -- Use the simplified identification chain approach (Kallenberg-aligned)
   directing_measure_integral_via_chain X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
 
-/-- **Packaged directing measure theorem:** Existence of a directing kernel with all
-key properties bundled together.
-
-For a contractable sequence X on ℝ, there exists:
-1. A limit function α ∈ L¹ that is the L¹ limit of Cesàro averages
-2. A random probability measure ν(·) on ℝ (the directing measure)
-3. The identification α = ∫ f dν a.e.
-
-This packages the outputs of `directing_measure` and `directing_measure_integral`
-into a single existential statement that is convenient for applications.
-
-**Proof:** Follows directly from `directing_measure_integral` which provides
-the limit α and its identification with ∫ f dν, combined with
-`directing_measure_isProbabilityMeasure` and `directing_measure_measurable`.
--/
-lemma alpha_is_conditional_expectation_packaged
-  {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
-  (hX_meas : ∀ i, Measurable (X i))
-  (hX_L2 : ∀ i, MemLp (X i) 2 μ)
-  (f : ℝ → ℝ) (hf_meas : Measurable f)
-  (hf_bdd : ∃ C, ∀ x, |f x| ≤ C) :
-  ∃ (alpha : Ω → ℝ) (nu : Ω → Measure ℝ),
-    Measurable alpha ∧
-    MemLp alpha 1 μ ∧
-    (∀ ω, IsProbabilityMeasure (nu ω)) ∧
-    (∀ s, MeasurableSet s → Measurable (fun ω => nu ω s)) ∧
-    -- L¹ convergence: Cesàro averages converge to alpha
-    (∀ n, ∀ ε > 0, ∃ M : ℕ, ∀ m : ℕ, m ≥ M →
-      ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, f (X (n + k.val + 1) ω) - alpha ω| ∂μ < ε) ∧
-    -- Identification: alpha equals the integral against nu
-    (∀ᵐ ω ∂μ, alpha ω = ∫ x, f x ∂(nu ω)) := by
-  -- Use directing_measure for nu and directing_measure_integral for alpha
-  obtain ⟨alpha, hα_meas, hα_L1, hα_conv, hα_eq⟩ :=
-    directing_measure_integral X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-  refine ⟨alpha, directing_measure X hX_contract hX_meas hX_L2, hα_meas, hα_L1, ?_, ?_, hα_conv, hα_eq⟩
-  · exact directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2
-  · exact fun s hs => directing_measure_measurable X hX_contract hX_meas hX_L2 s hs
-
 /-- The integral of `alphaIic` equals the marginal probability.
 
 By the L¹ convergence property of the Cesàro averages and contractability

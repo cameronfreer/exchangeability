@@ -1526,8 +1526,3 @@ theorem subseq_ae_of_L1
   -- Step 3: Extract almost-everywhere convergent subsequence
   exact h_tendstoInMeasure.exists_seq_tendsto_ae
 
-/-! Note: The complete `alpha_is_conditional_expectation_packaged` is in
-`MoreL2Helpers.lean` (at the `ViaL2` namespace level, not `Helpers`).
-A stub was previously here but has been removed since it wasn't used
-in the critical path. -/
-

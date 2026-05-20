@@ -802,9 +802,3 @@ theorem reverse_martingale_subsequence_convergence
   classical
   exact Helpers.subseq_ae_of_L1 alpha alpha_inf h_alpha_meas h_alpha_inf_meas h_integrable h_L1_conv
 
-/-! The critical path of the L² proof uses
-`directing_measure_satisfies_requirements` from `MoreL2Helpers.lean`; earlier
-`alpha_is_reverse_martingale` / `contractability_conditional_expectation` /
-`alpha_is_conditional_expectation_packaged` placeholders are not on that path
-and have been removed. -/
-
