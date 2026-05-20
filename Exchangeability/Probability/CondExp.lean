@@ -3,8 +3,6 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.Probability.CondExpBasic
-import Exchangeability.Probability.CondProb
 import Exchangeability.Probability.IntegrationHelpers
 import Mathlib.Probability.Independence.Basic
 import Mathlib.Probability.Independence.Conditional

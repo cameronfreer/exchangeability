@@ -8,7 +8,6 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.Real
 import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 import Mathlib.MeasureTheory.Function.FactorsThrough
 import Mathlib.MeasureTheory.Function.AEEqOfIntegral
-import Exchangeability.Probability.CondExpBasic
 
 /-!
 # Helper Lemmas for RN-Derivative Approach to Kallenberg 1.3
