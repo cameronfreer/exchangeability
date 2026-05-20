@@ -1137,6 +1137,7 @@ For any bounded measurable f, we have α_f(ω) = ∫ f dν(ω) a.e.
 This is the fundamental bridge property.
 -/
 lemma directing_measure_integral
+    [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
@@ -1167,7 +1168,7 @@ the limit α and its identification with ∫ f dν, combined with
 `directing_measure_isProbabilityMeasure` and `directing_measure_measurable`.
 -/
 lemma alpha_is_conditional_expectation_packaged
-  {Ω : Type*} [MeasurableSpace Ω]
+  {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
   {μ : Measure Ω} [IsProbabilityMeasure μ]
   (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
   (hX_meas : ∀ i, Measurable (X i))
