@@ -61,11 +61,6 @@ def tailProcess (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   iInf (tailFamily X)
 
 omit [MeasurableSpace Ω] in
-@[simp]
-lemma tailProcess_def (X : ℕ → Ω → α) :
-    tailProcess X = iInf (tailFamily X) := rfl
-
-omit [MeasurableSpace Ω] in
 lemma tailFamily_antitone (X : ℕ → Ω → α) :
     Antitone (tailFamily X) := by
   intro n m hnm
@@ -106,28 +101,6 @@ lemma preimage_injective_of_surjective {α β} {f : α → β}
   -- compare membership in equal preimages
   have := congrArg (fun A => x ∈ A) this
   simpa using this
-
-/-- If `f` is surjective, then `map f (comap f m) = m`. -/
-lemma map_comap_eq_of_surjective {α β} {f : α → β}
-    (hf : Function.Surjective f) (m : MeasurableSpace β) :
-  MeasurableSpace.map f (MeasurableSpace.comap f m) = m := by
-  classical
-  -- Prove by extensionality on measurable sets.
-  ext S; constructor
-  · -- `S ∈ map f (comap f m)` iff `f ⁻¹' S ∈ comap f m`
-    intro hS
-    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S) at hS
-    rcases hS with ⟨T, hT, hpre⟩
-    -- injectivity of preimage under surjectivity identifies `S = T`
-    have hinj := preimage_injective_of_surjective (α := α) (β := β) hf
-    have : S = T := by
-      apply hinj
-      exact hpre.symm
-    simpa [this]
-  · -- unit inequality `m ≤ map f (comap f m)`
-    intro hS
-    change MeasurableSet[MeasurableSpace.comap f m] (f ⁻¹' S)
-    exact ⟨S, hS, rfl⟩
 
 end MeasurableSpace
 
@@ -265,43 +238,6 @@ lemma tailFamily_eq_comap_sample_path_shift (X : ℕ → Ω → α) (n : ℕ) :
     _ = MeasurableSpace.comap (fun ω k => X k ω) (MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance) := by
         rw [← comap_shift_eq_iSup_comap_coords n]
 
-/-- **Bridge 1 (path ↔ process).**
-    For the coordinate process on path space, `tailProcess` equals `tailShift`.
-
-    **Proof strategy:** Apply iInf_congr using comap_shift_eq_iSup_comap_coords. -/
-lemma tailProcess_coords_eq_tailShift :
-    tailProcess (fun k (ω : ℕ → α) => ω k) = tailShift α := by
-  -- The key observation: for X = (fun k ω => ω k), we have X (n+k) ω = ω (n+k)
-  simp only [tailProcess, tailShift]
-  -- Both sides are iInf over n of the same expression (by comap_shift_eq_iSup_comap_coords)
-  congr 1
-  funext n
-  -- Goal: ⨆ k, comap (fun ω => ω (n+k)) = comap (shift n) pi
-  exact (comap_shift_eq_iSup_comap_coords n).symm
-
-omit [MeasurableSpace Ω] in
-/-- **Bridge 2a (unconditional inequality).**
-    The process tail is always at least as coarse as the pullback of the path tail.
-
-    **Note:** Equality holds when the sample-path map is surjective.
-    See `tailProcess_eq_comap_path_of_surjective`. -/
-lemma comap_path_tailShift_le_tailProcess (X : ℕ → Ω → α) :
-    MeasurableSpace.comap (fun ω : Ω => fun k => X k ω) (tailShift α) ≤ tailProcess X := by
-  simp only [tailProcess, tailShift]
-  trans (iInf (fun n => MeasurableSpace.comap (fun ω : Ω => fun k => X k ω)
-    (MeasurableSpace.comap (fun (ω : ℕ → α) => fun k => ω (n + k)) inferInstance)))
-  · exact comap_iInf_le _ _
-  · apply le_iInf
-    intro m
-    have : tailFamily X m =
-        MeasurableSpace.comap (fun ω k => X k ω)
-          (MeasurableSpace.comap (fun ω k => ω (m + k)) inferInstance) :=
-      tailFamily_eq_comap_sample_path_shift X m
-    rw [this]
-    exact iInf_le (fun n => MeasurableSpace.comap (fun ω k => X k ω)
-      (MeasurableSpace.comap (fun ω k => ω (n + k)) inferInstance)) m
-
-omit [MeasurableSpace Ω] in
 /-- **Bridge 2b (surjective equality).**
     When the sample-path map `Φ : Ω → (ℕ → α)` given by `Φ ω k := X k ω` is surjective,
     the process tail equals the pullback of the path tail along `Φ`.

@@ -101,24 +101,6 @@ def iidProjectiveFamily {ν : Measure α} [IsProbabilityMeasure ν] :
   fun I => Measure.pi (fun (_ : I) => ν)
 
 /--
-The finite product measures form a projective family (consistency condition).
-
-**Statement:** The family `iidProjectiveFamily ν` satisfies the projectivity
-condition: if `J ⊆ I`, then marginalizing `ν^I` onto coordinates in `J` gives `ν^J`.
-
-**Mathematical content:** This is the consistency requirement for Kolmogorov's
-extension theorem. For i.i.d. sequences, consistency is automatic because each
-coordinate is independently distributed.
-
-**Proof:** This is a special case of mathlib's `isProjectiveMeasureFamily_pi`,
-which proves projectivity for any family of probability measures. For constant
-families (same measure on each coordinate), the result is immediate.
--/
-lemma iidProjectiveFamily_projective {ν : Measure α} [IsProbabilityMeasure ν] :
-    @IsProjectiveMeasureFamily ℕ (fun _ => α) (fun _ => inferInstance) (iidProjectiveFamily (ν:=ν)) :=
-  @isProjectiveMeasureFamily_pi ℕ (fun _ => α) (fun _ => inferInstance) (fun _ => ν) (fun _ => inferInstance)
-
-/--
 The infinite i.i.d. product measure `ν^ℕ` on `ℕ → α`.
 
 **Definition:** This is the unique probability measure on `ℕ → α` such that:
@@ -174,79 +156,6 @@ instance : IsProbabilityMeasure (iidProduct ν) := by
     infer_instance
   exact @IsProjectiveLimit.isProbabilityMeasure ℕ (fun _ => α) (fun _ => inferInstance)
     (iidProjectiveFamily (ν:=ν)) (iidProduct ν) this (iidProduct_isProjectiveLimit (ν:=ν))
-
-/--
-Marginal distributions on arbitrary finite subsets match the finite products.
-
-**Statement:** For any finite subset `I ⊆ ℕ`, the marginal distribution of
-`iidProduct ν` on the coordinates indexed by `I` equals the product measure `ν^I`.
-
-**Intuition:** If we project an i.i.d. sequence onto a finite set of coordinates,
-we get a finite i.i.d. sample with the same marginal distribution.
-
-This is a direct consequence of the projective limit characterization.
--/
-lemma cylinder_finset {I : Finset ℕ} :
-    (iidProduct ν).map I.restrict = Measure.pi fun _ : I => ν :=
-  iidProduct_isProjectiveLimit (ν:=ν) I
-
-/--
-The distribution on the first `n` coordinates is the n-fold product `ν^n`.
-
-**Statement:** The marginal distribution of `iidProduct ν` on `{0, 1, ..., n-1}`
-equals the n-fold product measure on `Fin n → α`.
-
-**Intuition:** The first `n` coordinates of an i.i.d. sequence form a finite i.i.d.
-sample of size `n`.
-
-**Proof strategy:** Show that both measures agree on all measurable rectangles
-(sets of the form `∏ᵢ Sᵢ`). This uses `Measure.pi_eq` and the characterization
-of `iidProduct` via `infinitePi_pi`.
--/
-lemma cylinder_fintype {n : ℕ} :
-    (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) =
-      Measure.pi fun _ : Fin n => ν := by
-  -- Show both measures agree on all measurable rectangles
-  symm
-  apply Measure.pi_eq
-  intro s hs
-
-  -- Compute the LHS: (iidProduct ν).map (...) applied to rectangle Set.univ.pi s
-  have h_meas : Measurable (fun f : ℕ → α => fun i : Fin n => f i) := by fun_prop
-
-  calc (iidProduct ν).map (fun f : ℕ → α => fun i : Fin n => f i) (Set.univ.pi s)
-      = iidProduct ν ((fun f : ℕ → α => fun i : Fin n => f i) ⁻¹' (Set.univ.pi s)) := by
-        rw [Measure.map_apply h_meas (.univ_pi hs)]
-    _ = iidProduct ν {f : ℕ → α | ∀ i : Fin n, f i ∈ s i} := by
-        congr 1
-        ext f
-        simp [Set.pi]
-    _ = iidProduct ν (Set.pi (Finset.range n) fun i : ℕ => if h : i < n then s ⟨i, h⟩ else Set.univ) := by
-        congr 1
-        ext f
-        simp only [Set.mem_setOf_eq, Set.mem_pi]
-        constructor
-        · intro hf i (hi : i ∈ Finset.range n)
-          have hi' : i < n := Finset.mem_range.mp hi
-          simp only [hi', dite_true]
-          exact hf ⟨i, hi'⟩
-        · intro hf ⟨i, hi⟩
-          have hi' : i ∈ Finset.range n := Finset.mem_range.mpr hi
-          specialize hf i hi'
-          simp only [hi, dite_true] at hf
-          exact hf
-    _ = ∏ i ∈ Finset.range n, ν (if h : i < n then s ⟨i, h⟩ else Set.univ) := by
-        unfold iidProduct
-        rw [Measure.infinitePi_pi]
-        intro i hi
-        have hi' : i < n := Finset.mem_range.mp hi
-        simp only [hi', dite_true]
-        exact hs ⟨i, hi'⟩
-    _ = ∏ i : Fin n, ν (s i) := by
-        rw [← Fin.prod_univ_eq_prod_range]
-        congr 1
-        funext i
-        simp [i.isLt]
 
 /--
 **Key result:** i.i.d. sequences are invariant under all permutations of the indices.
