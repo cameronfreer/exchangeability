@@ -56,14 +56,6 @@ def powCLM (U : E →L[ℝ] E) : ℕ → (E →L[ℝ] E)
 @[simp] lemma powCLM_succ (U : E →L[ℝ] E) (k : ℕ) :
     powCLM U (k+1) = U.comp (powCLM U k) := rfl
 
-lemma powCLM_apply (U : E →L[ℝ] E) (k : ℕ) (v : E) :
-    (powCLM U k) v = (U^[k]) v := by
-  induction k with
-  | zero => simp [powCLM]
-  | succ k ih =>
-    simp [powCLM, Function.iterate_succ_apply']
-    rw [ih]
-
 /-! ### Lp Coercion Helper Lemmas -/
 
 section LpCoercionHelpers
@@ -169,17 +161,6 @@ lemma birkhoffAvgCLM_zero (U : E →L[ℝ] E) :
     birkhoffAvgCLM U 0 = 0 := by
   simp [birkhoffAvgCLM]
 
-lemma birkhoffAvgCLM_apply (U : E →L[ℝ] E) (n : ℕ) (v : E) :
-    (birkhoffAvgCLM U n) v =
-      if n = 0 then 0
-      else (n : ℝ)⁻¹ • ∑ k : Fin n, (powCLM U k) v := by
-  unfold birkhoffAvgCLM
-  by_cases hn : n = 0
-  · simp [hn]
-  · simp only [hn, if_false]
-    -- The scalar multiplication and sum distribute over function application
-    simp [Pi.smul_apply, Finset.sum_apply]
-
 /-- For Lp spaces: iterating Koopman and then coercing equals
     coercing and then composing with T^[k] (almost everywhere). -/
 @[nolint unusedArguments]
@@ -213,59 +194,5 @@ lemma powCLM_koopman_coe_ae {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
       _ = (fun ω => (fL2 : Ω → ℝ) (T^[k+1] ω)) := by
           ext ω
           rw [← Function.iterate_succ_apply]
-
-/-- CLM Birkhoff average equals function-level average (almost everywhere).
-
-This is the key lemma showing that coercing the Lp Birkhoff average equals
-averaging the coerced functions.
-
-**Strategy:**
-1. Unfold birkhoffAvgCLM and show coercion distributes through scalar mult and sum
-2. For each k, use powCLM_koopman_coe_ae to show:
-   `((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) =ᵐ[μ] (fun ω => (fL2 : Ω → ℝ) (T^[k] ω))`
-3. Combine using a.e. equality for sums
-4. Simplify scalar multiplication to regular multiplication
-
-This lemma would resolve the coercion issues at ViaKoopman lines 3999-4051. -/
-lemma birkhoffAvgCLM_coe_ae_eq_function_avg
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (T : Ω → Ω) (hT_meas : Measurable T) (hT_mp : MeasurePreserving T μ μ)
-    (n : ℕ) (fL2 : Lp ℝ 2 μ) :
-  ((birkhoffAvgCLM (koopman T hT_mp) n) fL2 : Ω → ℝ) =ᵐ[μ]
-  (fun ω => if n = 0 then 0
-            else (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω)) := by
-  -- Case split on n = 0
-  by_cases hn : n = 0
-  · -- Case n = 0: both sides are 0
-    simp only [hn, if_true]
-    rw [birkhoffAvgCLM_zero]
-    exact Lp.coeFn_zero ℝ 2 μ
-  · -- Case n ≠ 0: use coercion distribution
-    -- Unfold birkhoffAvgCLM
-    unfold birkhoffAvgCLM
-    simp only [hn, if_false]
-
-    -- Step 1: Distribute coercion through scalar multiplication
-    -- LHS: ↑↑((n⁻¹) • (∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2)
-    calc ((((n : ℝ)⁻¹) • (∑ k : Fin n, powCLM (koopman T hT_mp) k)) fL2 : Ω → ℝ)
-        =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ((∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω :=
-          Lp.coeFn_smul' ((n : ℝ)⁻¹) _
-      -- Step 2: Distribute coercion through sum
-      _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) ω := by
-          apply Filter.EventuallyEq.mul .rfl
-          -- First show that (∑ CLMs) applied to fL2 equals ∑ (CLM applied to fL2)
-          have h_sum_app : (∑ k : Fin n, powCLM (koopman T hT_mp) k) fL2 =
-                           ∑ k : Fin n, (powCLM (koopman T hT_mp) k) fL2 := by
-            rw [← ContinuousLinearMap.sum_apply]
-          rw [h_sum_app]
-          exact Lp.coeFn_sum' _
-      -- Step 3: For each k, replace powCLM with function iteration
-      _ =ᵐ[μ] fun ω => ((n : ℝ)⁻¹) * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω) := by
-          apply Filter.EventuallyEq.mul .rfl
-          apply EventuallyEq.sum'
-          intro k
-          exact powCLM_koopman_coe_ae T hT_meas hT_mp k fL2
-      -- Step 4: Simplify
-      _ = fun ω => (n : ℝ)⁻¹ * ∑ k : Fin n, (fL2 : Ω → ℝ) (T^[k] ω) := rfl
 
 end Exchangeability.Ergodic
