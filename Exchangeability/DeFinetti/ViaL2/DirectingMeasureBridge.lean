@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Mathlib.Probability.Kernel.Condexp
-import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
+import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIic
 
 /-!
 # Bridge: `directing_measure` is the pushforward of `condExpKernel` by `X 0`
