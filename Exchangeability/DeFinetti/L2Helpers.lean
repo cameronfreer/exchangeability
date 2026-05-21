@@ -210,22 +210,6 @@ lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Meas
   simpa [Function.comp, Φ, h_left_eval, h_right_eval] using
     h_left.trans (h_apply.trans h_right)
 
-/-- **Young's inequality for products: |ab| ≤ (a² + b²)/2.**
-
-Elementary inequality used to dominate products by squares, derived from
-the identity `0 ≤ (|a| - |b|)²`. Used in covariance bounds. -/
-private lemma abs_mul_le_half_sq_add_sq (a b : ℝ) :
-    |a * b| ≤ ((a ^ 2) + (b ^ 2)) / 2 := by
-  have h := two_mul_le_add_sq (|a|) (|b|)
-  have h' : (|a| * |b|) * 2 ≤ |a| ^ 2 + |b| ^ 2 := by
-    simpa [mul_comm, mul_left_comm, mul_assoc, pow_two] using h
-  have h'' : |a| * |b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
-    have : |a| * |b| * 2 ≤ |a| ^ 2 + |b| ^ 2 := h'
-    linarith [show (0 : ℝ) < 2 by norm_num]
-  have h''' : |a * b| ≤ (|a| ^ 2 + |b| ^ 2) / 2 := by
-    simpa [abs_mul] using h''
-  simpa [sq_abs, pow_two, add_comm, add_left_comm, add_assoc] using h'''
-
 end CovarianceHelpers
 /-!
 ## Lp utility lemmas
@@ -297,40 +281,6 @@ lemma sqrt_div_lt_half_eps_of_nat
         ring
     _ = |ε / 2| := Real.sqrt_sq_eq_abs _
     _ = ε / 2 := abs_of_pos (div_pos hε (by norm_num))
-
-/-- **Arithmetic bound for convergence rates: 3·√(Cf/m) < ε when m is large.**
-
-Similar to `sqrt_div_lt_half_eps_of_nat` but with factor 3 instead of 1/2.
-Used in the Cauchy argument where we sum three L² bounds via triangle inequality. -/
-lemma sqrt_div_lt_third_eps_of_nat
-  {Cf ε : ℝ} (hCf : 0 ≤ Cf) (hε : 0 < ε) :
-  ∀ ⦃m : ℕ⦄, m ≥ Nat.ceil (9 * Cf / (ε^2)) + 1 →
-    3 * Real.sqrt (Cf / m) < ε := by
-  intro m hm
-  have hA_lt_m : 9*Cf/ε^2 < (m : ℝ) := by
-    calc 9*Cf/ε^2
-        ≤ Nat.ceil (9*Cf/ε^2) := Nat.le_ceil _
-      _ < (Nat.ceil (9*Cf/ε^2) : ℝ) + 1 := by linarith
-      _ ≤ m := by exact_mod_cast hm
-  by_cases hCf0 : Cf = 0
-  · simp [hCf0, hε]
-  have hCfpos : 0 < Cf := lt_of_le_of_ne hCf (Ne.symm hCf0)
-  have hmpos : 0 < (m : ℝ) := by linarith [show 0 < 9*Cf/ε^2 by positivity, hA_lt_m]
-  have hdenom_pos : 0 < 9*Cf/ε^2 := by positivity
-  have hdiv : Cf / (m : ℝ) < Cf / (9*Cf/ε^2) :=
-    div_lt_div_of_pos_left hCfpos hdenom_pos hA_lt_m
-  have heq : Cf / (9*Cf/ε^2) = ε^2 / 9 := by
-    field_simp [ne_of_gt hCfpos]
-  have hlt : Cf / (m : ℝ) < ε^2 / 9 := by
-    rw [← heq]; exact hdiv
-  have hnonneg : 0 ≤ Cf / (m : ℝ) := div_nonneg hCf (Nat.cast_nonneg m)
-  have h_sqrt_simpl : Real.sqrt (ε^2 / 9) = ε / 3 := by
-    rw [Real.sqrt_div (sq_nonneg ε), Real.sqrt_sq (le_of_lt hε),
-        show (9 : ℝ) = 3^2 by norm_num, Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
-  calc 3 * Real.sqrt (Cf / m)
-      < 3 * Real.sqrt (ε^2 / 9) := by linarith [Real.sqrt_lt_sqrt hnonneg hlt]
-    _ = 3 * (ε / 3) := by rw [h_sqrt_simpl]
-    _ = ε := by ring
 
 /-- Convert an L² integral bound to an eLpNorm bound. -/
 lemma eLpNorm_two_from_integral_sq_le
@@ -480,76 +430,6 @@ lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
       simp
       have : k ≤ b.val := hb
       omega
-
-/-- Cardinality of `{i : Fin(2k) | i.val ≥ k}` is k. -/
-lemma card_filter_fin_val_ge_two_mul (k : ℕ) :
-  ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = k := by
-  have h_lt := card_filter_fin_val_lt_two_mul k
-  have h_part := card_filter_partition k
-  omega
-
-/-- Sum over `{i : Fin n | i.val < k}` equals sum over Fin k when k ≤ n. -/
-lemma sum_filter_fin_val_lt_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
-  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => i.val < k)), g i.val
-    = ∑ j : Fin k, g j.val := by
-  -- The filtered set equals the image of Fin k under the embedding
-  have h_eq : ((univ : Finset (Fin n)).filter (fun i => i.val < k))
-            = Finset.image (fun (j : Fin k) => (⟨j.val, Nat.lt_of_lt_of_le j.isLt hk⟩ : Fin n)) univ := by
-    ext i
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
-    constructor
-    · intro hi
-      use ⟨i.val, hi⟩
-    · rintro ⟨j, _, rfl⟩
-      exact j.isLt
-  rw [h_eq, Finset.sum_image]
-  · intro a b _ _ hab
-    simp only [Fin.mk.injEq] at hab
-    exact Fin.ext hab
-
-/-- Sum over `{i : Fin n | i.val ≥ k}` equals sum over Fin (n-k) with offset, when k ≤ n. -/
-lemma sum_filter_fin_val_ge_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (hk : k ≤ n) (g : ℕ → β) :
-  ∑ i ∈ ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k))), g i.val
-    = ∑ j : Fin (n - k), g (k + j.val) := by
-  -- The filtered set equals the image of Fin (n-k) under the shift map
-  have h_eq : ((univ : Finset (Fin n)).filter (fun i => ¬(i.val < k)))
-            = Finset.image (fun (j : Fin (n - k)) => (⟨k + j.val, by omega⟩ : Fin n)) univ := by
-    ext i
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image, not_lt]
-    constructor
-    · intro hi
-      use ⟨i.val - k, by omega⟩
-      ext
-      simp
-      omega
-    · rintro ⟨j, _, rfl⟩
-      simp
-  rw [h_eq, Finset.sum_image]
-  · intro a b _ _ hab
-    simp only [Fin.mk.injEq] at hab
-    exact Fin.ext (by omega)
-
-/-- Sum over last k elements of Fin(n+k) equals sum over Fin k with offset. -/
-lemma sum_last_block_eq_sum_fin {β : Type*} [AddCommMonoid β] (n k : ℕ) (g : ℕ → β) :
-  ∑ i ∈ ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val)), g i.val
-    = ∑ j : Fin k, g (n + j.val) := by
-  -- The filtered set equals the image of Fin k under the shift map
-  have h_eq : ((univ : Finset (Fin (n + k))).filter (fun i => n ≤ i.val))
-            = Finset.image (fun (j : Fin k) => (⟨n + j.val, by omega⟩ : Fin (n + k))) univ := by
-    ext i
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
-    constructor
-    · intro hi
-      use ⟨i.val - n, by omega⟩
-      ext
-      simp
-      omega
-    · rintro ⟨j, _, rfl⟩
-      simp
-  rw [h_eq, Finset.sum_image]
-  · intro a b _ _ hab
-    simp only [Fin.mk.injEq] at hab
-    exact Fin.ext (by omega)
 
 end FinIndexHelpers
 end Exchangeability.DeFinetti.L2Helpers
