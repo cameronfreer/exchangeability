@@ -192,28 +192,6 @@ lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → α))
   -- Transport membership through shift^[k+2] using shift-invariance
   constructor <;> intro h <;> (rw [← h_iter_k2, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
 
-/-! ### Cycle permutation for lag constancy -/
-
-/-- A cycle on [L, R] that maps n → n-1 (for L < n ≤ R) and L → R.
-This is useful for proving lag constancy of cylinder sets: it shifts coordinates
-down by 1 within the range, wrapping L to R. -/
-def cycleShiftDown (L R : ℕ) (hLR : L ≤ R) : Equiv.Perm ℕ where
-  toFun := fun n =>
-    if L < n ∧ n ≤ R then n - 1
-    else if n = L then R
-    else n
-  invFun := fun n =>
-    if L ≤ n ∧ n < R then n + 1
-    else if n = R then L
-    else n
-  left_inv := by intro n; simp only; split_ifs <;> omega
-  right_inv := by intro n; simp only; split_ifs <;> omega
-
-/-! ### Disjoint offset swap permutation
-
-For shifting cylinders from coords {i : i ∈ S} to {offset + i : i ∈ S} while fixing coords outside.
-This is used in `h_shift_to_N₀` to show CE[φ(ω_k) · 1_B | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI].
--/
 
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
     (fun ω => f (ω 0) * g (ω (k + 1))) ∘ Exchangeability.reindex (Equiv.swap k (k + 1))

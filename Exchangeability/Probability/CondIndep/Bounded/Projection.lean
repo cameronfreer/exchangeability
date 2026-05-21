@@ -3,7 +3,8 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.Probability.CondIndep.Bounded.Extension
+import Exchangeability.Probability.CondIndep.Bounded.Approximation
+import Exchangeability.Probability.CondIndep.Indicator
 
 /-!
 # Conditional Independence - Projection Theorems

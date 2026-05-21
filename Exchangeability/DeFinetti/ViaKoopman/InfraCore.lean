@@ -241,32 +241,6 @@ private lemma measurePreserving_of_map_eq
     MeasurePreserving g μ' μ :=
   ⟨hg, by simp [hpush]⟩
 
-/-- Push AE along a factor map using only null sets and a measurable null *superset*. -/
-lemma ae_comp_of_pushforward
-    (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    {P : Ω → Prop} :
-    (∀ᶠ x in ae μ, P x) → (∀ᶠ x' in ae μ', P (g x')) := by
-  classical
-  intro h
-  -- Turn AE into a measurable null *superset*
-  have h0 : μ {x | ¬ P x} = 0 := (ae_iff).1 h
-  obtain ⟨T, hsubset, hTmeas, hTzero⟩ :=
-    exists_measurable_superset_of_null (s := {x | ¬ P x}) h0
-  -- Push the measurable null set through the factor map
-  have : μ' (g ⁻¹' T) = 0 := by
-    -- `map g μ' = μ` gives the preimage formula on measurable sets
-    have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
-    rw [hmp.measure_preimage hTmeas.nullMeasurableSet]
-    exact hTzero
-  -- Conclude AE via `measure_mono_null`
-  refine (ae_iff).2 ?_
-  -- `{x' | ¬ P (g x') } ⊆ g ⁻¹' T`
-  have hsub : {x' | ¬ P (g x')} ⊆ g ⁻¹' T := by
-    intro x' hx'
-    have : g x' ∈ {x | ¬ P x} := by simpa
-    exact hsubset this
-  exact measure_mono_null hsub this
-
 end Helpers
 
 /-- Transport integrability across a pushforward equality and then pull back by composition.

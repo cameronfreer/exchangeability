@@ -94,27 +94,6 @@ lemma exchangeable_path_of_exchangeable
   -- These are definitionally equal
   convert hPathInv π using 2
 
-/-- Transfer ConditionallyIID from path space to original space.
-
-If (μ_path X) has conditionally i.i.d. coordinates, then μ has conditionally i.i.d. X.
-
-**Key insight**: The map φ : Ω → ℕ → ℝ defined by φ ω i = X i ω induces a bijection
-between the ConditionallyIID conditions:
-- For path space: ν' : (ℕ → ℝ) → Measure ℝ is the directing measure
-- For original space: ν = ν' ∘ φ is the directing measure
--/
-private lemma conditionallyIID_of_path_ciid
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (h : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i)) :
-    ConditionallyIID μ X := by
-  have h_path_ciid :
-      ConditionallyIID (μ.map (pathify X))
-        (fun i (ω : ℕ → ℝ) => ω i) := by
-    simpa [Exchangeability.Bridge.μ_path] using h
-  simpa [Exchangeability.Bridge.μ_path] using
-    conditionallyIID_transfer (μ := μ) X hX_meas h_path_ciid
-
 @[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
@@ -160,26 +139,14 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
 3. Apply Koopman ergodic machinery
 4. Transfer from path space to original space
 -/
-@[nolint unusedArguments]
 theorem deFinetti_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hX_exch : Exchangeable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  -- Step 1: Get contractability from exchangeability
-  have hContract := contractable_of_exchangeable hX_exch hX_meas
-  -- Step 2: Push contractability to path space
-  have hPathContract := pathSpace_contractable_of_contractable X hX_meas hContract
-  -- Step 3: Get shift-preservation on path space
-  have hσ := pathSpace_shift_preserving_of_contractable X hX_meas hContract
-  haveI : IsProbabilityMeasure (μ_path μ X) :=
-    Exchangeability.Bridge.isProbabilityMeasure_μ_path μ X hX_meas
-  -- Step 4: Apply conditionallyIID_bind_of_contractable
-  have h_path_ciid : ConditionallyIID (μ_path μ X) (fun i (ω : ℕ → ℝ) => ω i) :=
-    conditionallyIID_bind_of_contractable hσ hPathContract
-  -- Step 5: Transfer from path space to original space
-  exact conditionallyIID_transfer X hX_meas h_path_ciid
+    ConditionallyIID μ X :=
+  ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp
+    (contractable_of_exchangeable hX_exch hX_meas)).2
 
 /-- **Contractable implies conditionally i.i.d.** (via Koopman).
 
