@@ -72,28 +72,6 @@ exchangeability implies full exchangeability (via `exchangeable_iff_fullyExchang
 gives path measure exchangeability needed for the ergodic machinery.
 -/
 
-/-- Exchangeability of X implies exchangeability of the path measure μ_path.
-
-This follows from `exchangeable_iff_fullyExchangeable` and `fullyExchangeable_iff_pathLaw_invariant`.
--/
-lemma exchangeable_path_of_exchangeable
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hExch : Exchangeable μ X) :
-    ∀ π : Equiv.Perm ℕ,
-      Measure.map (reindex π) (μ_path μ X) = μ_path μ X := by
-  -- Exchangeable → FullyExchangeable (via π-system uniqueness)
-  have hFull : FullyExchangeable μ X :=
-    (exchangeable_iff_fullyExchangeable hX_meas).mp hExch
-  -- FullyExchangeable → path law is permutation-invariant
-  have hPathInv := (fullyExchangeable_iff_pathLaw_invariant hX_meas).mp hFull
-  -- μ_path μ X = pathLaw μ X (same definition)
-  intro π
-  -- pathLaw μ X = Measure.map (fun ω i => X i ω) μ
-  -- μ_path μ X = Measure.map (pathify X) μ where pathify X ω n = X n ω
-  -- These are definitionally equal
-  convert hPathInv π using 2
-
 @[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
