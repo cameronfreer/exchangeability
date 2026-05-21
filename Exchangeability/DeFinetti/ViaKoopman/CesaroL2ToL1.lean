@@ -465,10 +465,7 @@ lemma optionB_Step4c_triangle
         have hB_meas : Measurable (B n) := by
           rw [hB_def]
           simp [hn]
-          -- (1/n) * ∑_{j < n} g(ω j) is measurable
-          refine Measurable.const_mul ?_ _
-          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact Measurable.comp hg_meas (measurable_pi_apply j)
+          fun_prop
         have hB_bd_ae : ∀ᵐ ω ∂μ, ‖B n ω‖ ≤ Cg := ae_of_all μ (fun ω => le_trans (Real.norm_eq_abs _).le (hB_bd ω))
         exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd_ae⟩
     -- |B n - Y| is integrable as difference of integrable functions
@@ -530,20 +527,13 @@ lemma optionB_Step4c_triangle
               ≤ |A n ω| + |B n ω| := abs_sub _ _
             _ ≤ Cg + Cg := by gcongr
             _ = 2 * Cg := by ring
-      have hA_meas : Measurable (A n) := by
-        rw [hA_def]
-        simp
-        refine Measurable.const_mul ?_ _
-        refine Finset.measurable_sum (Finset.range (n + 1)) (fun j _ => ?_)
-        exact Measurable.comp hg_meas (measurable_pi_apply j)
+      have hA_meas : Measurable (A n) := by rw [hA_def]; simp; fun_prop
       have hB_meas : Measurable (B n) := by
         rw [hB_def]
         by_cases hn : n = 0
         · simp [hn]
         · simp [hn]
-          refine Measurable.const_mul ?_ _
-          refine Finset.measurable_sum (Finset.range n) (fun j _ => ?_)
-          exact Measurable.comp hg_meas (measurable_pi_apply j)
+          fun_prop
       have hAB_bd_ae : ∀ᵐ ω ∂μ, ‖|A n ω - B n ω|‖ ≤ 2 * Cg :=
         ae_of_all μ (fun ω => by simp [Real.norm_eq_abs]; exact hAB_bd ω)
       exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd_ae⟩

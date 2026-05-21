@@ -222,15 +222,7 @@ lemma cylinder_subset_prefixCylinders {s : Finset ℕ} {S : Set (∀ _ : s, α)}
   have hpull_meas : Measurable pull := by fun_prop
   have hs_eq :
       MeasureTheory.cylinder (α:=fun _ : ℕ => α) s S =
-        prefixCylinder (α:=α) (pull ⁻¹' S) := by
-    ext x
-    classical
-    have hpull : pull (prefixProj (α:=α) N x) = s.restrict x := by
-      funext y
-      rcases y with ⟨y, hy⟩
-      simp only [pull, prefixProj, Finset.restrict]
-      rfl
-    simp [MeasureTheory.cylinder, prefixCylinder, hpull]
+        prefixCylinder (α:=α) (pull ⁻¹' S) := rfl
   refine hs_eq ▸ prefixCylinder_mem_prefixCylinders (α:=α) ?_
   exact hpull_meas hS
 
