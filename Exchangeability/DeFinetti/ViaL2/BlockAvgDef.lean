@@ -91,4 +91,16 @@ lemma blockAvg_abs_le_one
         · have : (n : ℝ) ≠ 0 := by simp [hn]
           simp [this]
 
+/-- `blockAvg f X m n` is in L²(μ) whenever `f` is bounded by 1, on any probability space.
+Combines `blockAvg_measurable` + `blockAvg_abs_le_one` + `MemLp.of_bound`. -/
+lemma blockAvg_memLp_two_of_abs_le_one
+    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    (f : α → ℝ) (X : ℕ → Ω → α)
+    (hf_meas : Measurable f) (hX_meas : ∀ i, Measurable (X i))
+    (hf_bdd : ∀ x, |f x| ≤ 1) (m n : ℕ) :
+    MemLp (blockAvg f X m n) 2 μ := by
+  refine MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas m n).aestronglyMeasurable 1 ?_
+  exact ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (blockAvg_abs_le_one f X hf_bdd m n ω)
+
 end Exchangeability.DeFinetti.ViaL2
