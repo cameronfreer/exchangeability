@@ -165,7 +165,7 @@ lemma optionB_Step3b_L2_to_L1
             |birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n fL2 ω
              - condexpL2 (μ := μ) fL2 ω|) := by
       filter_upwards [hB_eq_pos n hn, hY_eq] with ω h1 h2
-      simpa [h1, h2]
+      simp [h1, h2]
 
     -- measurability: both birkhoffAverage and condexpL2 are Lp elements, so AEMeasurable when coerced
     have h_meas :
@@ -541,7 +541,7 @@ lemma optionB_Step4c_triangle
     -- now integrate the pointwise inequality
     calc
       ∫ ω, |A n ω - Y ω| ∂μ
-          = ∫ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ∂μ := by simpa [hre]
+          = ∫ ω, |(A n ω - B n ω) + (B n ω - Y ω)| ∂μ := by simp [hre]
       _ ≤ ∫ ω, (|A n ω - B n ω| + |B n ω - Y ω|) ∂μ := by
             refine integral_mono_of_nonneg ?_ ?_ ?_
             · exact ae_of_all μ (fun ω => by positivity)
@@ -567,7 +567,7 @@ lemma optionB_Step4c_triangle
     _ =  ∫ ω, |A n ω - Y ω| ∂μ := by
           have : 0 ≤ ∫ ω, |A n ω - Y ω| ∂μ :=
             integral_nonneg (by intro ω; positivity)
-          simpa [abs_of_nonneg this]
+          simp [abs_of_nonneg this]
     _ ≤  ∫ ω, |A n ω - B n ω| ∂μ + ∫ ω, |B n ω - Y ω| ∂μ := h_triangle n
     _ <  ε/2 + ε/2 := by
           apply add_lt_add

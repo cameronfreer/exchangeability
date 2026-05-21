@@ -107,7 +107,7 @@ lemma alphaIic_ae_eq_alphaIicCE
           split_ifs <;> norm_num
       · -- A ≤ 1
         by_cases hm_pos : m = 0
-        · simp [hm_pos, A]
+        · simp [hm_pos]
         · have hm_cast : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm_pos)
           calc (1 / (m : ℝ)) * ∑ k : Fin m, indIic t (X (n + ↑k + 1) ω)
               ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
@@ -169,7 +169,7 @@ lemma alphaIic_ae_eq_alphaIicCE
           _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
                 gcongr with k
                 unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const, Finset.card_fin]
+          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const]
           _ = 1 := by field_simp [hm]
 
     -- Prove integrability of alpha (from weighted_sums_converge_L1)
@@ -277,7 +277,7 @@ lemma alphaIic_ae_eq_alphaIicCE
                                 indIic t (X m ω) - indIic t (X 0 ω) := by
           clear h_left h_right hm_pos -- Don't use outer context
           induction m with
-          | zero => simp [Finset.sum_range_zero]
+          | zero => simp
           | succ m' ih =>
               rw [Finset.sum_range_succ (f := fun k => indIic t (X (k + 1) ω))]
               rw [Finset.sum_range_succ (f := fun i => indIic t (X i ω))]
@@ -332,18 +332,18 @@ lemma alphaIic_ae_eq_alphaIicCE
                 have : ∫ ω, |indIic t (X m ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
                   refine integral_mono (Integrable.abs hf_int) (integrable_const 1) ?_
                   intro ω
-                  unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
+                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X m ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
-                  _ = 1 := by simp [measure_univ]
+                  _ = 1 := by simp
               · -- ∫ |indIic t (X 0)| ≤ 1
                 have : ∫ ω, |indIic t (X 0 ω)| ∂μ ≤ ∫ ω, (1 : ℝ) ∂μ := by
                   refine integral_mono (Integrable.abs hg_int) (integrable_const 1) ?_
                   intro ω
-                  unfold indIic; simp [Set.indicator, abs_of_nonneg]; split_ifs <;> norm_num
+                  unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
                 calc ∫ ω, |indIic t (X 0 ω)| ∂μ
                     ≤ ∫ ω, (1 : ℝ) ∂μ := this
-                  _ = 1 := by simp [measure_univ]
+                  _ = 1 := by simp
         _ = 2/(m:ℝ) := by ring
 
     -- Choose M large enough for both axiom and negligibility
@@ -363,14 +363,14 @@ lemma alphaIic_ae_eq_alphaIicCE
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
         _ ≥ M₁ := by
             have : max (M₁ : ℝ) (Nat.ceil (4/ε) : ℝ) ≥ M₁ := le_max_left _ _
-            simpa [Nat.cast_max] using this
+            simp [Nat.cast_max]
 
     have h2 : (m : ℝ) ≥ Nat.ceil (4/ε) := by
       calc (m : ℝ)
           ≥ max M₁ (Nat.ceil (4/ε)) := Nat.cast_le.mpr hm
         _ ≥ Nat.ceil (4/ε) := by
             have : max (M₁ : ℝ) (Nat.ceil (4/ε) : ℝ) ≥ Nat.ceil (4/ε) := le_max_right _ _
-            simpa [Nat.cast_max] using this
+            simp [Nat.cast_max]
 
     -- From h2, we get 2/m ≤ ε/2
     have h_small : 2/(m:ℝ) ≤ ε/2 := by
@@ -415,7 +415,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               gcongr with k
               unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
         _ = (1/(m:ℝ)) * m := by
-              rw [← one_div]; simp [Finset.sum_const, Finset.card_fin]
+              rw [← one_div]; simp [Finset.sum_const]
         _ = 1 := by field_simp
 
     -- Factor out the integrability of B m (used 4× below).
@@ -432,7 +432,7 @@ lemma alphaIic_ae_eq_alphaIicCE
         _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
               gcongr with i
               unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-        _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
+        _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const]
         _ = 1 := by field_simp
 
     -- Triangle inequality for integrals
@@ -526,7 +526,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
                     gcongr with k
                     unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
+              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const]
               _ = 1 := by field_simp [hm]
       · -- f is bounded by hypothesis hf_bdd
         exact Integrable.of_bound hf_meas 1 hf_bdd
@@ -549,7 +549,7 @@ lemma alphaIic_ae_eq_alphaIicCE
               _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
                     gcongr with k
                     unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const, Finset.card_fin]
+              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const]
               _ = 1 := by field_simp [hm]
       · -- g is bounded by hypothesis hg_bdd
         exact Integrable.of_bound hg_meas 1 hg_bdd

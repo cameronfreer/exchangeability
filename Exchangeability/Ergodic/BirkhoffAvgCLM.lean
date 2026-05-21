@@ -101,7 +101,7 @@ lemma Lp.coeFn_sum' {ι : Type*} [Fintype ι] (fs : ι → Lp ℝ 2 μ) :
             intro ω
             rfl
   -- Apply to Finset.univ
-  convert h_finset Finset.univ using 1 <;> simp
+  convert h_finset Finset.univ using 1
 
 /-- A.e. equality is preserved under finite sums. -/
 lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}

@@ -114,7 +114,7 @@ lemma Integrable.of_abs_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure 
   -- Use Integrable.mono' with dominating function C * |g|
   refine Integrable.mono' (hg.norm.const_mul C) hfg_meas ?_
   filter_upwards with ω
-  simp only [Real.norm_eq_abs, Pi.mul_apply, abs_of_nonneg hC]
+  simp only [Real.norm_eq_abs]
   calc |f ω * g ω| = |f ω| * |g ω| := abs_mul _ _
     _ ≤ C * |g ω| := mul_le_mul_of_nonneg_right (h_bound ω) (abs_nonneg _)
 

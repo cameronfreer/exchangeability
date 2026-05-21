@@ -693,7 +693,7 @@ theorem condexp_product_factorization_contractable
         rw [Finset.sum_congr rfl (fun j _ => h_each_term j)]
         rw [Finset.sum_const, Finset.card_univ]
         have h_card : Fintype.card (Fin m → Fin (n + 1)) = (n + 1)^m := by
-          simp [Fintype.card_fun, Fintype.card_fin]
+          simp [Fintype.card_fin]
         rw [h_card, nsmul_eq_mul]
 
         -- Goal: ∫_s f = (1/(n+1)^m) * ((n+1)^m * ∫_s f)

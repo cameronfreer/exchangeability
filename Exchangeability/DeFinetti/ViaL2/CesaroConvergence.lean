@@ -549,7 +549,7 @@ lemma kallenberg_L2_bound
           · intro i _; exact (enum i).property
           · intro a ha; simp
           · intro a ha; simp
-          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro i hi; simp
           · intro a ha; simp
         exact h_bij
       rw [this]; exact hp_prob.1
@@ -569,7 +569,7 @@ lemma kallenberg_L2_bound
           · intro i _; exact (enum i).property
           · intro a ha; simp
           · intro a ha; simp
-          · intro i hi; simp [OrderIso.symm_apply_apply]
+          · intro i hi; simp
           · intro a ha; simp
         exact h_bij
       rw [this]; exact hq_prob.1
@@ -758,7 +758,7 @@ lemma kallenberg_L2_bound
           · intro k _; exact (enum k).property
           · intro i hi; simp
           · intro i hi; simp
-          · intro k hk; simp [OrderIso.symm_apply_apply]
+          · intro k hk; simp
           · intro i hi; simp
     _ = ∫ ω, (∑ k : Fin n, p' k * ξ k ω - ∑ k : Fin n, q' k * ξ k ω) ^ 2 ∂μ := by
           congr 1; ext ω
@@ -1988,7 +1988,7 @@ private lemma blockAvg_shift_tendsto
             · norm_num
       _ = eLpNorm (((N + m : ℝ) / m) • (blockAvg f X 0 (N + m) - α_f)) 2 μ
           + eLpNorm ((N / m : ℝ) • (blockAvg f X 0 N - α_f)) 2 μ := by
-            congr 1 <;> { congr 1; ext ω; simp [Pi.smul_apply, Pi.sub_apply] }
+            rfl
       _ = ‖((N + m : ℝ) / m)‖ₑ * eLpNorm (blockAvg f X 0 (N + m) - α_f) 2 μ
           + ‖(N / m : ℝ)‖ₑ * eLpNorm (blockAvg f X 0 N - α_f) 2 μ := by
             rw [eLpNorm_const_smul, eLpNorm_const_smul]

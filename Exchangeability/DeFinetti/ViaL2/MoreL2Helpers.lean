@@ -160,7 +160,7 @@ lemma directing_measure_measurable
         have h_univ_const : ∀ ω, directing_measure X hX_contract hX_meas hX_L2 ω Set.univ = 1 := by
           intro ω
           have hprob := directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
-          simpa using hprob.measure_univ
+          exact hprob.measure_univ
         simp_rw [h_univ_const]
         -- (fun ω => 1 - ν(ω)(s)) is measurable
         -- Constant 1 minus measurable function
