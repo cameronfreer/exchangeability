@@ -59,6 +59,7 @@ def blockAvg (m n : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) : ℝ :=
   if hn : n = 0 then 0
   else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j)))
 
+omit [MeasurableSpace α] in
 @[nolint unusedArguments]
 lemma blockAvg_pos_n {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
     blockAvg m n k f ω = (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j))) := by
@@ -66,6 +67,7 @@ lemma blockAvg_pos_n {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω :
 
 /-! ### Block Average and Shifted Cesàro Averages -/
 
+omit [MeasurableSpace α] in
 /-- Block average at position k equals Cesàro average starting at k*n.
 
 This connects block averages to the existing Cesàro convergence machinery. -/
@@ -92,6 +94,7 @@ lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measura
   · simp only [hn, ↓reduceDIte]
     exact (Finset.measurable_sum _ fun j _ => hf.comp (measurable_pi_apply _)).const_mul _
 
+omit [MeasurableSpace α] in
 /-- Block averages of bounded functions are bounded.
 
 If |f x| ≤ C for all x, then |blockAvg m n k f ω| ≤ C for all ω.
@@ -258,6 +261,7 @@ section Contractability
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
 
+omit [IsProbabilityMeasure μ] [StandardBorelSpace α] in
 /-- For contractable μ, integral of product equals integral of product with reindexed coordinates.
 
 Given strict monotone k : Fin m → ℕ, contractability says:
@@ -299,6 +303,7 @@ lemma integral_prod_reindex_of_contractable
     _ = ∫ ω, (∏ i : Fin m, fs i (ω (k i))) ∂μ := by
         rw [integral_map h_meas_reindex.aemeasurable hF_meas']
 
+omit [StandardBorelSpace α] in
 /-- Averaging over all choice functions yields product of block averages.
 
 For any bounded measurable fs : Fin m → α → ℝ:

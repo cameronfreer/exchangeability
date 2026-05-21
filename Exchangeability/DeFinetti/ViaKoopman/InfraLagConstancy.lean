@@ -141,6 +141,7 @@ section LagConstancyProof
 
 variable {α : Type*} [MeasurableSpace α]
 
+omit [MeasurableSpace α] in
 /-- Shift^m applied to reindex (swap k (k+1)) ω equals shift^m applied to ω when m > k + 1.
 
 This is because the swap only affects coordinates k and k+1, which are "shifted away"
@@ -193,6 +194,7 @@ lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → α))
   constructor <;> intro h <;> (rw [← h_iter_k2, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
 
 
+omit [MeasurableSpace α] in
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
     (fun ω => f (ω 0) * g (ω (k + 1))) ∘ Exchangeability.reindex (Equiv.swap k (k + 1))
     = fun ω => f (ω 0) * g (ω k) := by

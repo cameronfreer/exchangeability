@@ -103,6 +103,7 @@ theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     CondIndep μ Y Z W ↔ CondIndep μ Z Y W := by
   constructor <;> (intro h A B hA hB; simpa [mul_comm] using h B A hB hA)
 
+omit [MeasurableSpace Ω] in
 /-- Extract independence of first component from pair independence. -/
 lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :

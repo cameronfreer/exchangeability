@@ -35,6 +35,7 @@ section CesaroL1Bounded
 
 variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
 
+omit [StandardBorelSpace α] in
 /-- **L¹ Cesàro convergence for bounded functions**.
 
 For a bounded measurable function g : α → ℝ, the Cesàro averages
@@ -58,11 +59,13 @@ lemma L1_cesaro_convergence_bounded
   exact optionB_L1_convergence_bounded hσ g hg_meas hg_bd
 
 -- Iteration of shift by j steps applied to coordinate 0 gives coordinate j
+omit [MeasurableSpace α] in
 private lemma shift_iterate_apply_zero (j : ℕ) (ω : ℕ → α) :
     (shift^[j] ω) 0 = ω j := by
   rw [shift_iterate_apply]
   simp
 
+omit [StandardBorelSpace α] in
 /-- **L¹ Cesàro convergence for integrable functions**.
 
 Extends the bounded case to general integrable functions by truncating g_M := max(min(g, M), -M),

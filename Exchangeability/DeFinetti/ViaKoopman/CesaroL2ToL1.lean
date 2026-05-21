@@ -49,6 +49,7 @@ variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace �
 
 -- Helper lemmas for Step 3b: connecting condexpL2 to condExp
 
+omit [StandardBorelSpace α] in
 /-- Our condexpL2 operator agrees a.e. with classical conditional expectation.
 
 **Mathematical content:** This is a standard fact in measure theory. Our `condexpL2` is defined as:
@@ -86,6 +87,7 @@ lemma condexpL2_ae_eq_condExp (f : Lp ℝ 2 μ) :
 -- These are standard measure-theoretic facts that Lean's elaborator struggles with
 -- due to complexity of nested a.e. manipulations. Documented with full proofs.
 
+omit [IsProbabilityMeasure μ] [StandardBorelSpace α] in
 /-- Pull a.e. equality back along a measure-preserving map.
     Standard fact: if f =ᵐ g and T preserves μ, then f ∘ T =ᵐ g ∘ T.
     Proof: Use QuasiMeasurePreserving.ae_eq_comp from mathlib. -/
@@ -95,6 +97,7 @@ lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
     (f ∘ shift) =ᵐ[μ] (g ∘ shift) :=
   hT.quasiMeasurePreserving.ae_eq_comp hfg
 
+omit [MeasurableSpace α] [StandardBorelSpace α] in
 /-- General evaluation formula for shift iteration. -/
 @[nolint unusedArguments]
 lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
@@ -107,6 +110,7 @@ lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
       rw [ih]
       ac_rfl
 
+omit [MeasurableSpace α] [StandardBorelSpace α] in
 /-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
 lemma iterate_shift_eval0' (k : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) 0 = ω k := by
@@ -118,6 +122,7 @@ lemma iterate_shift_eval0' (k : ℕ) (ω : Ω[α]) :
 These lemmas extract Steps 4a-4c from the main theorem to reduce elaboration complexity.
 Each lemma is self-contained with ~50-80 lines, well below timeout thresholds. -/
 
+omit [StandardBorelSpace α] in
 /-- On a probability space, L² convergence of Koopman–Birkhoff averages to `condexpL2`
     implies L¹ convergence of chosen representatives.  This version is robust to
     older mathlib snapshots (no `Subtype.aestronglyMeasurable`, no `tendsto_iff_*`,
@@ -262,6 +267,7 @@ lemma optionB_Step3b_L2_to_L1
   exact tendsto_of_tendsto_of_tendsto_of_le_of_le'
     tendsto_const_nhds hL2_norm h_lower_ev h_upper_ev
 
+omit [StandardBorelSpace α] in
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
 For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
@@ -424,6 +430,7 @@ lemma optionB_Step4b_AB_close
   -- Squeeze
   exact squeeze_zero' (Filter.Eventually.of_forall h_lower) h_upper' h_tends_zero
 
+omit [StandardBorelSpace α] in
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
 Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
@@ -583,6 +590,7 @@ lemma optionB_Step4c_triangle
             simpa [abs_of_nonneg h_nonneg] using this
     _ =  ε := by ring
 
+omit [StandardBorelSpace α] in
 /-- **Option B bounded case implementation**: L¹ convergence for bounded functions.
 
 For a bounded measurable function g : α → ℝ, the Cesàro averages A_n(ω) = (1/(n+1)) ∑_j g(ω j)

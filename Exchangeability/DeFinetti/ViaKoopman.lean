@@ -159,6 +159,7 @@ lemma measure_map_shift_eq_of_contractable
   -- Extract the set-wise equality from measure equality
   rw [h_eq]
 
+omit [StandardBorelSpace α] in
 /-- Shift-preservation transfers to the pushforward measure.
 
 If `X` is contractable, the pushforward measure is shift-preserving. -/

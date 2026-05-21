@@ -389,6 +389,7 @@ lemma measure_map_reindexBlock_eq_of_contractable
     _ = Measure.map (fun ω (i : Fin N) => ω i.val) μ S := by rw [hMarg]
     _ = Measure.map (prefixProj (α := α) N) μ S := rfl
 
+omit [IsProbabilityMeasure μ] in
 /-- Set integral equality from measure invariance and set invariance.
 
 If the measure is invariant under reindexing (μ = μ ∘ reindexBlock⁻¹) and the set is invariant
