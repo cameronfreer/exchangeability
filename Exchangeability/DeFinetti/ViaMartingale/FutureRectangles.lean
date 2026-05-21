@@ -181,16 +181,6 @@ def AgreeOnFutureRectangles (μ ν : Measure (α × (ℕ → α))) : Prop :=
   ∀ (r : ℕ) (B : Set α) (_hB : MeasurableSet B) (C : Fin r → Set α) (_hC : ∀ i, MeasurableSet (C i)),
     μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)
 
-lemma agree_on_future_rectangles_of_contractable
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
-    (k m : ℕ) (hk : k ≤ m) :
-    AgreeOnFutureRectangles
-      (Measure.map (fun ω => (X m ω, shiftRV X (m + 1) ω)) μ)
-      (Measure.map (fun ω => (X k ω, shiftRV X (m + 1) ω)) μ) := by
-  intro r B hB C hC
-  exact contractable_dist_eq_on_rectangles_future hX hX_meas k m hk r B hB C hC
-
 /-! ## Measure extension from future rectangles -/
 
 @[nolint unusedArguments]
@@ -398,11 +388,5 @@ lemma contractable_dist_eq
   apply measure_ext_of_future_rectangles
   intro r B hB C hC
   exact contractable_dist_eq_on_rectangles_future hX hX_meas k m hk r B hB C hC
-
-/-- Measures that agree on all future rectangles are equal. -/
-lemma AgreeOnFutureRectangles_to_measure_eq
-    {μ ν : Measure (α × (ℕ → α))} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
-    (h : AgreeOnFutureRectangles μ ν) : μ = ν :=
-  measure_ext_of_future_rectangles h
 
 end Exchangeability.DeFinetti.ViaMartingale

@@ -51,25 +51,6 @@ noncomputable section
 -- 3. The local project already has Exchangeability.Probability.CondIndep.condIndep_of_indep_pair
 --    which serves a similar purpose with a different signature
 
-/-! ### Reusable micro-lemmas for Steps 4b–4c -/
-
-/-- `ae_ball_iff` in the direction we need on a finite index set (`Finset.range n`). -/
-lemma ae_ball_range_mpr
-  {Ω : Type _} [MeasurableSpace Ω] (μ : Measure Ω) {n : ℕ}
-  {P : ℕ → Ω → Prop}
-  (h : ∀ k ∈ Finset.range n, ∀ᵐ ω ∂ μ, P k ω) :
-  ∀ᵐ ω ∂ μ, ∀ k ∈ Finset.range n, P k ω := by
-  have hcount : (Finset.range n : Set ℕ).Countable := Finset.countable_toSet _
-  simpa using (MeasureTheory.ae_ball_iff hcount).mpr h
-
-/-- Handy arithmetic fact repeatedly needed: split `k ≤ n` into cases. -/
-private lemma le_eq_or_lt {k n : ℕ} (hk : k ≤ n) : k = n ∨ k < n :=
-  eq_or_lt_of_le hk
-
-/-- Pull absolute value through division when denominator is nonnegative. -/
-private lemma abs_div_of_nonneg {x y : ℝ} (hy : 0 ≤ y) :
-  |x / y| = |x| / y := by simp [abs_div, abs_of_nonneg hy]
-
 /-! ### Lp coercion lemmas for measure spaces -/
 
 /-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
@@ -290,13 +271,6 @@ lemma ae_comp_of_pushforward
     exact hsubset this
   exact measure_mono_null hsub this
 
-omit [MeasurableSpace Ω] [MeasurableSpace Ω'] in
-/-- Indicator pulls through a preimage under composition. -/
-lemma indicator_preimage_comp {B : Set Ω} (K : Ω → ℝ) :
-    (Set.indicator (g ⁻¹' B) (K ∘ g))
-  = (fun x' => Set.indicator B K (g x')) := by
-  ext x'; by_cases hx : g x' ∈ B <;> simp [Set.indicator, hx]
-
 end Helpers
 
 /-! ## Infrastructure Lemmas for Conditional Expectation Pullback
@@ -319,23 +293,6 @@ measure-preserving transformations.
 - Measurability lift: `have hBm' : @MeasurableSet Ω inst B := hm B hBm`
 -/
 
-/-- Build a `MeasurePreserving` from a pushforward equality.
-This helper ensures the ambient MeasurableSpace instances are used. -/
-private def mpOfPushforward
-    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
-    {μ : Measure Ω} {μ' : Measure Ω'}
-    (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ) :
-    MeasurePreserving g μ' μ :=
-  ⟨hg, hpush⟩
-
-/-- **AE-pullback along a factor map**: Almost-everywhere equalities transport along pushforward.
-
-If `g : Ω̂ → Ω` is a factor map (i.e., `map g μ̂ = μ`), then two functions are
-a.e.-equal on `Ω` iff their pullbacks are a.e.-equal on `Ω̂`.
-
-**Note**: For our use case with `restrictNonneg : Ωℤ[α] → Ω[α]`, the forward direction
-(which is what we primarily need) works and the map is essentially surjective onto
-a set of full measure. -/
 lemma ae_pullback_iff
     {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
     {μ : Measure Ω} {μ' : Measure Ω'}
@@ -442,15 +399,6 @@ the sub-σ-algebra as the ambient instance in type class arguments. -/
 
 namespace MeasureTheory
 
-/-- CE is a.e.-strongly measurable w.r.t. the *sub* σ-algebra, with ambient locked. -/
-@[nolint unusedArguments]
-lemma aestronglyMeasurable_condExp'
-    {Ω β} [mΩ : MeasurableSpace Ω] [NormedAddCommGroup β] [NormedSpace ℝ β] [CompleteSpace β]
-    {μ : Measure Ω} (m : MeasurableSpace Ω) (_hm : m ≤ mΩ)
-    (f : Ω → β) :
-    AEStronglyMeasurable[m] (condExp m μ f) μ :=
-  stronglyMeasurable_condExp.aestronglyMeasurable
-
 /-- The defining property of conditional expectation on `m`-measurable sets, with ambient locked. -/
 lemma setIntegral_condExp'
     {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
@@ -514,58 +462,16 @@ lemma integrable_of_ae_bound
 
 -- Helper lemmas for rectangle-case conditional expectation proofs
 
-/-- Norm/abs bound for indicators (ℝ and general normed targets). -/
-lemma abs_indicator_le_abs_self {Ω} (s : Set Ω) (f : Ω → ℝ) :
-    ∀ x, |s.indicator f x| ≤ |f x| := fun x => by
-  by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx, abs_nonneg]
-
-lemma norm_indicator_le_norm_self
-    {Ω E} [SeminormedAddCommGroup E] (s : Set Ω) (f : Ω → E) :
-    ∀ x, ‖s.indicator f x‖ ≤ ‖f x‖ := fun x => by
-  by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx]
-
 /-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
 lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
     s.indicator f = fun x => f x * s.indicator (fun _ => (1 : ℝ)) x := by
   ext x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx]
-
-lemma integral_indicator_as_mul {Ω} [MeasurableSpace Ω] {μ : Measure Ω}
-    (s : Set Ω) (f : Ω → ℝ) :
-    ∫ x, s.indicator f x ∂μ = ∫ x, f x * s.indicator (fun _ => (1 : ℝ)) x ∂μ := by
-  simp [indicator_as_mul_one s f]
 
 /-- "Lift" a measurable-in-sub-σ-algebra set to ambient measurability. -/
 lemma measurableSet_of_sub {Ω} [mΩ : MeasurableSpace Ω]
     (m : MeasurableSpace Ω) (hm : m ≤ mΩ) {s : Set Ω}
     (hs : MeasurableSet[m] s) : @MeasurableSet Ω mΩ s :=
   hm s hs
-
-/-- AEMeasurable indicator under ambient from sub-σ-algebra measurability. -/
-lemma aemeasurable_indicator_of_sub {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
-    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
-    {s : Set Ω} (hs : MeasurableSet[m] s)
-    {f : Ω → ℝ} (hf : AEMeasurable f μ) :
-    AEMeasurable (s.indicator f) μ := by
-  letI : MeasurableSpace Ω := mΩ  -- Fix ambient space instance
-  exact hf.indicator (measurableSet_of_sub m hm hs)
-
-/-- Idempotence of conditional expectation for m-measurable integrable functions.
-
-Wraps mathlib's `condExp_of_aestronglyMeasurable'`. We keep the local name because the
-helper takes the weaker `AEStronglyMeasurable[m] f μ` rather than the
-`StronglyMeasurable[m] f` required by `condExp_of_stronglyMeasurable` (which gives
-*pointwise* equality rather than the a.e. equality stated here). Callers in
-rectangle-case proofs typically have only the AE version. -/
-lemma condExp_idempotent'
-    {Ω} [mΩ : MeasurableSpace Ω] {μ : Measure Ω}
-    (m : MeasurableSpace Ω) (hm : m ≤ mΩ)
-    [SigmaFinite (μ.trim hm)]
-    {f : Ω → ℝ}
-    (hf_m : AEStronglyMeasurable[m] f μ)
-    (hf_int : Integrable f μ) :
-    μ[f | m] =ᵐ[μ] f := by
-  -- Idempotence: CE[f|m] = f a.e. when f is m-measurable
-  exact MeasureTheory.condExp_of_aestronglyMeasurable' hm hf_m hf_int
 
 end MeasureTheory
 

@@ -402,35 +402,6 @@ private lemma card_filter_partition (k : ℕ) :
   simp only [card_fin] at h_card_sum
   convert h_card_sum.symm using 2
 
-/-- Cardinality of `{i : Fin(2k) | i.val < k}` is k. -/
-lemma card_filter_fin_val_lt_two_mul (k : ℕ) :
-  ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card = k := by
-  -- Use symmetry: both halves of Fin (2k) have equal size
-  have h_part := card_filter_partition k
-  -- Prove both sets have size k by showing they partition 2k equally
-  suffices h : ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card =
-               ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card by omega
-  -- Use Finset.card_bij to show the two filtered sets have equal cardinality
-  apply Finset.card_bij (fun (a : Fin (2*k)) (ha : a ∈ (univ.filter (fun i => i.val < k))) => (⟨a.val + k, by simp at ha; omega⟩ : Fin (2*k)))
-  · intro a ha
-    simp only [mem_filter, mem_univ, true_and] at ha ⊢
-    omega
-  · intro a b ha hb h
-    simp at h
-    exact Fin.ext (by omega)
-  · intro b hb
-    simp only [mem_filter, mem_univ, true_and, not_lt] at hb
-    use ⟨b.val - k, by omega⟩
-    refine ⟨?_, ?_⟩
-    · simp only [mem_filter, mem_univ, true_and]
-      have : k ≤ b.val := hb
-      have : b.val < 2 * k := b.isLt
-      omega
-    · ext
-      simp
-      have : k ≤ b.val := hb
-      omega
-
 end FinIndexHelpers
 end Exchangeability.DeFinetti.L2Helpers
 

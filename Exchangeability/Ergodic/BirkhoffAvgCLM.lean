@@ -157,42 +157,4 @@ def birkhoffAvgCLM (U : E →L[ℝ] E) (n : ℕ) : E →L[ℝ] E :=
   if n = 0 then 0 else
     ((n : ℝ)⁻¹) • (∑ k : Fin n, powCLM U k)
 
-lemma birkhoffAvgCLM_zero (U : E →L[ℝ] E) :
-    birkhoffAvgCLM U 0 = 0 := by
-  simp [birkhoffAvgCLM]
-
-/-- For Lp spaces: iterating Koopman and then coercing equals
-    coercing and then composing with T^[k] (almost everywhere). -/
-@[nolint unusedArguments]
-lemma powCLM_koopman_coe_ae {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsProbabilityMeasure μ]
-    (T : Ω → Ω) (hT_meas : Measurable T) (hT_mp : MeasurePreserving T μ μ)
-    (k : ℕ) (fL2 : Lp ℝ 2 μ) :
-  ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) =ᵐ[μ]
-  (fun ω => (fL2 : Ω → ℝ) (T^[k] ω)) := by
-  induction k with
-  | zero =>
-    simp [powCLM]
-  | succ k ih =>
-    simp only [powCLM_succ, ContinuousLinearMap.coe_comp', Function.comp_apply]
-    -- Apply koopman to the k-th iterate
-    have h_koopman : ((koopman T hT_mp) ((powCLM (koopman T hT_mp) k) fL2) : Ω → ℝ) =ᵐ[μ]
-      (fun ω => ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) (T ω)) := by
-      -- koopman is defined as compMeasurePreservingₗᵢ, which corresponds to composition
-      unfold koopman
-      simp only [LinearIsometry.coe_toContinuousLinearMap]
-      exact Lp.coeFn_compMeasurePreserving _ hT_mp
-    -- Combine with inductive hypothesis using composition
-    calc ((koopman T hT_mp) ((powCLM (koopman T hT_mp) k) fL2) : Ω → ℝ)
-        =ᵐ[μ] (fun ω => ((powCLM (koopman T hT_mp) k) fL2 : Ω → ℝ) (T ω)) := h_koopman
-      _ =ᵐ[μ] (fun ω => (fL2 : Ω → ℝ) (T^[k] (T ω))) := by
-          -- The inductive hypothesis gives: powCLM k fL2 evaluates to fL2 ∘ T^[k] a.e.
-          -- We need this at the point T ω, which is the image under a measure-preserving map
-          -- Use MeasurePreserving.quasiMeasurePreserving to get QuasiMeasurePreserving
-          have h_quasi := hT_mp.quasiMeasurePreserving
-          exact h_quasi.ae_eq_comp ih
-      _ = (fun ω => (fL2 : Ω → ℝ) (T^[k+1] ω)) := by
-          ext ω
-          rw [← Function.iterate_succ_apply]
-
 end Exchangeability.Ergodic

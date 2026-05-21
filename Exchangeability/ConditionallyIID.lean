@@ -195,15 +195,6 @@ def ConditionallyIID (μ : Measure Ω) (X : ℕ → Ω → α) : Prop :=
         Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
           = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)
 
-/-- Helper lemma: Permuting coordinates after taking a product is the same as taking the product
-and then permuting. -/
-theorem pi_perm_comm {ι : Type*} [Fintype ι] {α : Type*} [MeasurableSpace α]
-    {ν : Measure α} [SigmaFinite ν] (σ : Equiv.Perm ι) :
-    Measure.pi (fun _ : ι => ν) =
-      Measure.map (fun f : ι → α => f ∘ σ.symm) (Measure.pi fun _ : ι => ν) := by
-  classical
-  exact (MeasureTheory.Measure.pi_comp_perm (ν:=ν) (σ:=σ.symm)).symm
-
 /--
 **Main theorem:** Conditionally i.i.d. sequences are exchangeable.
 

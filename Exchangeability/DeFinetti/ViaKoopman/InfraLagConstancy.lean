@@ -192,40 +192,6 @@ lemma reindex_swap_preimage_shiftInvariant (k : ℕ) (s : Set (ℕ → α))
   -- Transport membership through shift^[k+2] using shift-invariance
   constructor <;> intro h <;> (rw [← h_iter_k2, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
 
-/-- **Generalized reindex preimage invariance**: For any permutation π that is identity
-beyond some bound M, shift-invariant sets are reindex-invariant.
-
-This generalizes `reindex_swap_preimage_shiftInvariant` from transpositions to arbitrary
-finite-support permutations. The proof uses the same key insight: shift^[M] commutes with
-reindex π when π is identity beyond M, so membership in shift-invariant sets is preserved. -/
-lemma reindex_perm_preimage_shiftInvariant (π : Equiv.Perm ℕ) (M : ℕ)
-    (h_id_beyond : ∀ n, M ≤ n → π n = n)
-    (s : Set (ℕ → α)) (hs : isShiftInvariant (α := α) s) :
-    (Exchangeability.reindex π) ⁻¹' s = s := by
-  ext ω
-  simp only [Set.mem_preimage]
-  -- Use that s is shift-invariant: ω ∈ s ↔ shift^[m] ω ∈ s for any m
-  obtain ⟨_, hs_shift⟩ := hs
-  have h_iter : ∀ m, (shift (α := α))^[m] ⁻¹' s = s := by
-    intro m
-    induction m with
-    | zero => simp
-    | succ n ih =>
-      calc shift^[n + 1] ⁻¹' s = shift^[n] ⁻¹' (shift ⁻¹' s) := by
-              simp only [Function.iterate_succ', Set.preimage_comp]
-        _ = shift^[n] ⁻¹' s := by rw [hs_shift]
-        _ = s := ih
-  -- Key: shift^[M] (reindex π ω) = shift^[M] ω pointwise
-  have h_eq : shift^[M] (Exchangeability.reindex π ω) = shift^[M] ω := by
-    ext n
-    rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply]
-    -- π (n + M) = n + M since n + M ≥ M
-    have hle : M ≤ n + M := Nat.le_add_left M n
-    rw [h_id_beyond (n + M) hle]
-  have h_iter_M := h_iter M
-  -- Transport membership through shift^[M] using shift-invariance
-  constructor <;> intro h <;> (rw [← h_iter_M, Set.mem_preimage] at h ⊢; first | rwa [← h_eq] | rwa [h_eq])
-
 /-! ### Cycle permutation for lag constancy -/
 
 /-- A cycle on [L, R] that maps n → n-1 (for L < n ≤ R) and L → R.
@@ -243,25 +209,9 @@ def cycleShiftDown (L R : ℕ) (hLR : L ≤ R) : Equiv.Perm ℕ where
   left_inv := by intro n; simp only; split_ifs <;> omega
   right_inv := by intro n; simp only; split_ifs <;> omega
 
-lemma cycleShiftDown_lt (L R n : ℕ) (hLR : L ≤ R) (hn : n < L) :
-    cycleShiftDown L R hLR n = n := by
-  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
-
 lemma cycleShiftDown_gt (L R n : ℕ) (hLR : L ≤ R) (hn : R < n) :
     cycleShiftDown L R hLR n = n := by
   simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
-
-lemma cycleShiftDown_sub (L R n : ℕ) (hLR : L ≤ R) (hLn : L < n) (hnR : n ≤ R) :
-    cycleShiftDown L R hLR n = n - 1 := by
-  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
-
-lemma cycleShiftDown_L (L R : ℕ) (hLR : L ≤ R) :
-    cycleShiftDown L R hLR L = R := by
-  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
-
-/-- The cycle is identity beyond R. -/
-lemma cycleShiftDown_id_beyond (L R : ℕ) (hLR : L ≤ R) (n : ℕ) (hn : R < n) :
-    cycleShiftDown L R hLR n = n := cycleShiftDown_gt L R n hLR hn
 
 /-! ### Disjoint offset swap permutation
 
@@ -321,56 +271,6 @@ def disjointOffsetSwap (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < of
       · rw [if_pos h2, if_pos h2.1]
         omega
       · rw [if_neg h2, if_neg h1, if_neg h2]
-
-/-- disjointOffsetSwap maps i to offset + i for i ∈ S. -/
-lemma disjointOffsetSwap_mem (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
-    (i : ℕ) (hi : i ∈ S) : disjointOffsetSwap S offset hS i = offset + i := by
-  simp only [disjointOffsetSwap, Equiv.coe_fn_mk, hi, ↓reduceIte]
-
-/-- disjointOffsetSwap maps offset + i to i for i ∈ S. -/
-lemma disjointOffsetSwap_offset_mem (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
-    (i : ℕ) (hi : i ∈ S) : disjointOffsetSwap S offset hS (offset + i) = i := by
-  simp only [disjointOffsetSwap, Equiv.coe_fn_mk]
-  have h1 : offset + i ∉ S := by
-    intro habs
-    have := hS (offset + i) habs
-    omega
-  rw [if_neg h1]
-  have hcond : offset + i - offset ∈ S ∧ offset ≤ offset + i := by
-    simp only [Nat.add_sub_cancel_left, hi, Nat.le_add_right, and_self]
-  rw [if_pos hcond]
-  simp only [Nat.add_sub_cancel_left]
-
-/-- disjointOffsetSwap fixes n when n ∉ S and n < offset. -/
-lemma disjointOffsetSwap_lt (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
-    (n : ℕ) (hn_notin : n ∉ S) (hn_lt : n < offset) : disjointOffsetSwap S offset hS n = n := by
-  simp only [disjointOffsetSwap, Equiv.coe_fn_mk, hn_notin, ↓reduceIte]
-  split_ifs with h
-  · exfalso
-    omega
-  · rfl
-
-/-- disjointOffsetSwap is identity beyond offset + max(S). -/
-lemma disjointOffsetSwap_id_beyond (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset)
-    (n : ℕ) (hn : S.sup id + offset < n) : disjointOffsetSwap S offset hS n = n := by
-  simp only [disjointOffsetSwap, Equiv.coe_fn_mk]
-  have h1 : n ∉ S := by
-    intro habs
-    have hsup : (id n : ℕ) ≤ S.sup id := Finset.le_sup (f := id) habs
-    simp only [id_eq] at hsup
-    have : n ≤ S.sup id := hsup
-    linarith
-  simp only [h1, ↓reduceIte]
-  split_ifs with h
-  · exfalso
-    obtain ⟨hmem, hle⟩ := h
-    have hsup : (id (n - offset) : ℕ) ≤ S.sup id := Finset.le_sup (f := id) hmem
-    simp only [id_eq] at hsup
-    have hsub : n - offset ≤ S.sup id := hsup
-    -- n - offset ≤ S.sup id and offset ≤ n implies n ≤ S.sup id + offset
-    have hle' : n ≤ S.sup id + offset := Nat.sub_le_iff_le_add.mp hsub
-    omega
-  · rfl
 
 /-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
 when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/

@@ -37,47 +37,6 @@ variable {α : Type*} [MeasurableSpace α]
 -- Short notation for shift-invariant σ-algebra (used throughout this file)
 local notation "mSI" => shiftInvariantSigma (α := α)
 
-/-- The comap of shiftInvariantSigma along restrictNonneg is contained in shiftInvariantSigmaℤ.
-
-This follows from the fact that preimages of shift-invariant sets are shiftℤ-invariant,
-using `restrictNonneg_shiftℤ : restrictNonneg (shiftℤ ω) = shift (restrictNonneg ω)`. -/
-lemma comap_restrictNonneg_shiftInvariantSigma_le :
-    MeasurableSpace.comap (restrictNonneg (α := α)) (shiftInvariantSigma (α := α))
-      ≤ shiftInvariantSigmaℤ (α := α) := by
-  intro t ht
-  -- t is of the form restrictNonneg⁻¹' s for some s ∈ shiftInvariantSigma
-  rcases ht with ⟨s, hs, rfl⟩
-  -- hs : isShiftInvariant s, i.e., MeasurableSet s ∧ shift⁻¹' s = s
-  constructor
-  · exact measurable_restrictNonneg hs.1
-  · ext ω; simp only [Set.mem_preimage]; rw [restrictNonneg_shiftℤ, ← Set.mem_preimage, hs.2]
-
-/-- Pulling an almost-everywhere equality back along the natural extension.
-
-**Proof**: Uses `ae_map_iff` from mathlib: since `μ = map restrictNonneg ext.μhat`,
-we have `(∀ᵐ ω ∂μ, F ω = G ω) ↔ (∀ᵐ ωhat ∂ext.μhat, F (restrictNonneg ωhat) = G (restrictNonneg ωhat))`.
-The hypothesis `h` gives the RHS, so we conclude the LHS. -/
-@[nolint unusedArguments]
-lemma naturalExtension_pullback_ae
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
-    (ext : NaturalExtensionData (μ := μ))
-    {F G : Ω[α] → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ)
-    (h : (fun ωhat => F (restrictNonneg (α := α) ωhat))
-        =ᵐ[ext.μhat]
-        (fun ωhat => G (restrictNonneg (α := α) ωhat))) :
-    F =ᵐ[μ] G := by
-  haveI := ext.μhat_isProb
-  rw [ae_pullback_iff (restrictNonneg (α := α)) measurable_restrictNonneg
-    ext.restrict_pushforward hF hG]
-  exact h
-
-/-- Two-sided version of `condexp_precomp_iterate_eq`.
-
-**Proof strategy**: For any k iterations of shiftℤ, the conditional expectation
-is unchanged because:
-1. shiftℤ^[k] is measure-preserving (composition of measure-preserving maps)
-2. shiftℤ^[k] leaves shiftInvariantSigmaℤ-measurable sets invariant
-3. Set-integrals over invariant sets are preserved by measure-preserving maps -/
 lemma condexp_precomp_iterate_eq_twosided
     {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
     (hσ : MeasurePreserving (shiftℤ (α := α)) μhat μhat) {k : ℕ}
@@ -136,130 +95,12 @@ lemma condexp_precomp_iterate_eq_twosided
             | shiftInvariantSigmaℤ (α := α)] := h_base
       _ =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := ih
 
-/-- Invariance of conditional expectation under the inverse shift.
-
-**Proof strategy**: Similar to `condexp_precomp_iterate_eq_twosided`, but using
-that shiftℤInv also preserves the measure and leaves the invariant σ-algebra fixed. -/
-lemma condexp_precomp_shiftℤInv_eq
-    {μhat : Measure (Ωℤ[α])} [IsProbabilityMeasure μhat]
-    (hσInv : MeasurePreserving (shiftℤInv (α := α)) μhat μhat)
-    {f : Ωℤ[α] → ℝ} (hf : Integrable f μhat) :
-    μhat[(fun ω => f (shiftℤInv (α := α) ω))
-        | shiftInvariantSigmaℤ (α := α)]
-      =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := by
-  -- Key property: shiftInvariantSigmaℤ-measurable sets are shiftℤInv-invariant too
-  -- Proof: If shiftℤ⁻¹' s = s then shiftℤInv⁻¹' s = s (since they're inverses)
-  have h_inv : ∀ s, MeasurableSet[shiftInvariantSigmaℤ (α := α)] s →
-      (shiftℤInv (α := α)) ⁻¹' s = s := by
-    intro s hs
-    -- hs.2 gives shiftℤ⁻¹' s = s
-    -- Need: shiftℤInv⁻¹' s = s, i.e., ∀ ω, shiftℤInv ω ∈ s ↔ ω ∈ s
-    ext ω
-    constructor
-    · -- shiftℤInv ω ∈ s → ω ∈ s
-      intro h
-      -- shiftℤInv ω ∈ s means ω = shiftℤ (shiftℤInv ω) ∈ shiftℤ '' s
-      -- Since shiftℤ⁻¹' s = s, we have shiftℤ '' s = s (bijection)
-      have hω' : shiftℤ (α := α) (shiftℤInv (α := α) ω) ∈ shiftℤ (α := α) '' s :=
-        Set.mem_image_of_mem _ h
-      simp only [shiftℤ_comp_shiftℤInv] at hω'
-      -- Use that shiftℤ '' s = s (from shiftℤ⁻¹' s = s and bijectivity)
-      have h_surj : shiftℤ (α := α) '' s = s := by
-        ext x
-        simp only [Set.mem_image]
-        constructor
-        · rintro ⟨y, hy, rfl⟩
-          -- y ∈ s, want shiftℤ y ∈ s
-          -- hs.2 : shiftℤ⁻¹' s = s means y ∈ s ↔ y ∈ shiftℤ⁻¹' s ↔ shiftℤ y ∈ s
-          have h : y ∈ shiftℤ (α := α) ⁻¹' s := by rw [hs.2]; exact hy
-          exact Set.mem_preimage.mp h
-        · intro hx
-          use shiftℤInv (α := α) x
-          constructor
-          · rw [← hs.2]
-            simp [shiftℤ_comp_shiftℤInv, hx]
-          · simp
-      rw [h_surj] at hω'
-      exact hω'
-    · -- ω ∈ s → shiftℤInv ω ∈ s
-      intro h
-      -- ω ∈ s and shiftℤ⁻¹' s = s means shiftℤ⁻¹ ω ∈ s
-      -- shiftℤ⁻¹' s = s means: ∀ x, shiftℤ x ∈ s ↔ x ∈ s
-      -- Apply with x = shiftℤInv ω: shiftℤ (shiftℤInv ω) ∈ s ↔ shiftℤInv ω ∈ s
-      rw [← hs.2]
-      simp [h]
-  -- Now prove the main result using ae_eq_condExp_of_forall_setIntegral_eq
-  have hf_inv : Integrable (fun ω => f (shiftℤInv (α := α) ω)) μhat :=
-    (hσInv.integrable_comp hf.aestronglyMeasurable).mpr hf
-  symm
-  apply MeasureTheory.ae_eq_condExp_of_forall_setIntegral_eq
-    (shiftInvariantSigmaℤ_le (α := α))
-  · exact hf_inv  -- Integrability
-  · exact fun _ _ _ => MeasureTheory.integrable_condExp.integrableOn  -- IntegrableOn for the condExp
-  -- Set integral equality
-  · intro s hs hμs
-    rw [MeasureTheory.setIntegral_condExp (shiftInvariantSigmaℤ_le (α := α)) hf hs]
-    -- Need: ∫_s (f ∘ shiftℤInv) = ∫_s f
-    have h_s_inv : (shiftℤInv (α := α)) ⁻¹' s = s := h_inv s hs
-    -- Use measure-preserving property
-    rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
-    rw [← MeasureTheory.integral_indicator (shiftInvariantSigmaℤ_le (α := α) s hs)]
-    -- Rewrite indicator: (1_s · f) ∘ shiftℤInv vs 1_s · (f ∘ shiftℤInv)
-    -- Since shiftℤInv⁻¹' s = s, we have 1_s (shiftℤInv ω) = 1_s ω
-    have h_ind : ∀ ω, s.indicator (fun ω => f (shiftℤInv (α := α) ω)) ω =
-        s.indicator f (shiftℤInv (α := α) ω) := by
-      intro ω
-      simp only [Set.indicator]
-      split_ifs with h1 h2 h2
-      · rfl
-      · exfalso
-        rw [← Set.mem_preimage, h_s_inv] at h2
-        exact h2 h1
-      · exfalso
-        rw [← h_s_inv] at h1
-        exact h1 (Set.mem_preimage.mpr h2)
-      · rfl
-    rw [show (∫ x, s.indicator (fun ω => f (shiftℤInv (α := α) ω)) x ∂μhat) =
-        (∫ x, s.indicator f (shiftℤInv (α := α) x) ∂μhat)
-      from MeasureTheory.integral_congr_ae (ae_of_all μhat h_ind)]
-    -- Now use measure-preserving: ∫ g ∘ T dμ = ∫ g dμ
-    -- Since hσInv.map_eq : μhat.map shiftℤInv = μhat,
-    -- we have ∫ g ∘ shiftℤInv dμhat = ∫ g d(μhat.map shiftℤInv) = ∫ g dμhat
-    -- This is exactly ∫ (s.indicator f) ∘ shiftℤInv dμhat = ∫ s.indicator f dμhat
-    have h_map_eq : Measure.map (shiftℤInv (α := α)) μhat = μhat := hσInv.map_eq
-    have h_ae : AEStronglyMeasurable (s.indicator f) μhat := by
-      refine (hf.aestronglyMeasurable.indicator ?_)
-      exact shiftInvariantSigmaℤ_le (α := α) s hs
-    -- Convert h_ae to AEStronglyMeasurable for the map measure
-    have h_ae_map : AEStronglyMeasurable (s.indicator f) (μhat.map (shiftℤInv (α := α))) := by
-      rw [h_map_eq]; exact h_ae
-    rw [← MeasureTheory.integral_map measurable_shiftℤInv.aemeasurable h_ae_map, h_map_eq]
-  -- AE strong measurability
-  · exact MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
-
 /-- Helper: Integrability of a bounded function on a finite measure space. -/
 private lemma integrable_of_bounded_helper {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
   obtain ⟨C, hC⟩ := hbd
   exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
-/-- Helper: Integrability of a bounded product on a finite measure space. -/
-private lemma integrable_of_bounded_mul_helper
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ] [Nonempty Ω]
-    {φ ψ : Ω → ℝ}
-    (hφ_meas : Measurable φ) (hφ_bd : ∃ Cφ, ∀ ω, |φ ω| ≤ Cφ)
-    (hψ_meas : Measurable ψ) (hψ_bd : ∃ Cψ, ∀ ω, |ψ ω| ≤ Cψ) :
-    Integrable (fun ω => φ ω * ψ ω) μ := by
-  classical
-  obtain ⟨Cφ, hCφ⟩ := hφ_bd
-  obtain ⟨Cψ, hCψ⟩ := hψ_bd
-  have hCφ_nonneg : 0 ≤ Cφ := (abs_nonneg _).trans (hCφ (Classical.arbitrary Ω))
-  have hCψ_nonneg : 0 ≤ Cψ := (abs_nonneg _).trans (hCψ (Classical.arbitrary Ω))
-  have h_bound : ∀ ω, |φ ω * ψ ω| ≤ Cφ * Cψ := fun ω => by
-    simpa [abs_mul] using mul_le_mul (hCφ ω) (hCψ ω) (abs_nonneg _) hCφ_nonneg
-  have h_meas : Measurable fun ω => φ ω * ψ ω := hφ_meas.mul hψ_meas
-  exact integrable_of_bounded_helper h_meas ⟨Cφ * Cψ, h_bound⟩
 
 /-- Integrability of `f * g` when `g` is integrable and `|f| ≤ C`.
 

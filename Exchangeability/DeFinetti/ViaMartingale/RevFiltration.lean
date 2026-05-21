@@ -44,12 +44,6 @@ open MartingaleHelpers
 abbrev revFiltration (X : ℕ → Ω → α) (m : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (shiftRV X m) inferInstance
 
-omit [MeasurableSpace Ω] in
-@[simp]
-lemma revFiltration_zero (X : ℕ → Ω → α) :
-    revFiltration X 0 = MeasurableSpace.comap (path X) inferInstance := by
-  simp only [revFiltration, shiftRV_zero]
-
 lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m : ℕ) :
     revFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
   by
@@ -83,7 +77,6 @@ lemma revFiltration_eq_tailFamily (X : ℕ → Ω → α) (m : ℕ) :
   -- Simplify: comap (shiftRV X m) (comap eval_k) = comap (eval_k ∘ shiftRV X m)
   congr 1; funext k; rw [MeasurableSpace.comap_comp]; rfl
 
-omit [MeasurableSpace Ω] in
 /-- ViaMartingale's `tailSigma` equals the canonical `Tail.tailProcess`. -/
 lemma tailSigma_eq_canonical (X : ℕ → Ω → α) :
     tailSigma X = Exchangeability.Tail.tailProcess X := by

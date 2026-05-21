@@ -59,11 +59,6 @@ def blockAvg (m n : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) : ℝ :=
   if hn : n = 0 then 0
   else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j)))
 
-@[simp, nolint unusedArguments]
-lemma blockAvg_zero_n (m : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
-    blockAvg m 0 k f ω = 0 := by
-  simp [blockAvg]
-
 @[nolint unusedArguments]
 lemma blockAvg_pos_n {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
     blockAvg m n k f ω = (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j))) := by
