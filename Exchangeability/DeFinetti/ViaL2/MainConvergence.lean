@@ -246,7 +246,7 @@ theorem weighted_sums_converge_L1
       convert h using 2
       ext ω
       simp only [A]
-      congr 2 <;> (congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega)
+      congr 2; congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega
 
     -- Segment 2: ‖A (m-k) k - A (ℓ-k) k‖₂² ≤ Cf/k
     have h2 : ∫ ω, (A (m - k) k ω - A (ℓ - k) k ω)^2 ∂μ ≤ Cf / k := by
@@ -259,7 +259,7 @@ theorem weighted_sums_converge_L1
         convert h using 2
         ext ω
         simp only [A]
-        congr 2 <;> (congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega)
+        congr 2; congr 1; apply Finset.sum_congr rfl; intro i _; congr; omega
       have : ∀ ω, (A (ℓ - k) k ω - A 0 ℓ ω)^2 = (A 0 ℓ ω - A (ℓ - k) k ω)^2 := by
         intro ω; ring
       simp_rw [this]; exact h_sq
