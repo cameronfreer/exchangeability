@@ -55,7 +55,7 @@ lemma futureFiltration_antitone (X : ℕ → Ω → α) :
   revFiltration_antitone X (Nat.succ_le_succ hmn)
 
 /-- Tail σ-algebra via the future filtration. (Additive alias.) -/
-def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+@[reducible] def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, futureFiltration X m
 
 omit [MeasurableSpace Ω] in

@@ -52,7 +52,7 @@ lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m
 /-! ### Tail σ-Algebra -/
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
-def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+@[reducible] def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, revFiltration X m
 
 omit [MeasurableSpace Ω] in

@@ -178,7 +178,7 @@ lemma isShiftInvariantℤ_iff (S : Set (Ωℤ[α])) :
 
 This is defined directly as the sub-σ-algebra of measurable shift-invariant sets.
 -/
-def shiftInvariantSigmaℤ : MeasurableSpace (Ωℤ[α]) where
+@[reducible] def shiftInvariantSigmaℤ : MeasurableSpace (Ωℤ[α]) where
   MeasurableSet' := fun s => IsShiftInvariantℤ (α := α) s
   measurableSet_empty := by
     refine ⟨MeasurableSet.empty, ?_⟩
