@@ -463,7 +463,9 @@ lemma optionB_Step4c_triangle
             _ = Cg := by field_simp
         -- Bounded + Measurable → Integrable on finite measure space
         have hB_meas : Measurable (B n) := by
-          rw [hB_def]; simp [hn]; fun_prop
+          rw [hB_def]
+          simp [hn]
+          fun_prop
         have hB_bd_ae : ∀ᵐ ω ∂μ, ‖B n ω‖ ≤ Cg := ae_of_all μ (fun ω => le_trans (Real.norm_eq_abs _).le (hB_bd ω))
         exact ⟨hB_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded hB_bd_ae⟩
     -- |B n - Y| is integrable as difference of integrable functions
@@ -530,7 +532,8 @@ lemma optionB_Step4c_triangle
         rw [hB_def]
         by_cases hn : n = 0
         · simp [hn]
-        · simp [hn]; fun_prop
+        · simp [hn]
+          fun_prop
       have hAB_bd_ae : ∀ᵐ ω ∂μ, ‖|A n ω - B n ω|‖ ≤ 2 * Cg :=
         ae_of_all μ (fun ω => by simp [Real.norm_eq_abs]; exact hAB_bd ω)
       exact ⟨(hA_meas.sub hB_meas).norm.aestronglyMeasurable, HasFiniteIntegral.of_bounded hAB_bd_ae⟩

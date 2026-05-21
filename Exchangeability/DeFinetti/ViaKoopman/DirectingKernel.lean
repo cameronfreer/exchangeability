@@ -88,7 +88,8 @@ lemma ν_eval_measurable
 instance ν_isProbabilityMeasure
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) : IsProbabilityMeasure (ν (μ := μ) ω) := by
-  unfold ν; infer_instance
+  unfold ν
+  infer_instance
 
 /-! ## Bridge lemmas -/
 
