@@ -58,11 +58,7 @@ lemma cylinder_measurable {r : ℕ} {C : Fin r → Set α}
     MeasurableSet (cylinder (α:=α) r C) := by
   classical
   simp only [cylinder, Set.setOf_forall]
-  exact MeasurableSet.iInter fun i => by
-    have : (fun f : ℕ → α => f i.val) ⁻¹' C i = {f | f i ∈ C i} := by
-      ext f; simp [Set.mem_preimage]
-    rw [← this]
-    exact (hC i).preimage (measurable_pi_apply i.val)
+  exact MeasurableSet.iInter fun i => (hC i).preimage (measurable_pi_apply i.val)
 
 end FutureCylinders
 
