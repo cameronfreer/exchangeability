@@ -173,6 +173,7 @@ private lemma shift_iterate_preimage_of_shiftInvariant (C : ℕ) (s : Set (Ω[α
   | zero => simp
   | succ k ih => rw [Function.iterate_succ', Set.preimage_comp, hs_shift, ih]
 
+set_option linter.unusedVariables false in
 /-- Reindexing by blockInjection preserves membership in shift-invariant sets.
 
 The key insight is that blockInjection is eventually a constant shift:

@@ -49,13 +49,14 @@ section FutureFiltration
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+omit [MeasurableSpace Ω] in
 /-- The future filtration is decreasing (antitone). -/
 lemma futureFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (futureFiltration X) := fun _ _ hmn =>
   revFiltration_antitone X (Nat.succ_le_succ hmn)
 
 /-- Tail σ-algebra via the future filtration. (Additive alias.) -/
-def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+@[reducible] def tailSigmaFuture (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, futureFiltration X m
 
 omit [MeasurableSpace Ω] in
@@ -66,6 +67,7 @@ omit [MeasurableSpace Ω] in
 @[simp] lemma futureFiltration_eq_rev_succ (X : ℕ → Ω → α) (m : ℕ) :
     futureFiltration X m = revFiltration X (m + 1) := rfl
 
+omit [MeasurableSpace Ω] in
 lemma tailSigmaFuture_eq_tailSigma (X : ℕ → Ω → α) :
     tailSigmaFuture X = tailSigma X := by
   -- Both are infima of antitone sequences: ⨅ n, revFiltration X (n+1) vs ⨅ n, revFiltration X n

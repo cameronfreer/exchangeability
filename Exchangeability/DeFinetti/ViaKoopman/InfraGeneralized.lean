@@ -95,6 +95,7 @@ lemma condexp_precomp_iterate_eq_twosided
             | shiftInvariantSigmaℤ (α := α)] := h_base
       _ =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := ih
 
+set_option linter.unusedVariables false in
 /-- Integrability of `f * g` when `g` is integrable and `|f| ≤ C`.
 
 This shows that multiplying an integrable function by a bounded function preserves integrability.

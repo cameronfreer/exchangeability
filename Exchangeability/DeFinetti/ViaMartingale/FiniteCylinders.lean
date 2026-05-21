@@ -45,7 +45,7 @@ open MartingaleHelpers
 /-- **Finite future σ-algebra.**
 
 Approximates the infinite future σ(X_{m+1}, X_{m+2}, ...) by finite truncation. -/
-def finFutureSigma (X : ℕ → Ω → α) (m k : ℕ) : MeasurableSpace Ω :=
+@[reducible] def finFutureSigma (X : ℕ → Ω → α) (m k : ℕ) : MeasurableSpace Ω :=
   MeasurableSpace.comap (fun ω => fun i : Fin k => X (m + 1 + i.val) ω) inferInstance
 
 end Exchangeability.DeFinetti.ViaMartingale

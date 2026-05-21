@@ -855,6 +855,7 @@ lemma l2_bound_two_windows_uniform
 
   exact h_final
 
+set_option linter.unusedVariables false in
 /-- **Compute the L² contractability constant for f ∘ X.**
 
 This helper extracts the common covariance structure computation needed by both
@@ -1349,9 +1350,9 @@ namespace TailSigma
 
 -- Re-export the definitions for backward compatibility
 /-- Re-export of `Tail.tailFamily` for backward compatibility. -/
-def tailFamily := @Exchangeability.Tail.tailFamily
+@[reducible] def tailFamily := @Exchangeability.Tail.tailFamily
 /-- Re-export of `Tail.tailProcess` for backward compatibility. -/
-def tailSigma := @Exchangeability.Tail.tailProcess
+@[reducible] def tailSigma := @Exchangeability.Tail.tailProcess
 
 -- Re-export the lemmas for backward compatibility
 @[nolint unusedArguments]

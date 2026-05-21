@@ -70,6 +70,7 @@ lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
   refine measurable_pi_lambda _ ?_
   intro n; cases n <;> simp [consRV] <;> fun_prop
 
+omit [MeasurableSpace Ω] in
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
 This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
@@ -83,6 +84,7 @@ lemma comap_tailRV_le {t : Ω → ℕ → α} :
   obtain ⟨A, hA, rfl⟩ := hS
   exact ⟨(fun s : ℕ → α => (fun n => s (n + 1)) ) ⁻¹' A, hA.preimage hShift, rfl⟩
 
+omit [MeasurableSpace Ω] in
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
 
 This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/

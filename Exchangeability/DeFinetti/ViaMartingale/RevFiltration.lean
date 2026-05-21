@@ -52,7 +52,7 @@ lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m
 /-! ### Tail σ-Algebra -/
 
 /-- The tail σ-algebra for a process X: ⋂ₙ σ(Xₙ, Xₙ₊₁, ...). -/
-def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
+@[reducible] def tailSigma (X : ℕ → Ω → α) : MeasurableSpace Ω :=
   ⨅ m, revFiltration X m
 
 omit [MeasurableSpace Ω] in
@@ -77,6 +77,7 @@ lemma revFiltration_eq_tailFamily (X : ℕ → Ω → α) (m : ℕ) :
   -- Simplify: comap (shiftRV X m) (comap eval_k) = comap (eval_k ∘ shiftRV X m)
   congr 1; funext k; rw [MeasurableSpace.comap_comp]; rfl
 
+omit [MeasurableSpace Ω] in
 /-- ViaMartingale's `tailSigma` equals the canonical `Tail.tailProcess`. -/
 lemma tailSigma_eq_canonical (X : ℕ → Ω → α) :
     tailSigma X = Exchangeability.Tail.tailProcess X := by
@@ -85,6 +86,7 @@ lemma tailSigma_eq_canonical (X : ℕ → Ω → α) :
 
 /-! ### Monotonicity -/
 
+omit [MeasurableSpace Ω] in
 lemma revFiltration_antitone (X : ℕ → Ω → α) :
     Antitone (revFiltration X) := by
   intro m n hmn
