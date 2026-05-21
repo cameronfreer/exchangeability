@@ -99,26 +99,6 @@ namespace ViaMartingale
 open MeasureTheory Filter
 open Exchangeability.DeFinetti.MartingaleHelpers
 
-/-! ### Infrastructure for Test Function Transfer (integral_map + Law Equality) -/
-
-/-- **B1: Bochner integral under Measure.map (Change of variables).**
-If `T : Ω → δ` is measurable and `g : δ → ℝ` is integrable w.r.t. `Measure.map T μ`,
-then `∫ g ∘ T ∂μ = ∫ g ∂ (Measure.map T μ)`.
-
-This is the Bochner integral analogue of `lintegral_map`. -/
-lemma integral_map_eq
-    {Ω δ : Type*} [MeasurableSpace Ω] [MeasurableSpace δ]
-    {μ : Measure Ω} {T : Ω → δ} (hT : Measurable T)
-    {g : δ → ℝ}
-    (hg : Integrable g (Measure.map T μ)) :
-  ∫ ω, g (T ω) ∂μ = ∫ y, g y ∂ (Measure.map T μ) := by
-  -- Use mathlib's change-of-variables formula for Bochner integrals
-  symm
-  exact MeasureTheory.integral_map hT.aemeasurable hg.aestronglyMeasurable
-
-
-/- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
-
 /-! ### Main Theorem: de Finetti via Reverse Martingales -/
 
 section MainTheorem
