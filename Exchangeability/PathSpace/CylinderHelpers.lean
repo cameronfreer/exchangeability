@@ -87,11 +87,9 @@ lemma firstRCylinder_measurable_in_firstRSigma
     (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
     (hC : ∀ i, MeasurableSet (C i)) :
     MeasurableSet[firstRSigma X r] (firstRCylinder X r C) := by
-  -- firstRSigma X r = comap (firstRMap X r); express firstRCylinder as a preimage.
   refine ⟨{f : Fin r → α | ∀ i, f i ∈ C i}, ?_, rfl⟩
   classical
-  rw [Set.setOf_forall]
-  exact MeasurableSet.iInter fun i => (hC i).preimage (measurable_pi_apply i)
+  measurability
 
 /-- **Measurable in the ambient σ‑algebra.**
 If each coordinate `X i` is measurable, then the block cylinder is measurable

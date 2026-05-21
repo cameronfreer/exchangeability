@@ -142,8 +142,7 @@ private theorem h_tower_of_lagConst_from_one
       -- Using integral_map: ∫ h d(μ.map shift) = ∫ (h ∘ shift) dμ
       -- Since hσ.map_eq : μ.map shift = μ, we get ∫ h dμ = ∫ (h ∘ shift) dμ
       have hh_asm : AEStronglyMeasurable (fun ω => |A n ω - Y ω|) μ := by
-        have hA_meas : Measurable (A n) :=
-          measurable_const.mul (Finset.measurable_sum _ fun j _ => hg_meas.comp (measurable_pi_apply j))
+        have hA_meas : Measurable (A n) := by fun_prop
         have h_diff : AEStronglyMeasurable (fun ω => A n ω - Y ω) μ :=
           hA_meas.aestronglyMeasurable.sub integrable_condExp.aestronglyMeasurable
         exact continuous_abs.comp_aestronglyMeasurable h_diff
