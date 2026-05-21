@@ -348,7 +348,7 @@ lemma alphaIicCE_right_continuous_at
         linarith
       apply Filter.Tendsto.congr' _ tendsto_const_nhds
       filter_upwards [h_ev] with n hn
-      simp only [Set.mem_Iic, not_le.mpr hn, ↓reduceIte]
+      simp only [not_le.mpr hn, ↓reduceIte]
 
   -- 3c: Each f_n is a.e. strongly measurable
   have h_meas : ∀ n, AEStronglyMeasurable (fs n) μ := fun n =>
