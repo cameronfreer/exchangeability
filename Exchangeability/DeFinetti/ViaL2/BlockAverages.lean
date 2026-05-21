@@ -127,8 +127,8 @@ lemma contractable_covariance_structure
   -- All X_i have the same mean by contractability (single-variable marginal)
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
-    -- Use contractable_single_marginal_eq to show X_k has same distribution as X_0
-    have h_eq_dist := contractable_single_marginal_eq (X := X) hX_contract hX_meas k
+    -- X_k has the same distribution as X_0 by contractability (singleton subsequence)
+    have h_eq_dist := contractable_map_single (X := X) hX_contract hX_meas (i := k)
     -- Transfer integral via equal distributions
     have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
       have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
@@ -147,7 +147,7 @@ lemma contractable_covariance_structure
   have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
     intro k
     -- Use equal distribution to transfer the variance integral
-    have h_eq_dist := contractable_single_marginal_eq (X := X) hX_contract hX_meas k
+    have h_eq_dist := contractable_map_single (X := X) hX_contract hX_meas (i := k)
     have hmean_k := hmean k
     -- The variance with k's mean equals variance with m (since they're equal)
     show ∫ ω, (X k ω - m)^2 ∂μ = σSq
