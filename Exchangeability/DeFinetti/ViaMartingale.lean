@@ -68,8 +68,10 @@ convergence:
 
 ## Main results
 
-* `deFinetti_viaMartingale`: **Main theorem** - contractable implies conditionally i.i.d.
-* `contraction_independence`: Contraction-independence lemma (Kallenberg Lemma 1.3)
+This file provides the proof infrastructure (helper lemmas and constructions)
+for the reverse-martingale route. The public theorems
+(`deFinetti`, `deFinetti_equivalence`, `deFinetti_RyllNardzewski_equivalence`)
+live in `TheoremViaMartingale.lean`.
 
 ## Dependencies
 
@@ -98,21 +100,6 @@ namespace ViaMartingale
 
 open MeasureTheory Filter
 open Exchangeability.DeFinetti.MartingaleHelpers
-
-/-! ### Main Theorem: de Finetti via Reverse Martingales -/
-
-section MainTheorem
-
-open ProbabilityTheory
-
-end MainTheorem
-
-/-!
-## Notes
-
-The main de Finetti theorem using this machinery is in `TheoremViaMartingale.lean`.
-This file provides the proof infrastructure (helper lemmas and constructions).
--/
 
 end ViaMartingale
 end DeFinetti
