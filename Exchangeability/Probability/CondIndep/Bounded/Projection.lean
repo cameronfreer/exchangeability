@@ -386,38 +386,6 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
   exact (ae_eq_condExp_of_forall_setIntegral_eq hmZW_le hf_int
     (fun _ _ _ => integrable_condExp.integrableOn) hg_eq hgm).symm
 
-/-- **Conditional expectation projection from conditional independence.**
-
-When Y ⊥⊥_W Z, conditioning on (Z,W) gives the same result as conditioning on W alone
-for functions of Y.
-
-**Key insight:** Conditional independence means that knowing Z provides no additional
-information about Y beyond what W already provides. Therefore E[f(Y)|σ(Z,W)] = E[f(Y)|σ(W)].
-
-**Proof strategy:**
-1. By uniqueness, suffices to show integrals match on σ(W)-sets
-2. For S ∈ σ(W), we have S ∈ σ(Z,W) since σ(W) ≤ σ(Z,W)
-3. So ∫_S E[f(Y)|σ(Z,W)] = ∫_S f(Y) by conditional expectation property
-4. And ∫_S E[f(Y)|σ(W)] = ∫_S f(Y) by conditional expectation property
-5. Therefore the integrals match, giving the result
-
-**Alternative via conditional independence definition:**
-- Can show E[f(Y)|σ(Z,W)] is σ(W)-measurable by using the factorization from CondIndep
-- Then apply that conditional expectation of a σ(W)-measurable function w.r.t. σ(W) is identity
--/
-theorem condIndep_project (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
-    (hY : Measurable Y) (hZ : Measurable Z) (hW : Measurable W)
-    (h_indep : CondIndep μ Y Z W)
-    {A : Set α} (hA : MeasurableSet A) :
-    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap (fun ω => (Z ω, W ω)) (by infer_instance) ]
-      =ᵐ[μ]
-    μ[ Set.indicator (Y ⁻¹' A) (fun _ => (1 : ℝ))
-       | MeasurableSpace.comap W (by infer_instance) ] := by
-  -- This follows directly from the helper lemma
-  exact condExp_project_of_condIndep μ Y Z W hY hZ hW h_indep hA
-
 /-!
 ### Kallenberg 1.3: Indicator Conditional Independence from Drop-Info
 

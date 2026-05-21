@@ -30,59 +30,8 @@ open MeasureTheory ProbabilityTheory Set Exchangeability.Probability
 variable {Ω α β γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
 
-/-!
-## Conditional independence from unconditional independence
--/
-
-/-- **Independence plus independence of pair from W implies conditional independence.**
-
-If Y and Z are (unconditionally) independent, and the pair (Y,Z) is independent of W,
-then Y ⊥⊥_W Z.
-
-**Key insight:** Independence of (Y,Z) from W means the conditional law of (Y,Z) given W
-equals the unconditional law, so the factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)]
-survives conditioning on W.
-
-**Counterexample showing Y ⊥ Z alone is NOT enough:**
-- Y, Z: independent fair coin flips
-- W := Y + Z
-- Then Y ⊥ Z unconditionally, but P(Y=1|Z=1,W=1) = 1 ≠ 1/2 = P(Y=1|W=1),
-  so Y and Z are NOT conditionally independent given W.
-
-**Proof strategy:**
-1. Since (Y,Z) ⊥ W, conditional expectation of any function of (Y,Z) given σ(W)
-   is the constant E[that function].
-2. Apply to 1_A(Y), 1_B(Z), and their product.
-3. The unconditional factorization E[1_A(Y)·1_B(Z)] = E[1_A(Y)]·E[1_B(Z)] (from Y ⊥ Z)
-   transfers to the conditional expectations.
--/
 
 
--- Product of indicators composed with functions equals indicator of product set composed with pair.
-private lemma mul_indicator_comp_pair_eq_indicator_prod {Ω α β : Type*}
-    (Y : Ω → α) (Z : Ω → β) (A : Set α) (B : Set β) :
-    ((Y ⁻¹' A).indicator (fun _ => (1 : ℝ))) * ((Z ⁻¹' B).indicator (fun _ => (1 : ℝ)))
-      = (fun p => (A ×ˢ B).indicator (fun _ => (1 : ℝ)) p) ∘ (fun ω => (Y ω, Z ω)) := by
-  classical
-  ext ω
-  simp only [Pi.mul_apply, Function.comp_apply]
-  by_cases hY : ω ∈ Y ⁻¹' A <;> by_cases hZ : ω ∈ Z ⁻¹' B
-  · rw [Set.indicator_of_mem hY, Set.indicator_of_mem hZ]
-    have : (Y ω, Z ω) ∈ A ×ˢ B := Set.mk_mem_prod hY hZ
-    rw [Set.indicator_of_mem this]; norm_num
-  · rw [Set.indicator_of_mem hY, Set.indicator_of_notMem hZ]
-    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hZ h.2
-    rw [Set.indicator_of_notMem this]; norm_num
-  · rw [Set.indicator_of_notMem hY, Set.indicator_of_mem hZ]
-    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
-    rw [Set.indicator_of_notMem this]; norm_num
-  · rw [Set.indicator_of_notMem hY, Set.indicator_of_notMem hZ]
-    have : (Y ω, Z ω) ∉ A ×ˢ B := fun h => hY h.1
-    rw [Set.indicator_of_notMem this]; norm_num
-
-/-!
-## Extension to simple functions and bounded measurables (§C2)
--/
 
 /-- **Base case: Factorization for scaled indicators.**
 

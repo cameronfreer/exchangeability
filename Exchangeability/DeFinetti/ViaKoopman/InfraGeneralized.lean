@@ -95,13 +95,6 @@ lemma condexp_precomp_iterate_eq_twosided
             | shiftInvariantSigmaℤ (α := α)] := h_base
       _ =ᵐ[μhat] μhat[f | shiftInvariantSigmaℤ (α := α)] := ih
 
-/-- Helper: Integrability of a bounded function on a finite measure space. -/
-private lemma integrable_of_bounded_helper {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    [IsFiniteMeasure μ] {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
 /-- Integrability of `f * g` when `g` is integrable and `|f| ≤ C`.
 
 This shows that multiplying an integrable function by a bounded function preserves integrability.

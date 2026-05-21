@@ -152,10 +152,6 @@ lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
       = fun n => ω (Int.ofNat n - 1) := by ext; simp [restrictNonneg, shiftℤInv]
 
 @[measurability, fun_prop]
-lemma measurable_restrictNonneg : Measurable (restrictNonneg (α := α)) := by
-  unfold restrictNonneg; fun_prop
-
-@[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   unfold shiftℤ; fun_prop
 
@@ -273,111 +269,6 @@ lemma ae_comp_of_pushforward
 
 end Helpers
 
-/-! ## Infrastructure Lemmas for Conditional Expectation Pullback
-
-This section contains infrastructure lemmas needed for the Koopman approach to de Finetti's
-theorem. These lemmas handle the interaction between conditional expectation, factor maps, and
-measure-preserving transformations.
-
-### Key Technical Details
-
-**The Indicator Trick**:
-- Converts set integrals `∫ x in s, f x ∂μ` to whole-space integrals `∫ x, (indicator s f) x ∂μ`
-- Avoids measure composition `Measure.restrict` which has type class defeq issues
-- Uses `MeasureTheory.integral_indicator` for the conversion
-
-**Type Class Management** (CRITICAL):
-- `m : MeasurableSpace Ω` is a plain parameter, NEVER installed as an instance
-- Ambient instance explicitly named: `[inst : MeasurableSpace Ω]`
-- Binder order matters: `m` must come AFTER all instance parameters
-- Measurability lift: `have hBm' : @MeasurableSet Ω inst B := hm B hBm`
--/
-
-lemma ae_pullback_iff
-    {Ω Ω' : Type*} [MeasurableSpace Ω] [MeasurableSpace Ω']
-    {μ : Measure Ω} {μ' : Measure Ω'}
-    (g : Ω' → Ω) (hg : Measurable g) (hpush : Measure.map g μ' = μ)
-    {F G : Ω → ℝ} (hF : AEMeasurable F μ) (hG : AEMeasurable G μ) :
-    F =ᵐ[μ] G ↔ (F ∘ g) =ᵐ[μ'] (G ∘ g) := by
-  classical
-  -- Replace by measurable modifications so the {≠}-sets are measurable.
-  let Fm := hF.mk F
-  let Gm := hG.mk G
-  have hF_eq : F =ᵐ[μ] Fm := hF.ae_eq_mk
-  have hG_eq : G =ᵐ[μ] Gm := hG.ae_eq_mk
-  have hFm_meas : Measurable Fm := hF.measurable_mk
-  have hGm_meas : Measurable Gm := hG.measurable_mk
-
-  -- Reduce both directions to the measurable representatives.
-  have h_left :
-      (F =ᵐ[μ] G) ↔ (Fm =ᵐ[μ] Gm) := by
-    constructor
-    · intro h; exact hF_eq.symm.trans (h.trans hG_eq)
-    · intro h; exact hF_eq.trans (h.trans hG_eq.symm)
-
-  have h_right :
-      (F ∘ g =ᵐ[μ'] G ∘ g) ↔ (Fm ∘ g =ᵐ[μ'] Gm ∘ g) := by
-    constructor
-    · intro h
-      -- strengthen both sides using AE equivalence pushed along g
-      have hF' : (F ∘ g) =ᵐ[μ'] (Fm ∘ g) :=
-        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hF_eq
-      have hG' : (G ∘ g) =ᵐ[μ'] (Gm ∘ g) :=
-        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hG_eq
-      exact hF'.symm.trans (h.trans hG')
-    · intro h
-      have hF' : (F ∘ g) =ᵐ[μ'] (Fm ∘ g) :=
-        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hF_eq
-      have hG' : (G ∘ g) =ᵐ[μ'] (Gm ∘ g) :=
-        ae_comp_of_pushforward (μ := μ) (μ' := μ') (g := g) hg hpush hG_eq
-      exact hF'.trans (h.trans hG'.symm)
-
-  -- Now prove the equivalence for measurable reps by null-set/preimage.
-  have h_core :
-      (Fm =ᵐ[μ] Gm) ↔ (Fm ∘ g =ᵐ[μ'] Gm ∘ g) := by
-    -- Use measurable {x | Fm x ≠ Gm x}.
-    have hSmeas :
-        MeasurableSet {x | Fm x ≠ Gm x} := by
-      -- `{f ≠ g} = {f < g} ∪ {g < f}`
-      have h1 : MeasurableSet {x | Fm x < Gm x} :=
-        measurableSet_lt hFm_meas hGm_meas
-      have h2 : MeasurableSet {x | Gm x < Fm x} :=
-        measurableSet_lt hGm_meas hFm_meas
-      have : {x | Fm x ≠ Gm x} = {x | Fm x < Gm x} ∪ {x | Gm x < Fm x} := by
-        ext x
-        constructor
-        · intro h; exact ne_iff_lt_or_gt.mp h
-        · intro h; exact ne_iff_lt_or_gt.mpr h
-      rw [this]
-      exact h1.union h2
-    constructor
-    · intro h
-      -- μ S = 0 → μ' (g ⁻¹' S) = 0  → AE on μ' after composing with g.
-      have : μ {x | Fm x ≠ Gm x} = 0 := (ae_iff).1 h
-      -- push it through the factor map using measurability
-      have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
-      have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by
-        rw [hmp.measure_preimage hSmeas.nullMeasurableSet]
-        exact this
-      -- identify the preimage set with the set for the composed functions
-      have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := by
-        simpa using this
-      exact (ae_iff).2 this
-    · intro h
-      have : μ' {x' | (Fm ∘ g) x' ≠ (Gm ∘ g) x'} = 0 := (ae_iff).1 h
-      -- convert back using the same preimage identity and measure-preserving fact
-      have hmp : MeasurePreserving g μ' μ := measurePreserving_of_map_eq hg hpush
-      -- `{x' | (Fm∘g) x' ≠ (Gm∘g) x'} = g ⁻¹' {x | Fm x ≠ Gm x}`
-      have : μ' (g ⁻¹' {x | Fm x ≠ Gm x}) = 0 := by simpa using this
-      -- and `μ S = μ' (g ⁻¹' S)` for S measurable
-      have : μ {x | Fm x ≠ Gm x} = 0 := by
-        rw [← hmp.measure_preimage hSmeas.nullMeasurableSet]
-        exact this
-      exact (ae_iff).2 this
-
-  -- Stitch the three equivalences together.
-  simpa [h_left, h_right] using h_core
-
 /-- Transport integrability across a pushforward equality and then pull back by composition.
 This avoids instance gymnastics by rewriting the measure explicitly, then using `comp_measurable`. -/
 lemma integrable_comp_of_pushforward
@@ -461,17 +352,6 @@ lemma integrable_of_ae_bound
       _ < ⊤ := this
 
 -- Helper lemmas for rectangle-case conditional expectation proofs
-
-/-- Indicator ↔ product with a 0/1 mask (for ℝ). -/
-lemma indicator_as_mul_one {Ω} (s : Set Ω) (f : Ω → ℝ) :
-    s.indicator f = fun x => f x * s.indicator (fun _ => (1 : ℝ)) x := by
-  ext x; by_cases hx : x ∈ s <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, hx]
-
-/-- "Lift" a measurable-in-sub-σ-algebra set to ambient measurability. -/
-lemma measurableSet_of_sub {Ω} [mΩ : MeasurableSpace Ω]
-    (m : MeasurableSpace Ω) (hm : m ≤ mΩ) {s : Set Ω}
-    (hs : MeasurableSet[m] s) : @MeasurableSet Ω mΩ s :=
-  hm s hs
 
 end MeasureTheory
 

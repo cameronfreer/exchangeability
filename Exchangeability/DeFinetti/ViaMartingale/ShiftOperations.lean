@@ -39,9 +39,6 @@ def path (X : ℕ → Ω → α) : Ω → (ℕ → α) := fun ω n => X n ω
 def shiftRV (X : ℕ → Ω → α) (m : ℕ) : Ω → (ℕ → α) :=
   fun ω n => X (m + n) ω
 
-/-- Shifted process: (θₘX)ₙ = X_{m+n}. -/
-def shiftProcess (X : ℕ → Ω → α) (m : ℕ) : ℕ → Ω → α := fun n ω => X (m + n) ω
-
 /-! ### Cons and Tail Operations -/
 
 /-- Cons a value onto a sequence: `consRV x t` produces `[x, t(0), t(1), ...]`. -/
@@ -55,10 +52,6 @@ def tailRV (t : Ω → ℕ → α) : Ω → ℕ → α := fun ω n => t ω (n+1)
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 @[simp]
 lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t) = t := rfl
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma shiftRV_zero (X : ℕ → Ω → α) : shiftRV X 0 = path X := by
-  ext ω n; simp [shiftRV, path]
 
 /-! ### Measurability -/
 
