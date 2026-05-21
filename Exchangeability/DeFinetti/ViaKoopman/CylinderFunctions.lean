@@ -43,19 +43,6 @@ def cylinderFunction {m : ℕ} (φ : (Fin m → α) → ℝ) : (ℕ → α) → 
 def productCylinder {m : ℕ} (fs : Fin m → α → ℝ) : (ℕ → α) → ℝ :=
   fun ω => ∏ k : Fin m, fs k (ω k.val)
 
-omit [MeasurableSpace α] in
-lemma productCylinder_eq_cylinder {m : ℕ} (fs : Fin m → α → ℝ) :
-    productCylinder fs = cylinderFunction (fun coords => ∏ k, fs k (coords k)) := rfl
-
-/-- Measurability of cylinder functions. -/
-@[measurability, fun_prop]
-lemma measurable_cylinderFunction {m : ℕ} {φ : (Fin m → α) → ℝ}
-    (_hφ : Measurable φ) :
-    Measurable (cylinderFunction φ) := by
-  classical
-  simpa [cylinderFunction] using _hφ.comp (by fun_prop :
-    Measurable fun ω : ℕ → α => fun k : Fin m => ω k.val)
-
 /-- Measurability of product cylinders. -/
 @[measurability, fun_prop]
 lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
@@ -128,6 +115,3 @@ lemma productCylinderLp_ae_eq
   exact MeasureTheory.MemLp.coeFn_toLp
     (productCylinder_memLp (μ := μ) (fs := fs) hmeas hbd)
 
-/-- The shifted cylinder function: F ∘ shift^n. -/
-def shiftedCylinder (n : ℕ) (F : (ℕ → α) → ℝ) : (ℕ → α) → ℝ :=
-  fun ω => F ((shift^[n]) ω)

@@ -299,10 +299,6 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
 
 /- Helper: relabeling coordinates by a finite permutation is measurable as a map
 from (Fin n → α) to itself (with product σ-algebra). -/
-lemma measurable_perm_map {n : ℕ} (σ : Equiv.Perm (Fin n)) :
-    Measurable (fun (h : Fin n → α) => fun i => h (σ i)) := by
-  fun_prop
-
 /-- Contractability implies the first m variables have the same joint distribution
 regardless of which m consecutive variables we pick (starting from position k). -/
 lemma Contractable.shift_segment_eq {μ : Measure Ω} {X : ℕ → Ω → α}

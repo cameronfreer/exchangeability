@@ -84,39 +84,8 @@ lemma indProd_stronglyMeasurable [MeasurableSpace Ω] [MeasurableSpace α]
   rw [indProd_eq_firstRCylinder_indicator]
   exact .indicator stronglyMeasurable_const (firstRCylinder_measurable_ambient X r C hX hC)
 
-/-- indProd takes values in [0,1]. -/
-lemma indProd_nonneg_le_one (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
-    0 ≤ indProd X r C ω ∧ indProd X r C ω ≤ 1 := by
-  rw [indProd_as_indicator]
-  by_cases h : ∀ i : Fin r, X i ω ∈ C i <;> simp [Set.indicator, h]
-
 /-- indProd of zero coordinates is identically 1. -/
 @[simp] lemma indProd_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
     indProd X 0 C = fun _ => 1 := funext fun _ => by simp [indProd]
-
-/-- indProd on the universal sets is identically 1. -/
-lemma indProd_univ (X : ℕ → Ω → α) (r : ℕ) :
-    indProd X r (fun _ => Set.univ) = fun _ => 1 := funext fun _ => by simp [indProd, Set.indicator]
-
-/-- indProd is measurable when coordinates are measurable. -/
-@[measurability, fun_prop]
-lemma indProd_measurable [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
-    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
-    Measurable (indProd X r C) :=
-  (indProd_stronglyMeasurable X r C hX hC).measurable
-
-/-- indProd product equals multiplication of indProds. -/
-lemma indProd_mul (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} (ω : Ω) :
-    indProd X r C ω * indProd X r D ω = indProd X r (fun i => C i ∩ D i) ω := by
-  simp only [indProd]; rw [← Finset.prod_mul_distrib]; congr 1; funext i
-  simp only [Set.indicator]
-  by_cases hC : X i ω ∈ C i <;> by_cases hD : X i ω ∈ D i <;> simp [hC, hD, Set.mem_inter_iff]
-
-/-- indProd on intersection via firstRCylinder. -/
-lemma indProd_inter_eq (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
-    indProd X r (fun i => C i ∩ D i)
-      = (firstRCylinder X r C ∩ firstRCylinder X r D).indicator (fun _ => (1 : ℝ)) := by
-  rw [indProd_eq_firstRCylinder_indicator, firstRCylinder_inter]
 
 end Exchangeability.DeFinetti.ViaMartingale

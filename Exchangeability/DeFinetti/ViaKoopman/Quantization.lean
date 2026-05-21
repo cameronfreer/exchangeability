@@ -53,23 +53,6 @@ lemma quantize_err_le {C ε x : ℝ} (hε : 0 < ε) :
   · linarith
   · linarith
 
-/-- Quantized values are bounded by C + 1 when ε ≤ 1. -/
-lemma quantize_abs_le {C ε x : ℝ} (hC : 0 ≤ C) (hε : 0 < ε) (hε1 : ε ≤ 1) :
-    |quantize C ε x| ≤ C + 1 := by
-  classical
-  set v := max (-C) (min C x) with hv
-  -- |v| ≤ C
-  have hv_le : |v| ≤ C := abs_le.mpr ⟨by linarith [le_max_left (-C) (min C x)],
-    max_le (by linarith) (min_le_left _ _)⟩
-  -- Triangle inequality: |q| ≤ |v| + |q - v| ≤ C + ε ≤ C + 1
-  have : |quantize C ε x| ≤ |v| + ε :=
-    calc |quantize C ε x|
-        = |(quantize C ε x - v) + v| := by ring_nf
-      _ ≤ |quantize C ε x - v| + |v| := abs_add_le _ _
-      _ ≤ ε + |v| := by linarith [quantize_err_le (C := C) (ε := ε) (x := x) hε]
-      _ = |v| + ε := by ring
-  linarith [hv_le, this, hε1]
-
 /-- Quantization converges pointwise as ε → 0.
 
 Since |quantize C ε x - v| ≤ ε where v = max (-C) (min C x), the quantized value

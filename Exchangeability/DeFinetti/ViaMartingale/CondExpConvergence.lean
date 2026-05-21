@@ -164,10 +164,6 @@ variable {X : ℕ → Ω → α}
 /-- 𝔽ₘ := σ(θ_{m+1} X) (the future filtration). -/
 abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 
-/-- The reverse filtration is decreasing; packaged for the martingale API. -/
-lemma filtration_antitone (X : ℕ → Ω → α) : Antitone (fun m => futureFiltration X m) :=
-  futureFiltration_antitone X
-
 /-- Mₘ := 𝔼[1_{Xₖ∈B} | 𝔽ₘ].
 The reverse martingale sequence for the indicator of X_k in B.
 

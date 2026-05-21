@@ -137,64 +137,6 @@ lemma integral_eq_of_map_eq
     _ = ∫ y, g y ∂(Measure.map T' μ) := by rw [hLaw]
     _ = ∫ ω, g (T' ω) ∂μ := h3.symm
 
-/-- **Helper:** Generalized test function lemma without ψ factor.
-
-From the pair law (Y,W) =^d (Y,W'), we can swap W and W' for test functions
-of the form φ(Y) * g(W), where g : γ → ℝ is a bounded measurable function.
-
-This is the key tool for the "swap back" step in the swap-condition-swap technique,
-where we need to handle functions like φ * (v * 1_B)∘W without the ψ factor.
-
-**Proof strategy:** Apply the pair law equality directly to the test function F(y,w) = φ(y)*g(w),
-using integral_map to convert between ∫ F∘(Y,W) and ∫ F d[Law(Y,W)].
--/
-@[nolint unusedArguments]
-lemma test_fn_pair_law
-  {Ω α γ : Type*}
-  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace γ]
-  {μ : Measure Ω} [IsProbabilityMeasure μ]
-  (Y : Ω → α) (W W' : Ω → γ)
-  (hY : Measurable Y) (hW : Measurable W) (hW' : Measurable W')
-  (h_pair : Measure.map (fun ω => (Y ω, W ω)) μ =
-            Measure.map (fun ω => (Y ω, W' ω)) μ)
-  (φ : Ω → ℝ) (hφ_factor : ∃ f : α → ℝ, Measurable f ∧ φ = f ∘ Y)
-  (hφ_int : Integrable φ μ)
-  (g : γ → ℝ) (hg : Measurable g) (hg_bdd : ∀ w, ‖g w‖ ≤ 1) :
-  ∫ ω, φ ω * g (W ω) ∂μ = ∫ ω, φ ω * g (W' ω) ∂μ := by
-  -- Extract the factorization f with φ = f ∘ Y
-  obtain ⟨f, hf, rfl⟩ := hφ_factor
-
-  -- Define the test function on the product space
-  let g_test : α × γ → ℝ := fun ⟨y, w⟩ => f y * g w
-
-  -- Measurability
-  have hT : Measurable (fun ω => (Y ω, W ω)) := hY.prodMk hW
-  have hT' : Measurable (fun ω => (Y ω, W' ω)) := hY.prodMk hW'
-
-  -- g_test is measurable
-  have hg_test_meas : Measurable g_test := by
-    exact (hf.comp measurable_fst).mul (hg.comp measurable_snd)
-
-  -- Integrability: g_test is bounded by ‖φ‖ (since |g| ≤ 1)
-  have hg_test_int : Integrable g_test (Measure.map (fun ω => (Y ω, W ω)) μ) := by
-    -- |g_test(y,w)| = |f(y)| * |g(w)| ≤ |f(y)| * 1 = |f(y)|
-    -- So ∫ |g_test| d[law(Y,W)] = ∫ |f(Y)| * |g(W)| dμ ≤ ∫ |f(Y)| dμ = ∫ |φ| dμ < ∞
-    have h_comp_int : Integrable (g_test ∘ fun ω => (Y ω, W ω)) μ := by
-      refine Integrable.mono hφ_int ?_ ?_
-      · exact ((hf.comp hY).mul (hg.comp hW)).aestronglyMeasurable
-      · filter_upwards with ω
-        simp [g_test]
-        calc |f (Y ω)| * |g (W ω)|
-            ≤ |f (Y ω)| * 1 := by gcongr; exact hg_bdd (W ω)
-          _ = |f (Y ω)| := mul_one _
-    exact (integrable_map_measure hg_test_meas.aestronglyMeasurable hT.aemeasurable).mpr h_comp_int
-
-  -- Apply integral transfer under law equality
-  have h := integral_eq_of_map_eq hT hT' hg_test_int h_pair
-
-  -- Simplify: g_test ∘ (Y,W) = f∘Y * g∘W
-  convert h using 1
-
 /-! **Kallenberg Lemma 1.3 (Contraction-Independence)**: If the triple distribution
 satisfies (Y, Z, W) =^d (Y, Z, W'), then Y and Z are conditionally independent given W.
 
@@ -221,21 +163,6 @@ This factorization follows from the distributional equality via a martingale arg
 
 /- ===== Helpers: adjointness & indicator algebra (μ[·|m], (hm : m ≤ m0)) ===== -/
 
-/-- Set integral as `1_s · f` (explicit unit indicator), tuned to avoid elaboration blowups. -/
-lemma setIntegral_eq_integral_indicator_one_mul
-    {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    {s : Set Ω} (hs : MeasurableSet s) {f : Ω → ℝ} :
-  ∫ ω in s, f ω ∂μ
-  = ∫ ω, (Set.indicator s (fun _ => (1 : ℝ)) ω) * f ω ∂μ := by
-  classical
-  -- by definition: `∫_s f = ∫ indicator s f`; then identify with `1_s * f`
-  have : ∫ ω in s, f ω ∂μ = ∫ ω, Set.indicator s f ω ∂μ :=
-    (integral_indicator hs).symm
-  refine this.trans ?_
-  refine integral_congr_ae ?ae
-  filter_upwards with ω
-  by_cases hω : ω ∈ s <;> simp [Set.indicator, hω, mul_comm]
-
 /-- If `|g| ≤ C` a.e., then `|μ[g|m]| ≤ C` a.e. (uses monotonicity of conditional expectation). -/
 @[nolint unusedArguments]
 lemma ae_bound_condexp_of_ae_bound
@@ -252,126 +179,6 @@ lemma ae_bound_condexp_of_ae_bound
     filter_upwards [hgC] with ω hω
     linarith [abs_nonneg (g ω)]
 
-/-- **Adjointness for bounded `g` (L∞–L¹)**:
-If `g` is essentially bounded and `ξ ∈ L¹(μ)`, then
-`∫ g · μ[ξ|m] = ∫ μ[g|m] · ξ`.
-
-This avoids the `L¹×L¹` product pitfall by using `L∞` control on `g`,
-and the corresponding `L∞` control on `μ[g|m]`. -/
-lemma integral_mul_condexp_adjoint_Linfty
-    {Ω : Type*} [m0 : MeasurableSpace Ω] (μ : Measure Ω)
-    {m : MeasurableSpace Ω} (hm : m ≤ m0)
-    [SigmaFinite (μ.trim hm)]
-    {g ξ : Ω → ℝ} {C : ℝ}
-    (hgC : ∀ᵐ ω ∂μ, |g ω| ≤ C)
-    (hg : Integrable g μ)
-    (hξ : Integrable ξ μ) :
-  ∫ ω, g ω * μ[ξ | m] ω ∂μ
-  = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-  classical
-  -- Both products are integrable
-  have h_int1 : Integrable (fun ω => g ω * μ[ξ | m] ω) μ :=
-    Integrable.bdd_mul (MeasureTheory.integrable_condExp (m := m) (f := ξ))
-      hg.aestronglyMeasurable hgC
-  have hμgC : ∀ᵐ ω ∂μ, |μ[g | m] ω| ≤ C :=
-    @ae_bound_condexp_of_ae_bound Ω m0 μ m hm _ _ _ hgC
-  have h_int2 : Integrable (fun ω => μ[g | m] ω * ξ ω) μ :=
-    Integrable.bdd_mul hξ
-      (MeasureTheory.integrable_condExp (m := m) (f := g)).aestronglyMeasurable hμgC
-
-  -- Now copy the "adjointness by CE" argument, which is safe since both products are L¹.
-  have h1 :
-      ∫ ω, g ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := by
-      simpa using (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm)
-        (f := fun ω => g ω * μ[ξ | m] ω)).symm
-  have hpull :
-      μ[(fun ω => g ω * μ[ξ | m] ω) | m]
-      =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-    -- pull out the `m`-measurable factor `μ[ξ|m]`
-    have hξm :
-        AEStronglyMeasurable[m] (μ[ξ | m]) μ :=
-      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
-    -- Rewrite to match pull-out lemma signature (measurable factor on right)
-    have h_comm : (fun ω => g ω * μ[ξ | m] ω) = (fun ω => μ[ξ | m] ω * g ω) := by
-      ext ω; ring
-    rw [h_comm]
-    have h_int_comm : Integrable (fun ω => μ[ξ | m] ω * g ω) μ := by
-      convert h_int1 using 1; ext ω; ring
-    have h_pull := MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hξm h_int_comm hg
-    -- The lemma gives μ[ξ|m] * μ[g|m], but we need μ[g|m] * μ[ξ|m]
-    filter_upwards [h_pull] with ω hω
-    simp only [Pi.mul_apply] at hω ⊢
-    rw [mul_comm]
-    exact hω
-  have h3 :
-      ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ
-    = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
-    -- reverse pull-out (now pull out `μ[g|m]`)
-    have hgm :
-        AEStronglyMeasurable[m] (μ[g | m]) μ :=
-      MeasureTheory.stronglyMeasurable_condExp.aestronglyMeasurable
-    have hpull' :
-        μ[(fun ω => μ[g | m] ω * ξ ω) | m]
-        =ᵐ[μ] (fun ω => μ[g | m] ω * μ[ξ | m] ω) := by
-      exact MeasureTheory.condExp_mul_of_aestronglyMeasurable_left hgm h_int2 hξ
-    simpa using (integral_congr_ae hpull').symm
-  have h4 :
-      ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ
-    = ∫ ω, μ[g | m] ω * ξ ω ∂μ := by
-    -- Kill α/β noise by naming the product once and for all
-    set F : Ω → ℝ := fun ω => μ[g | m] ω * ξ ω with hF
-
-    -- Apply the CE integral identity to F (and orient it the way we need)
-    have h_goal :
-        ∫ (ω : Ω), μ[g | m] ω * ξ ω ∂μ
-      = ∫ (ω : Ω), μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := by
-      simpa [hF] using
-        (MeasureTheory.integral_condExp (μ := μ) (m := m) (hm := hm) (f := F)).symm
-
-    exact h_goal.symm
-
-  calc
-    ∫ ω, g ω * μ[ξ | m] ω ∂μ
-        = ∫ ω, μ[(fun ω => g ω * μ[ξ | m] ω) | m] ω ∂μ := h1
-    _   = ∫ ω, μ[g | m] ω * μ[ξ | m] ω ∂μ := (integral_congr_ae hpull)
-    _   = ∫ ω, μ[(fun ω => μ[g | m] ω * ξ ω) | m] ω ∂μ := h3
-    _   = ∫ ω, μ[g | m] ω * ξ ω ∂μ := h4
-
--- Utility lemmas for indicator-set integral conversion
-@[nolint unusedArguments]
-lemma indicator_comp_preimage_one
-  {Ω S : Type*} [MeasurableSpace S] {W : Ω → S} {T : Set S} :
-  (fun ω => Set.indicator T (fun _ : S => (1 : ℝ)) (W ω))
-  =
-  Set.indicator (W ⁻¹' T) (fun _ : Ω => (1 : ℝ)) := by
-  funext ω
-  by_cases h : W ω ∈ T <;> simp [Set.indicator_of_mem, Set.indicator_of_notMem, h]
-
-lemma integral_mul_indicator_to_set {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
-  {S : Set Ω} (hS : MeasurableSet S) (f : Ω → ℝ) :
-  ∫ ω, f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω ∂ μ
-  = ∫ ω in S, f ω ∂ μ := by
-  have : (fun ω => f ω * Set.indicator S (fun _ : Ω => (1 : ℝ)) ω) = S.indicator f := by
-    funext ω; by_cases h : ω ∈ S <;> simp [h]
-  simp [this, integral_indicator, hS]
-
-/- DELETED: The following two lemmas are unused in this file.
-   The stronger rectangle-based lemma `condexp_indicator_eq_of_agree_on_future_rectangles`
-   from CondExp.lean provides the needed functionality.
-
-/-- **Lemma 1.3 (contraction and independence).**
-
-If `(ξ, η) =^d (ξ, ζ)` and `σ(η) ⊆ σ(ζ)`, then `ξ ⊥⊥_η ζ`.
-[Proof sketch omitted - would use L² martingale argument]
-*Kallenberg (2005), Lemma 1.3.* -/
--- lemma contraction_independence ... -- OMITTED (proof sketch available)
-
-/-- If `(ξ,η)` and `(ξ,ζ)` have the same law and `σ(η) ≤ σ(ζ)`,
-then for all measurable `B`, the conditional expectations of `1_{ξ∈B}` coincide.
-[Proof sketch omitted - would use L² norm comparison] -/
--- lemma condexp_indicator_eq_of_dist_eq_and_le ... -- OMITTED (proof sketch available)
--/
 
 -- FutureCylinders, FirstBlockCylinder, IndicatorAlgebra, FutureRectangles sections
 -- have been extracted to MartingaleHelpers.lean and ViaMartingale/FutureRectangles.lean
@@ -400,43 +207,6 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 section MainTheorem
 
 open ProbabilityTheory
-
-/-- **Mixture representation on every finite block** (strict‑mono version)
-using the canonical directing measure.
-
-This is the key infrastructure lemma that assembles all the pieces:
-- `directingMeasure` with its probability and measurability properties
-- `conditional_law_eq_directingMeasure` extending X₀-marginal to all coordinates
-- `finite_product_formula` for the strict-mono product identity
-
-The public-facing theorem `deFinetti_viaMartingale` is in `TheoremViaMartingale.lean`. -/
-lemma finite_product_formula_with_directing
-    {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α) (hX : Contractable μ X) (hX_meas : ∀ n, Measurable (X n))
-    (m : ℕ) (k : Fin m → ℕ) (hk : StrictMono k) :
-  Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ
-    = μ.bind (fun ω => Measure.pi fun _ : Fin m => directingMeasure (μ := μ) X hX_meas ω) := by
-  classical
-  -- Assemble the hypotheses required by `finite_product_formula`.
-  have hν_prob : ∀ ω, IsProbabilityMeasure (directingMeasure (μ := μ) X hX_meas ω) :=
-    directingMeasure_isProb (μ := μ) X hX_meas
-  have hν_meas :
-      ∀ B : Set α, MeasurableSet B →
-        Measurable (fun ω => directingMeasure (μ := μ) X hX_meas ω B) :=
-    directingMeasure_measurable_eval (μ := μ) X hX_meas
-  -- X₀ marginal identity → all coordinates via conditional_law_eq_directingMeasure
-  have hν_law :
-      ∀ n B, MeasurableSet B →
-        (fun ω => (directingMeasure (μ := μ) X hX_meas ω B).toReal)
-          =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X] := by
-    intro n B hB
-    exact conditional_law_eq_directingMeasure (μ := μ) X hX hX_meas n B hB
-  -- Now invoke finite_product_formula wrapper.
-  exact finite_product_formula X hX hX_meas
-    (directingMeasure (μ := μ) X hX_meas) hν_prob hν_meas hν_law m k hk
 
 end MainTheorem
 

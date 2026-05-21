@@ -122,59 +122,6 @@ lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC
           field_simp
           ring
 
-/-- Telescoping bound for product differences.
-
-|∏ Aᵢ - ∏ Bᵢ| ≤ m * C^{m-1} * max |Aᵢ - Bᵢ|
-
-when |Aᵢ|, |Bᵢ| ≤ C for all i.
-
-Note: When m = 0, both products are 1, so the LHS is 0 and the RHS is 0.
-For m > 0, we use Finset.univ.sup' with nonemptiness. -/
-lemma prod_diff_bound {m : ℕ} {A B : Fin m → ℝ} {C : ℝ} (hC : 0 ≤ C)
-    (hA : ∀ i, |A i| ≤ C) (hB : ∀ i, |B i| ≤ C) :
-    |∏ i, A i - ∏ i, B i| ≤
-      if h : 0 < m then m * C^(m - 1) * (Finset.univ.sup' ⟨⟨0, h⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|))
-      else 0 := by
-  -- When m = 0, both products are 1, LHS = |1 - 1| = 0
-  by_cases hm : 0 < m
-  · simp only [hm, ↓reduceDIte]
-    -- Case C = 0: All |A i|, |B i| ≤ 0, so A = B = 0, so LHS = 0
-    by_cases hC' : C = 0
-    · have hA0 : ∀ i, A i = 0 := fun i => abs_eq_zero.mp (le_antisymm (hC' ▸ hA i) (abs_nonneg _))
-      have hB0 : ∀ i, B i = 0 := fun i => abs_eq_zero.mp (le_antisymm (hC' ▸ hB i) (abs_nonneg _))
-      -- Both products are 0, so LHS = |0 - 0| = 0 ≤ RHS
-      simp only [hA0, hB0, sub_self, abs_zero, Finset.prod_const, Finset.card_fin, zero_pow hm.ne']
-      -- Goal: 0 ≤ m * C^(m-1) * sup'(...)(fun _ => 0)
-      have h_sup_zero : Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun _ : Fin m => (0 : ℝ)) = 0 :=
-        le_antisymm (Finset.sup'_le _ _ fun _ _ => le_refl 0)
-          (Finset.le_sup'_of_le (fun _ => (0 : ℝ)) (Finset.mem_univ ⟨0, hm⟩) (le_refl 0))
-      simp only [h_sup_zero, mul_zero, le_refl]
-    -- Case C > 0: Use abs_prod_sub_prod_le_general
-    have hC_pos : 0 < C := lt_of_le_of_ne hC (Ne.symm hC')
-    have h_gen := abs_prod_sub_prod_le_general A B hC_pos hA hB
-    -- Now bound sum by m * max
-    have h_sum_le_m_max : ∑ i : Fin m, |A i - B i| ≤
-        m * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
-      calc ∑ i : Fin m, |A i - B i|
-        _ ≤ ∑ _i : Fin m, Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) :=
-            Finset.sum_le_sum fun i hi => Finset.le_sup' (fun i => |A i - B i|) hi
-        _ = Finset.card (Finset.univ : Finset (Fin m)) •
-              Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
-            rw [Finset.sum_const]
-        _ = (m : ℝ) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by
-            rw [Finset.card_fin, nsmul_eq_mul]
-    calc |∏ i, A i - ∏ i, B i|
-      _ ≤ C^(m - 1) * ∑ i, |A i - B i| := h_gen
-      _ ≤ C^(m - 1) * ((m : ℝ) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|)) := by
-          apply mul_le_mul_of_nonneg_left h_sum_le_m_max
-          exact pow_nonneg hC _
-      _ = ↑m * C^(m - 1) * Finset.univ.sup' ⟨⟨0, hm⟩, Finset.mem_univ _⟩ (fun i => |A i - B i|) := by ring
-  · simp only [hm, ↓reduceDIte]
-    -- m = 0, so both products over Fin 0 are empty, hence equal to 1
-    have hm0 : m = 0 := Nat.eq_zero_of_not_pos hm
-    subst hm0
-    simp only [Finset.univ_eq_empty, Finset.prod_empty, sub_self, abs_zero, le_refl]
-
 /-- Product of block averages converges L¹ to product of conditional expectations.
 
 `∫ |∏ blockAvg_i - ∏ CE[fᵢ(ω₀) | mSI]| dμ → 0` as n → ∞

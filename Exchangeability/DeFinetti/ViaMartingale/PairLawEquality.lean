@@ -107,31 +107,6 @@ lemma phi1_strictMono (r m : ℕ) (_hr : r ≤ m) : StrictMono (phi1 r m) := by
     simp only [hj, if_false]
     omega
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- φ₀ and φ₁ agree on indices 0,...,r-1 (the first r coordinates). -/
-lemma phi0_phi1_agree_on_first_r (r m i : ℕ) (hi : i < r) :
-    phi0 r m i = phi1 r m i := by
-  simp only [phi0, phi1, hi, Nat.le_of_lt hi, ↓reduceIte]
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- φ₀ at index r gives m+1 (start of future tail). -/
-lemma phi0_at_r (r m : ℕ) (hr : r ≤ m) : phi0 r m r = m + 1 := by
-  simp [phi0]; omega
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- φ₁ at index r gives r (the extra coordinate in W'). -/
-lemma phi1_at_r (r m : ℕ) : phi1 r m r = r := by
-  simp [phi1]
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- φ₁ at index r+1+k gives m+1+k (same as φ₀ at index r+k). -/
-lemma phi1_after_r (r m k : ℕ) (hr : r ≤ m) :
-    phi1 r m (r + 1 + k) = m + 1 + k := by
-  simp only [phi1]
-  have h : ¬(r + 1 + k ≤ r) := by omega
-  simp only [h, ↓reduceIte]
-  omega
-
 /-- **Key lemma:** Contractability gives pair-law equality `(U, W) =^d (U, W')`.
 
 Given a contractable sequence X:

@@ -120,10 +120,6 @@ lemma blockInjection_strictMono (m n : ℕ) (hn : 0 < n) (j : Fin m → Fin n) :
     simp only [blockInjection_apply_ge (Nat.le_of_not_lt hi), blockInjection_apply_ge hi']
     omega
 
-/-- Block injection is an embedding (strictly monotone implies injective). -/
-def blockInjectionEmb (m n : ℕ) (hn : 0 < n) (j : Fin m → Fin n) : ℕ ↪ ℕ :=
-  ⟨blockInjection m n j, (blockInjection_strictMono m n hn j).injective⟩
-
 /-! ### Reindexing by Block Injection -/
 
 /-- Reindex a sequence by block injection.
@@ -150,55 +146,6 @@ lemma measurable_reindexBlock (m n : ℕ) (j : Fin m → Fin n) :
 lemma blockInjection_val_lt (m n : ℕ) (j : Fin m → Fin n) (i : Fin m) :
     blockInjection m n j i.val = i.val * n + (j i).val := by
   simp [blockInjection, i.isLt]
-
-/-- Block injection at position k yields a value in block k. -/
-lemma blockInjection_mem_block (m n : ℕ) (j : Fin m → Fin n) (k : Fin m) :
-    blockInjection m n j k.val ∈ Set.Ico (k.val * n) ((k.val + 1) * n) := by
-  simp only [blockInjection_val_lt, Set.mem_Ico]
-  constructor
-  · omega
-  · have hj : (j k).val < n := (j k).isLt
-    calc k.val * n + (j k).val
-      _ < k.val * n + n := by omega
-      _ = (k.val + 1) * n := by ring
-
-/-- Block injection values for different k are in different blocks (hence disjoint). -/
-lemma blockInjection_disjoint_blocks (m n : ℕ) (j : Fin m → Fin n)
-    (k₁ k₂ : Fin m) (hk : k₁ ≠ k₂) :
-    blockInjection m n j k₁.val ≠ blockInjection m n j k₂.val := by
-  intro h
-  simp only [blockInjection_val_lt] at h
-  -- If k₁ * n + j(k₁) = k₂ * n + j(k₂) and both j values < n, then k₁ = k₂
-  have hj1 : (j k₁).val < n := (j k₁).isLt
-  have hj2 : (j k₂).val < n := (j k₂).isLt
-  -- Use Nat.div_mod uniqueness: k₁ = k₂ iff they're in the same block
-  have heq_div : k₁.val * n + (j k₁).val = k₂.val * n + (j k₂).val := h
-  -- WLOG: case split on k₁ < k₂ or k₂ < k₁
-  rcases Nat.lt_trichotomy k₁.val k₂.val with hlt | heq | hgt
-  · -- k₁ < k₂: then k₁ * n + j(k₁) < (k₁ + 1) * n ≤ k₂ * n ≤ k₂ * n + j(k₂)
-    have h1 : k₁.val * n + (j k₁).val < (k₁.val + 1) * n := by
-      calc k₁.val * n + (j k₁).val < k₁.val * n + n := by omega
-        _ = (k₁.val + 1) * n := by ring
-    have h2 : (k₁.val + 1) * n ≤ k₂.val * n := Nat.mul_le_mul_right n hlt
-    have h3 : k₂.val * n ≤ k₂.val * n + (j k₂).val := Nat.le_add_right _ _
-    have : k₁.val * n + (j k₁).val < k₂.val * n + (j k₂).val := calc
-      k₁.val * n + (j k₁).val < (k₁.val + 1) * n := h1
-      _ ≤ k₂.val * n := h2
-      _ ≤ k₂.val * n + (j k₂).val := h3
-    omega
-  · -- k₁ = k₂: contradiction with hk
-    exact hk (Fin.ext heq)
-  · -- k₂ < k₁: symmetric case
-    have h1 : k₂.val * n + (j k₂).val < (k₂.val + 1) * n := by
-      calc k₂.val * n + (j k₂).val < k₂.val * n + n := by omega
-        _ = (k₂.val + 1) * n := by ring
-    have h2 : (k₂.val + 1) * n ≤ k₁.val * n := Nat.mul_le_mul_right n hgt
-    have h3 : k₁.val * n ≤ k₁.val * n + (j k₁).val := Nat.le_add_right _ _
-    have : k₂.val * n + (j k₂).val < k₁.val * n + (j k₁).val := calc
-      k₂.val * n + (j k₂).val < (k₂.val + 1) * n := h1
-      _ ≤ k₁.val * n := h2
-      _ ≤ k₁.val * n + (j k₁).val := h3
-    omega
 
 /-! ### Shift-Invariance of Reindexing
 

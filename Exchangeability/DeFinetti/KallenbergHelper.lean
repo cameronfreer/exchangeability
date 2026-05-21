@@ -13,11 +13,3 @@ variable [MeasurableSpace α] [StandardBorelSpace α]
 variable [MeasurableSpace β] [StandardBorelSpace β] [Nonempty β]
 variable {μ : Measure Ω} [IsProbabilityMeasure μ]
 
-/-- Pull `f =ᵐ[map ζ μ] g` back along `ζ`. -/
-lemma ae_comp_of_ae_eq_map
-    {δ} [MeasurableSpace δ]
-    {ζ : Ω → β} (hζ : Measurable ζ)
-    {f g : β → δ} (h : f =ᵐ[Measure.map ζ μ] g) :
-    (fun ω => f (ζ ω)) =ᵐ[μ] (fun ω => g (ζ ω)) := by
-  -- Apply ae_eq_comp from mathlib: if f =ᵐ[map ζ μ] g, then f ∘ ζ =ᵐ[μ] g ∘ ζ
-  exact MeasureTheory.ae_eq_comp hζ.aemeasurable h

@@ -59,11 +59,6 @@ def shift : (ℕ → α) → (ℕ → α) := fun ξ n => ξ (n + 1)
 @[simp]
 lemma shift_apply (ξ : ℕ → α) (n : ℕ) : shift ξ n = ξ (n + 1) := rfl
 
-/-- Composing shift with itself is shift by 2. More generally, shift^n shifts by n. -/
-lemma shift_comp_shift : @shift α ∘ shift = fun ξ n => ξ (n + 2) := by
-  ext ξ n
-  simp only [Function.comp_apply, shift_apply]
-
 /-- The shift operator is measurable.
 
 **Proof:** shift is measurable iff for all i, the composition `(shift ξ) i` is measurable.

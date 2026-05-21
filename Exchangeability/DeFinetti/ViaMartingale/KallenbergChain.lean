@@ -76,16 +76,6 @@ def embedPairSeq : α × (ℕ → α) → ℕ → α
 def projectPairSeq : (ℕ → α) → α × (ℕ → α) :=
   fun f => (f 0, fun n => f (n + 1))
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-lemma projectPairSeq_embedPairSeq (p : α × (ℕ → α)) : projectPairSeq (embedPairSeq p) = p := by
-  rcases p with ⟨a, f⟩
-  simp only [projectPairSeq, embedPairSeq]
-
-@[measurability, fun_prop]
-lemma embedPairSeq_measurable : Measurable (embedPairSeq : α × (ℕ → α) → ℕ → α) := by
-  refine measurable_pi_lambda _ ?_
-  intro n; cases n <;> simp [embedPairSeq] <;> fun_prop
-
 @[measurability, fun_prop]
 lemma projectPairSeq_measurable : Measurable (projectPairSeq : (ℕ → α) → α × (ℕ → α)) :=
   by
@@ -105,16 +95,6 @@ lemma pairInjection_strictMono (k m : ℕ) (hk : k < m) : StrictMono (pairInject
   | 0, 0 => exact (Nat.lt_irrefl 0 hij).elim
   | 0, _ + 1 | _ + 1, _ + 1 => simp only [pairInjection]; omega
   | _ + 1, 0 => exact (Nat.not_lt_zero _ hij).elim
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- The pair (X k, shiftRV X m) factors through embedPairSeq and reindexing. -/
-lemma pair_eq_embedPairSeq_comp (X : ℕ → Ω → α) (k m : ℕ) :
-    (fun ω => embedPairSeq (X k ω, shiftRV X m ω)) =
-    (fun ω n => X (pairInjection k m n) ω) := by
-  ext ω n
-  cases n with
-  | zero => rfl
-  | succ n' => simp only [embedPairSeq, shiftRV, pairInjection]
 
 /-- **Pair law for shifted sequences from contractability.**
 
@@ -205,26 +185,6 @@ lemma condExp_indicator_revFiltration_eq_of_le
     (hX k) (measurable_shiftRV hX) (measurable_shiftRV hX)
     (pair_law_shift_eq_of_contractable hContr hX hkm hmn).symm
     (revFiltration_antitone X hmn) hB
-
-/-- **Trivial case: k = m.** X_m is measurable w.r.t. revFiltration X m (as (shiftRV X m) 0),
-so conditional expectation equals the function itself. -/
-lemma condExp_indicator_revFiltration_eq_self_of_eq
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n))
-    (m : ℕ) {B : Set α} (hB : MeasurableSet B) :
-    μ[Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) | revFiltration X m]
-      =ᵐ[μ]
-    Set.indicator (X m ⁻¹' B) (fun _ => (1 : ℝ)) := by
-  have hXm_meas : @Measurable Ω α (revFiltration X m) _ (X m) := by
-    have h_eq : X m = (fun ω => (shiftRV X m ω) 0) := funext fun ω => by simp only [shiftRV, add_zero]
-    rw [h_eq]
-    have hIdent : @Measurable Ω (ℕ → α) (revFiltration X m) _ (shiftRV X m) := measurable_iff_comap_le.mpr le_rfl
-    exact (measurable_pi_apply 0).comp hIdent
-  have hm_le := revFiltration_le X hX m
-  exact haveI : SigmaFinite (μ.trim hm_le) := inferInstance
-    .of_eq <| @condExp_of_stronglyMeasurable Ω ℝ (revFiltration X m) _ _ _ _ _ hm_le _
-    _ ((measurable_const.indicator hB).comp hXm_meas).stronglyMeasurable
-    (.indicator (integrable_const 1) ((hX m) hB))
 
 /-! ### Convergence to Tail σ-algebra
 

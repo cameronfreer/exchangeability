@@ -89,25 +89,6 @@ lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [Measur
     tailSigma X ≤ futureFiltration X m :=
   iInf_le_of_le (m + 1) le_rfl
 
-/-- Indicators of tail-measurable sets are tail-measurable functions. -/
-@[nolint unusedArguments]
-lemma indicator_tailMeasurable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (A : Set Ω) (hA : MeasurableSet[tailSigma X] A) :
-    StronglyMeasurable[tailSigma X] (A.indicator (fun _ => (1 : ℝ))) :=
-  StronglyMeasurable.indicator stronglyMeasurable_const hA
-
-/-- If each coordinate is measurable, then the tail σ-algebra is sigma-finite
-when the base measure is finite.
-
-Note: While this could be stated for general sigma-finite measures, we only need the finite
-case for de Finetti's theorem (which works with probability measures). The general sigma-finite
-case requires manual construction of spanning sets and is a mathlib gap. -/
-lemma sigmaFinite_trim_tailSigma {Ω α : Type*} {m₀ : MeasurableSpace Ω} [MeasurableSpace α]
-    {μ : @Measure Ω m₀} [IsFiniteMeasure μ]
-    (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :
-    SigmaFinite (μ.trim (tailSigma_le X hX)) :=
-  inferInstance
-
 /-! ### Helper lemmas for futureFiltration properties -/
 
 /-- Future filtration is sub-σ-algebra of ambient. -/
@@ -115,28 +96,6 @@ lemma futureFiltration_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace 
     (X : ℕ → Ω → α) (m : ℕ) (hX : ∀ n, Measurable (X n)) :
     futureFiltration X m ≤ (inferInstance : MeasurableSpace Ω) :=
   revFiltration_le X hX (m + 1)
-
-/-- The preimage of a measurable set under X_{m+k} is measurable in futureFiltration X m.
-Note: This requires k ≥ 1 since futureFiltration X m = σ(X_{m+1}, X_{m+2}, ...). -/
-@[nolint unusedArguments]
-lemma preimage_measurable_in_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (m k : ℕ) (hk : 1 ≤ k) {A : Set α} (hA : MeasurableSet A) :
-    MeasurableSet[futureFiltration X m] (X (m + k) ⁻¹' A) := by
-  -- futureFiltration X m = comap (shiftRV X (m+1))
-  -- X (m + k) = X (m + 1 + (k-1)) = π_{k-1} ∘ shiftRV X (m+1)
-  -- where π_n projects to the n-th coordinate
-  show MeasurableSet[MeasurableSpace.comap (shiftRV X (m + 1)) inferInstance] _
-  have : X (m + k) = (fun f : ℕ → α => f (k - 1)) ∘ shiftRV X (m + 1) :=
-    funext fun ω => by simp [shiftRV]; congr 1; omega
-  rw [this, Set.preimage_comp]
-  exact ⟨(fun f : ℕ → α => f (k - 1)) ⁻¹' A, (measurable_pi_apply (k - 1)) hA, rfl⟩
-
-/-- Events measurable in a future filtration remain measurable in earlier filtrations. -/
-lemma measurableSet_of_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) {m n : ℕ} (hmn : m ≤ n) {A : Set Ω}
-    (hA : MeasurableSet[futureFiltration X n] A) :
-    MeasurableSet[futureFiltration X m] A :=
-  futureFiltration_antitone X hmn A hA
 
 end FutureFiltration
 
