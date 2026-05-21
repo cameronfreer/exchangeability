@@ -56,6 +56,29 @@ variable {α : Type*} [MeasurableSpace α]
 -- Short notation for shift-invariant σ-algebra (used throughout this file)
 local notation "mSI" => shiftInvariantSigma (α := α)
 
+/-- For a finite family `fs : Fin m → α → ℝ` (with `0 < m`) where each `fs i` is bounded,
+there exists a single positive constant bounding all `fs i` uniformly.
+
+Construction: take the max of the individual bounds (in absolute value), then add 1
+to ensure strict positivity. -/
+private lemma exists_uniform_pos_bound_fin
+    {β : Type*} {m : ℕ} (hm_pos : 0 < m) {fs : Fin m → β → ℝ}
+    (hfs_bd : ∀ i, ∃ C, ∀ x, |fs i x| ≤ C) :
+    ∃ C > 0, ∀ i x, |fs i x| ≤ C := by
+  classical
+  choose Cs hCs using hfs_bd
+  have huniv_nonempty : (Finset.univ : Finset (Fin m)).Nonempty :=
+    ⟨⟨0, hm_pos⟩, Finset.mem_univ _⟩
+  refine ⟨(Finset.univ.sup' huniv_nonempty (fun i => |Cs i|)) + 1, ?_, ?_⟩
+  · exact add_pos_of_nonneg_of_pos
+      (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, hm_pos⟩) (abs_nonneg _)) one_pos
+  · intro i x
+    have h1 : |fs i x| ≤ Cs i := hCs i x
+    have h2 : Cs i ≤ |Cs i| := le_abs_self _
+    have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i => |Cs i|) :=
+      Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
+    linarith
+
 /-! ### Product L¹ Convergence via Telescoping -/
 
 section ProductConvergence
@@ -175,21 +198,7 @@ lemma product_blockAvg_L1_convergence
   have hm_pos : 0 < m := Nat.pos_of_ne_zero hm
 
   -- Step 1: Get uniform bound C > 0 for all fs i
-  have hC_exists : ∃ C > 0, ∀ i, ∀ x, |fs i x| ≤ C := by
-    choose Cs hCs using hfs_bd
-    -- Use max of bounds + 1 to ensure positivity
-    use (Finset.univ.sup' ⟨⟨0, hm_pos⟩, Finset.mem_univ _⟩ (fun i => |Cs i|)) + 1
-    constructor
-    · -- maxC > 0 since we add 1
-      exact add_pos_of_nonneg_of_pos (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, hm_pos⟩)
-        (abs_nonneg _)) one_pos
-    intro i x
-    have h1 : |fs i x| ≤ Cs i := hCs i x
-    have h2 : Cs i ≤ |Cs i| := le_abs_self _
-    have h3 : |Cs i| ≤ Finset.univ.sup' ⟨⟨0, hm_pos⟩, Finset.mem_univ _⟩ (fun i => |Cs i|) :=
-      Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
-    linarith
-  obtain ⟨C, hC_pos, hC_bd⟩ := hC_exists
+  obtain ⟨C, hC_pos, hC_bd⟩ := exists_uniform_pos_bound_fin hm_pos hfs_bd
 
   -- Step 2: Upper bound using telescoping
   -- Define the upper bound sequence
@@ -471,6 +480,9 @@ theorem condexp_product_factorization_contractable
   -- m > 0 case: Fin m is nonempty
   have hm_nonempty : Nonempty (Fin m) := ⟨⟨0, Nat.pos_of_ne_zero hm⟩⟩
 
+  -- Uniform positive bound on all fs i, used by every integrability subproof below.
+  obtain ⟨C, hC_pos, hC_bd⟩ := exists_uniform_pos_bound_fin (Nat.pos_of_ne_zero hm) hfs_bd
+
   -- The target function (product of CEs)
   -- Define as product of functions, which is what Finset.stronglyMeasurable_prod produces
   let g : Ω[α] → ℝ := ∏ i : Fin m, (fun ω => μ[(fun ω' => fs i (ω' 0)) | mSI] ω)
@@ -489,18 +501,6 @@ theorem condexp_product_factorization_contractable
 
   -- f is integrable (bounded measurable function on probability space)
   have hf_int : Integrable f μ := by
-    choose Cs hCs using hfs_bd
-    have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
-    let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
-    have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
-      (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
-    have hC_bd : ∀ i x, |fs i x| ≤ C := by
-      intro i x
-      have h1 : |fs i x| ≤ Cs i := hCs i x
-      have h2 : Cs i ≤ |Cs i| := le_abs_self _
-      have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
-        Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
-      linarith
     have h_meas : Measurable f := Finset.measurable_prod _ (fun i _ =>
       (hfs_meas i).comp (measurable_pi_apply _))
     apply Integrable.of_bound h_meas.aestronglyMeasurable (C^(Fintype.card (Fin m)))
@@ -512,18 +512,6 @@ theorem condexp_product_factorization_contractable
 
   -- g is integrable (bounded product of conditional expectations)
   have hg_int : Integrable g μ := by
-    choose Cs hCs using hfs_bd
-    have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
-    let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
-    have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
-      (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
-    have hC_bd : ∀ i x, |fs i x| ≤ C := by
-      intro i x
-      have h1 : |fs i x| ≤ Cs i := hCs i x
-      have h2 : Cs i ≤ |Cs i| := le_abs_self _
-      have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
-        Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
-      linarith
     -- Each CE is bounded by C
     have hCE_bd : ∀ᵐ ω ∂μ, ∀ i, |μ[(fun ω' => fs i (ω' 0)) | mSI] ω| ≤ C := by
       rw [ae_all_iff]
@@ -672,20 +660,6 @@ theorem condexp_product_factorization_contractable
 
       simp_rw [h_prod_blockAvg_eq]
 
-      -- Get bound for integrability
-      choose Cs hCs using hfs_bd
-      have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
-      let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
-      have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
-        (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
-      have hC_bd : ∀ i x, |fs i x| ≤ C := by
-        intro i x
-        have h1 : |fs i x| ≤ Cs i := hCs i x
-        have h2 : Cs i ≤ |Cs i| := le_abs_self _
-        have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
-          Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
-        linarith
-
       -- The RHS simplifies to the same as LHS
       -- ∫_s (1/(n+1)^m * ∑_j ...) = (1/(n+1)^m) * ∫_s (∑_j ...) = (1/(n+1)^m) * ∑_j ∫_s ...
       -- Each ∫_s ... = ∫_s f by h_each_j_setIntegral
@@ -762,19 +736,6 @@ theorem condexp_product_factorization_contractable
       simp only [Real.dist_eq, sub_zero] at hN
       rw [abs_of_nonneg (integral_nonneg (fun _ => abs_nonneg _))] at hN
       rw [Real.dist_eq]
-      -- Get a uniform bound C on all fs i
-      choose Cs hCs using hfs_bd
-      have huniv_nonempty : Finset.univ.Nonempty := Finset.univ_nonempty_iff.mpr hm_nonempty
-      let C := (Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|)) + 1
-      have hC_pos : 0 < C := add_pos_of_nonneg_of_pos
-        (Finset.le_sup'_of_le _ (Finset.mem_univ ⟨0, Nat.pos_of_ne_zero hm⟩) (abs_nonneg _)) one_pos
-      have hC_bd : ∀ i x, |fs i x| ≤ C := by
-        intro i x
-        have h1 : |fs i x| ≤ Cs i := hCs i x
-        have h2 : Cs i ≤ |Cs i| := le_abs_self _
-        have h3 : |Cs i| ≤ Finset.univ.sup' huniv_nonempty (fun i : Fin m => |Cs i|) :=
-          Finset.le_sup' (fun i => |Cs i|) (Finset.mem_univ i)
-        linarith
       -- Integrability of blockAvgProd n
       have h_int_blockAvg : Integrable (blockAvgProd n) μ := by
         have h_meas_n : Measurable (blockAvgProd n) :=
