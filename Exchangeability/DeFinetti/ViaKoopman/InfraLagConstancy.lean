@@ -209,71 +209,12 @@ def cycleShiftDown (L R : ℕ) (hLR : L ≤ R) : Equiv.Perm ℕ where
   left_inv := by intro n; simp only; split_ifs <;> omega
   right_inv := by intro n; simp only; split_ifs <;> omega
 
-lemma cycleShiftDown_gt (L R n : ℕ) (hLR : L ≤ R) (hn : R < n) :
-    cycleShiftDown L R hLR n = n := by
-  simp only [cycleShiftDown, Equiv.coe_fn_mk]; split_ifs <;> omega
-
 /-! ### Disjoint offset swap permutation
 
 For shifting cylinders from coords {i : i ∈ S} to {offset + i : i ∈ S} while fixing coords outside.
 This is used in `h_shift_to_N₀` to show CE[φ(ω_k) · 1_B | mSI] = CE[φ(ω_k) · 1_{B_at N₀} | mSI].
 -/
 
-/-- Permutation that swaps i ↔ offset+i for all i in a finite set S,
-where all elements of S are less than offset. This is an involution. -/
-def disjointOffsetSwap (S : Finset ℕ) (offset : ℕ) (hS : ∀ i ∈ S, i < offset) : Equiv.Perm ℕ where
-  toFun := fun n =>
-    if n ∈ S then offset + n
-    else if n - offset ∈ S ∧ offset ≤ n then n - offset
-    else n
-  invFun := fun n =>
-    if n ∈ S then offset + n
-    else if n - offset ∈ S ∧ offset ≤ n then n - offset
-    else n
-  left_inv := by
-    intro n
-    simp only
-    by_cases h1 : n ∈ S
-    · -- n ∈ S, toFun n = offset + n
-      rw [if_pos h1]
-      -- invFun (offset + n): is offset + n ∈ S? No, since offset + n ≥ offset > i for all i ∈ S
-      have hnotS : offset + n ∉ S := by
-        intro habs; have := hS (offset + n) habs; omega
-      rw [if_neg hnotS]
-      have hcond : offset + n - offset ∈ S ∧ offset ≤ offset + n := by
-        simp only [Nat.add_sub_cancel_left, h1, Nat.le_add_right, and_self]
-      rw [if_pos hcond]
-      simp only [Nat.add_sub_cancel_left]
-    · -- n ∉ S
-      rw [if_neg h1]
-      by_cases h2 : n - offset ∈ S ∧ offset ≤ n
-      · -- n - offset ∈ S and offset ≤ n, toFun n = n - offset
-        rw [if_pos h2, if_pos h2.1]
-        omega
-      · -- neither condition, toFun n = n
-        rw [if_neg h2, if_neg h1, if_neg h2]
-  right_inv := by
-    intro n
-    simp only
-    by_cases h1 : n ∈ S
-    · -- n ∈ S
-      rw [if_pos h1]
-      have hnotS : offset + n ∉ S := by
-        intro habs; have := hS (offset + n) habs; omega
-      rw [if_neg hnotS]
-      have hcond : offset + n - offset ∈ S ∧ offset ≤ offset + n := by
-        simp only [Nat.add_sub_cancel_left, h1, Nat.le_add_right, and_self]
-      rw [if_pos hcond]
-      simp only [Nat.add_sub_cancel_left]
-    · -- n ∉ S
-      rw [if_neg h1]
-      by_cases h2 : n - offset ∈ S ∧ offset ≤ n
-      · rw [if_pos h2, if_pos h2.1]
-        omega
-      · rw [if_neg h2, if_neg h1, if_neg h2]
-
-/-- The function f(ω 0) * g(ω (k+1)) composed with reindex τ gives f(ω 0) * g(ω k)
-when τ = swap k (k+1) and k ≥ 1 (so τ fixes 0). -/
 private lemma product_reindex_swap_eq (f g : α → ℝ) (k : ℕ) (hk : 0 < k) :
     (fun ω => f (ω 0) * g (ω (k + 1))) ∘ Exchangeability.reindex (Equiv.swap k (k + 1))
     = fun ω => f (ω 0) * g (ω k) := by

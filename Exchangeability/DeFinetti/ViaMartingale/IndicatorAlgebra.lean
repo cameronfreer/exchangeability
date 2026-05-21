@@ -75,15 +75,6 @@ lemma indProd_integrable [MeasurableSpace Ω] [MeasurableSpace α]
   -- Indicator functions of measurable sets are integrable under finite measures
   exact Integrable.indicator (integrable_const 1) (firstRCylinder_measurable_ambient X r C hX hC)
 
-/-- indProd is strongly measurable when coordinates and sets are measurable. -/
-@[measurability, fun_prop]
-lemma indProd_stronglyMeasurable [MeasurableSpace Ω] [MeasurableSpace α]
-    (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α)
-    (hX : ∀ n, Measurable (X n)) (hC : ∀ i, MeasurableSet (C i)) :
-    StronglyMeasurable (indProd X r C) := by
-  rw [indProd_eq_firstRCylinder_indicator]
-  exact .indicator stronglyMeasurable_const (firstRCylinder_measurable_ambient X r C hX hC)
-
 /-- indProd of zero coordinates is identically 1. -/
 @[simp] lemma indProd_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
     indProd X 0 C = fun _ => 1 := funext fun _ => by simp [indProd]

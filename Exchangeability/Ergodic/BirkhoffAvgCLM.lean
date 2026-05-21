@@ -152,9 +152,4 @@ lemma EventuallyEq.sum' {ι : Type*} [Fintype ι] {fs gs : ι → Ω → ℝ}
 
 end LpCoercionHelpers
 
-/-- Birkhoff average as a continuous linear map. -/
-def birkhoffAvgCLM (U : E →L[ℝ] E) (n : ℕ) : E →L[ℝ] E :=
-  if n = 0 then 0 else
-    ((n : ℝ)⁻¹) • (∑ k : Fin n, powCLM U k)
-
 end Exchangeability.Ergodic

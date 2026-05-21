@@ -66,13 +66,6 @@ have the same distribution. This follows from contractability by viewing each pa
 as a strictly increasing subsequence of X.
 -/
 
-/-- Embedding of `α × (ℕ → α)` into `ℕ → α` by placing the first element at position 0
-and the sequence at positions 1, 2, 3, ... -/
-def embedPairSeq : α × (ℕ → α) → ℕ → α
-  | (a, _), 0 => a
-  | (_, f), n + 1 => f n
-
-/-- Projection from `ℕ → α` to `α × (ℕ → α)` by extracting position 0 and the tail. -/
 def projectPairSeq : (ℕ → α) → α × (ℕ → α) :=
   fun f => (f 0, fun n => f (n + 1))
 

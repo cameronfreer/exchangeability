@@ -87,19 +87,6 @@ end CondDistribUniqueness
 
 section ConditionalIndependence
 
-/-- **Helper lemma:** Marginal distribution projection from triple.
-If two triple distributions are equal, then projecting to a pair by dropping one coordinate
-preserves the equality. -/
-private lemma map_pair_of_map_triple_eq
-  {Ω α β γ δ : Type*}
-  [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
-  {μ : Measure Ω}
-  {f₁ f₂ : Ω → α × β × γ} {proj : α × β × γ → δ}
-  (hf₁ : Measurable f₁) (hf₂ : Measurable f₂) (hproj : Measurable proj)
-  (h_eq : Measure.map f₁ μ = Measure.map f₂ μ) :
-  Measure.map (proj ∘ f₁) μ = Measure.map (proj ∘ f₂) μ := by
-  rw [← Measure.map_map hproj hf₁, ← Measure.map_map hproj hf₂, h_eq]
-
 end ConditionalIndependence
 
 end Exchangeability.DeFinetti.ViaMartingale

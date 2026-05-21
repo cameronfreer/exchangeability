@@ -381,27 +381,6 @@ namespace FinIndexHelpers
 open scoped BigOperators
 open Finset
 
-/-- Auxiliary lemma: the two filtered sets partition Fin(2k). -/
-private lemma card_filter_partition (k : ℕ) :
-  ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k)).card +
-  ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))).card = 2*k := by
-  have h_partition : (univ : Finset (Fin (2*k)))
-                   = (univ : Finset (Fin (2*k))).filter (fun i => i.val < k)
-                   ∪ (univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k)) := by
-    ext i; simp only [mem_union, mem_filter, mem_univ, true_and]; tauto
-  have h_disj : Disjoint ((univ : Finset (Fin (2*k))).filter (fun i => i.val < k))
-                         ((univ : Finset (Fin (2*k))).filter (fun i => ¬(i.val < k))) := by
-    rw [disjoint_iff_ne]
-    intro a ha b hb
-    simp only [mem_filter, mem_univ, true_and] at ha hb
-    intro heq
-    rw [heq] at ha
-    exact hb ha
-  have h_card_sum := card_union_of_disjoint h_disj
-  rw [← h_partition] at h_card_sum
-  simp only [card_fin] at h_card_sum
-  convert h_card_sum.symm using 2
-
 end FinIndexHelpers
 end Exchangeability.DeFinetti.L2Helpers
 

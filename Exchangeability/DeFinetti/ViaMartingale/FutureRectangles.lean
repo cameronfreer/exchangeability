@@ -176,11 +176,6 @@ lemma contractable_dist_eq_on_rectangles_future
 
 end FutureRectangles
 
-/-- Two measures agree on all future rectangles (sets of form B ×ˢ cylinder r C). -/
-def AgreeOnFutureRectangles (μ ν : Measure (α × (ℕ → α))) : Prop :=
-  ∀ (r : ℕ) (B : Set α) (_hB : MeasurableSet B) (C : Fin r → Set α) (_hC : ∀ i, MeasurableSet (C i)),
-    μ (B ×ˢ cylinder (α:=α) r C) = ν (B ×ˢ cylinder (α:=α) r C)
-
 /-! ## Measure extension from future rectangles -/
 
 @[nolint unusedArguments]

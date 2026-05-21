@@ -34,11 +34,6 @@ noncomputable section
 
 variable {α : Type*} [MeasurableSpace α]
 
-/-- Cylinder function: a function on path space depending only on finitely many coordinates.
-For simplicity, we take the first m coordinates. -/
-def cylinderFunction {m : ℕ} (φ : (Fin m → α) → ℝ) : (ℕ → α) → ℝ :=
-  fun ω => φ (fun k => ω k.val)
-
 /-- Product cylinder: ∏_{k < m} fₖ(ω k). -/
 def productCylinder {m : ℕ} (fs : Fin m → α → ℝ) : (ℕ → α) → ℝ :=
   fun ω => ∏ k : Fin m, fs k (ω k.val)

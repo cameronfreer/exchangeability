@@ -103,35 +103,6 @@ theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     CondIndep μ Y Z W ↔ CondIndep μ Z Y W := by
   constructor <;> (intro h A B hA hB; simpa [mul_comm] using h B A hB hA)
 
-/-!
-## Helper lemmas for independence and conditional expectation
--/
-
-/-- **Conditional expectation against an independent σ-algebra is constant.**
-
-If X is integrable and measurable with respect to a σ-algebra independent of σ(W),
-then E[X | σ(W)] = E[X] almost everywhere.
-
-This is the key property that makes independence "pass through" conditioning:
-knowing W provides no information about X when X ⊥ W.
--/
-@[nolint unusedArguments]
-lemma condExp_const_of_indepFun (μ : Measure Ω) [IsProbabilityMeasure μ]
-    {X : Ω → ℝ} {W : Ω → γ}
-    (hX : Measurable X) (hW : Measurable W)
-    (h_indep : IndepFun X W μ)
-    (_hX_int : Integrable X μ) :
-    μ[X | MeasurableSpace.comap W (by infer_instance)] =ᵐ[μ] (fun _ => μ[X]) := by
-  -- Convert IndepFun to Indep of σ-algebras
-  rw [IndepFun_iff_Indep] at h_indep
-  -- Apply condExp_indep_eq: E[X|σ(W)] = E[X] when σ(X) ⊥ σ(W)
-  refine condExp_indep_eq hX.comap_le hW.comap_le ?_ h_indep
-  -- X is σ(X)-strongly measurable (X is measurable from (Ω, σ(X)) to ℝ by definition of comap)
-  have : @Measurable Ω ℝ (MeasurableSpace.comap X (by infer_instance)) _ X :=
-    Measurable.of_comap_le le_rfl
-  exact this.stronglyMeasurable
-
-variable {μ : Measure Ω} in
 /-- Extract independence of first component from pair independence. -/
 lemma IndepFun.of_comp_left_fst {Y : Ω → α} {Z : Ω → β} {W : Ω → γ}
     (h : IndepFun (fun ω => (Y ω, Z ω)) W μ) :
