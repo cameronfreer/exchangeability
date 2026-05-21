@@ -1860,30 +1860,8 @@ private lemma blockAvg_shift_tendsto
   let C_N := eLpNorm (blockAvg f X 0 N - α_f) 2 μ
 
   -- Step 3: We need MemLp for blockAvg - α_f to use eLpNorm_add_le
-  have hBlockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
-    intro n
-    by_cases hn : n > 0
-    · apply memLp_two_of_bounded
-      · exact blockAvg_measurable f X hf_meas hX_meas 0 n
-      · intro ω
-        calc |blockAvg f X 0 n ω|
-            = |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| := rfl
-          _ = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
-              rw [abs_mul, abs_inv, abs_of_nonneg (Nat.cast_nonneg n)]
-          _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-              apply mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _)
-              exact inv_nonneg.mpr (Nat.cast_nonneg n)
-          _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun _ => 1) := by
-              apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr (Nat.cast_nonneg n))
-              exact Finset.sum_le_sum (fun k _ => hf_bdd (X (0 + k) ω))
-          _ = (n : ℝ)⁻¹ * n := by simp
-          _ = 1 := by field_simp [Nat.pos_iff_ne_zero.mp hn]
-    · push Not at hn
-      have : n = 0 := Nat.eq_zero_of_le_zero hn
-      subst this
-      have h_eq : blockAvg f X 0 0 = fun _ => 0 := by ext ω; simp [blockAvg]
-      rw [h_eq]
-      exact MemLp.zero'
+  have hBlockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n =>
+    blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n
 
   have hDiff_memLp : ∀ n, MemLp (blockAvg f X 0 n - α_f) 2 μ :=
     fun n => (hBlockAvg_memLp n).sub hα_memLp
@@ -2161,51 +2139,10 @@ lemma cesaro_to_condexp_L2
     -- Apply cauchy_complete_eLpNorm to get L² limit
 
     -- Step 1: Show each blockAvg is in L²
-    have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ := by
-      intro n hn_pos
-      -- blockAvg is bounded since f is bounded
-      apply memLp_two_of_bounded
-      · -- Measurable: blockAvg is a finite sum of measurable functions
-        fun_prop
-      intro ω
-      -- |blockAvg f X 0 n ω| ≤ 1 since |f| ≤ 1
-      show |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ 1
-      calc |(n : ℝ)⁻¹ * (Finset.range n).sum (fun k => f (X (0 + k) ω))|
-          = (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))| := by
-            rw [abs_mul, abs_inv, abs_of_nonneg]
-            exact Nat.cast_nonneg n
-        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-            apply mul_le_mul_of_nonneg_left
-            · exact Finset.abs_sum_le_sum_abs _ _
-            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-        _ ≤ (n : ℝ)⁻¹ * (Finset.range n).sum (fun k => 1) := by
-            apply mul_le_mul_of_nonneg_left
-            · apply Finset.sum_le_sum
-              intro k _
-              exact hf_bdd (X (0 + k) ω)
-            · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-        _ = (n : ℝ)⁻¹ * n := by simp
-        _ = 1 := by
-            field_simp [Nat.pos_iff_ne_zero.mp hn_pos]
-
-    -- For n = 0, handle separately
-    have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := by
-      intro n
-      by_cases hn : n > 0
-      · exact hblockAvg_memLp n hn
-      · -- n = 0 case: blockAvg is just the constant 0 function
-        have : n = 0 := by omega
-        subst this
-        -- When n=0, Finset.range 0 is empty, so sum = 0
-        -- blockAvg f X 0 0 = 0⁻¹ * 0, which we treat as the zero function
-        have h_eq : blockAvg f X 0 0 = fun ω => (0 : ℝ) := by
-          ext ω
-          simp [blockAvg, Finset.range_zero, Finset.sum_empty]
-        rw [h_eq]
-        -- Constant 0 function is in L² (bounded by 1)
-        apply memLp_two_of_bounded (M := 1) measurable_const
-        intro ω
-        norm_num
+    have hblockAvg_memLp_all : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n =>
+      blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n
+    have hblockAvg_memLp : ∀ n, n > 0 → MemLp (blockAvg f X 0 n) 2 μ :=
+      fun n _ => hblockAvg_memLp_all n
 
     -- Step 2-5: Extract L² limit from Cauchy sequence
     --
@@ -2635,25 +2572,8 @@ lemma cesaro_to_condexp_L2
       -- L² convergence + bounded measure gives set integral convergence
       have h_setInt_tendsto : Tendsto (fun n => ∫ ω in A, blockAvg f X 0 n ω ∂μ)
           atTop (𝓝 (∫ ω in A, α_f ω ∂μ)) := by
-        -- Need MemLp for each blockAvg n (bounded functions on probability spaces)
-        have h_blockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n => by
-          apply MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas 0 n).aestronglyMeasurable 1
-          filter_upwards with ω
-          simp only [Real.norm_eq_abs, blockAvg]
-          -- |n⁻¹ * ∑ f(X k)| ≤ n⁻¹ * n = 1
-          rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
-          calc (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-              ≤ (n : ℝ)⁻¹ * n := by
-                apply mul_le_mul_of_nonneg_left _ (inv_nonneg.mpr (Nat.cast_nonneg n))
-                calc |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-                    ≤ (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) :=
-                      Finset.abs_sum_le_sum_abs _ _
-                  _ ≤ (Finset.range n).sum (fun _ => 1) := by
-                      apply Finset.sum_le_sum; intro k _
-                      simp only [zero_add]; exact hf_bdd (X k ω)
-                  _ = n := by simp only [Finset.sum_const, Finset.card_range, nsmul_one]
-            _ ≤ 1 := by by_cases hn : n = 0 <;> simp [hn]
-        -- Use auxiliary lemma
+        have h_blockAvg_memLp : ∀ n, MemLp (blockAvg f X 0 n) 2 μ := fun n =>
+          blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n
         have hA_meas : MeasurableSet A := hm A hA
         exact tendsto_setIntegral_of_L2_tendsto hA_meas h_blockAvg_memLp hα_memLp hα_limit
 
@@ -2708,12 +2628,8 @@ lemma cesaro_to_condexp_L1
   -- STEP 1: Convert eLpNorm convergence to plain integral form
   -- eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2), so squaring both sides and using continuity
   -- First, show that each difference is in L²
-  have h_diff_memLp : ∀ n, MemLp (fun ω => blockAvg f X 0 n ω - α_f ω) 2 μ := by
-    intro n
-    have h_blockAvg_memLp : MemLp (blockAvg f X 0 n) 2 μ := by
-      apply MemLp.of_bound (blockAvg_measurable f X hf_meas hX_meas 0 n).aestronglyMeasurable 1
-      exact ae_of_all μ (fun ω => (Real.norm_eq_abs _).le.trans (blockAvg_abs_le_one f X hf_bdd 0 n ω))
-    exact h_blockAvg_memLp.sub hα_L2
+  have h_diff_memLp : ∀ n, MemLp (fun ω => blockAvg f X 0 n ω - α_f ω) 2 μ := fun n =>
+    (blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n).sub hα_L2
 
   have hL2_integral : Tendsto (fun n => ∫ ω, (blockAvg f X 0 n ω - α_f ω)^2 ∂μ) atTop (𝓝 0) := by
     -- Define gn := blockAvg f X 0 n - α_f for notational convenience
