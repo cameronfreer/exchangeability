@@ -800,13 +800,13 @@ lemma kallenberg_L2_bound
    a massive indentation when handling the ρ = 1 edge case separately. -/
 private lemma cesaro_cauchy_rho_lt
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {X : ℕ → Ω → ℝ} (hX_contract : Exchangeability.Contractable μ X)
+    {X : ℕ → Ω → ℝ} (_hX_contract : Exchangeability.Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1)
     (m_mean : ℝ) (hm_mean : m_mean = ∫ ω, f (X 0 ω) ∂μ)
     (Z : ℕ → Ω → ℝ) (hZ_def : ∀ i ω, Z i ω = f (X i ω) - m_mean)
     (hZ_meas : ∀ i, Measurable (Z i))
-    (hZ_contract : Exchangeability.Contractable μ Z)
+    (_hZ_contract : Exchangeability.Contractable μ Z)
     (hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ)
     (hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0)
     (hZ_cov_uniform : ∀ i j, i ≠ j → ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ)
@@ -1813,6 +1813,7 @@ private lemma blockAvg_cauchy_in_L2
     rw [h_norm_zero]
     exact hε
 
+set_option linter.unusedVariables false in
 lemma blockAvg_measurable_tailFamily
     {Ω : Type*} [MeasurableSpace Ω]
     {f : ℝ → ℝ} (hf : Measurable f)

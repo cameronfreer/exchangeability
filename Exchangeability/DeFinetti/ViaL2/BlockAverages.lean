@@ -855,6 +855,7 @@ lemma l2_bound_two_windows_uniform
 
   exact h_final
 
+set_option linter.unusedVariables false in
 /-- **Compute the L² contractability constant for f ∘ X.**
 
 This helper extracts the common covariance structure computation needed by both

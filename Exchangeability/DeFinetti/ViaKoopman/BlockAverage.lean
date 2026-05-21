@@ -56,7 +56,7 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 For coordinate `k < m`, computes the average of `f(ω(k*n + j))` over `j ∈ {0, ..., n-1}`.
 This is the Cesàro average of `f` starting at coordinate `k*n`. -/
 def blockAvg (m n : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) : ℝ :=
-  if hn : n = 0 then 0
+  if _hn : n = 0 then 0
   else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j)))
 
 omit [MeasurableSpace α] in

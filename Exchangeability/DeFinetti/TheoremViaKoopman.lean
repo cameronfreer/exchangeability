@@ -72,6 +72,7 @@ exchangeability implies full exchangeability (via `exchangeable_iff_fullyExchang
 gives path measure exchangeability needed for the ergodic machinery.
 -/
 
+set_option linter.unusedVariables false in
 @[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]

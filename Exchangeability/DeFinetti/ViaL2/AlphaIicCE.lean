@@ -48,6 +48,7 @@ We now define the **canonical** version using conditional expectation onto the t
 This avoids all pointwise headaches and gives us the endpoint limits for free.
 -/
 
+set_option linter.unusedVariables false in
 /-- **Canonical conditional expectation version** of α_{Iic t}.
 
 This is the conditional expectation of the indicator function `1_{(-∞,t]}∘X_0` with respect
