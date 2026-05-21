@@ -88,9 +88,7 @@ lemma ν_eval_measurable
 instance ν_isProbabilityMeasure
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) : IsProbabilityMeasure (ν (μ := μ) ω) := by
-  simp only [ν]
-  -- rcdKernel is a Markov kernel (composition of map and comap preserves this)
-  exact IsMarkovKernel.isProbabilityMeasure ω
+  unfold ν; infer_instance
 
 /-! ## Bridge lemmas -/
 
@@ -103,15 +101,9 @@ lemma integral_ν_eq_integral_condExpKernel
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] [StandardBorelSpace α]
     (ω : Ω[α]) {f : α → ℝ} (hf : Measurable f) :
     ∫ x, f x ∂(ν (μ := μ) ω) = ∫ y, f (y 0) ∂(condExpKernel μ (shiftInvariantSigma (α := α)) ω) := by
-  -- By definition: ν ω = Kernel.comap (Kernel.map (condExpKernel μ ...) π₀) id ... ω
-  -- Kernel.comap with id is just evaluation, so: ν ω = (Kernel.map (condExpKernel μ ...) π₀) ω
-  -- Kernel.map_apply gives: (Kernel.map κ f) a = (κ a).map f
-  -- So: ν ω = ((condExpKernel μ ...) ω).map π₀
-  -- Then integral_map gives: ∫ f d(μ.map g) = ∫ (f ∘ g) dμ
   unfold ν rcdKernel
   rw [Kernel.comap_apply]
   rw [Kernel.map_apply _ (measurable_pi0 (α := α))]
-  -- Now: ∫ x, f x ∂((condExpKernel ... ω).map π₀) = ∫ y, f (y 0) ∂(condExpKernel ... ω)
   unfold π0
   rw [MeasureTheory.integral_map (measurable_pi_apply 0).aemeasurable hf.aestronglyMeasurable]
   rfl
