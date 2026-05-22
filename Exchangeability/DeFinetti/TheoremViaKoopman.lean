@@ -72,12 +72,9 @@ exchangeability implies full exchangeability (via `exchangeable_iff_fullyExchang
 gives path measure exchangeability needed for the ergodic machinery.
 -/
 
-set_option linter.unusedVariables false in
-@[nolint unusedArguments]
 lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i)) :
     Contractable μ X ↔ Exchangeable μ X ∧ ConditionallyIID μ X := by
   constructor
   · -- Forward: Contractable → Exchangeable ∧ ConditionallyIID
@@ -121,10 +118,9 @@ lemma deFinetti_RyllNardzewski_equivalence_viaKoopman
 theorem deFinetti_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hX_exch : Exchangeable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
+    (hX_exch : Exchangeable μ X) :
     ConditionallyIID μ X :=
-  ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp
+  ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas).mp
     (contractable_of_exchangeable hX_exch hX_meas)).2
 
 /-- **Contractable implies conditionally i.i.d.** (via Koopman).
@@ -136,9 +132,8 @@ theorem deFinetti_viaKoopman
 theorem conditionallyIID_of_contractable_viaKoopman
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
-    (hContract : Contractable μ X)
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  exact ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas hX_L2).mp hContract).2
+    (hContract : Contractable μ X) :
+    ConditionallyIID μ X :=
+  ((deFinetti_RyllNardzewski_equivalence_viaKoopman μ X hX_meas).mp hContract).2
 
 end Exchangeability.DeFinetti
