@@ -16,14 +16,10 @@ import Exchangeability.DeFinetti.ViaL2.MoreL2Helpers
 This is the main file for the L² approach to de Finetti's theorem. The proof
 has been split across multiple files for maintainability:
 
-* `ViaL2/BlockAverages.lean` - Block average definitions and early infrastructure  
-  (~1600 lines)
-* `ViaL2/CesaroConvergence.lean` - Cesàro convergence via L² bounds  
-  (~2800 lines)
-* `ViaL2/MainConvergence.lean` - Main convergence theorems and directing measure  
-  (~2800 lines)
-* `ViaL2/MoreL2Helpers.lean` - Technical lemmas and temporary axioms  
-  (~500 lines)
+* `ViaL2/BlockAverages.lean` - Block average definitions and early infrastructure
+* `ViaL2/CesaroConvergence.lean` - Cesàro convergence via L² bounds
+* `ViaL2/MainConvergence.lean` - Main convergence theorems and directing measure
+* `ViaL2/MoreL2Helpers.lean` - Technical lemmas
 
 This file re-exports all the main results for use by `TheoremViaL2.lean`.
 

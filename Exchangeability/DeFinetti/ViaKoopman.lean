@@ -16,9 +16,9 @@ Kallenberg's "first proof" which uses disjoint-block averaging rather than permu
 
 ## Main results
 
-* `deFinetti_viaKoopman_path`: de Finetti's theorem from contractability (path-space version).
-  For a contractable sequence on a standard Borel space, there exists a kernel ν
-  such that the coordinates are conditionally i.i.d. given ν.
+* `conditionallyIID_bind_of_contractable`: the file's main bridge — a contractable
+  sequence on a standard Borel space is conditionally i.i.d. given a directing
+  measure (via `bind`). Public theorem wrappers live in `TheoremViaKoopman.lean`.
 
 ## Mathematical overview
 
