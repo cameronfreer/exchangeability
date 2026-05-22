@@ -27,7 +27,6 @@ basic properties. The definition uses indicator functions on measurable rectangl
 ## Main results
 
 * `condIndep_symm`: Conditional independence is symmetric (Y ⊥⊥_W Z ↔ Z ⊥⊥_W Y)
-* `condExp_const_of_indepFun`: Independence implies constant conditional expectation
 
 ## Implementation notes
 

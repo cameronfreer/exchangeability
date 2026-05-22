@@ -22,15 +22,14 @@ import Mathlib.Probability.CDF
 /-!
 # Main Convergence Theorems via L² Approach
 
-This file contains the main convergence theorems for the L² proof of de Finetti's
-theorem, including weighted sums convergence and reverse martingale results.
+This file contains the main L¹ convergence theorem for the L² proof of de Finetti's
+theorem. The directing measure itself and the packaging theorem
+`directing_measure_satisfies_requirements` now live in `DirectingMeasureCore.lean`
+and `MoreL2Helpers.lean` respectively.
 
 ## Main results
 
 * `weighted_sums_converge_L1`: Weighted sums converge in L¹ for contractable sequences
-* `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
-* `directing_measure`: Construction of the directing measure
-* `directing_measure_satisfies_requirements`: Final packaging theorem
 
 ## References
 

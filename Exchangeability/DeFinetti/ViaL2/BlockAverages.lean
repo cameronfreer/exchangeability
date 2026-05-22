@@ -52,12 +52,14 @@ Starting from a **contractable** sequence ξ:
 
 ## Main results
 
-* `deFinetti_viaL2`: **Main theorem** - contractable implies conditionally i.i.d.
-* `deFinetti`: **Canonical name** (alias for `deFinetti_viaL2`)
+This file establishes the covariance structure and L² bounds used by the L²
+proof. The public theorems (`deFinetti_viaL2`, `deFinetti`) live in
+`TheoremViaL2.lean`; the L¹ convergence step lives in `MainConvergence.lean`.
 
-Supporting lemmas:
-* `weighted_sums_converge_L1`: L² bound implies L¹ convergence
-* `reverse_martingale_limit`: Tail-measurable limit via reverse martingale
+Key local lemmas:
+
+* `contractable_covariance_structure`: extract uniform `(mean, σ², ρ)` from contractability
+* `l2_bound_two_windows_uniform`, `l2_bound_long_vs_tail`: the two L² Cauchy bounds
 
 ## Why this proof is default
 

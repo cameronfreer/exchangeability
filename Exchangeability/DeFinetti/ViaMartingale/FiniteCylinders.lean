@@ -19,9 +19,6 @@ conditional independence from contractability.
 ## Main definitions
 
 * `finFutureSigma X m k` - Finite approximation of the future σ-algebra
-* `contractable_finite_cylinder_measure` - Cylinder measure formula from contractability
-* `contractable_triple_pushforward` - Triple pushforward equality
-* `join_eq_comap_pair_finFuture` - σ-algebra join characterization
 
 ## Strategy
 

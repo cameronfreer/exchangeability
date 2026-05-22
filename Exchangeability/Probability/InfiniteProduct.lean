@@ -28,13 +28,8 @@ measure-theoretic construction underlying i.i.d. sequences.
 
 ## Main results
 
-* `iidProjectiveFamily_projective`: The finite products form a projective family
-  (projections preserve the measure).
 * `iidProduct_isProjectiveLimit`: `iidProduct ν` is the projective limit of the
   finite products, making it unique with this property.
-* `cylinder_finset`: For any finite subset `I`, the marginal distribution on `I`
-  equals the finite product `ν^I`.
-* `cylinder_fintype`: The distribution on the first `n` coordinates equals `ν^n`.
 * `perm_eq`: **The measure is invariant under all permutations of ℕ**, proving that
   i.i.d. sequences are fully exchangeable.
 

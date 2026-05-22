@@ -22,7 +22,6 @@ conditional independence.
 * `tendsto_condexp_L1`: L¹ convergence of conditional expectations
 * `eapprox_real_approx`: Simple function approximation for real-valued functions
 * `condExp_project_of_condIndep`: Conditional expectation projection theorem
-* `condIndep_project`: Main projection theorem
 
 ## References
 

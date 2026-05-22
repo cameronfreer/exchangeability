@@ -13,7 +13,8 @@ which is the first step toward the full monotone class extension to bounded meas
 
 ## Main results
 
-* `condIndep_of_indep_pair`: Independence Y ⊥ Z plus (Y,Z) ⊥ W implies Y ⊥⊥_W Z
+* `condIndep_indicator`: Indicator-level factorization from `CondIndep`
+* `condIndep_indicator_simpleFunc`: Extension to indicators of simple functions
 * `condIndep_simpleFunc`: Factorization extends to simple functions
 
 ## References
