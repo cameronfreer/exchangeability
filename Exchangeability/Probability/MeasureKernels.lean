@@ -57,12 +57,10 @@ lemma measurable_prod_ennreal {ι : Type*} [Fintype ι] {Ω : Type*} [Measurable
 
 /-- Rewrite `Set.univ.pi B` as a setOf comprehension.
 
-This is a convenience lemma for working with measurable rectangles in product spaces.
-The two forms are definitionally equal but different proof strategies prefer different forms:
-- `Set.univ.pi B` is convenient for applying `Measure.pi_pi`
-- `{x | ∀ i, x i ∈ B i}` is convenient for membership reasoning
--/
-lemma univ_pi_eq_setOf_forall {ι : Type*} {α : Type*} (B : ι → Set α) :
+Convenience lemma for working with measurable rectangles: `Set.univ.pi B` is convenient
+for applying `Measure.pi_pi`, while `{x | ∀ i, x i ∈ B i}` is convenient for membership
+reasoning. -/
+private lemma univ_pi_eq_setOf_forall {ι : Type*} {α : Type*} (B : ι → Set α) :
     Set.univ.pi B = {x | ∀ i, x i ∈ B i} := by
   ext x; simp [Set.pi]
 

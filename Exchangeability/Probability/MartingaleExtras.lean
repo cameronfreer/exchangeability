@@ -12,20 +12,11 @@ import Mathlib.MeasureTheory.MeasurableSpace.Prod
 import Mathlib.MeasureTheory.Function.FactorsThrough
 
 /-!
-# Martingale Helper Lemmas (Fully Proved)
-
-This file contains **fully-proved** helper lemmas related to martingales and conditional expectations.
-These are extracted from exploratory work and may be useful for future developments.
-
-**All lemmas here are complete** - no axioms, no sorries.
+# Martingale Helper Lemmas
 
 ## Contents
 
-1. **Reverse conditional expectation helpers**:
-   - `revCE`: Definition of reverse martingale along decreasing filtration
-
-2. **Fatou-type lemmas**:
-   - `lintegral_fatou_ofReal_norm`: Fatou's lemma for `ENNReal.ofReal ∘ ‖·‖`
+* `lintegral_fatou_ofReal_norm`: Fatou's lemma for `ENNReal.ofReal ∘ ‖·‖`
 
 ## References
 
@@ -40,12 +31,6 @@ open MeasureTheory Filter Set Function
 namespace Exchangeability.Probability
 
 variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-
-/-! ## Reverse Conditional Expectation Helpers -/
-
-/-- Reverse martingale along a decreasing chain: `X n := condExp μ (F n) f`. -/
-def revCE (μ : Measure Ω) (F : ℕ → MeasurableSpace Ω) (f : Ω → ℝ) (n : ℕ) : Ω → ℝ :=
-  μ[f | F n]
 
 /-! ## Fatou-Type Lemmas -/
 
