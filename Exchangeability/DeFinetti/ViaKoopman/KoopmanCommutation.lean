@@ -60,7 +60,7 @@ lemma condexpL2_fixes_fixedSubspace {g : Lp ℝ 2 μ}
 
 This combines:
 1. The Mean Ergodic Theorem (MET) giving convergence to orthogonal projection
-2. The identification proj = condexp via range_condexp_eq_fixedSubspace
+2. The identification proj = condexp via `proj_eq_condexp`
 -/
 theorem birkhoffAverage_tendsto_condexp (f : Lp ℝ 2 μ) :
     Tendsto (fun n => birkhoffAverage ℝ (koopman shift hσ) (fun f => f) n f)
@@ -209,14 +209,11 @@ theorem birkhoffCylinder_tendsto_condexp
   -- First conjunct: a.e. equality between fL2 and F
   · exact productCylinderLp_ae_eq (μ := μ) (fs := fs) hmeas hbd
   -- Second conjunct: convergence to condexpL2
-  · -- MET gives convergence to `metProjection`; `proj_eq_condexp` and the
-    -- defeq `metProjection = metProjectionShift` identify it with `condexpL2`.
+  · -- MET gives convergence to `metProjection`, which is defeq to
+    -- `metProjectionShift`; `proj_eq_condexp` identifies it with `condexpL2`.
     have h_met := Exchangeability.Ergodic.birkhoffAverage_tendsto_metProjection
       shift hσ (productCylinderLp (μ := μ) (fs := fs) hmeas hbd)
-    have h_proj_eq : Exchangeability.Ergodic.metProjection shift hσ =
-        Exchangeability.DeFinetti.metProjectionShift hσ := rfl
-    rw [← Exchangeability.DeFinetti.proj_eq_condexp (μ := μ) hσ, ← h_proj_eq]
-    exact h_met
+    simpa [Exchangeability.DeFinetti.proj_eq_condexp (μ := μ) hσ] using h_met
 
 end MainConvergence
 
