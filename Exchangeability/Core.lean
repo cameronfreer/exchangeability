@@ -165,13 +165,7 @@ end Extend
 
 section Measurable
 
-variable [MeasurableSpace α]
 
--- Disable false-positive linter warnings in this section:
--- Many theorems use `Measurable (Fin n → α)` which transitively depends on
--- `[MeasurableSpace α]` via `Pi.measurableSpace`, but the linter doesn't track
--- this transitive dependency and incorrectly suggests omitting `[MeasurableSpace α]`.
-set_option linter.unusedSectionVars false
 
 @[measurability, fun_prop, nolint unusedArguments]
 lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
@@ -343,14 +337,7 @@ uniqueness result, the full measures are equal.
 
 section Probability
 
-variable [MeasurableSpace Ω] [MeasurableSpace α]
 
--- Disable false-positive linter warnings in this section:
--- Many theorems use types like `Measurable (ℕ → α → β)` or `Measure (ℕ → α)` which
--- transitively depend on `[MeasurableSpace α]` via `Pi.measurableSpace`, but the
--- linter doesn't track this transitive dependency and incorrectly suggests omitting
--- `[MeasurableSpace Ω]` or `[MeasurableSpace α]`.
-set_option linter.unusedSectionVars false
 
 /--
 Reindex a sequence by applying a permutation to the indices.
@@ -360,6 +347,7 @@ Given a permutation `π` of ℕ and a sequence `x : ℕ → α`, returns the seq
 -/
 def reindex (π : Equiv.Perm ℕ) (x : ℕ → α) : ℕ → α := fun i => x (π i)
 
+omit [MeasurableSpace α] in
 @[simp, nolint unusedArguments]
 lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
     reindex (α:=α) π x i = x (π i) := rfl

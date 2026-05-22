@@ -48,12 +48,6 @@ variable (X : ℕ → Ω → ℝ)
 variable (hX_contract : Contractable μ X)
 variable (hX_meas : ∀ i, Measurable (X i))
 
-/-
-Note: Some lemmas in this section explicitly include type and measurability parameters that shadow
-section variables. This makes certain section variables unused for those lemmas, requiring
-`set_option linter.unusedSectionVars false` before each affected declaration.
--/
-
 /-- The unique element of Fin 1. -/
 private def fin1Zero : Fin 1 := ⟨0, by decide⟩
 /-- First element of Fin 2. -/
@@ -71,7 +65,7 @@ private lemma measurable_eval_fin2 {i : Fin 2} :
     Measurable fun g : (Fin 2 → ℝ) => g i :=
   measurable_pi_apply _
 
-set_option linter.unusedSectionVars false in
+omit [IsProbabilityMeasure μ] in
 /-- **All marginals have the same distribution in a contractable sequence.**
 
 For a contractable sequence, the law of each coordinate agrees with the law of `X 0`.
@@ -130,7 +124,7 @@ private lemma strictMono_two {i j : ℕ} (hij : i < j) :
   subst ha; subst hb
   simp [fin2Zero, fin2One, hij]
 
-set_option linter.unusedSectionVars false in
+omit [IsProbabilityMeasure μ] in
 /-- **All bivariate marginals have the same distribution in a contractable sequence.**
 
 For a contractable sequence, every increasing pair `(i,j)` with `i < j` has the same
@@ -173,7 +167,7 @@ lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, 
     simp [eval, fin2Zero, fin2One]
   simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
 
-set_option linter.unusedSectionVars false in
+omit [IsProbabilityMeasure μ] in
 /-- **Contractability is preserved under measurable postcomposition.**
 
 If X is a contractable sequence and f is measurable, then `f ∘ X` is also contractable.
