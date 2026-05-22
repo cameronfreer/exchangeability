@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
-import Exchangeability.DeFinetti.ViaL2.CesaroConvergence
 import Exchangeability.DeFinetti.ViaL2.MainConvergence
 import Exchangeability.DeFinetti.ViaL2.DirectingMeasureIntegral
 import Exchangeability.DeFinetti.L2Helpers
