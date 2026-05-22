@@ -2100,7 +2100,6 @@ private lemma tendsto_setIntegral_of_L2_tendsto
   exact tendsto_setIntegral_of_L1' f (hf.integrable one_le_two)
     (Filter.univ_mem' hfn_int) h1 A
 
-set_option maxHeartbeats 2000000
 
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 

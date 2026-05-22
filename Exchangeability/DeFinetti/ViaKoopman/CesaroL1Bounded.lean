@@ -29,7 +29,6 @@ variable {α : Type*} [MeasurableSpace α]
 -- Short notation for shift-invariant σ-algebra (used throughout this file)
 local notation "mSI" => shiftInvariantSigma (α := α)
 
-set_option maxHeartbeats 8000000
 
 section CesaroL1Bounded
 

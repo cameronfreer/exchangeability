@@ -260,7 +260,6 @@ lemma condExp_ae_eq_of_setIntegral_diff_eq_zero
   have h_eq := h_ce_sub.symm.trans h_ce_diff_zero
   exact h_eq.mono fun ω hω => sub_eq_zero.mp hω
 
-set_option maxHeartbeats 600000 in
 /-- **Lag-constancy from exchangeability via transpositions** (Kallenberg's approach).
 
 For EXCHANGEABLE measures μ on path space, the conditional expectation

@@ -45,7 +45,6 @@ The key results that solve the endpoint limit problem:
 3. **A.e. endpoint limits**: Monotonicity + boundedness + L¹ limits ⇒ a.e. pointwise limits
 -/
 
-set_option maxHeartbeats 400000 in
 /-- **Identification lemma**: alphaIic equals alphaIicCE almost everywhere.
 
 **Proof strategy:**
