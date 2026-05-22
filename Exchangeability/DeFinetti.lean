@@ -90,26 +90,12 @@ This expresses that:
 - **Proved in ConditionallyIID.lean**: `exchangeable_of_conditionallyIID`
 - **For de Finetti**: The kernel is tail-measurable (constructed via ergodic theory)
 
-### DirectingMeasure structure
-
-An alternative bundled formulation that explicitly carries the kernel and its properties.
+The theorem-facing abstraction is the existential `ConditionallyIID` above. Each
+route builds the directing object through its own route-specific construction
+(`ViaMartingale.directingMeasure_*`, `ViaL2.directing_measure_satisfies_requirements`,
+`ViaKoopman.conditionallyIID_bind_of_contractable`); there is intentionally no
+shared bundled wrapper.
 -/
-
-/-- A directing measure for a process `X` is a tail-measurable Markov kernel.
-
-This bundles the kernel with its key properties needed for de Finetti's theorem.
-
-**Note**: This is an alternative formulation that explicitly carries the kernel.
-The main `ConditionallyIID` definition is existential and doesn't expose the kernel.
--/
-structure DirectingMeasure (μ : Measure Ω) [IsProbabilityMeasure μ] (X : ℕ → Ω → α) where
-  /-- The probability kernel -/
-  kernel : ProbabilityTheory.Kernel Ω α
-  /-- The kernel is a Markov kernel (maps to probability measures) -/
-  is_markov : ProbabilityTheory.IsMarkovKernel kernel
-  -- Tail measurability would be expressed as:
-  -- is_tail_measurable : @AEStronglyMeasurable' _ _ (tailSigmaAlgebra X) _ _ (fun ω ↦ kernel ω) μ
-  -- Note: tail measurability constraint would be added with proper tail σ-algebra infrastructure
 
 /-!
 ## Main theorem statements
