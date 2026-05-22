@@ -450,36 +450,9 @@ theorem conditional_iid_from_directing_measure
 
 /-- **FMP 1.1: Monotone Class Theorem (Sierpiński)** = Dynkin's π-λ theorem.
 
-Let 𝒞 be a π-system and 𝒟 a λ-system in some space Ω such that 𝒞 ⊆ 𝒟.
-Then σ(𝒞) ⊆ 𝒟.
-
-**Proof outline** (Kallenberg):
-1. Assume 𝒟 = λ(𝒞) (smallest λ-system containing 𝒞)
-2. Show 𝒟 is a π-system (then it's a σ-field)
-3. Two-step extension:
-   - Fix B ∈ 𝒞, define 𝒜_B = {A : A ∩ B ∈ 𝒟}, show 𝒜_B is λ-system ⊇ 𝒞
-   - Fix A ∈ 𝒟, define ℬ_A = {B : A ∩ B ∈ 𝒟}, show ℬ_A is λ-system ⊇ 𝒞
-
-**Mathlib version**: `MeasurableSpace.induction_on_inter`
-
-Mathlib's version is stated as an induction principle: if a predicate C holds on:
-- The empty set
-- All sets in the π-system 𝒞
-- Is closed under complements
-- Is closed under countable disjoint unions
-
-Then C holds on all measurable sets in σ(𝒞).
-
-**Definitions in mathlib**:
-- `IsPiSystem`: A collection closed under binary non-empty intersections
-  (Mathlib/MeasureTheory/PiSystem.lean)
-- `DynkinSystem`: A structure containing ∅, closed under complements and
-  countable disjoint unions (Mathlib/MeasureTheory/PiSystem.lean)
-- `induction_on_inter`: The π-λ theorem as an induction principle
-  (Mathlib/MeasureTheory/PiSystem.lean)
-
-This theorem is now a direct wrapper around mathlib's `induction_on_inter`.
--/
+Let 𝒞 be a π-system and 𝒟 a λ-system with 𝒞 ⊆ 𝒟; then σ(𝒞) ⊆ 𝒟. This
+declaration is a thin wrapper around mathlib's `MeasurableSpace.induction_on_inter`,
+retained as the lean-side anchor for the blueprint entry `thm:monotone_class`. -/
 theorem monotone_class_theorem
     {Ω' : Type*} {m : MeasurableSpace Ω'} {C : ∀ s : Set Ω', MeasurableSet s → Prop}
     {s : Set (Set Ω')} (h_eq : m = MeasurableSpace.generateFrom s)
@@ -491,9 +464,8 @@ theorem monotone_class_theorem
       ∀ (hf : ∀ i, MeasurableSet (f i)), (∀ i, C (f i) (hf i)) →
         C (⋃ i, f i) (MeasurableSet.iUnion hf))
     {t : Set Ω'} (htm : MeasurableSet t) :
-    C t htm := by
-  -- Direct application of mathlib's π-λ theorem (induction_on_inter)
-  exact MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl iUnion t htm
+    C t htm :=
+  MeasurableSpace.induction_on_inter h_eq h_inter empty basic compl iUnion t htm
 
 -- *Monotone-class remark.*  Earlier drafts included an explicit monotone-class lemma
 -- (`monotone_class_product_extension`) proving the π-λ step described above.  The sole
