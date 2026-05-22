@@ -288,7 +288,6 @@ private theorem h_tower_of_lagConst_from_one
 
   exact h_ae_eq
 
-set_option maxHeartbeats 1000000
 
 /-- **Pair factorization via MET + Exchangeability** (Kallenberg's approach).
 

@@ -37,7 +37,6 @@ open MeasureTheory ProbabilityTheory Set Exchangeability.Probability
 variable {Ω α β γ : Type*}
 variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
 
-set_option maxHeartbeats 500000 in
 /-- **Conditional expectation projection from conditional independence (helper).**
 
 When Y ⊥⊥_W Z, conditioning on (Z,W) gives the same result as conditioning on W alone

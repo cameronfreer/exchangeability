@@ -41,7 +41,6 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 These lemmas implement the bounded and general cases for L¹ convergence of Cesàro averages
 using the cylinder function approach (Option B). This avoids MET and sub-σ-algebra typeclass issues. -/
 
-set_option maxHeartbeats 8000000
 
 section OptionB_L2ToL1
 
