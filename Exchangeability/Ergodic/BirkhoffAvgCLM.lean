@@ -19,20 +19,23 @@ when mixing Lp-level and function-level operations.
 ## Main definitions
 
 * `powCLM U k`: The k-th iterate of a CLM U as a CLM
-* `birkhoffAvgCLM U n`: The n-th Birkhoff average as a CLM
 
 ## Main results
 
-* `powCLM_koopman_coe_ae`: Iterating Koopman and coercing equals coercing and iterating (a.e.)
-* `birkhoffAvgCLM_coe_ae_eq_function_avg`: CLM Birkhoff average equals function-level average (a.e.)
+Lp-coercion helpers used to bridge Lp-level scalar/sum operations and the
+function-level a.e. equalities they induce: `Lp.coeFn_smul'`, `Lp.coeFn_sum'`,
+`EventuallyEq.sum'`.
 
 ## Implementation notes
 
-This infrastructure solves the coercion mismatch issue where Lean distinguishes between:
+These helpers were introduced to handle the coercion mismatch issue where Lean
+distinguishes between:
 - `↑↑(birkhoffAverage ℝ U (fun f => f) n g)` (coerce the Lp average)
 - `birkhoffAverage ℝ U (fun f => ↑↑f) n g` (average the coerced functions)
 
-By working entirely at the CLM level and only coercing at the end, we avoid this issue.
+The CLM-level entry point `birkhoffAvgCLM` was removed when downstream proofs
+were rewritten to work at the Lp level directly; the iterate helper `powCLM`
+and the coercion lemmas above remain in use.
 -/
 
 open scoped BigOperators

@@ -30,7 +30,9 @@ The martingale approach follows this structure:
 ## Main results
 
 * `conditionallyIID_of_contractable`: Contractable ⇒ ConditionallyIID
-* `deFinetti_viaMartingale`: Exchangeable ⇔ ConditionallyIID
+* `deFinetti`: Exchangeable ⇒ ConditionallyIID
+* `deFinetti_equivalence`: Exchangeable ⇔ ConditionallyIID
+* `deFinetti_RyllNardzewski_equivalence`: full three-way equivalence
 
 ## References
 

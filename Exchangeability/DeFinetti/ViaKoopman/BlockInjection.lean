@@ -24,7 +24,6 @@ contractability).
 ## Main results
 
 * `blockInjection_strictMono`: The block injection is strictly monotone when n > 0.
-* `blockInjectionEmb`: Embedding version of block injection.
 
 ## Mathematical context
 

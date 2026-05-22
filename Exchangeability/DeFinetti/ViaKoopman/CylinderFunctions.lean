@@ -15,14 +15,11 @@ measurability and boundedness properties.
 
 ## Main Definitions
 
-* `cylinderFunction`: A function on path space depending only on finitely many coordinates
 * `productCylinder`: Product of functions evaluated at different coordinates
 * `productCylinderLp`: Lp representative for bounded product cylinders
-* `shiftedCylinder`: Cylinder function composed with shift^n
 
 ## Main Results
 
-* `measurable_cylinderFunction`: Cylinder functions are measurable
 * `measurable_productCylinder`: Product cylinders are measurable
 * `productCylinder_bounded`: Product cylinders are bounded
 * `productCylinder_memLp`: Product cylinders are in L²

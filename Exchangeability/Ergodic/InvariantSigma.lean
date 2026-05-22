@@ -39,8 +39,6 @@ are in separate modules:
 
 ## Main results
 
-* `fixedSpace_eq_invMeasurable`: Functions fixed by Koopman are exactly those
-  measurable with respect to the shift-invariant σ-algebra.
 * `proj_eq_condexp`: The orthogonal projection onto the fixed-point subspace equals
   the conditional expectation onto the shift-invariant σ-algebra.
 

@@ -16,7 +16,6 @@ expectations from σ(Z,W) to σ(W).
 
 * `condExp_project_of_condIndep`: When Y ⊥⊥_W Z, conditioning on (Z,W) gives the
   same result as conditioning on W alone for indicator functions of Y.
-* `condIndep_project`: Wrapper theorem using the projection property.
 
 ## Key insight
 

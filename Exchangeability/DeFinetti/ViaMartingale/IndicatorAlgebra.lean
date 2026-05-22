@@ -22,7 +22,6 @@ products of indicator functions on finite cylinders.
 * `indProd_as_indicator` - indProd equals indicator of intersection
 * `indProd_eq_firstRCylinder_indicator` - Connection to firstRCylinder
 * `indProd_integrable` - Integrability under finite measures
-* `indProd_mul` - Product formula for indProd
 
 These are extracted from ViaMartingale.lean to enable modular imports.
 -/

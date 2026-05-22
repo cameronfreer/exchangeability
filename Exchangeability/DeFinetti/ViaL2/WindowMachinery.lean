@@ -19,7 +19,6 @@ in the ViaL2 proof of de Finetti's theorem.
 ## Main results
 
 * `window_card`: The window contains exactly k elements
-* `mem_window_iff`: Characterization of window membership
 * `sum_window_eq_sum_fin`: Sums over windows can be reindexed as sums over `Fin k`
 
 ## References
