@@ -363,22 +363,6 @@ lemma metProjectionShift_tendsto
   have hlimit := ContinuousLinearMap.tendsto_birkhoffAverage_orthogonalProjection K hnorm f
   convert hlimit using 1
 
-/-- The range of `metProjectionShift` equals the fixed subspace. -/
-lemma metProjectionShift_range_fixedSubspace
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) :
-    Set.range (metProjectionShift (μ := μ) hσ) =
-      (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-  metProjectionShift_range (μ := μ) hσ
-
-/-- `metProjectionShift` fixes elements of the fixed subspace. -/
-lemma metProjectionShift_fixes_fixedSubspace
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
-    (hg : g ∈ fixedSubspace hσ) :
-    metProjectionShift (μ := μ) hσ g = g :=
-  metProjectionShift_fixed (μ := μ) hσ hg
-
 /-- Conditional expectation on L² with respect to the shift-invariant σ-algebra.
 
 This is the orthogonal projection onto the subspace of shift-invariant L² functions,
@@ -552,9 +536,9 @@ theorem proj_eq_condexp {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
   have h_symm_MET : (metProjectionShift hσ).IsSymmetric :=
     metProjectionShift_isSymmetric hσ
   have h_range_MET : Set.range (metProjectionShift hσ) = (fixedSubspace hσ : Set (Lp ℝ 2 μ)) :=
-    metProjectionShift_range_fixedSubspace hσ
+    metProjectionShift_range hσ
   have h_fixes_MET : ∀ g ∈ fixedSubspace hσ, metProjectionShift hσ g = g :=
-    fun g hg => metProjectionShift_fixes_fixedSubspace hσ hg
+    fun _ hg => metProjectionShift_fixed hσ hg
 
   -- Establish condexpL2 properties (via helper)
   obtain ⟨h_idem_cond, h_symm_cond, h_range_cond, h_fixes_cond⟩ :=
