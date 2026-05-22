@@ -37,7 +37,6 @@ open Exchangeability.Ergodic
 open Exchangeability.PathSpace
 open scoped BigOperators RealInnerProductSpace
 
-set_option linter.unusedSectionVars false
 
 variable {α : Type*} [MeasurableSpace α]
 

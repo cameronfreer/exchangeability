@@ -154,6 +154,7 @@ private lemma shift_iterate_apply (j n : ℕ) (ξ : ℕ → α) :
   | succ j ih =>
     simp only [Function.iterate_succ', Function.comp_apply, shift_apply, ih]; ring_nf
 
+omit [MeasurableSpace α] in
 private lemma shift_iterate_reindex_swap_eq (k m : ℕ) (hm : k + 1 < m) (ω : ℕ → α) :
     shift^[m] (Exchangeability.reindex (Equiv.swap k (k + 1)) ω) = shift^[m] ω := by
   ext n; rw [shift_iterate_apply, shift_iterate_apply, Exchangeability.reindex_apply,

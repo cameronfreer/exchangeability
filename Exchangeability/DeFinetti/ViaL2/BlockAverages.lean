@@ -886,7 +886,7 @@ lemma get_covariance_constant
       -1 ≤ ρf ∧ ρf ≤ 1 := by
   -- Step 1: Show f∘X is contractable
   have hfX_contract : Contractable μ (fun n ω => f (X n ω)) :=
-    @contractable_comp Ω _ μ _ X hX_contract hX_meas f hf_meas
+    @contractable_comp Ω _ μ X hX_contract hX_meas f hf_meas
 
   -- Step 2: Get covariance structure (m, σ², ρ) of f∘X
   obtain ⟨M, hM⟩ := hf_bdd
