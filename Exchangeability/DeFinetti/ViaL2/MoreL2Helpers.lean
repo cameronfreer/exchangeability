@@ -103,7 +103,7 @@ lemma directing_measure_eval_Iic_measurable
 
 /-- For each measurable set s, the map ω ↦ ν(ω)(s) is measurable.
 
-This is the key measurability property needed for complete_from_directing_measure.
+This is the key measurability property needed for conditional_iid_from_directing_measure.
 Uses monotone class theorem (π-λ theorem) - prove for intervals, extend to all Borel sets.
 -/
 lemma directing_measure_measurable
@@ -229,7 +229,7 @@ lemma directing_measure_measurable
 
 /-- The bridge property: E[∏ᵢ 𝟙_{Bᵢ}(X_{k(i)})] = E[∏ᵢ ν(·)(Bᵢ)].
 
-This is the key property needed for `complete_from_directing_measure`.
+This is the key property needed for `conditional_iid_from_directing_measure`.
 Uses `indicator_product_bridge` from `BridgeProperty.lean`, establishing that
 the directing measure satisfies `hν_law` via shift invariance of conditional expectations.
 -/
@@ -289,7 +289,7 @@ lemma directing_measure_bridge
 /-- **Main packaging theorem for L² proof.**
 
 This theorem packages all the directing measure properties needed by
-`CommonEnding.complete_from_directing_measure`:
+`CommonEnding.conditional_iid_from_directing_measure`:
 
 1. `ν` is a probability measure for all ω
 2. `ω ↦ ν(ω)(s)` is measurable for all measurable sets s

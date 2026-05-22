@@ -13,7 +13,7 @@ import Exchangeability.Util.StrictMono
 This file provides the **bridge property** used by CommonEnding to complete
 the de Finetti proof. It converts the measure equality from ViaMartingale's
 `finite_product_formula` to the integral equality form needed by
-`CommonEnding.complete_from_directing_measure`.
+`CommonEnding.conditional_iid_from_directing_measure`.
 
 ## Main results
 
@@ -169,7 +169,7 @@ lemma indicator_product_bridge_strictMono
 For any injective k : Fin m → ℕ, the integral of the product of indicators equals
 the integral of the product of directing measure evaluations.
 
-This is the main result used by `CommonEnding.complete_from_directing_measure`. -/
+This is the main result used by `CommonEnding.conditional_iid_from_directing_measure`. -/
 lemma indicator_product_bridge
     [StandardBorelSpace Ω]
     {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
