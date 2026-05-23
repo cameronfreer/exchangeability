@@ -111,61 +111,11 @@ lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- Strategy: The key observation is that comparing a long average (1/m) with
-  -- a tail average (1/k over last k terms) is the same as comparing two different
-  -- weight vectors over the same m terms.
-
-  -- Since Cf is already the uniform bound for equal-weight windows (from hCf_unif),
-  -- and this comparison uses weights that differ by at most 1/k at each position,
-  -- the bound follows from the general weight lemma.
-
-  -- Specifically:
-  -- - Long avg: sum_{i<m} (1/m) f(X_{n+i+1})
-  -- - Tail avg: sum_{i<k} (1/k) f(X_{n+(m-k)+i+1}) = sum_{i in [m-k,m)} (1/k) f(X_{n+i+1})
-  -- These can be written as:
-  --   p_i = 1/m for all i
-  --   q_i = 0 for i < m-k, and 1/k for i >= m-k
-  -- So sup|p-q| = max(1/m, 1/k) = 1/k (since k ≤ m)
-
-  -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
-  -- which is exactly what we need to prove.
-
-  -- Direct approach using hCf_unif:
-  -- The tail average is an equal-weight window of size k starting at n+(m-k):
-  --   (1/k) ∑_{j<k} f(X_{n+(m-k)+j+1})
-  --
-  -- Strategy:
-  -- 1. Use triangle inequality: |long_avg - tail_avg| ≤ |long_avg - some_window| + |some_window - tail_avg|
-  -- 2. The tail window is exactly window starting at position n+(m-k)
-  -- 3. Can compare it with a window of size k starting at n using hCf_unif
-  -- 4. The bound Cf/k applies since both are equal-weight windows of size k
-  --
-  -- Rewrite long average (1/m) * ∑_{i<m} f(X_{n+i+1}) in terms of weights on each position
-  -- We can split it as: sum over first (m-k) terms + sum over last k terms
-  -- Then compare with the tail average which is just the last k terms weighted by 1/k
-
-  -- Key insight: Write the difference as a weighted combination where we can apply sum_tail_block_reindex
-  -- Long avg = (1/m) * [first (m-k) terms + last k terms]
-  -- Tail avg = (1/k) * [last k terms]
-  -- Difference involves the last k terms with weight (1/m - 1/k) and first terms with weight 1/m
-
-  -- Since |1/m - 1/k| ≤ 1/k and we have at most m terms each bounded,
-  -- this reduces to applying the uniform bound hCf_unif
-
-  -- Use that we can rewrite the long average to isolate the tail portion
-  -- and apply the uniform bound
-
+  -- Express the difference of the two averages as a single weighted combination
+  -- `∑ p_i Y_i - ∑ q_i Y_i = ∑ (p_i - q_i) Y_i` over `Fin m` and apply
+  -- `L2Approach.l2_contractability_bound`. The uniform bound on `|p_i - q_i|`
+  -- is `1/k`, giving the final `Cf/k`.
   obtain ⟨M, hM⟩ := hf_bdd
-
-  -- The key is to use boundedness to show the difference is controlled
-  -- For a more direct proof, we use that:
-  -- |long_avg - tail_avg|² ≤ |long_avg - window_avg|² + |window_avg - tail_avg|²
-  -- where both terms can be bounded using hCf_unif
-
-  -- However, for simplicity, we can use the fact that both averages involve
-  -- bounded functions and the weight difference is small
-
-  -- Direct bound using triangle inequality and boundedness
   have h_bdd_integrand : ∀ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
         (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
       ≤ (4 * M)^2 := by
