@@ -394,7 +394,15 @@ lemma integrable_mul_of_ae_bdd_left
   exact Integrable.bdd_mul hY hZ.aestronglyMeasurable hZ_norm
 
 /-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
-the L¹ distance. This is a standard property following from Jensen's inequality. -/
+the L¹ distance. This is a standard property following from Jensen's inequality.
+
+The path-space-specialised form is kept here (rather than calling
+`Exchangeability.Probability.condExp_L1_lipschitz` directly) because that lemma
+declares its sub-σ-algebra hypothesis as `_hm : m ≤ ‹_›`, and at the call sites
+in `CesaroPairFactorization.lean`/`CesaroL1Bounded.lean` the elaborator
+resolves `‹_›` to `shiftInvariantSigma` rather than the ambient
+`MeasurableSpace.pi`, producing a `shiftInvariantSigma ≤ shiftInvariantSigma`
+hypothesis that no obvious workaround discharges. -/
 @[nolint unusedArguments]
 lemma condExp_L1_lipschitz
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
