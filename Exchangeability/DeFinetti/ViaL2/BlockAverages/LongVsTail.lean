@@ -26,11 +26,10 @@ open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
 open Exchangeability.DeFinetti.L2Helpers
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω : Type*} [MeasurableSpace Ω]
 
 open scoped BigOperators
 
-set_option linter.unusedVariables false in
 /-- **Compute the L² contractability constant for f ∘ X.**
 
 This helper extracts the common covariance structure computation needed by both
@@ -42,12 +41,10 @@ Returns `Cf = 2σ²(1-ρ)` where `(mf, σ², ρ)` is the covariance structure of
 **Design rationale**: Computing the covariance structure once and passing it to
 both bound lemmas ensures they use the same constant, avoiding the need to prove
 equality of opaque existential witnesses. -/
-@[nolint unusedArguments]
 lemma get_covariance_constant
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     ∃ (Cf : ℝ) (mf σSqf ρf : ℝ),
@@ -93,15 +90,13 @@ lemma get_covariance_constant
 
 lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ)
     (hX_meas : ∀ i, Measurable (X i))
-    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
     -- Accept Cf and covariance structure as arguments
     (Cf mf σSqf ρf : ℝ)
     (hCf_def : Cf = 2 * σSqf * (1 - ρf))
-    (_hCf_nonneg : 0 ≤ Cf)
     (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
     (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
     (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
@@ -116,115 +111,6 @@ lemma l2_bound_long_vs_tail
   -- `L2Approach.l2_contractability_bound`. The uniform bound on `|p_i - q_i|`
   -- is `1/k`, giving the final `Cf/k`.
   obtain ⟨M, hM⟩ := hf_bdd
-  have h_bdd_integrand : ∀ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
-      ≤ (4 * M)^2 := by
-    intro ω
-    have h1 : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| ≤ M := by
-      calc |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)|
-          = (1 / (m : ℝ)) * |∑ i : Fin m, f (X (n + i.val + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
-        _ ≤ (1 / (m : ℝ)) * (m * M) := by
-            apply mul_le_mul_of_nonneg_left _ (by positivity)
-            calc |∑ i : Fin m, f (X (n + i.val + 1) ω)|
-                ≤ ∑ i : Fin m, |f (X (n + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
-              _ ≤ ∑ i : Fin m, M := by
-                  apply Finset.sum_le_sum
-                  intro i _; exact hM _
-              _ = m * M := by rw [Finset.sum_const, Finset.card_fin]; ring
-        _ = M := by
-            have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr (Nat.lt_of_lt_of_le hk hkm)
-            field_simp [ne_of_gt hm_pos]
-    have h2 : |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M := by
-      calc |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
-          = (1 / (k : ℝ)) * |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (k : ℝ))]
-        _ ≤ (1 / (k : ℝ)) * (k * M) := by
-            apply mul_le_mul_of_nonneg_left _ (by positivity)
-            calc |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
-                ≤ ∑ i : Fin k, |f (X (n + (m - k) + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
-              _ ≤ ∑ i : Fin k, M := by
-                  apply Finset.sum_le_sum
-                  intro i _; exact hM _
-              _ = k * M := by rw [Finset.sum_const, Finset.card_fin]; ring
-        _ = M := by
-          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-          field_simp [ne_of_gt hk_pos]
-    have ha : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤
-        |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-           |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| :=
-      abs_sub _ _
-    calc ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
-        ≤ (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-           |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)^2 := by
-            apply sq_le_sq'
-            · have : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                         |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
-              have : -(|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                      |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|) ≤
-                     (1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-                     (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) :=
-                neg_le_of_abs_le ha
-              linarith
-            · exact le_of_abs_le ha
-      _ ≤ (M + M)^2 := by
-          apply sq_le_sq'
-          · have hM_nonneg : 0 ≤ M := by
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            have : 0 ≤ M + M := by linarith
-            have h_sum_bound : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M + M := by
-              linarith [h1, h2]
-            have : -(M + M) ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              have h_nonneg : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                                   |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
-              linarith [h_nonneg, hM_nonneg]
-            linarith [h_sum_bound]
-          · linarith [h1, h2]
-      _ = (2 * M)^2 := by ring
-      _ ≤ (4 * M)^2 := by
-          apply sq_le_sq'
-          · have hM_nonneg : 0 ≤ M := by
-              -- |f 0| ≤ M implies 0 ≤ M
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            have : 0 ≤ 4 * M := by linarith
-            linarith [this, hM_nonneg]
-          · have hM_nonneg : 0 ≤ M := by
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            linarith [hM_nonneg]
-
-  -- The key insight: We can bound this by decomposing the long average
-  -- and using triangle inequality with a common window of size k
-
-  -- Introduce an intermediate window: (1/k) * ∑_{i<k} f(X_{n+i+1})
-  -- Then: |long_avg - tail_avg|² ≤ 2|long_avg - window_avg|² + 2|window_avg - tail_avg|²
-
-  -- The second term |window_avg - tail_avg|² can be bounded by hCf_unif since
-  -- both are equal-weight windows of size k at positions n and n+(m-k)
-
-  -- For the first term, we use that the long average (1/m) is close to any k-window (1/k)
-  -- This follows from the fact that the long average is a weighted combination that
-  -- includes the k-window with smaller weight
-
-  -- However, the cleanest approach requires more machinery about weighted averages
-  -- For now, we have established the integrand is bounded, which is the key
-  -- integrability property needed for the convergence proof
-
-  -- Apply l2_contractability_bound with weight vectors:
-  --   p = (1/m, 1/m, ..., 1/m)  [m terms]
-  --   q = (0, ..., 0, 1/k, ..., 1/k)  [m-k zeros, then k terms of 1/k]
-  -- The sup |p - q| = 1/k, giving bound 2σ²(1-ρ) · (1/k) = Cf/k
-
-  -- Use the provided covariance structure (passed as arguments)
-  -- We need to relate this to Cf from the hypothesis
-  -- Actually, hCf_unif tells us the bound is Cf/k, so we can deduce what Cf must be
-
   -- Define the sequence ξ on m elements
   let ξ : Fin m → Ω → ℝ := fun i ω => f (X (n + i.val + 1) ω)
 

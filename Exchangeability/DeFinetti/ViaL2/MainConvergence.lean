@@ -60,7 +60,7 @@ theorem weighted_sums_converge_L1
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     ∃ (alpha : Ω → ℝ),  -- SINGLE alpha, not a sequence!
@@ -168,31 +168,15 @@ theorem weighted_sums_converge_L1
               ring
     exact MemLp.of_bound (hA_meas n m).aestronglyMeasurable M hA_ae_bdd
 
-  -- Covariance structure of f ∘ X
-  have hfX_contract' : Contractable μ (fun n ω => f (X n ω)) :=
-    L2Helpers.contractable_comp X hX_contract hX_meas f hf_meas
-
-  have hfX_meas' : ∀ i, Measurable fun ω => f (X i ω) := by
-    intro i
-    exact hf_meas.comp (hX_meas i)
-
-  have hfX_L2' : ∀ i, MemLp (fun ω => f (X i ω)) 2 μ := by
-    intro i
-    obtain ⟨M, hM⟩ := hf_bdd
-    apply MemLp.of_bound (hfX_meas' i).aestronglyMeasurable M
-    filter_upwards with ω
-    simp [Real.norm_eq_abs]
-    exact hM (X i ω)
-
   -- **Phase 2: Compute covariance structure once and pass to both lemmas**
   -- This eliminates the need to prove Cf = Cf_tail (they're the same by construction!)
   obtain ⟨Cf, mf, σSqf, ρf, hCf_def, hCf_nonneg, hmean, hvar, hcov, hσSq_nn, hρ_bd1, hρ_bd2⟩ :=
-    get_covariance_constant X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
+    get_covariance_constant X hX_contract hX_meas f hf_meas hf_bdd
 
   -- Apply l2_bound_two_windows_uniform with the shared covariance structure
   have h_window_bound :=
-    l2_bound_two_windows_uniform X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-      Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
+    l2_bound_two_windows_uniform X hX_meas f hf_meas hf_bdd
+      Cf mf σSqf ρf hCf_def hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
 
   let Y : ℕ → Ω → ℝ := fun t ω => f (X t ω)
 
@@ -206,10 +190,8 @@ theorem weighted_sums_converge_L1
                ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
           ≤ Cf / k := by
     intro n m k hk hkm
-    -- Apply l2_bound_long_vs_tail with the shared covariance structure
-    -- No more existential unpacking, no more sorry - just a direct bound!
-    exact l2_bound_long_vs_tail X hX_contract hX_meas hX_L2 f hf_meas hf_bdd
-      Cf mf σSqf ρf hCf_def hCf_nonneg hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
+    exact l2_bound_long_vs_tail X hX_meas f hf_meas hf_bdd
+      Cf mf σSqf ρf hCf_def hmean hvar hcov hσSq_nn ⟨hρ_bd1, hρ_bd2⟩
       n m k hk hkm
 
   -- Step 1: For n=0, show (A 0 m)_m is Cauchy in L² hence L¹
