@@ -232,7 +232,8 @@ The martingale approach uses reverse martingale convergence to the tail $\sigma$
   \leanok
   \uses{def:tailSigma}
   The directing measure $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
-  is a probability measure for a.e.\ $\omega$.
+  is a probability measure for every $\omega$ (the bound is pointwise, not merely a.e., via
+  mathlib's \texttt{isProbability\_condExpKernel}).
 \end{lemma}
 
 \begin{lemma}[Directing measure measurability]
@@ -243,14 +244,45 @@ The martingale approach uses reverse martingale convergence to the tail $\sigma$
   The directing measure $\omega \mapsto \nu(\omega)(B)$ is measurable for each Borel $B$.
 \end{lemma}
 
+\begin{lemma}[Conditional law of $X_n$ equals directing measure]
+  \label{lem:conditional_law_eq_directingMeasure}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.conditional_law_eq_directingMeasure}
+  \leanok
+  \uses{lem:directingMeasure_isProb, lem:directingMeasure_measurable, def:contractable}
+  Per-coordinate identification: for every $n$ and every Borel $B$,
+  $(\omega \mapsto \nu(\omega)(B).\mathrm{toReal})
+    \, =^{\mu\text{-a.e.}} \, \mathbb{E}[\mathbf{1}_B \circ X_n \mid \mathcal{T}]$.
+  This is the bridge condition consumed by \ref{lem:finite_product_formula} below.
+\end{lemma}
+
+\begin{lemma}[Finite product formula]
+  \label{lem:finite_product_formula}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.finite_product_formula}
+  \leanok
+  \uses{lem:finite_level_factorization, lem:tail_factorization, lem:conditional_law_eq_directingMeasure}
+  Under contractability, for every strictly monotone selection
+  $k : \mathrm{Fin}\,m \to \mathbb{N}$ and any kernel $\nu$ satisfying the per-coordinate
+  bridge \ref{lem:conditional_law_eq_directingMeasure}:
+  \[
+    \mathrm{Measure.map}\,(\omega \mapsto (i \mapsto X_{k\,i}(\omega)))\,\mu
+      \,=\, \mu.\mathrm{bind}\,(\omega \mapsto \mathrm{Measure.pi}\,(\lambda\, i,\, \nu(\omega))).
+  \]
+  This is the martingale route's analogue of the L²/Koopman \ref{thm:condIndep_extension}:
+  it bundles the rectangle $\pi$-system extension and the
+  $\mathrm{Measure.map} = \mathrm{bind}$ identification into one step driven by
+  per-coordinate conditional expectations.
+\end{lemma}
+
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Martingale)]
   \label{thm:conditionallyIID_of_contractable_martingale}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal, lem:block_coord_condIndep, lem:directingMeasure_isProb, lem:directingMeasure_measurable, thm:condIndep_extension}
+  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal, lem:block_coord_condIndep, lem:directingMeasure_isProb, lem:directingMeasure_measurable, lem:conditional_law_eq_directingMeasure, lem:finite_product_formula}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.
   The directing kernel $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
-  is constructed from the tail $\sigma$-algebra.
+  is constructed from the tail $\sigma$-algebra, identified per-coordinate by
+  \ref{lem:conditional_law_eq_directingMeasure}, and lifted to the joint law by
+  \ref{lem:finite_product_formula} — bypassing the L²/Koopman common-ending step.
 \end{theorem}
 
 
@@ -328,18 +360,20 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 \subsection{Directing Measure Construction}
 
 The L$^2$ route now goes through mathlib's \texttt{condExpKernel} machinery:
-the Stieltjes construction supplies the candidate kernel, and a pair of bridge
-lemmas identifies its push-forward and integral with the conditional expectation
-on the tail $\sigma$-algebra. The shared common-ending theorem then lifts the
-indicator-level identity to the full product $\sigma$-algebra.
+the Stieltjes construction supplies the candidate directing measure
+$\omega \mapsto \nu(\omega)$, and a pair of bridge lemmas identifies its
+push-forward and integral with the kernel coming from mathlib's
+\texttt{condExpKernel} on the tail $\sigma$-algebra. The shared common-ending
+theorem then lifts the indicator-level identity to the full product $\sigma$-algebra.
 
 \begin{lemma}[Directing measure is probability (L$^2$ version)]
   \label{lem:directing_measure_isProb_L2}
   \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_isProbabilityMeasure}
   \leanok
-  The Stieltjes measure constructed from the limiting CDF is a probability measure a.e.
-  Monotonicity, bounds, and right-continuity of the underlying CDF are inherited
-  directly from mathlib's \texttt{stieltjesOfMeasurableRat} construction.
+  The Stieltjes measure constructed from the limiting CDF is a probability measure
+  for every $\omega$ (pointwise, not merely a.e.). Monotonicity, bounds, and
+  right-continuity of the underlying CDF are inherited directly from mathlib's
+  \texttt{stieltjesOfMeasurableRat} construction.
 \end{lemma}
 
 \begin{theorem}[Directing measure equals \texttt{condExpKernel} push-forward]
@@ -498,6 +532,57 @@ extension argument that lifts the indicator-level identity to the full product
 $\sigma$-algebra. The martingale route reaches conditional independence through its own
 parallel \texttt{finite\_product\_formula} pipeline (built on
 \texttt{condExpKernel}) rather than the lemmas in this chapter.
+
+\section{Comparing the two endings}
+
+The L²/Koopman ending (\ref{thm:condIndep_extension}, in
+\texttt{CommonEnding.lean}) and the martingale ending
+(\ref{lem:finite_product_formula}, in
+\texttt{ViaMartingale/FiniteProduct.lean}) are similar in total length and both
+finish with a rectangle $\pi$-system extension via
+\texttt{MeasureTheory.ext\_of\_generate\_finite}. The substantive
+difference is the \emph{shape of the bridge condition} each accepts
+about the directing kernel $\nu$.
+
+\begin{tabular}{p{0.18\textwidth}p{0.36\textwidth}p{0.4\textwidth}}
+  \textbf{Route} & \textbf{Bridge shape} & \textbf{How the route produces it} \\
+  \hline
+  Martingale &
+  Per-coordinate conditional-expectation equality:
+  $(\omega \mapsto \nu(\omega)(B).\mathrm{toReal})
+    \, =^{\mathrm{a.e.}} \, \mathbb{E}[\mathbf{1}_B \circ X_n \mid \mathcal{T}]$
+  for every $n$, $B$
+  (see \ref{lem:conditional_law_eq_directingMeasure}). &
+  Falls out directly from mathlib's \texttt{condExpKernel} applied to
+  the tail $\sigma$-algebra. \\[0.7em]
+  L²/Koopman &
+  Joint integral equality on the whole $m$-tuple:
+  for every injective $k : \mathrm{Fin}\,m \to \mathbb{N}$ and rectangle $B$,
+  $\int^- \prod_i \mathbf{1}_{X_{k\,i} \in B_i}\,d\mu
+     = \int^- \prod_i \nu(\omega)(B_i)\,d\mu.$ &
+  Falls out of Cesàro / ergodic averaging — both sides are limits of the
+  same averaged sequence. \\
+\end{tabular}
+
+\paragraph{Why this matters.} Each route's directing-measure
+construction naturally produces the bridge shape its own ending
+expects, so the routes pick the ending that matches what they already
+have. The martingale route's per-coordinate bridge is ``smaller'' (one
+σ-algebra-relative equality per index) and is what \texttt{condExpKernel}
+delivers without extra work; the common ending's joint integral bridge
+is what limit-of-averages arguments deliver without extra work, but
+would be wasteful if you already had per-coordinate CE equalities.
+
+\paragraph{Approximate line counts.}
+Roughly comparable: \texttt{CommonEnding.lean} is about 455 lines, with
+\texttt{conditional\_iid\_from\_directing\_measure} doing the heavy work in roughly
+60 lines of body; \texttt{ViaMartingale/FiniteProduct.lean} is about 395 lines, with
+\texttt{finite\_product\_formula\_id} the heavy work in roughly 165 lines (down from
+$\sim$220 after recent golfing). Both compress to a $\sim$15-line stitching theorem at
+the top level (in \texttt{TheoremViaMartingale.lean} resp.\ \texttt{TheoremViaL2.lean}
+/ \texttt{TheoremViaKoopman.lean}) that hands a 4-tuple
+$(\nu, h_{\nu\text{-prob}}, h_{\nu\text{-meas}}, h_{\text{bridge}})$ to the chosen
+ending.
 
 \begin{lemma}[$\pi$-system uniqueness]
   \label{lem:pi_system}
