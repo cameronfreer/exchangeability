@@ -73,7 +73,7 @@ theorem condExp_tendsto_iInf
 2. `revCE_martingale`: Reversed process is a forward martingale
 3. `condExp_exists_ae_limit_antitone`: A.S. existence via upcrossing bounds
    (`Martingale/Crossings.lean`)
-4. `uniformIntegrable_condexp_antitone`: Uniform integrability via de la Vallée-Poussin
+4. `Integrable.uniformIntegrable_condExp` (mathlib): UI of conditional expectations
 5. `ae_limit_is_condexp_iInf`: Limit identification via Vitali convergence + tower
 6. `condExp_tendsto_iInf`: Wraps step 5
 

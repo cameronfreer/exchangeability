@@ -6,6 +6,7 @@ Authors: Cameron Freer
 
 import Mathlib.Probability.Martingale.Convergence
 import Exchangeability.Probability.MartingaleExtras
+import Exchangeability.Probability.SigmaAlgebraHelpers
 import Exchangeability.Probability.Martingale.Crossings.Bounds
 
 /-!
@@ -17,7 +18,6 @@ The reverse-martingale convergence theorem chain, ending in
 ## Main Results
 
 * `condExp_exists_ae_limit_antitone`: A.S. limit existence for antitone filtrations
-* `uniformIntegrable_condexp_antitone`: UI of conditional expectations
 * `ae_limit_is_condexp_iInf`: Limit equals condExp w.r.t. intersection σ-algebra
 -/
 
@@ -66,45 +66,14 @@ lemma condExp_exists_ae_limit_antitone
           ≤ eLpNorm f 1 μ := hL1_bdd n
         _ = R := hR
 
-  -- Step 2: Show finite upcrossings using L¹-boundedness
-  -- Strategy: Use the fact that L¹-bounded sequences with reverse martingale structure
-  -- have finite upcrossings. This follows from the upcrossing inequality.
+  -- Step 2: Show finite upcrossings using L¹-boundedness. The expected number of
+  -- upcrossings on `[a, b]` is bounded by a finite constant via
+  -- `upcrossings_bdd_uniform`, so the upcrossings are themselves a.e. finite.
   have hupcross : ∀ᵐ ω ∂μ, ∀ a b : ℚ, a < b →
       upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω < ⊤ := by
-    -- The sequence is L¹-bounded, so we can extract a uniform bound
-    obtain ⟨R, hR_pos, hR_bound⟩ : ∃ R : ENNReal, 0 < R ∧ ∀ n, eLpNorm (μ[f | 𝔽 n]) 1 μ ≤ R := by
-      use max (eLpNorm f 1 μ) 1
-      refine ⟨?_, ?_⟩
-      · exact lt_max_of_lt_right zero_lt_one
-      · intro n
-        exact le_trans (hL1_bdd n) (le_max_left _ _)
-
-    -- For reverse martingales, we use a key observation:
-    -- The sequence μ[f | 𝔽 n] is L¹-bounded and satisfies the tower property
-    -- in the reverse direction, which is sufficient to guarantee a.e. convergence
-    -- by the reverse martingale convergence theorem.
-
-    -- Key insight: For a reverse martingale with L¹ bound R, the expected number
-    -- of upcrossings is bounded by R/(b-a), which is finite. By Markov's inequality,
-    -- this implies a.e. finiteness.
-
     simp only [ae_all_iff, eventually_imp_distrib_left]
     intro a b hab
 
-    -- Core argument: L¹-bounded sequences with reverse martingale property have finite upcrossings
-    -- This follows from the reverse martingale convergence theorem
-
-    -- The proof would construct, for each N, a time-reversed martingale:
-    -- Y^N_k := μ[f | 𝔽_{N ⊓ (N - k)}] with increasing filtration G^N_k := 𝔽_{N ⊓ (N - k)}
-    -- Then Y^N is a forward martingale, so by Submartingale.upcrossings_ae_lt_top,
-    -- upcrossings of Y^N are a.e. finite with bound independent of N.
-    -- Taking N → ∞, the upcrossings of the original sequence are also a.e. finite.
-
-    -- For now, we use a classical result:
-    -- A reverse martingale that is L¹-bounded has finite upcrossings a.e.
-    -- This is the time-reversed version of the forward martingale convergence theorem.
-
-    -- Get uniform bound on expected upcrossings from time-reversed martingales
     have hab' : (↑a : ℝ) < (↑b : ℝ) := Rat.cast_lt.2 hab
     -- Get bound for upcrossings (forward direction)
     obtain ⟨C_up, h_C_up_finite, hC_up⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
@@ -115,8 +84,6 @@ lemma condExp_exists_ae_limit_antitone
     -- Use max of both bounds as the uniform constant
     set C := max C_up C_down with hC_def
     have h_C_finite : C < ⊤ := max_lt h_C_up_finite h_C_down_finite
-    have hC : ∀ N, ∫⁻ ω, (upcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) ∂μ ≤ C :=
-      fun N => (hC_up N).trans (le_max_left _ _)
 
     -- Establish relationship between original and reversed sequence upcrossings
     -- Key: upcrossingsBefore (original, N) ≤ upcrossings (reversed_at_N)
@@ -169,43 +136,11 @@ lemma condExp_exists_ae_limit_antitone
                    = (fun ω => downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω) from
                 up_neg_flip_eq_down (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n)]
         _ ≤ C := by
-            -- Downcrossings are bounded by applying Doob's inequality to -revCEFinite.
-            --
-            -- Key facts:
-            -- 1. -revCEFinite is a martingale (negation preserves martingale property)
-            -- 2. L¹ norm: ‖-revCEFinite‖₁ = ‖revCEFinite‖₁ ≤ ‖f‖₁ (L¹ contraction of condExp)
-            -- 3. downcrossings(a,b,X) = upcrossings(-b,-a,-X) by definition
-            -- 4. Apply Doob to -revCEFinite on interval [-b,-a]:
-            --      (b-a) * E[upcrossings(-b,-a,-revCE)] ≤ E[(-revCE_N + b)⁺]
-            --                                           ≤ ‖f‖₁ + |b|
-            -- 5. Divide by (b-a) to get bound ≤ (‖f‖₁ + |b|)/(b-a)
-            -- 6. This is ≤ C since |b| ≥ 0, so (‖f‖₁ + |b|) ≥ (‖f‖₁ + |a|) when a,b same sign
-            --
-            -- The proof mirrors the upcrossings bound but with -revCEFinite instead of revCEFinite.
-            --
-            -- PROOF APPROACH:
-            -- By up_neg_flip_eq_down: downcrossings(a,b,X) = upcrossings(-b,-a,-X)
-            -- So we need to show: ∫⁻ ω, upcrossings(-b,-a,-revCEFinite) ∂μ ≤ C
-            --
-            -- We can apply upcrossings_bdd_uniform to -revCEFinite with interval [-b,-a]:
-            -- 1. -revCEFinite is a martingale (negation preserves martingale property)
-            -- 2. eLpNorm (-revCEFinite) = eLpNorm revCEFinite ≤ eLpNorm f
-            -- 3. -b < -a since a < b
-            -- 4. Apply upcrossings_bdd_uniform to get bound C' for upcrossings(-b,-a,-revCEFinite)
-            --
-            -- The constant C' would be similar to C (same L¹ norm, same gap b-a).
-            --
-            -- Use the C_down bound obtained earlier from upcrossings_bdd_uniform for -f on [-b,-a]
-            -- downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
-            -- negProcess(revCEFinite f) = revCEFinite(-f) by negProcess_revCEFinite_eq
-
-            -- Rewrite downcrossings as upcrossings of negated process
-            -- Key identity: downcrossings(a,b,X) = upcrossings(-b,-a,-X) by up_neg_flip_eq_down
-            -- And: negProcess(revCEFinite f) = revCEFinite(-f) a.e. by condExp_neg
-            --
-            -- Technical note: condExp_neg gives a.e. equality, so the processes may differ
-            -- on a null set. However, since upcrossings is measurable and the integrals agree
-            -- for a.e.-equal functions, the integral bound still holds.
+            -- Rewrite `downcrossings(a,b,X) = upcrossings(-b,-a,-X)`
+            -- (`up_neg_flip_eq_down`), recognise `negProcess (revCEFinite f) =ᵐ
+            -- revCEFinite (-f)` (a consequence of `condExp_neg`), and apply
+            -- `upcrossings_bdd_uniform` to `-f` on `[-b,-a]` to get the
+            -- precomputed `C_down` bound.
             calc ∫⁻ ω, downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ
                 = ∫⁻ ω, upcrossings (-↑b) (-↑a) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
                     simp only [up_neg_flip_eq_down]
@@ -366,18 +301,6 @@ lemma condExp_exists_ae_limit_antitone
     rw [dif_pos hω]
     exact Classical.choose_spec hω
 
-/-- Uniform integrability of `{μ[f | 𝔽 n]}ₙ` for antitone filtration.
-
-This is a direct application of mathlib's `Integrable.uniformIntegrable_condExp`,
-which works for any family of sub-σ-algebras (not just filtrations). -/
-@[nolint unusedArguments]
-lemma uniformIntegrable_condexp_antitone
-    [IsProbabilityMeasure μ] {𝔽 : ℕ → MeasurableSpace Ω}
-    (_h_antitone : Antitone 𝔽) (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
-    (f : Ω → ℝ) (hf : Integrable f μ) :
-    UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ :=
-  hf.uniformIntegrable_condExp h_le
-
 /-- **Key lemma: A.e. limit of adapted sequence for antitone filtration is F_inf-AEStronglyMeasurable.**
 
 For antitone filtration 𝔽 with F_inf = ⨅ 𝔽, if each Xn is 𝔽 n-strongly-measurable and
@@ -390,79 +313,23 @@ The key observation: For antitone 𝔽 (𝔽 n decreases as n increases):
 - Hence Xlim is F_inf-measurable (up to a.e. equality)
 
 This is crucial for showing that reverse martingale limits satisfy μ[Xlim | F_inf] = Xlim. -/
-@[nolint unusedArguments]
 lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
-    (_h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
+    (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     {g : ℕ → Ω → ℝ} {Xlim : Ω → ℝ}
     (hg_meas : ∀ n, StronglyMeasurable[𝔽 n] (g n))
     (h_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))) :
     AEStronglyMeasurable[⨅ n, 𝔽 n] Xlim μ := by
-  -- KEY PROPERTY OF ANTITONE FILTRATIONS:
-  -- For antitone 𝔽 (𝔽 n decreases as n increases):
-  -- • For n ≥ N: 𝔽 n ⊆ 𝔽 N (larger index = smaller σ-algebra)
-  -- • Each g_n is 𝔽 n-measurable, hence 𝔽 N-measurable for n ≥ N (by monotonicity)
-  -- • The a.e. limit of 𝔽 N-measurable functions is AEStronglyMeasurable[𝔽 N]
-  -- • Since this holds for all N, Xlim is AEStronglyMeasurable[⨅ 𝔽]
-
-  -- Define Xlim' as the pointwise limsup (a well-defined representative)
-  let Xlim' : Ω → ℝ := fun ω => Filter.limsup (fun n => g n ω) Filter.atTop
-
-  -- Step 1: Show Xlim' is (⨅ 𝔽)-measurable
-  -- The key: {Xlim' > a} = limsup {g_n > a} = ⋂_N ⋃_{n≥N} {g_n > a} ∈ ⨅ 𝔽
-  have hXlim'_meas : Measurable[⨅ n, 𝔽 n] Xlim' := by
-    -- Strategy: Measurable[⨅ 𝔽] f ↔ ∀ M, Measurable[𝔽 M] f
-    -- We show Xlim' is 𝔽 M-measurable for each M using:
-    -- 1. limsup_nat_add: limsup g = limsup (fun n => g (n + M))
-    -- 2. Each g (n + M) is 𝔽 M-measurable (by antitone)
-    -- 3. Measurable.limsup gives limsup of 𝔽 M-measurable sequence is 𝔽 M-measurable
-
-    -- First prove Xlim' is 𝔽 M-measurable for each M
-    have hXlim'_meas_M : ∀ M, Measurable[𝔽 M] Xlim' := fun M => by
-      -- Step 1: The shifted sequence is 𝔽 M-measurable
-      have hg_shifted_meas : ∀ n, Measurable[𝔽 M] (g (n + M)) := fun n => by
-        -- g (n + M) is 𝔽 (n + M)-measurable
-        have h1 : StronglyMeasurable[𝔽 (n + M)] (g (n + M)) := hg_meas (n + M)
-        -- 𝔽 (n + M) ≤ 𝔽 M (by antitone, since n + M ≥ M)
-        have h2 : 𝔽 (n + M) ≤ 𝔽 M := h_antitone (Nat.le_add_left M n)
-        -- So g (n + M) is 𝔽 M-measurable
-        exact h1.measurable.mono h2 le_rfl
-
-      -- Step 2: The limsup of the shifted sequence is 𝔽 M-measurable
-      have hXlim'_shifted : Xlim' = fun ω => Filter.limsup (fun n => g (n + M) ω) Filter.atTop := by
-        ext ω
-        simp only [Xlim']
-        exact (Filter.limsup_nat_add (fun n => g n ω) M).symm
-
-      -- Step 3: The limsup of 𝔽 M-measurable functions is 𝔽 M-measurable
-      -- Use Measurable.limsup directly with explicit MeasurableSpace
-      rw [hXlim'_shifted]
-      -- Apply @Measurable.limsup with explicit MeasurableSpace 𝔽 M
-      -- Signature: @Measurable.limsup {α} {δ} [TopologicalSpace α] {mα} [BorelSpace α]
-      --            {mδ} [ConditionallyCompleteLinearOrder α] [OrderTopology α]
-      --            [SecondCountableTopology α] {f} (hf : ∀ i, Measurable (f i))
-      refine @Measurable.limsup ℝ Ω _ _ _ (𝔽 M) _ _ _ (fun n ω => g (n + M) ω) ?_
-      exact hg_shifted_meas
-
-    -- Now combine: Measurable[⨅ 𝔽] follows from Measurable[𝔽 M] for all M
-    -- Using: preimages are ⨅ 𝔽-measurable iff they're 𝔽 M-measurable for all M
-    intro s hs
-    rw [MeasurableSpace.measurableSet_iInf]
-    intro M
-    exact hXlim'_meas_M M hs
-
-  -- Step 2: Show Xlim = Xlim' a.e. (where limit exists, limsup = limit)
-  have hXlim_eq_Xlim' : Xlim =ᵐ[μ] Xlim' := by
-    filter_upwards [h_tendsto] with ω hω
-    -- hω : Tendsto (fun n => g n ω) atTop (𝓝 (Xlim ω))
-    -- hω.limsup_eq : limsup (fun n => g n ω) atTop = Xlim ω
-    -- Goal: Xlim ω = Xlim' ω = limsup (fun n => g n ω) atTop
-    exact hω.limsup_eq.symm
-
-  -- Step 3: Conclude AEStronglyMeasurable[⨅ 𝔽] Xlim
-  -- We have: Xlim' is (⨅ 𝔽)-measurable and Xlim = Xlim' a.e.
-  -- For ℝ, Measurable implies StronglyMeasurable (second countable)
-  exact ⟨Xlim', hXlim'_meas.stronglyMeasurable, hXlim_eq_Xlim'⟩
+  -- Compose the two `SigmaAlgebraHelpers` lemmas: first show
+  -- `AEStronglyMeasurable[𝔽 N] Xlim` for each `N` by feeding the shifted
+  -- sequence `g (n + N)` into `aestronglyMeasurable_sub_of_tendsto_ae`; then
+  -- combine over `N` via `aestronglyMeasurable_iInf_antitone`.
+  refine aestronglyMeasurable_iInf_antitone (μ := μ) h_antitone h_le Xlim (fun N => ?_)
+  refine aestronglyMeasurable_sub_of_tendsto_ae (μ := μ) (h_le N) (f := fun n => g (n + N))
+    (fun n => (hg_meas (n + N)).measurable.mono
+      (h_antitone (Nat.le_add_left N n)) le_rfl) ?_
+  filter_upwards [h_tendsto] with ω hω
+  exact hω.comp (Filter.tendsto_add_atTop_nat N)
 
 /-- Identification: the a.s. limit equals `μ[f | ⨅ n, 𝔽 n]`.
 
@@ -479,7 +346,7 @@ lemma ae_limit_is_condexp_iInf
     condExp_exists_ae_limit_antitone (μ := μ) h_antitone h_le f hf
 
   -- 2) UI ⟹ L¹ convergence via Vitali
-  have hUI := uniformIntegrable_condexp_antitone (μ := μ) h_antitone h_le f hf
+  have hUI : UniformIntegrable (fun n => μ[f | 𝔽 n]) 1 μ := hf.uniformIntegrable_condExp h_le
 
   have hL1_conv : Tendsto (fun n => eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ) atTop (𝓝 0) := by
     apply tendsto_Lp_finite_of_tendsto_ae (hp := le_refl 1) (hp' := ENNReal.one_ne_top)
@@ -487,15 +354,6 @@ lemma ae_limit_is_condexp_iInf
     · exact memLp_one_iff_integrable.2 hXlimint
     · exact hUI.unifIntegrable
     · exact h_tendsto
-
-  -- IMPORTANT: Define hXlim_aesm BEFORE introducing F_inf to avoid instance pollution
-  -- Xlim is a.e. limit of 𝔽 n-measurable functions, so it's a.e. strongly measurable
-  have hXlim_aesm : AEStronglyMeasurable Xlim μ := by
-    refine aestronglyMeasurable_of_tendsto_ae atTop ?h_meas h_tendsto
-    intro n
-    -- Each μ[f | 𝔽 n] is 𝔽 n-strongly measurable, hence ambient-space a.e. strongly measurable
-    have : StronglyMeasurable[𝔽 n] (μ[f | 𝔽 n]) := stronglyMeasurable_condExp
-    exact this.mono (h_le n) |>.aestronglyMeasurable
 
   -- Prove Xlim is AEStronglyMeasurable[⨅ 𝔽] BEFORE introducing F_inf alias
   -- This avoids type class unification issues between F_inf and ⨅ 𝔽
@@ -611,13 +469,6 @@ lemma ae_limit_is_condexp_iInf
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
     -- Therefore Y =ᵐ Xlim
     exact hCE_eqY.symm.trans hXlim_condExp_self
-
-  -- Finally: derive μ[Xlim | F_inf] =ᵐ[μ] Xlim from hCE_eqY and hXlim_eq
-  -- Simple 2-step chain, no circularity
-  have hXlim_condExp : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-    have h1 : μ[Xlim | F_inf] =ᵐ[μ] Y := hCE_eqY
-    have h2 : Y =ᵐ[μ] Xlim := hXlim_eq
-    exact h1.trans h2
 
   -- Return the desired result: combine h_tendsto with hXlim_eq
   -- We have: h_tendsto : μ[f|𝔽 n] → Xlim

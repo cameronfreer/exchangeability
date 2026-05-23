@@ -200,11 +200,9 @@ completing at time ≤ N.
 The proof uses the bijection (τ, σ) ↦ (N-σ, N-τ) which maps X's crossings to Y's
 crossings in reverse order. The greedy upcrossing algorithm finds these crossings
 with completion times bounded by `hittingBtwn_le_of_mem`. -/
-@[nolint unusedArguments]
 lemma timeReversal_crossing_bound
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k : ℕ) (ω : Ω)
-    (h_k : upperCrossingTime a b X N k ω < N)
-    (_h_neg : -b < -a) :
+    (h_k : upperCrossingTime a b X N k ω < N) :
     upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) k ω ≤ N := by
   have h := timeReversal_crossing_bound_strong X a b hab N k k ω (le_refl k) h_k
   simp only [Nat.sub_self] at h
