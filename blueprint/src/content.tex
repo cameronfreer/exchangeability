@@ -571,18 +571,12 @@ have. The martingale route's per-coordinate bridge is ``smaller'' (one
 σ-algebra-relative equality per index) and is what \texttt{condExpKernel}
 delivers without extra work; the common ending's joint integral bridge
 is what limit-of-averages arguments deliver without extra work, but
-would be wasteful if you already had per-coordinate CE equalities.
-
-\paragraph{Approximate line counts.}
-Roughly comparable: \texttt{CommonEnding.lean} is about 455 lines, with
-\texttt{conditional\_iid\_from\_directing\_measure} doing the heavy work in roughly
-60 lines of body; \texttt{ViaMartingale/FiniteProduct.lean} is about 395 lines, with
-\texttt{finite\_product\_formula\_id} the heavy work in roughly 165 lines (down from
-$\sim$220 after recent golfing). Both compress to a $\sim$15-line stitching theorem at
-the top level (in \texttt{TheoremViaMartingale.lean} resp.\ \texttt{TheoremViaL2.lean}
-/ \texttt{TheoremViaKoopman.lean}) that hands a 4-tuple
-$(\nu, h_{\nu\text{-prob}}, h_{\nu\text{-meas}}, h_{\text{bridge}})$ to the chosen
-ending.
+would be wasteful if you already had per-coordinate CE equalities. At
+the stitching level both routes compress to a short top-level theorem
+that hands a 4-tuple
+$(\nu, h_{\nu\text{-prob}}, h_{\nu\text{-meas}}, h_{\text{bridge}})$ to
+the chosen ending — the choice of ending is what differs, not the
+amount of stitching.
 
 \begin{lemma}[$\pi$-system uniqueness]
   \label{lem:pi_system}
