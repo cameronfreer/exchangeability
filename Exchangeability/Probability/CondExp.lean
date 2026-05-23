@@ -38,12 +38,9 @@ This file centralizes these patterns to keep the main proofs clean and maintaina
 - **`condIndep_of_indicator_condexp_eq`**: Projection property ⇒ conditional independence
   - **Used in**: ViaMartingale conditional independence arguments
   - **Key insight**: Uses mathlib's `ProbabilityTheory.CondIndep` product formula
-  
-- **`condExp_indicator_mul_indicator_of_condIndep`**: Product formula for indicators
-  - Direct application of `ProbabilityTheory.condIndep_iff`
-  
-- **`condexp_indicator_inter_bridge`**: Typeclass-safe wrapper for ViaMartingale.lean
-  - Manages `IsFiniteMeasure` and `SigmaFinite` instances automatically
+
+- **`condexp_indicator_inter_bridge`**: Indicator/set form of `ProbabilityTheory.condIndep_iff`,
+  with the typeclass plumbing absorbed for ViaMartingale.lean
 
 ### 3. Distributional Equality ⇒ Conditional Expectation Equality
 - **`condexp_indicator_eq_of_pair_law_eq`**: If `(Y,Z)` and `(Y',Z)` have the same law, then
@@ -216,29 +213,6 @@ lemma condIndep_of_indicator_condexp_eq
       simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
   simpa [h_f1f2, f1, f2] using h_prod
 
-/-- **Product formula for conditional expectations of indicators** under conditional independence.
-
-If `mF` and `mH` are conditionally independent given `m`, then for
-`A ∈ mF` and `B ∈ mH` we have
-```
-μ[(1_{A∩B}) | m] = (μ[1_A | m]) · (μ[1_B | m])   a.e.
-```
-This is a direct consequence of `ProbabilityTheory.condIndep_iff` (set version).
--/
-lemma condExp_indicator_mul_indicator_of_condIndep
-    {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
-    {m mF mH : MeasurableSpace Ω} {μ : @Measure Ω m₀}
-    [IsFiniteMeasure μ]
-    (hm  : m  ≤ m₀) (hmF : mF ≤ m₀) (hmH : mH ≤ m₀)
-    (hCI : ProbabilityTheory.CondIndep m mF mH hm μ)
-    {A B : Set Ω} (hA : MeasurableSet[mF] A) (hB : MeasurableSet[mH] B) :
-  μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
-    =ᵐ[μ]
-  (μ[A.indicator (fun _ => (1 : ℝ)) | m]
-   * μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
-  -- This is exactly the product formula from condIndep_iff
-  exact (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
-
 /-! ### Helper API for Sub-σ-algebras
 
 These wrappers provide explicit instance management for conditional expectations
@@ -267,14 +241,19 @@ def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
 
 /-! ### Bridge lemma for indicator factorization
 
-This adapter allows ViaMartingale.lean to use the proven factorization lemma
-while managing typeclass instances correctly. -/
+This adapter allows ViaMartingale.lean to use mathlib's product-formula
+characterisation of `CondIndep` while managing typeclass instances correctly. -/
 
-/-- Bridge lemma: Product formula for conditional expectations of indicators under conditional independence.
+/-- **Product formula for conditional expectations of indicators** under conditional independence.
 
-This is an adapter that manages typeclass instances and forwards to
-`condExp_indicator_mul_indicator_of_condIndep`. Use this in ViaMartingale.lean
-to avoid typeclass resolution issues. -/
+If `mF` and `mH` are conditionally independent given `m`, then for
+`A ∈ mF` and `B ∈ mH` we have
+```
+μ[1_{A∩B} | m] = μ[1_A | m] · μ[1_B | m]   a.e.
+```
+This is the indicator/set-valued half of `ProbabilityTheory.condIndep_iff`,
+wrapped here to relieve `ViaMartingale.lean` of the surrounding instance
+plumbing. -/
 lemma condexp_indicator_inter_bridge
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {μ : @Measure Ω m₀} [IsProbabilityMeasure μ]
@@ -285,12 +264,8 @@ lemma condexp_indicator_inter_bridge
     μ[(A ∩ B).indicator (fun _ => (1 : ℝ)) | m]
       =ᵐ[μ]
     (μ[A.indicator (fun _ => (1 : ℝ)) | m] *
-     μ[B.indicator (fun _ => (1 : ℝ)) | m]) := by
-  classical
-  -- Install trimmed instances (IsFiniteMeasure is automatic via mathlib)
-  haveI : SigmaFinite (μ.trim hm) := inferInstance
-  -- Forward to the proven lemma
-  exact condExp_indicator_mul_indicator_of_condIndep hm hmF hmH hCI hA hB
+     μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
+  (ProbabilityTheory.condIndep_iff m mF mH hm hmF hmH μ).mp hCI A B hA hB
 
 /-! ### Conditional expectation equality from distributional equality
 
