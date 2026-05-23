@@ -66,24 +66,12 @@ with σ(θ_{m+1} X) ⊆ σ(X_r, θ_{m+1} X).
 By Kallenberg's Lemma 1.3: if (U, η) =ᵈ (U, ζ) and σ(η) ⊆ σ(ζ), then U ⊥⊥_η ζ.
 Taking U = (X₀,...,X_{r-1}), η = θ_{m+1} X, ζ = (X_r, θ_{m+1} X) gives the result.
 
-**This replaces the old broken `coordinate_future_condIndep` which incorrectly claimed
-Y ⊥⊥_{σ(Y)} Y.**
-
----
-
-**SIMPLIFIED PROOF PATH (using Kallenberg 1.3 infrastructure):**
-
-The proof now uses `condExp_Xr_indicator_eq_of_contractable` which directly applies
-Kallenberg 1.3 with the true contraction structure:
-- W = shiftRV X (m+1) (far future)
-- W' = (U, W) where U = firstRMap X r (first r coords)
-- Contraction: σ(W) ⊆ σ(U, W) = σ(W')
-- Pair law: (X_r, W) =^d (X_r, W') from contractability
-
-This gives: E[1_{X_r ∈ B} | σ(U, W)] = E[1_{X_r ∈ B} | σ(W)]
-which is the indicator characterization of X_r ⊥⊥ U | W.
-
-The old finite-level approximation approach is now deprecated. -/
+The proof goes through `condExp_Xr_indicator_eq_of_contractable`, which packages
+the Kallenberg 1.3 input
+```
+E[1_{X_r ∈ B} | σ(U, W)] = E[1_{X_r ∈ B} | σ(W)]
+```
+with `U = firstRMap X r`, `W = shiftRV X (m+1)`. -/
 lemma block_coord_condIndep
     {Ω α : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     [MeasurableSpace α] [StandardBorelSpace α]
@@ -98,19 +86,6 @@ lemma block_coord_condIndep
     (MeasurableSpace.comap (X r) inferInstance)   -- single coord: σ(X_r)
     (futureFiltration_le X m hX_meas)             -- witness: σ(θ_{m+1} X) ≤ ambient
     μ := by
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  -- SIMPLIFIED PROOF using Kallenberg 1.3 infrastructure (condExp_Xr_indicator_eq_of_contractable)
-  -- ═══════════════════════════════════════════════════════════════════════════════
-  --
-  -- This bypasses the old finite-level approximation which used the broken chain:
-  --   condexp_indicator_eq_on_join_of_triple_law → condExp_eq_of_triple_law
-  --     → condIndep_of_triple_law_INVALID
-  --
-  -- Instead, we use the correct Kallenberg 1.3 approach with true contraction:
-  --   condExp_Xr_indicator_eq_of_contractable (at infinite level)
-  --
-  -- ═══════════════════════════════════════════════════════════════════════════════
-
   -- We use the "indicator projection" criterion for conditional independence.
   apply Exchangeability.Probability.condIndep_of_indicator_condexp_eq
   · exact firstRSigma_le_ambient X r hX_meas
@@ -143,10 +118,6 @@ lemma block_coord_condIndep
   -- Thus the result follows from condExp_Xr_indicator_eq_of_contractable.
   exact condExp_Xr_indicator_eq_of_contractable hX hX_meas (Nat.le_of_lt hrm) hB
 
-  -- NOTE: The previous proof used a finite-level approximation + Lévy upward convergence
-  -- approach, but that depended on a broken chain (condIndep_of_triple_law_INVALID).
-  -- The current proof via Kallenberg 1.3 is mathematically correct.
-
 
 /-- **Product formula for conditional expectations under conditional independence.**
 
@@ -156,8 +127,7 @@ independence given `m`, the conditional expectation of the intersection indicato
 μ[1_{A∩B} | m] = μ[1_A | m] · μ[1_B | m]   a.e.
 ```
 
-Now proven using `condexp_indicator_inter_bridge` from CondExp.lean, eliminating the
-previous `: True` stub. -/
+Proven using `condexp_indicator_inter_bridge` from CondExp.lean. -/
 lemma condexp_indicator_inter_of_condIndep
     {Ω : Type*} {m₀ : MeasurableSpace Ω} [StandardBorelSpace Ω]
     {μ : @Measure Ω m₀} [IsProbabilityMeasure μ]
@@ -171,7 +141,7 @@ lemma condexp_indicator_inter_of_condIndep
      μ[B.indicator (fun _ => (1 : ℝ)) | m]) :=
   Exchangeability.Probability.condexp_indicator_inter_bridge hm hmF hmH hCI hA hB
 
-/-- **Finite-level factorization builder (formerly Axiom 3).**
+/-- **Finite-level factorization builder.**
 
 For a contractable sequence, at any future level `m ≥ r`, the conditional expectation
 of the product indicator factors:
@@ -348,7 +318,7 @@ lemma finite_level_factorization
           rw [Fin.prod_univ_castSucc]
           simp only [Cinit, Clast, Fin.last]
 
-/-- **Tail factorization on finite cylinders (formerly Axiom 4).**
+/-- **Tail factorization on finite cylinders.**
 
 Assume you have, for all large enough `m`, the finite‑level factorization
 at the future filtration:
