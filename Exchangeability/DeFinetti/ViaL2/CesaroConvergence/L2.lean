@@ -7,6 +7,7 @@ Authors: Cameron Freer
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence.Cauchy
 import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.Tail.TailSigma
+import Exchangeability.Tail.ShiftInvariantMeasure
 import Exchangeability.Probability.SigmaAlgebraHelpers
 
 /-!
