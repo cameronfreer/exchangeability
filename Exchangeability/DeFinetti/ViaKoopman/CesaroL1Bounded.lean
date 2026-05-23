@@ -430,7 +430,8 @@ lemma ce_lipschitz_convergence
   have h₁ : ∀ n, ∫ ω, |μ[(fun ω' => f (ω' 0) * A n ω') | mSI] ω
                      - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
                ≤ ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ := fun n =>
-    condExp_L1_lipschitz' (hZ_int n) hW_int
+    Exchangeability.Probability.condExp_L1_lipschitz
+      (μ := μ) (m := mSI) (hZ_int n) hW_int
 
   have h₂ : ∀ n, ∫ ω, |f (ω 0) * A n ω - f (ω 0) * Y ω| ∂μ
                ≤ Cf * ∫ ω, |A n ω - Y ω| ∂μ := fun n => by

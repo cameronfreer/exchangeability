@@ -68,17 +68,9 @@ This file centralizes these patterns to keep the main proofs clean and maintaina
 4. Encode reusable probabilistic insights
 
 **Keep in main proofs:**
-- Domain-specific constructions (finFutureSigma, tailSigma, etc.)
+- Domain-specific constructions (`tailSigma`, etc.)
 - Proof-specific calculations
 - High-level proof architecture
-
-## Related Files
-
-- **CondExpBasic.lean**: Basic conditional expectation utilities
-- **CondProb.lean**: Conditional probability definitions
-- **ViaMartingale.lean**: Main consumer of this API
-- **ViaL2.lean**: Uses integrability lemmas
-- **ViaKoopman.lean**: Uses integrability and independence lemmas
 
 ## References
 
@@ -444,9 +436,8 @@ For integrable functions f, g, the conditional expectation is contractive in L¹
   ‖E[f|m] - E[g|m]‖₁ ≤ ‖f - g‖₁
 
 This is the key operator-theoretic property that makes CE well-behaved. -/
-@[nolint unusedArguments]
 lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (_hm : m ≤ ‹_›)
+    {m : MeasurableSpace Ω}
     {f g : Ω → ℝ} (hf : Integrable f μ) (hg : Integrable g μ) :
     ∫ ω, |μ[f|m] ω - μ[g|m] ω| ∂μ ≤ ∫ ω, |f ω - g ω| ∂μ := by
   -- Use the mathlib lemma integral_abs_condExp_le which gives ∫|E[f|m]| ≤ ∫|f|

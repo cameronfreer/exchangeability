@@ -392,23 +392,4 @@ lemma finite_product_formula
     = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
   finite_product_formula_strictMono X hX hX_meas ν hν_prob hν_meas hν_law m k hk
 
-/-- **Convenience identity case** (useful for tests and bridging). -/
-lemma finite_product_formula_id'
-    [StandardBorelSpace Ω]
-    {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
-    (X : ℕ → Ω → α)
-    (hX : Contractable μ X)
-    (hX_meas : ∀ n, Measurable (X n))
-    (ν : Ω → Measure α)
-    (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
-    (hν_meas : ∀ B : Set α, MeasurableSet B → Measurable (fun ω => ν ω B))
-    (hν_law : ∀ n B, MeasurableSet B →
-        (fun ω => (ν ω B).toReal) =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | tailSigma X])
-    (m : ℕ) :
-  Measure.map (fun ω => fun i : Fin m => X i ω) μ
-    = μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω) :=
-  finite_product_formula X hX hX_meas ν hν_prob hν_meas hν_law m (fun i => (i : ℕ))
-    fun _ _ => id
-
 end Exchangeability.DeFinetti.ViaMartingale
