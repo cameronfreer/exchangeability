@@ -14,9 +14,6 @@ import Mathlib.MeasureTheory.Function.ConditionalExpectation.CondexpL2
 import Exchangeability.Ergodic.ShiftInvariantSigma
 import Exchangeability.Ergodic.ShiftInvariantRepresentatives
 
--- NOTE: shift was moved from KoopmanMeanErgodic to PathSpace.Shift in Oct 2025
--- to avoid duplication with CommonEnding. See commit 57890e9.
-
 /-!
 # Shift-invariant σ-algebra and conditional expectation
 
