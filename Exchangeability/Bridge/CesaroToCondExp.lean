@@ -135,18 +135,12 @@ lemma contractable_shift_invariant_law {Ω : Type*} [MeasurableSpace Ω]
   -- hX n k hk_strictMono : Measure.map (fun ω i => X (k i) ω) μ = Measure.map (fun ω i => X i.val ω) μ
   rw [hX n k hk_strictMono]
 
-/-- Measurability of `shift` on path space. -/
-@[measurability, fun_prop]
-lemma measurable_shift_real : Measurable (shift (α := ℝ)) :=
-  shift_measurable
-
 /-- **Bridge 1'.** Package the previous lemma as `MeasurePreserving` for MET. -/
 lemma measurePreserving_shift_path {Ω : Type*} [MeasurableSpace Ω]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX : Exchangeability.Contractable μ X)
     (hX_meas : ∀ n, Measurable (X n)) :
-    MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) := by
-  refine ⟨measurable_shift_real, ?_⟩
-  exact contractable_shift_invariant_law μ hX hX_meas
+    MeasurePreserving (shift (α := ℝ)) (μ_path μ X) (μ_path μ X) :=
+  ⟨shift_measurable, contractable_shift_invariant_law μ hX hX_meas⟩
 
 end Exchangeability.Bridge

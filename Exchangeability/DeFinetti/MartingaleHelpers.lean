@@ -41,9 +41,9 @@ namespace MartingaleHelpers
 -- Re-export cylinder infrastructure from PathSpace for backward compatibility
 export PathSpace (cylinder cylinder_measurable firstRMap firstRSigma firstRCylinder
   firstRCylinder_measurable_in_firstRSigma firstRCylinder_measurable_ambient
-  measurable_firstRMap firstRSigma_le_ambient firstRSigma_mono firstRCylinder_zero
+  measurable_firstRMap firstRSigma_le_ambient firstRCylinder_zero
   mem_firstRCylinder_iff firstRCylinder_univ firstRCylinder_inter mem_cylinder_iff
-  cylinder_measurable_set cylinder_zero cylinder_univ cylinder_inter)
+  cylinder_zero)
 
 open MeasureTheory
 
