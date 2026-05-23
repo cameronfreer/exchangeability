@@ -78,9 +78,8 @@ lemma condExp_exists_ae_limit_antitone
     -- Get bound for upcrossings (forward direction)
     obtain ⟨C_up, h_C_up_finite, hC_up⟩ := upcrossings_bdd_uniform h_antitone h_le f hf (↑a) (↑b) hab'
     -- Get bound for downcrossings via negated process (backward direction)
-    have hab_neg : -(↑b : ℝ) < -(↑a : ℝ) := by linarith
     obtain ⟨C_down, h_C_down_finite, hC_down⟩ := upcrossings_bdd_uniform h_antitone h_le
-        (fun ω => -f ω) hf.neg (-↑b) (-↑a) hab_neg
+        (fun ω => -f ω) hf.neg (-↑b) (-↑a) (by linarith)
     -- Use max of both bounds as the uniform constant
     set C := max C_up C_down with hC_def
     have h_C_finite : C < ⊤ := max_lt h_C_up_finite h_C_down_finite
@@ -169,6 +168,15 @@ lemma condExp_exists_ae_limit_antitone
               _ ≤ C_down := hC_down N
               _ ≤ C := le_max_right C_up C_down
 
+    -- The sequence `μ[f | 𝔽 n]` is adapted to the constant ambient filtration; used
+    -- below for both `measurable_upcrossingsBefore` and `measurable_upcrossings`.
+    let ℱ : Filtration ℕ (inferInstance : MeasurableSpace Ω) :=
+      { seq := fun _ => (inferInstance : MeasurableSpace Ω)
+        mono' := fun _ _ _ => le_refl _
+        le' := fun _ => le_refl _ }
+    have h_adapted : StronglyAdapted ℱ (fun n => μ[f | 𝔽 n]) :=
+      fun n => stronglyMeasurable_condExp.mono (h_le n)
+
     -- Use monotone convergence on the ORIGINAL process (which IS monotone in N)
     have h_exp_orig : ∫⁻ ω, upcrossings (↑a) (↑b) (fun n => μ[f | 𝔽 n]) ω ∂μ ≤ C := by
       -- Set U N ω := upcrossingsBefore for the original process
@@ -182,48 +190,22 @@ lemma condExp_exists_ae_limit_antitone
         have := upcrossingsBefore_mono (f := fun n => μ[f | 𝔽 n]) hab' hmn ω
         exact Nat.cast_le.2 this
 
-      -- Measurability
-      have hU_meas : ∀ N, Measurable (U N) := by
-        intro N
-        simp only [hU]
-        -- upcrossingsBefore is measurable for adapted processes
-        -- Define the constant filtration (all same σ-algebra)
-        let ℱ : Filtration ℕ (inferInstance : MeasurableSpace Ω) := {
-          seq := fun _ => (inferInstance : MeasurableSpace Ω)
-          mono' := fun _ _ _ => le_refl _
-          le' := fun _ => le_refl _
-        }
-        -- The process μ[f | 𝔽 n] is adapted to this constant filtration
-        have h_adapted : StronglyAdapted ℱ (fun n => μ[f | 𝔽 n]) := by
-          intro n
-          exact stronglyMeasurable_condExp.mono (h_le n)
-        -- Apply measurability for adapted processes
-        exact measurable_from_top.comp (h_adapted.measurable_upcrossingsBefore hab')
+      -- Measurability (via the constant filtration `ℱ` set up above)
+      have hU_meas : ∀ N, Measurable (U N) := fun _ =>
+        measurable_from_top.comp (h_adapted.measurable_upcrossingsBefore hab')
 
       -- Apply monotone convergence theorem
       have h_iSup : ∫⁻ ω, (⨆ N, U N ω) ∂μ = ⨆ N, ∫⁻ ω, U N ω ∂μ := by
         exact lintegral_iSup hU_meas hU_mono
 
       -- Bound the supremum of integrals
-      have : (⨆ N, ∫⁻ ω, U N ω ∂μ) ≤ C := by
-        refine iSup_le (fun N => ?_)
-        exact h_N_bound N
+      have : (⨆ N, ∫⁻ ω, U N ω ∂μ) ≤ C := iSup_le h_N_bound
 
       -- Conclude: upcrossings = ⨆ N, upcrossingsBefore N
       simpa [MeasureTheory.upcrossings, hU] using h_iSup.le.trans this
 
     -- Apply ae_lt_top: measurable function with finite expectation is a.e. finite
     refine ae_lt_top ?_ (lt_of_le_of_lt h_exp_orig h_C_finite).ne
-    -- Measurability: upcrossings of an adapted process
-    -- The sequence μ[f | 𝔽 n] is adapted to the trivial filtration (constant ambient σ-algebra)
-    let ℱ : Filtration ℕ (inferInstance : MeasurableSpace Ω) := {
-      seq := fun _ => (inferInstance : MeasurableSpace Ω)
-      mono' := fun _ _ _ => le_refl _
-      le' := fun _ => le_refl _
-    }
-    have h_adapted : StronglyAdapted ℱ (fun n => μ[f | 𝔽 n]) := by
-      intro n
-      exact stronglyMeasurable_condExp.mono (h_le n)
     exact h_adapted.measurable_upcrossings hab'
 
   -- Step 3: Apply convergence theorem to get pointwise limits
@@ -448,23 +430,11 @@ lemma ae_limit_is_condexp_iInf
   have hXlim_eq : Y =ᵐ[μ] Xlim := by
     -- First prove μ[Xlim | F_inf] = Xlim using the fact that Xlim is (essentially) F_inf-measurable
     -- Xlim is the limit of F_inf-measurable functions, so is itself F_inf-measurable
-    have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim := by
-      -- PROOF STRATEGY: Use that reverse martingale limits are F_inf-measurable.
-      --
-      -- Step 1: Show Xlim is AEStronglyMeasurable[F_inf]
-      -- Each Xn = μ[f | 𝔽 n] is 𝔽 n-strongly-measurable. For antitone 𝔽, when n ≥ N:
-      --   {Xn > a} ∈ 𝔽 n ⊆ 𝔽 N
-      -- Hence lim sup {Xn > a} = ⋂_N ⋃_{n≥N} {Xn > a} ∈ ⋂_N 𝔽 N = F_inf.
-      -- This shows Xlim is F_inf-measurable (see aestronglyMeasurable_iInf_of_tendsto_ae_antitone).
-      --
-      -- Step 2: Apply condExp_of_aestronglyMeasurable':
-      -- If f is AEStronglyMeasurable[m] and integrable, then μ[f|m] =ᵐ f.
-      --
-      -- Step 1: Xlim is AEStronglyMeasurable[F_inf] via hXlim_iInf_meas (proved before set F_inf)
-      -- F_inf = iInf 𝔽 = ⨅ n, 𝔽 n definitionally, so this is just type conversion
-      have hXlim_F_inf_meas : AEStronglyMeasurable[F_inf] Xlim μ := hXlim_iInf_meas
-      -- Step 2: Apply condExp_of_aestronglyMeasurable': μ[Xlim | F_inf] =ᵐ Xlim
-      exact condExp_of_aestronglyMeasurable' hF_inf_le hXlim_F_inf_meas hXlimint
+    -- `Xlim` is `AEStronglyMeasurable[F_inf]` via the earlier `hXlim_iInf_meas`
+    -- (`F_inf := iInf 𝔽 = ⨅ n, 𝔽 n` definitionally); apply
+    -- `condExp_of_aestronglyMeasurable'`.
+    have hXlim_condExp_self : μ[Xlim | F_inf] =ᵐ[μ] Xlim :=
+      condExp_of_aestronglyMeasurable' hF_inf_le hXlim_iInf_meas hXlimint
 
     -- Now use L¹-continuity: μ[Xlim | F_inf] =ᵐ Y and μ[Xlim | F_inf] =ᵐ Xlim
     -- Therefore Y =ᵐ Xlim
