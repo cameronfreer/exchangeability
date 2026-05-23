@@ -47,8 +47,7 @@ For the **left shift** `T(ω₀, ω₁, ω₂, ...) = (ω₁, ω₂, ω₃, ...)
 
 ## Main results
 
-* `measurable_shift`: The shift map is measurable
-* `measurePreserving_shift_pi`: For product measures, the shift is measure-preserving
+* `measurable_shift`: The shift map is measurable (re-exported from `PathSpace.Shift`)
 * `birkhoffAverage_tendsto_metProjection`: **Birkhoff averages converge in L² to the
   projection onto the fixed-point subspace** (via Mean Ergodic Theorem)
 
@@ -84,15 +83,7 @@ variable {α : Type*} [MeasurableSpace α]
 -- Ensure Lp spaces work with p = 2
 attribute [local instance] fact_one_le_two_ennreal
 
--- NOTE: PathSpace and Ω[α] notation are now defined in PathSpace.Shift
--- The shift operator (shift ω) n = ω(n+1) is fundamental to ergodic theory and
--- is defined there along with shift_measurable.
-
 variable {Ω : Type*} [MeasurableSpace Ω]
-
--- Product measure setup will need specific API from mathlib
--- For now we work with abstract measure-preserving assumptions
--- lemma measurePreserving_shift_pi : ... (requires Measure.pi API)
 
 /--
 The Koopman operator: composition with a measure-preserving transformation.
