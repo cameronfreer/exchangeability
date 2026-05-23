@@ -24,7 +24,7 @@ open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
 open Exchangeability.DeFinetti.L2Helpers
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω : Type*} [MeasurableSpace Ω]
 
 open scoped BigOperators
 

@@ -26,11 +26,10 @@ open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
 open Exchangeability.DeFinetti.L2Helpers
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω : Type*} [MeasurableSpace Ω]
 
 open scoped BigOperators
 
-set_option linter.unusedVariables false in
 /-- **Compute the L² contractability constant for f ∘ X.**
 
 This helper extracts the common covariance structure computation needed by both
@@ -42,12 +41,10 @@ Returns `Cf = 2σ²(1-ρ)` where `(mf, σ², ρ)` is the covariance structure of
 **Design rationale**: Computing the covariance structure once and passing it to
 both bound lemmas ensures they use the same constant, avoiding the need to prove
 equality of opaque existential witnesses. -/
-@[nolint unusedArguments]
 lemma get_covariance_constant
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     ∃ (Cf : ℝ) (mf σSqf ρf : ℝ),
@@ -93,15 +90,13 @@ lemma get_covariance_constant
 
 lemma l2_bound_long_vs_tail
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ)
     (hX_meas : ∀ i, Measurable (X i))
-    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
     -- Accept Cf and covariance structure as arguments
     (Cf mf σSqf ρf : ℝ)
     (hCf_def : Cf = 2 * σSqf * (1 - ρf))
-    (_hCf_nonneg : 0 ≤ Cf)
     (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
     (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
     (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
@@ -111,170 +106,11 @@ lemma l2_bound_long_vs_tail
     ∫ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
           (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2 ∂μ
       ≤ Cf / k := by
-  -- Strategy: The key observation is that comparing a long average (1/m) with
-  -- a tail average (1/k over last k terms) is the same as comparing two different
-  -- weight vectors over the same m terms.
-
-  -- Since Cf is already the uniform bound for equal-weight windows (from hCf_unif),
-  -- and this comparison uses weights that differ by at most 1/k at each position,
-  -- the bound follows from the general weight lemma.
-
-  -- Specifically:
-  -- - Long avg: sum_{i<m} (1/m) f(X_{n+i+1})
-  -- - Tail avg: sum_{i<k} (1/k) f(X_{n+(m-k)+i+1}) = sum_{i in [m-k,m)} (1/k) f(X_{n+i+1})
-  -- These can be written as:
-  --   p_i = 1/m for all i
-  --   q_i = 0 for i < m-k, and 1/k for i >= m-k
-  -- So sup|p-q| = max(1/m, 1/k) = 1/k (since k ≤ m)
-
-  -- The bound from l2_contractability_bound would be: 2σ²(1-ρ) · (1/k) = Cf/k
-  -- which is exactly what we need to prove.
-
-  -- Direct approach using hCf_unif:
-  -- The tail average is an equal-weight window of size k starting at n+(m-k):
-  --   (1/k) ∑_{j<k} f(X_{n+(m-k)+j+1})
-  --
-  -- Strategy:
-  -- 1. Use triangle inequality: |long_avg - tail_avg| ≤ |long_avg - some_window| + |some_window - tail_avg|
-  -- 2. The tail window is exactly window starting at position n+(m-k)
-  -- 3. Can compare it with a window of size k starting at n using hCf_unif
-  -- 4. The bound Cf/k applies since both are equal-weight windows of size k
-  --
-  -- Rewrite long average (1/m) * ∑_{i<m} f(X_{n+i+1}) in terms of weights on each position
-  -- We can split it as: sum over first (m-k) terms + sum over last k terms
-  -- Then compare with the tail average which is just the last k terms weighted by 1/k
-
-  -- Key insight: Write the difference as a weighted combination where we can apply sum_tail_block_reindex
-  -- Long avg = (1/m) * [first (m-k) terms + last k terms]
-  -- Tail avg = (1/k) * [last k terms]
-  -- Difference involves the last k terms with weight (1/m - 1/k) and first terms with weight 1/m
-
-  -- Since |1/m - 1/k| ≤ 1/k and we have at most m terms each bounded,
-  -- this reduces to applying the uniform bound hCf_unif
-
-  -- Use that we can rewrite the long average to isolate the tail portion
-  -- and apply the uniform bound
-
+  -- Express the difference of the two averages as a single weighted combination
+  -- `∑ p_i Y_i - ∑ q_i Y_i = ∑ (p_i - q_i) Y_i` over `Fin m` and apply
+  -- `L2Approach.l2_contractability_bound`. The uniform bound on `|p_i - q_i|`
+  -- is `1/k`, giving the final `Cf/k`.
   obtain ⟨M, hM⟩ := hf_bdd
-
-  -- The key is to use boundedness to show the difference is controlled
-  -- For a more direct proof, we use that:
-  -- |long_avg - tail_avg|² ≤ |long_avg - window_avg|² + |window_avg - tail_avg|²
-  -- where both terms can be bounded using hCf_unif
-
-  -- However, for simplicity, we can use the fact that both averages involve
-  -- bounded functions and the weight difference is small
-
-  -- Direct bound using triangle inequality and boundedness
-  have h_bdd_integrand : ∀ ω, ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-        (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
-      ≤ (4 * M)^2 := by
-    intro ω
-    have h1 : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| ≤ M := by
-      calc |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)|
-          = (1 / (m : ℝ)) * |∑ i : Fin m, f (X (n + i.val + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (m : ℝ))]
-        _ ≤ (1 / (m : ℝ)) * (m * M) := by
-            apply mul_le_mul_of_nonneg_left _ (by positivity)
-            calc |∑ i : Fin m, f (X (n + i.val + 1) ω)|
-                ≤ ∑ i : Fin m, |f (X (n + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
-              _ ≤ ∑ i : Fin m, M := by
-                  apply Finset.sum_le_sum
-                  intro i _; exact hM _
-              _ = m * M := by rw [Finset.sum_const, Finset.card_fin]; ring
-        _ = M := by
-            have hm_pos : (0 : ℝ) < m := Nat.cast_pos.mpr (Nat.lt_of_lt_of_le hk hkm)
-            field_simp [ne_of_gt hm_pos]
-    have h2 : |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M := by
-      calc |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
-          = (1 / (k : ℝ)) * |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              rw [abs_mul, abs_of_nonneg (by positivity : 0 ≤ 1 / (k : ℝ))]
-        _ ≤ (1 / (k : ℝ)) * (k * M) := by
-            apply mul_le_mul_of_nonneg_left _ (by positivity)
-            calc |∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|
-                ≤ ∑ i : Fin k, |f (X (n + (m - k) + i.val + 1) ω)| := Finset.abs_sum_le_sum_abs _ _
-              _ ≤ ∑ i : Fin k, M := by
-                  apply Finset.sum_le_sum
-                  intro i _; exact hM _
-              _ = k * M := by rw [Finset.sum_const, Finset.card_fin]; ring
-        _ = M := by
-          have hk_pos : (0:ℝ) < k := Nat.cast_pos.mpr hk
-          field_simp [ne_of_gt hk_pos]
-    have ha : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤
-        |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-           |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| :=
-      abs_sub _ _
-    calc ((1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-          (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω))^2
-        ≤ (|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-           |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|)^2 := by
-            apply sq_le_sq'
-            · have : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                         |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
-              have : -(|(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                      |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)|) ≤
-                     (1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω) -
-                     (1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω) :=
-                neg_le_of_abs_le ha
-              linarith
-            · exact le_of_abs_le ha
-      _ ≤ (M + M)^2 := by
-          apply sq_le_sq'
-          · have hM_nonneg : 0 ≤ M := by
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            have : 0 ≤ M + M := by linarith
-            have h_sum_bound : |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| ≤ M + M := by
-              linarith [h1, h2]
-            have : -(M + M) ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                               |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by
-              have h_nonneg : 0 ≤ |(1 / (m : ℝ)) * ∑ i : Fin m, f (X (n + i.val + 1) ω)| +
-                                   |(1 / (k : ℝ)) * ∑ i : Fin k, f (X (n + (m - k) + i.val + 1) ω)| := by positivity
-              linarith [h_nonneg, hM_nonneg]
-            linarith [h_sum_bound]
-          · linarith [h1, h2]
-      _ = (2 * M)^2 := by ring
-      _ ≤ (4 * M)^2 := by
-          apply sq_le_sq'
-          · have hM_nonneg : 0 ≤ M := by
-              -- |f 0| ≤ M implies 0 ≤ M
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            have : 0 ≤ 4 * M := by linarith
-            linarith [this, hM_nonneg]
-          · have hM_nonneg : 0 ≤ M := by
-              have : |f 0| ≤ M := hM 0
-              exact le_trans (abs_nonneg _) this
-            linarith [hM_nonneg]
-
-  -- The key insight: We can bound this by decomposing the long average
-  -- and using triangle inequality with a common window of size k
-
-  -- Introduce an intermediate window: (1/k) * ∑_{i<k} f(X_{n+i+1})
-  -- Then: |long_avg - tail_avg|² ≤ 2|long_avg - window_avg|² + 2|window_avg - tail_avg|²
-
-  -- The second term |window_avg - tail_avg|² can be bounded by hCf_unif since
-  -- both are equal-weight windows of size k at positions n and n+(m-k)
-
-  -- For the first term, we use that the long average (1/m) is close to any k-window (1/k)
-  -- This follows from the fact that the long average is a weighted combination that
-  -- includes the k-window with smaller weight
-
-  -- However, the cleanest approach requires more machinery about weighted averages
-  -- For now, we have established the integrand is bounded, which is the key
-  -- integrability property needed for the convergence proof
-
-  -- Apply l2_contractability_bound with weight vectors:
-  --   p = (1/m, 1/m, ..., 1/m)  [m terms]
-  --   q = (0, ..., 0, 1/k, ..., 1/k)  [m-k zeros, then k terms of 1/k]
-  -- The sup |p - q| = 1/k, giving bound 2σ²(1-ρ) · (1/k) = Cf/k
-
-  -- Use the provided covariance structure (passed as arguments)
-  -- We need to relate this to Cf from the hypothesis
-  -- Actually, hCf_unif tells us the bound is Cf/k, so we can deduce what Cf must be
-
   -- Define the sequence ξ on m elements
   let ξ : Fin m → Ω → ℝ := fun i ω => f (X (n + i.val + 1) ω)
 

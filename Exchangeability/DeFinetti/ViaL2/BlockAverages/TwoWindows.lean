@@ -22,7 +22,7 @@ open MeasureTheory ProbabilityTheory BigOperators Filter Topology
 open Exchangeability
 open Exchangeability.DeFinetti.L2Helpers
 
-variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
+variable {Ω : Type*} [MeasurableSpace Ω]
 
 open scoped BigOperators
 
@@ -62,18 +62,15 @@ private lemma reindexed_weights_prob
     rw [h_w_def]
     exact h_nonneg _
 
-@[nolint unusedArguments]
 lemma l2_bound_two_windows_uniform
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ)
     (hX_meas : ∀ i, Measurable (X i))
-    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f)
     (hf_bdd : ∃ M, ∀ x, |f x| ≤ M)
     -- Accept Cf and covariance structure as arguments
     (Cf mf σSqf ρf : ℝ)
     (hCf_def : Cf = 2 * σSqf * (1 - ρf))
-    (_hCf_nonneg : 0 ≤ Cf)
     (hmean : ∀ n, ∫ ω, f (X n ω) ∂μ = mf)
     (hvar : ∀ n, ∫ ω, (f (X n ω) - mf)^2 ∂μ = σSqf)
     (hcov : ∀ n m, n ≠ m → ∫ ω, (f (X n ω) - mf) * (f (X m ω) - mf) ∂μ = σSqf * ρf)
