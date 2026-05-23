@@ -46,13 +46,6 @@ boundary behavior at ±∞ for every ω (not just a.e.).
 -- and weighted_sums_converge_L1 are in MainConvergence.lean and will be available when
 -- MainConvergence imports MoreL2Helpers.
 
--- Axiom for CDF limit behavior.
---
--- **MATHEMATICAL NOTE:** This axiom requires the CDF limits to hold for ALL ω.
--- However, from the L¹ construction of `alphaIic`, we can only prove a.e. convergence:
--- - `alphaIic_ae_tendsto_zero_at_bot` in MainConvergence.lean
--- - `alphaIic_ae_tendsto_one_at_top` in MainConvergence.lean
---
 /-- CDF limits at ±∞: F(t) → 0 as t → -∞ and F(t) → 1 as t → +∞.
 
 This is now trivial because `cdf_from_alpha` is defined via `stieltjesOfMeasurableRat`,
