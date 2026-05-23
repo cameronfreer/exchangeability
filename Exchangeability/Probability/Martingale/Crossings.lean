@@ -18,7 +18,7 @@ Following the split for maintainability, the contents now live in three sub-file
 * `Crossings/Bounds.lean` — `upcrossings_bdd_uniform` (uniform-in-`N` bound on
   upcrossings of the reverse martingale)
 * `Crossings/AntitoneLimit.lean` — `condExp_exists_ae_limit_antitone`,
-  `uniformIntegrable_condexp_antitone`, `ae_limit_is_condexp_iInf`
+  `ae_limit_is_condexp_iInf`
 
 Existing call sites continue to work via this umbrella import.
 -/

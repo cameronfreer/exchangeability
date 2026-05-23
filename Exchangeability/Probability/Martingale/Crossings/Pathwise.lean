@@ -162,8 +162,7 @@ private lemma upperCrossingTime_lt_imp_index_lt {Ω : Type*} {a b : ℝ} {f : �
     omega
 
 -- `timeReversal_crossing_bound` is imported from
--- Exchangeability.Probability.Axioms.TimeReversalCrossing
--- See that file for the full proof obligation and mathematical background.
+-- `Exchangeability.Probability.TimeReversalCrossing`.
 
 /-- **Corrected one-way inequality** with shifted horizon on the reversed side.
 
@@ -194,8 +193,7 @@ lemma upBefore_le_downBefore_rev_succ
       use N + 1
       simp only [mem_upperBounds, Set.mem_setOf_eq]
       intro n hn
-      have h_neg : -b < -a := by linarith
-      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt h_neg hn)
+      exact Nat.le_of_lt (upperCrossingTime_lt_imp_index_lt (by linarith) hn)
 
     have hsub : {n | upperCrossingTime a b X N n ω < N} ⊆
                 {n | upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) n ω < N+1} := by
