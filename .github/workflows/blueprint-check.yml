@@ -1,0 +1,23 @@
+name: Blueprint consistency
+
+on:
+  pull_request:
+    paths:
+      - 'blueprint/src/content.tex'
+      - 'blueprint/lean_decls'
+      - 'blueprint/check_blueprint.py'
+      - '.github/workflows/blueprint-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run blueprint consistency check
+        run: |
+          python3 blueprint/check_blueprint.py

@@ -41,6 +41,10 @@ jobs:
         run: |
           ~/.elan/bin/lake exe checkdecls blueprint/lean_decls
 
+      - name: Check blueprint consistency
+        run: |
+          python3 blueprint/check_blueprint.py
+
       - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet
