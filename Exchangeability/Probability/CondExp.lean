@@ -46,16 +46,13 @@ This file centralizes these patterns to keep the main proofs clean and maintaina
   - Manages `IsFiniteMeasure` and `SigmaFinite` instances automatically
 
 ### 3. Distributional Equality ⇒ Conditional Expectation Equality
-- **`condexp_indicator_eq_of_pair_law_eq`**: Core lemma for Axiom 1 (condexp_convergence)
-  - **Proof strategy**: If `(Y,Z)` and `(Y',Z)` have same law, then for measurable `B`:
-    ```
-    𝔼[1_{Y ∈ B} | σ(Z)] = 𝔼[1_{Y' ∈ B} | σ(Z)]  a.e.
-    ```
-  - **Used in**: ViaMartingale contractability arguments (with Y=X_m, Y'=X_k, Z=shift)
+- **`condexp_indicator_eq_of_pair_law_eq`**: If `(Y,Z)` and `(Y',Z)` have the same law, then
+  for measurable `B`:
+  ```
+  𝔼[1_{Y ∈ B} | σ(Z)] = 𝔼[1_{Y' ∈ B} | σ(Z)]  a.e.
+  ```
+  - **Used in**: `ViaMartingale.CondExpConvergence` (Y=X_m, Y'=X_k, Z=shiftRV X (m+1))
   - **Key technique**: Uniqueness of conditional expectation via integral identity
-  
-- **`condexp_indicator_eq_of_agree_on_future_rectangles`**: Application to sequences
-  - Wrapper for exchangeable sequence contexts
 
 ### 4. Sub-σ-algebra Infrastructure
 - **`condExpWith`**: Explicit instance management wrapper
@@ -128,30 +125,7 @@ lemma integrable_indicator_comp
   -- Bounded measurable function on finite measure space is integrable
   exact Integrable.of_bound h_meas.aestronglyMeasurable 1 h_bound
 
--- NOTE: AgreeOnFutureRectangles was removed - it was just wrapping measure equality.
--- The real AgreeOnFutureRectangles definition (rectangle agreement implies equality)
--- is in ViaMartingale.lean where it's actually used to prove measure equality from
--- agreement on generating sets.
-
-/-! ### Conditional Independence (Doob's Characterization)
-
-## Mathlib Integration
-
-Conditional independence is now available in mathlib as `ProbabilityTheory.CondIndep` from
-`Mathlib.Probability.Independence.Conditional`.
-
-For two σ-algebras m₁ and m₂ to be conditionally independent given m' with respect to μ,
-we require that for any sets t₁ ∈ m₁ and t₂ ∈ m₂:
-  μ⟦t₁ ∩ t₂ | m'⟧ =ᵐ[μ] μ⟦t₁ | m'⟧ * μ⟦t₂ | m'⟧
-
-To use: `open ProbabilityTheory` to access `CondIndep`, or use
-`ProbabilityTheory.CondIndep` directly.
-
-Related definitions also available in mathlib:
-- `ProbabilityTheory.CondIndepSet`: conditional independence of sets
-- `ProbabilityTheory.CondIndepFun`: conditional independence of functions  
-- `ProbabilityTheory.iCondIndep`: conditional independence of families
--/
+/-! ### Conditional Independence (Doob's Characterization) -/
 
 /-- **Doob's characterization of conditional independence (FMP 6.6).**
 
@@ -250,10 +224,6 @@ lemma condIndep_of_indicator_condexp_eq
       simp [f1, f2, Set.indicator, h1, h2, Set.mem_inter_iff] at *
   simpa [h_f1f2, f1, f2] using h_prod
 
-/-! ### Bounded Martingales and L² Inequalities -/
-
-/-! ### Axioms for Conditional Independence Factorization -/
-
 /-- **Product formula for conditional expectations of indicators** under conditional independence.
 
 If `mF` and `mH` are conditionally independent given `m`, then for
@@ -332,8 +302,8 @@ lemma condexp_indicator_inter_bridge
 
 /-! ### Conditional expectation equality from distributional equality
 
-This is the key bridge lemma for Axiom 1 (condexp_convergence): if (Y, Z) and (Y', Z)
-have the same joint distribution, then their conditional expectations given σ(Z) are equal. -/
+If `(Y, Z)` and `(Y', Z)` have the same joint distribution, then their conditional
+expectations given `σ(Z)` are equal. The consumer is `ViaMartingale.CondExpConvergence`. -/
 
 /-- **CE bridge lemma:** If `(Y, Z)` and `(Y', Z)` have the same law, then for every measurable `B`,
 ```
@@ -354,9 +324,8 @@ E[1_{Y ∈ B} | σ(Z)] = E[1_{Y' ∈ B} | σ(Z)]  a.e.
    E[1_{Y ∈ B} | σ(Z)] = E[1_{Y' ∈ B} | σ(Z)]  a.e.
    ```
 
-**This is the key step for `condexp_convergence` in ViaMartingale.lean!**
-Use with Y = X_m, Y' = X_k, Z = shiftRV X (m+1), and the equality comes from contractability
-via `contractable_dist_eq`. -/
+Used with Y = X_m, Y' = X_k, Z = shiftRV X (m+1), where the law equality comes from
+contractability via `contractable_dist_eq`. -/
 lemma condexp_indicator_eq_of_pair_law_eq
     {Ω α β : Type*} [mΩ : MeasurableSpace Ω] [MeasurableSpace α] [mβ : MeasurableSpace β]
     {μ : Measure Ω} [IsFiniteMeasure μ]
@@ -453,23 +422,6 @@ lemma condexp_indicator_eq_of_pair_law_eq
     -- Combine: ∫_{Z⁻¹(E)} f dμ = ∫_{Z⁻¹(E)} μ[f' | σ(Z)] dμ
     simp_rw [h_lhs, h_rhs_ce, h_rhs, h_meas_eq]
 
-/-- **Proof of condexp_indicator_eq_of_agree_on_future_rectangles.**
-
-This is a direct application of `condexp_indicator_eq_of_pair_law_eq` with the sequence type. -/
-lemma condexp_indicator_eq_of_agree_on_future_rectangles
-    {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
-    {μ : Measure Ω} [IsFiniteMeasure μ]
-    {X₁ X₂ : Ω → α} {Y : Ω → ℕ → α}
-    (hX₁ : Measurable X₁) (hX₂ : Measurable X₂) (hY : Measurable Y)
-    (heq : Measure.map (fun ω => (X₁ ω, Y ω)) μ = Measure.map (fun ω => (X₂ ω, Y ω)) μ)
-    (B : Set α) (hB : MeasurableSet B) :
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₁
-        | MeasurableSpace.comap Y inferInstance]
-      =ᵐ[μ]
-    μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ X₂
-        | MeasurableSpace.comap Y inferInstance] :=
-  condexp_indicator_eq_of_pair_law_eq X₁ X₂ Y hX₁ hX₂ hY heq hB
-
 /-! ### Operator-Theoretic Conditional Expectation Utilities -/
 
 section OperatorTheoretic
@@ -478,7 +430,8 @@ variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
 
 /-- Bounded measurable functions are integrable on finite measures.
 
-NOTE: Check if this exists in mathlib! This is a standard result. -/
+Wraps `Integrable.of_bound` so callers can pass `⟨C, hC⟩` directly instead of
+destructuring the bound first. -/
 lemma integrable_of_bounded [IsFiniteMeasure μ]
     {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
     Integrable f μ := by
@@ -520,7 +473,7 @@ lemma condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measure
     (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
     μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
   -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound with explicit instance management
-  -- following the pattern from condExpWith (line 338)
+  -- following the pattern from condExpWith above.
 
   -- g is m-measurable, so it's m-strongly measurable
   have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
