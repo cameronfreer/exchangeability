@@ -176,20 +176,6 @@ def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (_hB : Measurab
     (futureFiltration_le X m hX_meas)
     (B.indicator (fun _ => (1 : ℝ)) ∘ X k)
 
--- CondExp.lean milestones (completed):
--- (1) `0 ≤ M k B m ω ≤ 1` a.s.
---     API: `condexp_indicator_bounds`.
--- (2) For `m ≤ n`, `M k B n` is `𝔽 n`-measurable and
---     `μ[fun ω => M k B n ω | 𝔽 m] =ᵐ[μ] M k B m`.
---     API: `condexp_tower`, `condexp_stronglyMeasurable`.
--- (3) If `(X m, θₘ X) =^d (X k, θₘ X)`, then
---     `M m B m =ᵐ[μ] M k B m`.
---     API: `condexp_indicator_eq_of_dist_eq_and_le`.
--- (4) `(fun n => M k B n ω)` is a reverse martingale that converges
---     to `μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X k) | tailSigma X] ω`.
---     API: `condexp_tendsto_condexp_iInf` (Lévy's downward theorem) together with
---     `filtration_antitone` and `tailSigmaFuture_eq_iInf`.
-
 end reverse_martingale
 
 end Exchangeability.DeFinetti.ViaMartingale
