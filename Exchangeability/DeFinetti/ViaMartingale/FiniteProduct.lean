@@ -12,7 +12,6 @@ import Exchangeability.Probability.MeasureKernels
 import Exchangeability.Tail.TailSigma
 import Exchangeability.DeFinetti.ViaMartingale.ShiftOperations
 import Exchangeability.DeFinetti.ViaMartingale.FutureFiltration
-import Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders
 import Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence
 import Exchangeability.DeFinetti.ViaMartingale.Factorization
 import Exchangeability.PathSpace.CylinderHelpers
@@ -332,60 +331,15 @@ lemma finite_product_formula_id
             congr 1; exact integral_congr_ae h_swap
       _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) (Set.univ.pi C) := hR.symm
 
-  -- π–λ extension to all measurable sets (your standard pattern)
-  -- Both measures are finite (indeed probability); you can either show `univ = 1` on both
-  -- or reuse the general "iUnion = univ" cover with `IsFiniteMeasure`.
-  have h_univ :
-      (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
-        = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := by
-    -- both are probabilities
-    haveI : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) := by
-      constructor
-      have hme : Measurable (fun ω => fun i : Fin m => X i ω) := by
-        fun_prop
-      rw [Measure.map_apply hme MeasurableSet.univ]
-      have : (fun ω => fun i : Fin m => X i ω) ⁻¹' Set.univ = Set.univ := Set.preimage_univ
-      rw [this]
-      exact measure_univ
-    haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) := by
-      constructor
-      -- Need to show: (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ = 1
-      -- Strategy: bind of constant 1 over probability measure μ equals 1
-      -- First need AEMeasurability of the kernel (using MeasureKernels.aemeasurable_measure_pi)
-      have h_aemeas : AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
-        aemeasurable_measure_pi ν hν_prob hν_meas
-      rw [Measure.bind_apply MeasurableSet.univ h_aemeas]
-      -- ∫⁻ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ ∂μ
-      -- For each ω, Measure.pi is a product of probability measures, so it's a probability measure
-      have h_pi_prob : ∀ ω, (Measure.pi (fun _ : Fin m => ν ω)) Set.univ = 1 := fun ω =>
-        haveI := hν_prob ω; measure_univ
-      -- Integrate constant 1: ∫⁻ ω, 1 ∂μ = 1 * μ Set.univ = 1
-      simp only [h_pi_prob]
-      rw [lintegral_const]
-      simp [measure_univ]
-    -- Now both are probability measures, so both equal 1 on univ
-    calc (Measure.map (fun ω => fun i : Fin m => X i ω) μ) Set.univ
-        = 1 := measure_univ
-      _ = (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) Set.univ := measure_univ.symm
-
-  -- π–λ theorem: equality on the generating π-system + equality on univ ⇒ equality of measures
-  -- Since both are probability measures and agree on rectangles, they are equal
-
-  -- Define covering family (constant sequence of Set.univ)
-  let Bseq : ℕ → Set (Fin m → α) := fun _ => Set.univ
-
-  have h1B : ⋃ n, Bseq n = Set.univ := by
-    simp only [Bseq, Set.iUnion_const]
-
-  have h2B : ∀ n, Bseq n ∈ Rectangles := fun n =>
-    ⟨fun _ => Set.univ, fun _ => MeasurableSet.univ, by ext f; simp only [Bseq, Set.mem_univ, Set.mem_univ_pi]; tauto⟩
-
-  have hμB : ∀ n, Measure.map (fun ω => fun i : Fin m => X i ω) μ (Bseq n) ≠ ⊤ :=
-    fun n => by simp only [Bseq]; exact measure_ne_top _ Set.univ
-
-  -- Apply Measure.ext_of_generateFrom_of_iUnion
-  exact Measure.ext_of_generateFrom_of_iUnion
-    Rectangles Bseq h_gen h_pi h1B h2B hμB h_agree
+  -- π-system extension: both measures are probability measures and agree on the
+  -- generating π-system of rectangles, so they are equal.
+  haveI : IsProbabilityMeasure (Measure.map (fun ω => fun i : Fin m => X i ω) μ) :=
+    Measure.isProbabilityMeasure_map (by fun_prop : AEMeasurable _ μ)
+  haveI : IsProbabilityMeasure (μ.bind (fun ω => Measure.pi fun _ : Fin m => ν ω)) :=
+    MeasureTheory.isProbabilityMeasure_bind
+      (aemeasurable_measure_pi ν hν_prob hν_meas)
+      (Filter.Eventually.of_forall fun ω => by haveI := hν_prob ω; infer_instance)
+  exact MeasureTheory.ext_of_generate_finite Rectangles h_gen h_pi h_agree (by simp)
 
 /-- **Finite product formula for strictly monotone subsequences**.
 

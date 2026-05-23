@@ -11,7 +11,6 @@ import Exchangeability.Probability.CondIndep
 import Exchangeability.Probability.Martingale
 import Exchangeability.DeFinetti.ViaMartingale.ShiftOperations
 import Exchangeability.DeFinetti.ViaMartingale.FutureFiltration
-import Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders
 import Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence
 import Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra
 import Exchangeability.DeFinetti.ViaMartingale.PairLawEquality

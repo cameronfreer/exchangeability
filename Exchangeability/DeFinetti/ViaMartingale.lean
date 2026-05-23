@@ -28,7 +28,6 @@ import Exchangeability.DeFinetti.ViaMartingale.ShiftOperations
 import Exchangeability.DeFinetti.ViaMartingale.RevFiltration
 import Exchangeability.DeFinetti.ViaMartingale.FutureFiltration
 import Exchangeability.DeFinetti.ViaMartingale.FutureRectangles
-import Exchangeability.DeFinetti.ViaMartingale.FiniteCylinders
 import Exchangeability.DeFinetti.ViaMartingale.CondExpConvergence
 import Exchangeability.DeFinetti.ViaMartingale.DirectingMeasure
 import Exchangeability.DeFinetti.ViaMartingale.IndicatorAlgebra
