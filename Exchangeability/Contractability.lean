@@ -260,8 +260,7 @@ lemma Contractable.symm {μ : Measure Ω} {X : ℕ → Ω → α}
   (hX m k hk).symm
 
 -- Re-export StrictMono utilities for backward compatibility
-open Util.StrictMono (strictMono_add_left strictMono_add_right
-                       strictMono_Fin_ge_id fin_val_strictMono)
+open Util.StrictMono (strictMono_Fin_ge_id)
 
 /--
 Any strictly increasing function can be extended to a permutation.

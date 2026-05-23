@@ -13,27 +13,17 @@ This file contains infrastructure for working with cylinder sets on path space `
 Cylinder sets are fundamental objects in probability theory on sequence spaces,
 consisting of events determined by finitely many coordinates.
 
-Originally extracted from `MartingaleHelpers.lean` for broader reusability.
-
 ## Main definitions
 
-* `tailCylinder r C`: Cylinder on the first `r` tail coordinates (shifted by one)
 * `cylinder r C`: Standard cylinder on the first `r` coordinates starting at index 0
-* `finCylinder r C`: Cylinder for functions with domain `Fin r`
 * `firstRMap X r`: Map collecting the first `r` coordinates of a process
 * `firstRCylinder X r C`: Finite block cylinder event on the first `r` coordinates
 
 ## Main results
 
-* Measurability lemmas for all cylinder types
+* Measurability lemmas for cylinder types
 * Extensionality properties (universal sets, intersections)
 * Bridge lemmas connecting different cylinder formulations
-
-## Implementation notes
-
-This file is designed to be general-purpose infrastructure, not specific to any
-particular proof approach (martingale, Koopman, L²). It only imports mathlib
-and has no project dependencies.
 -/
 
 noncomputable section
@@ -120,27 +110,6 @@ lemma firstRSigma_le_ambient
   obtain ⟨t, ht, rfl⟩ := hs
   exact (measurable_firstRMap X r hX) ht
 
-omit [MeasurableSpace Ω] in
-/-- Stronger version: firstRSigma increases with r. -/
-lemma firstRSigma_mono
-    (X : ℕ → Ω → α) {r s : ℕ} (hrs : r ≤ s) :
-    firstRSigma X r ≤ firstRSigma X s := by
-  -- Strategy: firstRMap X r factors through firstRMap X s via projection
-  simp only [firstRSigma]
-  intro t ht
-  obtain ⟨u, hu, rfl⟩ := ht
-  -- Define projection π : (Fin s → α) → (Fin r → α) taking first r coords
-  let π : (Fin s → α) → (Fin r → α) := fun f i => f ⟨i.val, Nat.lt_of_lt_of_le i.isLt hrs⟩
-  -- Show firstRMap X r = π ∘ firstRMap X s
-  have h_comp : firstRMap X r = π ∘ firstRMap X s := by
-    funext ω i
-    simp [firstRMap, π]
-  -- π is measurable (composition of coordinate projections)
-  have hπ : Measurable π := by fun_prop
-  -- Preimage factors through composition
-  rw [h_comp, Set.preimage_comp]
-  exact ⟨π ⁻¹' u, hπ hu, rfl⟩
-
 omit [MeasurableSpace Ω] [MeasurableSpace α] in
 /-- The empty cylinder (r = 0) is the whole space. -/
 @[simp]
@@ -183,33 +152,10 @@ omit [MeasurableSpace α] in
 @[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
     f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
 
-/-- The cylinder set is measurable when each component set is measurable. -/
-lemma cylinder_measurable_set {r : ℕ} {C : Fin r → Set α}
-    (hC : ∀ i, MeasurableSet (C i)) :
-    MeasurableSet (cylinder (α:=α) r C) :=
-  cylinder_measurable hC
-
 omit [MeasurableSpace α] in
 /-- Empty cylinder is the whole space. -/
 @[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
   ext f; simp [cylinder]
-
-omit [MeasurableSpace α] in
-/-- Cylinder on universal sets is the whole space. -/
-lemma cylinder_univ {r : ℕ} : cylinder (α:=α) r (fun _ => Set.univ) = Set.univ := by
-  ext f; simp [cylinder]
-
-omit [MeasurableSpace α] in
-/-- Cylinders form intersections coordinate-wise. -/
-lemma cylinder_inter {r : ℕ} {C D : Fin r → Set α} :
-    cylinder (α:=α) r C ∩ cylinder (α:=α) r D = cylinder (α:=α) r (fun i => C i ∩ D i) := by
-  ext f
-  simp [cylinder, Set.mem_inter_iff]
-  constructor
-  · intro ⟨hC, hD⟩ i
-    exact ⟨hC i, hD i⟩
-  · intro h
-    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
 
 end CylinderBridge
 

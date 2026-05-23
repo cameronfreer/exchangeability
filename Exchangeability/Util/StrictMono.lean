@@ -15,8 +15,6 @@ in subsequence selection and permutation construction arguments.
 ## Main Results
 
 * `strictMono_Fin_ge_id`: For strictly monotone `k : Fin m → ℕ`, values dominate indices
-* `strictMono_add_left`, `strictMono_add_right`: Addition preserves strict monotonicity
-* `fin_val_strictMono`: The identity `Fin n → ℕ` is strictly monotone
 * `injective_implies_strictMono_perm`: Any injective `k : Fin m → ℕ` can be composed with
   a permutation to become strictly monotone
 
@@ -32,22 +30,6 @@ All lemmas are general-purpose utilities for `Fin` and strict monotonicity.
 namespace Exchangeability.Util.StrictMono
 
 variable {m n : ℕ}
-
-/-- Composing strictly monotone functions with left addition preserves strict monotonicity.
-
-For any strictly monotone `k : Fin m → ℕ` and constant `c`, the function
-`i ↦ c + k(i)` is also strictly monotone. -/
-lemma strictMono_add_left (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => c + k i) :=
-  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_left (hk hab) c
-
-/-- Composing strictly monotone functions with right addition preserves strict monotonicity.
-
-For any strictly monotone `k : Fin m → ℕ` and constant `c`, the function
-`i ↦ k(i) + c` is also strictly monotone. -/
-lemma strictMono_add_right (k : Fin m → ℕ) (hk : StrictMono k) (c : ℕ) :
-    StrictMono (fun i => k i + c) :=
-  fun ⦃_ _⦄ hab ↦ Nat.add_lt_add_right (hk hab) c
 
 /--
 For a strictly monotone function `k : Fin m → ℕ`, the values dominate the indices.
@@ -87,15 +69,6 @@ lemma strictMono_Fin_ge_id {k : Fin m → ℕ} (hk : StrictMono k) (i : Fin m) :
           _ ≤ k j + 1 := Nat.add_le_add_right ih' 1
           _ ≤ k j_succ := Nat.succ_le_of_lt hk_lt
   exact this i.val i.isLt
-
-/--
-The identity function `Fin n → ℕ` is strictly monotone.
-
-The canonical embedding of `Fin n` into `ℕ` preserves the order structure.
--/
-lemma fin_val_strictMono : StrictMono (fun i : Fin n => i.val) := by
-  intro i j hij
-  exact hij
 
 /-- Any injective function `k : Fin m → ℕ` can be composed with a permutation
 to become strictly monotone.
