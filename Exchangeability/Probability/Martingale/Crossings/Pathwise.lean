@@ -211,25 +211,11 @@ lemma upBefore_le_downBefore_rev_succ
           simp only [upperCrossingTime_zero]
           exact Nat.zero_lt_succ N
         | k + 1 =>
-          have h_neg : -b < -a := by linarith
-          -- hn tells us X has k+1 complete crossings (upperCrossingTime (k+1) < N)
-          -- The bijection maps these to Y having k+1 crossings by time N
+          -- hn says X has k+1 complete crossings before time N; the bijection
+          -- (τ, σ) ↦ (N-σ, N-τ) maps these to Y crossings completing by time N.
           have h_bound : upperCrossingTime (-b) (-a)
               (negProcess (revProcess X N)) (N+1) (k+1) ω ≤ N :=
-            -- **Time-reversal bijection for crossing times**
-            --
-            -- Mathematical argument:
-            -- Let Y = negProcess (revProcess X N), so Y(n) = -X(N-n)
-            -- X has k+1 upcrossings [a→b] with times (τ₁,σ₁),...,(τₖ₊₁,σₖ₊₁)
-            -- where 0 ≤ τ₁ < σ₁ < τ₂ < ... < τₖ₊₁ < σₖ₊₁ < N
-            --
-            -- Under bijection (τ,σ) ↦ (N-σ, N-τ):
-            --   - X's j-th crossing at (τⱼ, σⱼ) maps to Y's crossing at (N-σⱼ, N-τⱼ)
-            --   - Y's crossings complete in reverse order at times N-τₖ₊₁, ..., N-τ₁
-            --   - All complete by time N-τ₁ ≤ N (since τ₁ ≥ 0)
-            --
-            -- The greedy algorithm finds at least k+1 crossings for Y by time N.
-            timeReversal_crossing_bound X a b hab N (k+1) ω hn h_neg
+            timeReversal_crossing_bound X a b hab N (k+1) ω hn
           exact Nat.lt_succ_of_le h_bound
 
     exact csSup_le_csSup hbdd2 hemp hsub
