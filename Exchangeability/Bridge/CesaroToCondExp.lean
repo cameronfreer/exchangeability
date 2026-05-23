@@ -59,12 +59,6 @@ def μ_path {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (μ : Measure Ω) (X : ℕ → Ω → α) : Measure (PathSpace α) :=
   Measure.map (pathify X) μ
 
-/-- Alternate definition of process law without explicit μ for compatibility.
-Equivalent to `μ_path` but with μ as an implicit argument. -/
-def μ_path' {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
-    {α : Type*} [MeasurableSpace α] (X : ℕ → Ω → α) : Measure (PathSpace α) :=
-  Measure.map (pathify X) μ
-
 lemma isProbabilityMeasure_μ_path {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (μ : Measure Ω) [IsProbabilityMeasure μ]
     (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) :

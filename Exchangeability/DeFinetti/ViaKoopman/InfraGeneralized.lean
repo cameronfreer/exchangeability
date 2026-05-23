@@ -393,34 +393,6 @@ lemma integrable_mul_of_ae_bdd_left
     rwa [Real.norm_eq_abs]
   exact Integrable.bdd_mul hY hZ.aestronglyMeasurable hZ_norm
 
-/-- Path-space-specialised L¹-Lipschitz bound for conditional expectation
-against `shiftInvariantSigma`.
-
-This is the `shiftInvariantSigma`-specific variant of the generic
-`Exchangeability.Probability.condExp_L1_lipschitz`; the prime distinguishes
-it from that central lemma. It is preserved as a separate declaration
-because the central form declares its sub-σ-algebra hypothesis as
-`_hm : m ≤ ‹_›`, and at the call sites in `CesaroPairFactorization.lean`
-/ `CesaroL1Bounded.lean` the elaborator resolves `‹_›` to
-`shiftInvariantSigma` rather than the ambient `MeasurableSpace.pi`,
-producing a `shiftInvariantSigma ≤ shiftInvariantSigma` hypothesis that
-no obvious workaround discharges. -/
-@[nolint unusedArguments]
-lemma condExp_L1_lipschitz'
-    {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
-    {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
-    ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
-      ≤ ∫ ω, |Z ω - W ω| ∂μ := by
-  have h_sub : μ[(Z - W) | shiftInvariantSigma]
-              =ᵐ[μ] μ[Z | shiftInvariantSigma] - μ[W | shiftInvariantSigma] :=
-    condExp_sub hZ hW shiftInvariantSigma
-  calc ∫ ω, |μ[Z | shiftInvariantSigma] ω - μ[W | shiftInvariantSigma] ω| ∂μ
-      = ∫ ω, |μ[(Z - W) | shiftInvariantSigma] ω| ∂μ := by
-          refine integral_congr_ae ?_
-          filter_upwards [h_sub] with ω hω
-          simp [hω]
-    _ ≤ ∫ ω, |Z ω - W ω| ∂μ := integral_abs_condExp_le (Z - W)
-
 /-- Pull-out property: if Z is measurable w.r.t. the conditioning σ-algebra and a.e.-bounded,
 then CE[Z·Y | mSI] = Z·CE[Y | mSI] a.e. This is the standard "taking out what is known". -/
 lemma condExp_mul_pullout

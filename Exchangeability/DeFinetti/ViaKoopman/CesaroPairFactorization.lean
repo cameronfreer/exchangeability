@@ -191,7 +191,8 @@ private theorem h_tower_of_lagConst_from_one
       have h1 : ∫ ω, |μ[(fun ω' => f (ω' 0) * A' (n + 1) ω') | mSI] ω
                     - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ
               ≤ ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ :=
-        condExp_L1_lipschitz' hfA_int hfY_int
+        Exchangeability.Probability.condExp_L1_lipschitz
+          (μ := μ) (m := mSI) hfA_int hfY_int
       -- Factor bound
       have h2 : ∫ ω, |f (ω 0) * A' (n + 1) ω - f (ω 0) * Y ω| ∂μ
               ≤ Cf * ∫ ω, |A' (n + 1) ω - Y ω| ∂μ := by
