@@ -89,20 +89,15 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
   For all $m$: $\mathcal{T} \le \mathcal{F}_m$.
 \end{lemma}
 
-\begin{lemma}[Tail $\sigma$-algebra is infimum of reverse filtration]
-  \label{lem:tailSigma_eq_iInf}
-  \lean{Exchangeability.DeFinetti.ViaMartingale.tailSigma_eq_iInf_rev}
-  \leanok
-  \uses{def:tailSigma, def:futureFiltration}
-  $\mathcal{T} = \bigwedge_{m=0}^{\infty} \mathcal{F}_m$.
-\end{lemma}
-
 \begin{definition}[Shift-invariant $\sigma$-algebra]
   \label{def:shiftInvariantSigma}
-  \lean{Exchangeability.DeFinetti.ViaKoopman.shiftInvariantSigmaℤ}
+  \lean{Exchangeability.DeFinetti.shiftInvariantSigma}
   \leanok
-  The shift-invariant $\sigma$-algebra consists of sets $S$ such that
-  $\theta^{-1}(S) = S$ where $\theta$ is the shift operator.
+  The (one-sided) shift-invariant $\sigma$-algebra on path space $\mathbb{N} \to \alpha$
+  consists of measurable sets $S$ such that $\theta^{-1}(S) = S$, where $\theta$ is the
+  left shift. A two-sided counterpart on $\mathbb{Z} \to \alpha$,
+  \texttt{ViaKoopman.shiftInvariantSigmaℤ}, is introduced separately as scaffolding for
+  the Koopman route's lag-constancy lemmas.
 \end{definition}
 
 
@@ -180,7 +175,7 @@ The martingale approach uses reverse martingale convergence to the tail $\sigma$
   \label{lem:kallenberg_chain}
   \lean{Exchangeability.DeFinetti.ViaMartingale.condExp_indicator_revFiltration_eq_tail}
   \leanok
-  \uses{lem:condExp_indicator_eq, def:tailSigma, lem:tailSigma_eq_iInf, lem:futureFiltration_antitone}
+  \uses{lem:condExp_indicator_eq, def:tailSigma, lem:tailSigma_le_futureFiltration, lem:futureFiltration_antitone}
   Conditional expectations of indicators given the reverse filtration
   converge to conditional expectations given the tail $\sigma$-algebra.
 \end{lemma}
@@ -237,7 +232,8 @@ The martingale approach uses reverse martingale convergence to the tail $\sigma$
   \leanok
   \uses{def:tailSigma}
   The directing measure $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
-  is a probability measure for a.e.\ $\omega$.
+  is a probability measure for every $\omega$ (the bound is pointwise, not merely a.e., via
+  mathlib's \texttt{isProbability\_condExpKernel}).
 \end{lemma}
 
 \begin{lemma}[Directing measure measurability]
@@ -248,14 +244,45 @@ The martingale approach uses reverse martingale convergence to the tail $\sigma$
   The directing measure $\omega \mapsto \nu(\omega)(B)$ is measurable for each Borel $B$.
 \end{lemma}
 
+\begin{lemma}[Conditional law of $X_n$ equals directing measure]
+  \label{lem:conditional_law_eq_directingMeasure}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.conditional_law_eq_directingMeasure}
+  \leanok
+  \uses{lem:extreme_members_equal, def:contractable}
+  Per-coordinate identification: for every $n$ and every Borel $B$,
+  $(\omega \mapsto \nu(\omega)(B).\mathrm{toReal})
+    \, =^{\mu\text{-a.e.}} \, \mathbb{E}[\mathbf{1}_B \circ X_n \mid \mathcal{T}]$.
+  This is the bridge condition consumed by \ref{lem:finite_product_formula} below.
+\end{lemma}
+
+\begin{lemma}[Finite product formula]
+  \label{lem:finite_product_formula}
+  \lean{Exchangeability.DeFinetti.ViaMartingale.finite_product_formula}
+  \leanok
+  \uses{lem:finite_level_factorization, lem:tail_factorization, lem:conditional_law_eq_directingMeasure}
+  Under contractability, for every strictly monotone selection
+  $k : \mathrm{Fin}\,m \to \mathbb{N}$ and any kernel $\nu$ satisfying the per-coordinate
+  bridge \ref{lem:conditional_law_eq_directingMeasure}:
+  \[
+    \mathrm{Measure.map}\,(\omega \mapsto (i \mapsto X_{k\,i}(\omega)))\,\mu
+      \,=\, \mu.\mathrm{bind}\,(\omega \mapsto \mathrm{Measure.pi}\,(\lambda\, i,\, \nu(\omega))).
+  \]
+  This is the martingale route's analogue of the L²/Koopman \ref{thm:condIndep_extension}:
+  it bundles the rectangle $\pi$-system extension and the
+  $\mathrm{Measure.map} = \mathrm{bind}$ identification into one step driven by
+  per-coordinate conditional expectations.
+\end{lemma}
+
 \begin{theorem}[Contractable implies Conditionally i.i.d.\ (via Martingale)]
   \label{thm:conditionallyIID_of_contractable_martingale}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal, lem:block_coord_condIndep, lem:directingMeasure_isProb, lem:directingMeasure_measurable, thm:condIndep_extension}
+  \uses{def:contractable, def:conditionallyIID, lem:extreme_members_equal, lem:block_coord_condIndep, lem:directingMeasure_isProb, lem:directingMeasure_measurable, lem:conditional_law_eq_directingMeasure, lem:finite_product_formula}
   If $(X_n)$ is contractable, then it is conditionally i.i.d.
   The directing kernel $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$
-  is constructed from the tail $\sigma$-algebra.
+  is constructed from the tail $\sigma$-algebra, identified per-coordinate by
+  \ref{lem:conditional_law_eq_directingMeasure}, and lifted to the joint law by
+  \ref{lem:finite_product_formula} — bypassing the L²/Koopman common-ending step.
 \end{theorem}
 
 
@@ -295,16 +322,15 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 \subsection{Cesaro Convergence}
 
-\begin{lemma}[Kallenberg L$^2$ bound]
-  \label{lem:kallenberg_L2_bound}
-  \lean{Exchangeability.DeFinetti.ViaL2.kallenberg_L2_bound}
-  \leanok
-  The L$^2$ distance bound for weighted averages of an exchangeable sequence
-  (Kallenberg Lemma 1.2). Recorded here for completeness; the active proof
-  path uses the contractability-only variant \ref{lem:l2_bound} instead,
-  to avoid assuming exchangeability while proving Contractable
-  $\Rightarrow$ Exchangeable.
-\end{lemma}
+\begin{remark}[Recorded Kallenberg L$^2$ bound]
+  \label{rem:kallenberg_L2_bound}
+  Kallenberg's Lemma 1.2 gives an L$^2$ distance bound for weighted averages of an
+  \emph{exchangeable} sequence. It is recorded in the Lean library as
+  \texttt{Exchangeability.DeFinetti.ViaL2.kallenberg\_L2\_bound} for completeness, but it
+  is not on the active proof path — the route below uses the contractability-only
+  variant \ref{lem:l2_bound} so that the proof of Contractable $\Rightarrow$
+  Conditionally i.i.d.\ does not assume exchangeability.
+\end{remark}
 
 \begin{lemma}[Block averages are Cauchy in L$^2$]
   \label{lem:blockAvg_cauchy_in_L2}
@@ -333,13 +359,43 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 \subsection{Directing Measure Construction}
 
+The L$^2$ route now goes through mathlib's \texttt{condExpKernel} machinery:
+the Stieltjes construction supplies the candidate directing measure
+$\omega \mapsto \nu(\omega)$, and a pair of bridge lemmas identifies its
+push-forward and integral with the kernel coming from mathlib's
+\texttt{condExpKernel} on the tail $\sigma$-algebra. The shared common-ending
+theorem then lifts the indicator-level identity to the full product $\sigma$-algebra.
+
 \begin{lemma}[Directing measure is probability (L$^2$ version)]
   \label{lem:directing_measure_isProb_L2}
   \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_isProbabilityMeasure}
   \leanok
-  The Stieltjes measure constructed from the limiting CDF is a probability measure a.e.
-  Monotonicity, bounds, and right-continuity of the underlying CDF are inherited
-  directly from mathlib's \texttt{stieltjesOfMeasurableRat} construction.
+  The Stieltjes measure constructed from the limiting CDF is a probability measure
+  for every $\omega$ (pointwise, not merely a.e.). Monotonicity, bounds, and
+  right-continuity of the underlying CDF are inherited directly from mathlib's
+  \texttt{stieltjesOfMeasurableRat} construction.
+\end{lemma}
+
+\begin{theorem}[Directing measure equals \texttt{condExpKernel} push-forward]
+  \label{thm:directing_measure_ae_eq_condExpKernel_map}
+  \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_ae_eq_condExpKernel_map}
+  \leanok
+  \uses{lem:directing_measure_isProb_L2}
+  Almost everywhere in $\omega$, the Stieltjes-built directing measure coincides
+  with the push-forward of mathlib's \texttt{condExpKernel}~$\mu$~$\mathcal{T}$~$\omega$
+  by $X_0$. This is the kernel-level bridge from the analytic L$^2$ construction
+  to mathlib's conditional-expectation kernel API.
+\end{theorem}
+
+\begin{lemma}[Directing-measure integral equals conditional expectation]
+  \label{lem:directing_measure_integral_eq_condExp}
+  \lean{Exchangeability.DeFinetti.ViaL2.directing_measure_integral_eq_condExp}
+  \leanok
+  \uses{thm:directing_measure_ae_eq_condExpKernel_map}
+  For a bounded measurable function $f$, the integral
+  $\int f \, d\nu(\omega)$ against the directing measure equals
+  $\mathbb{E}[f \circ X_0 \mid \mathcal{T}](\omega)$ almost everywhere. This is the
+  shape consumed by the shared common-ending step.
 \end{lemma}
 
 \begin{theorem}[Weighted sums converge in L$^1$]
@@ -354,8 +410,12 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
   \label{thm:conditionallyIID_of_contractable_L2}
   \lean{Exchangeability.DeFinetti.conditionallyIID_of_contractable_viaL2}
   \leanok
-  \uses{def:contractable, def:conditionallyIID, lem:l2_bound, thm:weighted_sums_L1, lem:directing_measure_isProb_L2, thm:condIndep_extension}
-  If $(X_n)$ is contractable, then it is conditionally i.i.d.
+  \uses{def:contractable, def:conditionallyIID, lem:l2_bound, thm:weighted_sums_L1, lem:directing_measure_isProb_L2, thm:directing_measure_ae_eq_condExpKernel_map, lem:directing_measure_integral_eq_condExp, thm:condIndep_extension}
+  If $(X_n)$ is contractable (and real-valued), then it is conditionally i.i.d.
+  \textbf{Scope note:} the L$^2$ route is currently stated for real-valued sequences
+  via the Stieltjes-based directing-measure construction; extending it to general
+  standard Borel targets would require a measure-disintegration replacement for the
+  Stieltjes step.
 \end{theorem}
 
 
@@ -363,6 +423,12 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 The Koopman approach uses the Mean Ergodic Theorem via the shift operator on L$^2$.
 This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
+
+\textbf{Scope note:} the Koopman route is currently stated for real-valued sequences
+(the Mean Ergodic Theorem is invoked through L$^2(\mu; \mathbb{R})$ on path space).
+Generalising to standard Borel targets would require an L$^2$-valued ergodic infrastructure
+beyond what is presently formalised. The default project export
+(\ref{thm:deFinetti}) handles general standard Borel spaces via the martingale route.
 
 \subsection{Block Averages and Ergodic Theory}
 
@@ -460,8 +526,57 @@ This is Kallenberg's ``first proof'' and uses disjoint-block averaging.
 
 \chapter{Common Ending}
 
-All three proofs converge to the same final step: extending from indicators to general sets
-via a monotone class argument.
+The L$^2$ and Koopman routes share a common final step: a directing kernel built from
+the tail (or shift-invariant) $\sigma$-algebra is fed to a $\pi$-system / monotone-class
+extension argument that lifts the indicator-level identity to the full product
+$\sigma$-algebra. The martingale route reaches conditional independence through its own
+parallel \texttt{finite\_product\_formula} pipeline (built on
+\texttt{condExpKernel}) rather than the lemmas in this chapter.
+
+\section{Comparing the two endings}
+
+The L²/Koopman ending (\ref{thm:condIndep_extension}, in
+\texttt{CommonEnding.lean}) and the martingale ending
+(\ref{lem:finite_product_formula}, in
+\texttt{ViaMartingale/FiniteProduct.lean}) are similar in total length and both
+finish with a rectangle $\pi$-system extension via
+\texttt{MeasureTheory.ext\_of\_generate\_finite}. The substantive
+difference is the \emph{shape of the bridge condition} each accepts
+about the directing kernel $\nu$.
+
+\begin{tabular}{p{0.18\textwidth}p{0.36\textwidth}p{0.4\textwidth}}
+  \textbf{Route} & \textbf{Bridge shape} & \textbf{How the route produces it} \\
+  \hline
+  Martingale &
+  Per-coordinate conditional-expectation equality:
+  $(\omega \mapsto \nu(\omega)(B).\mathrm{toReal})
+    \, =^{\mathrm{a.e.}} \, \mathbb{E}[\mathbf{1}_B \circ X_n \mid \mathcal{T}]$
+  for every $n$, $B$
+  (see \ref{lem:conditional_law_eq_directingMeasure}). &
+  Falls out directly from mathlib's \texttt{condExpKernel} applied to
+  the tail $\sigma$-algebra. \\[0.7em]
+  L²/Koopman &
+  Joint integral equality on the whole $m$-tuple:
+  for every injective $k : \mathrm{Fin}\,m \to \mathbb{N}$ and rectangle $B$,
+  $\int^- \prod_i \mathbf{1}_{X_{k\,i} \in B_i}\,d\mu
+     = \int^- \prod_i \nu(\omega)(B_i)\,d\mu.$ &
+  Falls out of Cesàro / ergodic averaging — both sides are limits of the
+  same averaged sequence. \\
+\end{tabular}
+
+\paragraph{Why this matters.} Each route's directing-measure
+construction naturally produces the bridge shape its own ending
+expects, so the routes pick the ending that matches what they already
+have. The martingale route's per-coordinate bridge is ``smaller'' (one
+σ-algebra-relative equality per index) and is what \texttt{condExpKernel}
+delivers without extra work; the common ending's joint integral bridge
+is what limit-of-averages arguments deliver without extra work, but
+would be wasteful if you already had per-coordinate CE equalities. At
+the stitching level both routes compress to a short top-level theorem
+that hands a 4-tuple
+$(\nu, h_{\nu\text{-prob}}, h_{\nu\text{-meas}}, h_{\text{bridge}})$ to
+the chosen ending — the choice of ending is what differs, not the
+amount of stitching.
 
 \begin{lemma}[$\pi$-system uniqueness]
   \label{lem:pi_system}
@@ -489,11 +604,14 @@ via a monotone class argument.
 
 \chapter{Main Theorem}
 
-\begin{theorem}[de Finetti--Ryll-Nardzewski equivalence]
+We package the three-way equivalence as three separate top-level theorems, one per
+proof of the main implication. The default project export is the martingale version.
+
+\begin{theorem}[de Finetti--Ryll-Nardzewski equivalence (martingale route)]
   \label{thm:deFinetti}
   \lean{Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence}
   \leanok
-  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale, thm:conditionallyIID_of_contractable_L2, thm:conditionallyIID_of_contractable_Koopman}
+  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_martingale}
   For an infinite sequence $(X_n)_{n \in \mathbb{N}}$ of random variables taking values
   in a \emph{standard Borel space} $\alpha$ (with $\alpha$ nonempty), the following are equivalent:
   \begin{enumerate}
@@ -501,6 +619,26 @@ via a monotone class argument.
     \item $(X_n)$ is exchangeable
     \item $(X_n)$ is conditionally i.i.d.\ (i.e., there exists a directing kernel $\nu$)
   \end{enumerate}
-  \textbf{Remark:} The martingale proof constructs $\nu$ from the tail $\sigma$-algebra $\mathcal{T}$
-  via $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$.
+  This is the default project export. The proof constructs $\nu$ from the tail
+  $\sigma$-algebra $\mathcal{T}$ via
+  $\nu(\omega)(B) = \mathbb{E}[\mathbf{1}_{X_0 \in B} \mid \mathcal{T}](\omega)$.
+\end{theorem}
+
+\begin{theorem}[de Finetti--Ryll-Nardzewski equivalence (L$^2$ route)]
+  \label{thm:deFinetti_viaL2}
+  \lean{Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence_viaL2}
+  \leanok
+  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_L2}
+  Same three-way equivalence, proved via the elementary L$^2$ approach. This route
+  is currently stated for real-valued sequences (see the L$^2$ section caveat).
+\end{theorem}
+
+\begin{theorem}[de Finetti--Ryll-Nardzewski equivalence (Koopman route)]
+  \label{thm:deFinetti_viaKoopman}
+  \lean{Exchangeability.DeFinetti.deFinetti_RyllNardzewski_equivalence_viaKoopman}
+  \leanok
+  \uses{thm:contractable_of_exchangeable, thm:exchangeable_of_conditionallyIID, thm:conditionallyIID_of_contractable_Koopman}
+  Same three-way equivalence, proved via the Mean Ergodic Theorem through the Koopman
+  operator. This route is currently stated for real-valued sequences (see the Koopman
+  section caveat).
 \end{theorem}
