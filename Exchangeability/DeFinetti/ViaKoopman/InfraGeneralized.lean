@@ -393,18 +393,20 @@ lemma integrable_mul_of_ae_bdd_left
     rwa [Real.norm_eq_abs]
   exact Integrable.bdd_mul hY hZ.aestronglyMeasurable hZ_norm
 
-/-- Conditional expectation is L¹-Lipschitz: moving the integrand changes the CE by at most
-the L¹ distance. This is a standard property following from Jensen's inequality.
+/-- Path-space-specialised L¹-Lipschitz bound for conditional expectation
+against `shiftInvariantSigma`.
 
-The path-space-specialised form is kept here (rather than calling
-`Exchangeability.Probability.condExp_L1_lipschitz` directly) because that lemma
-declares its sub-σ-algebra hypothesis as `_hm : m ≤ ‹_›`, and at the call sites
-in `CesaroPairFactorization.lean`/`CesaroL1Bounded.lean` the elaborator
-resolves `‹_›` to `shiftInvariantSigma` rather than the ambient
-`MeasurableSpace.pi`, producing a `shiftInvariantSigma ≤ shiftInvariantSigma`
-hypothesis that no obvious workaround discharges. -/
+This is the `shiftInvariantSigma`-specific variant of the generic
+`Exchangeability.Probability.condExp_L1_lipschitz`; the prime distinguishes
+it from that central lemma. It is preserved as a separate declaration
+because the central form declares its sub-σ-algebra hypothesis as
+`_hm : m ≤ ‹_›`, and at the call sites in `CesaroPairFactorization.lean`
+/ `CesaroL1Bounded.lean` the elaborator resolves `‹_›` to
+`shiftInvariantSigma` rather than the ambient `MeasurableSpace.pi`,
+producing a `shiftInvariantSigma ≤ shiftInvariantSigma` hypothesis that
+no obvious workaround discharges. -/
 @[nolint unusedArguments]
-lemma condExp_L1_lipschitz
+lemma condExp_L1_lipschitz'
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     {Z W : Ω[α] → ℝ} (hZ : Integrable Z μ) (hW : Integrable W μ) :
     ∫ ω, |μ[Z | shiftInvariantSigma (α := α)] ω - μ[W | shiftInvariantSigma (α := α)] ω| ∂μ
