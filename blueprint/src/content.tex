@@ -299,15 +299,27 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
   \label{lem:kallenberg_L2_bound}
   \lean{Exchangeability.DeFinetti.ViaL2.kallenberg_L2_bound}
   \leanok
+  The L$^2$ distance bound for weighted averages of an exchangeable sequence
+  (Kallenberg Lemma 1.2). Recorded here for completeness; the active proof
+  path uses the contractability-only variant \cref{lem:l2_bound} instead,
+  to avoid assuming exchangeability while proving Contractable
+  $\Rightarrow$ Exchangeable.
+\end{lemma}
+
+\begin{lemma}[Block averages are Cauchy in L$^2$]
+  \label{lem:blockAvg_cauchy_in_L2}
+  \lean{Exchangeability.DeFinetti.ViaL2.blockAvg_cauchy_in_L2}
+  \leanok
   \uses{lem:l2_bound}
-  The key L$^2$ bound that drives the Cesaro convergence.
+  For contractable $X$ and bounded $f$, the block Cesaro averages
+  $\mathrm{blockAvg}\, f\, X\, 0\, n$ form a Cauchy sequence in L$^2$.
 \end{lemma}
 
 \begin{lemma}[Cesaro to conditional expectation (L$^2$)]
   \label{lem:cesaro_L2}
   \lean{Exchangeability.DeFinetti.ViaL2.cesaro_to_condexp_L2}
   \leanok
-  \uses{lem:kallenberg_L2_bound}
+  \uses{lem:blockAvg_cauchy_in_L2}
   Block averages converge in L$^2$ to the conditional expectation given the tail.
 \end{lemma}
 

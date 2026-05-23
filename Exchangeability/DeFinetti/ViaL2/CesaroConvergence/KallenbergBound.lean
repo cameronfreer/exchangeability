@@ -3,23 +3,8 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2.BlockAvgDef
-import Exchangeability.DeFinetti.ViaL2.BlockAverages
-import Exchangeability.DeFinetti.L2Helpers
-import Exchangeability.Contractability
-import Exchangeability.Probability.CondExp
-import Exchangeability.Probability.IntegrationHelpers
-import Exchangeability.Probability.LpNormHelpers
+
 import Exchangeability.Probability.CenteredVariables
-import Exchangeability.Probability.SigmaAlgebraHelpers
-import Exchangeability.Util.FinsetHelpers
-import Exchangeability.Tail.TailSigma
-import Exchangeability.Tail.ShiftInvariantMeasure
-import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
-import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.Set
-import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 
 /-!
 # Kallenberg's L² Bound (Lemma 1.2)

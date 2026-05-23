@@ -3,24 +3,11 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
-import Exchangeability.DeFinetti.ViaL2.BlockAvgDef
-import Exchangeability.DeFinetti.ViaL2.BlockAverages
+
 import Exchangeability.DeFinetti.ViaL2.CesaroConvergence.Cauchy
-import Exchangeability.DeFinetti.L2Helpers
-import Exchangeability.Contractability
-import Exchangeability.Probability.CondExp
-import Exchangeability.Probability.IntegrationHelpers
-import Exchangeability.Probability.LpNormHelpers
-import Exchangeability.Probability.CenteredVariables
-import Exchangeability.Probability.SigmaAlgebraHelpers
-import Exchangeability.Util.FinsetHelpers
+import Exchangeability.DeFinetti.ViaL2.BlockAverages
 import Exchangeability.Tail.TailSigma
-import Exchangeability.Tail.ShiftInvariantMeasure
-import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
-import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.Set
-import Mathlib.Analysis.InnerProductSpace.MeanErgodic
+import Exchangeability.Probability.SigmaAlgebraHelpers
 
 /-!
 # Cesàro L² Convergence: `cesaro_to_condexp_L2`
@@ -53,11 +40,10 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 open scoped BigOperators
 
-set_option linter.unusedVariables false in
 lemma blockAvg_measurable_tailFamily
     {Ω : Type*} [MeasurableSpace Ω]
     {f : ℝ → ℝ} (hf : Measurable f)
-    {X : ℕ → Ω → ℝ} (hX : ∀ i, Measurable (X i))
+    {X : ℕ → Ω → ℝ}
     (m n : ℕ) :
     Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) := by
   -- blockAvg f X m n = (n⁻¹) * ∑_{k<n} f(X_{m+k})
@@ -273,7 +259,7 @@ private lemma tail_measurability_of_blockAvg
 
     -- Step 1a: blockAvg f X N m is Measurable[tailFamily X N] for all m
     have h_block_meas : ∀ m, @Measurable Ω ℝ (TailSigma.tailFamily X N) _ (blockAvg f X N m) :=
-      fun m => blockAvg_measurable_tailFamily hf_meas hX_meas N m
+      fun m => blockAvg_measurable_tailFamily hf_meas N m
 
     -- Step 1b: blockAvg f X N m → α_f in L² (by blockAvg_shift_tendsto)
     have h_L2_conv := blockAvg_shift_tendsto f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit N
@@ -287,7 +273,7 @@ private lemma tail_measurability_of_blockAvg
     -- Note: α_f is AEStronglyMeasurable wrt ambient from MemLp
     have h_α_aesm : AEStronglyMeasurable α_f μ := hα_memLp.aestronglyMeasurable
     have h_block_aesm : ∀ m, AEStronglyMeasurable (blockAvg f X N m) μ :=
-      fun m => (blockAvg_measurable_tailFamily hf_meas hX_meas N m).aestronglyMeasurable.mono h_tf_le
+      fun m => (blockAvg_measurable_tailFamily hf_meas N m).aestronglyMeasurable.mono h_tf_le
     have h_in_measure : TendstoInMeasure μ (blockAvg f X N) atTop α_f :=
       tendstoInMeasure_of_tendsto_eLpNorm (by norm_num) h_block_aesm h_α_aesm h_L2_conv
 
@@ -344,7 +330,7 @@ private lemma tendsto_setIntegral_of_L2_tendsto
 /-- **Cesàro averages converge in L² to a tail-measurable limit.**
 
 This is the elementary L² route to de Finetti (Kallenberg's "second proof"):
-1. Kallenberg L² bound → Cesàro averages are Cauchy in L²
+1. L² contractability bound → Cesàro averages are Cauchy in L²
 2. Completeness of L² → limit α_f exists
 3. Block averages A_{N,n} are σ(X_{>N})-measurable → α_f is tail-measurable
 4. Tail measurability + L² limit → α_f = E[f(X_1) | tail σ-algebra]
@@ -359,17 +345,7 @@ lemma cesaro_to_condexp_L2
       AEStronglyMeasurable[TailSigma.tailSigma X] α_f μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) ∧
       α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X] := by
-  -- Kallenberg's second proof (elementary L² approach)
-
-  -- Define Z_i := f(X_i) - E[f(X_0)] (centered variables)
-  let Z := fun i ω => f (X i ω) - ∫ ω', f (X 0 ω') ∂μ
-
-  -- Step 1: Show {A_{0,n}}_n is Cauchy in L² using Kallenberg bound
-  -- For any m, m' and large n: ‖A_{m,n} - A_{m',n}‖_L² ≤ C_f/√n
-  -- Setting m=m'=0 with different n values: need to relate A_{0,n} and A_{0,n'}
-
-  -- Step 1: Show block averages form a Cauchy sequence in L²
-  -- Extracted to helper lemma to reduce proof complexity and isolate timeout source
+  -- Step 1: Show block averages form a Cauchy sequence in L² (via `Cauchy.lean`).
   have hCauchy := blockAvg_cauchy_in_L2 hX_contract hX_meas f hf_meas hf_bdd
 
   -- Step 2: Extract L² limit using completeness of Hilbert space

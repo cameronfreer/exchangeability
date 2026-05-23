@@ -4,22 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaL2.BlockAvgDef
-import Exchangeability.DeFinetti.ViaL2.BlockAverages
-import Exchangeability.DeFinetti.L2Helpers
-import Exchangeability.Contractability
-import Exchangeability.Probability.CondExp
-import Exchangeability.Probability.IntegrationHelpers
-import Exchangeability.Probability.LpNormHelpers
 import Exchangeability.Probability.CenteredVariables
-import Exchangeability.Probability.SigmaAlgebraHelpers
 import Exchangeability.Util.FinsetHelpers
-import Exchangeability.Tail.TailSigma
-import Exchangeability.Tail.ShiftInvariantMeasure
-import Mathlib.MeasureTheory.Function.L2Space
-import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
-import Mathlib.MeasureTheory.Function.LpSpace.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.Set
-import Mathlib.Analysis.InnerProductSpace.MeanErgodic
 
 /-!
 # Cesàro Cauchy Property: `blockAvg_cauchy_in_L2`
@@ -79,43 +65,12 @@ private lemma cesaro_cauchy_rho_lt
   -- Equivalently: N > Cf / (ε.toReal)²
   -- If ε = ⊤, the property is trivial (take any N); otherwise use Archimedean property
   by_cases hε_top : ε = ⊤
-  · -- Case ε = ⊤
-    -- Any N works; take N := 0
+  · -- Case ε = ⊤: any N works (e.g. 0); the difference is in L² so its eLpNorm is finite.
     refine ⟨0, ?_⟩
     intro n n' _ _
-    -- measurability of the two block averages and their difference
-    have h_meas_n  :
-        Measurable (fun ω => blockAvg f X 0 n  ω) :=
-      blockAvg_measurable f X hf_meas hX_meas 0 n
-    have h_meas_n' :
-        Measurable (fun ω => blockAvg f X 0 n' ω) :=
-      blockAvg_measurable f X hf_meas hX_meas 0 n'
-    have h_meas_diff :
-        Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
-      h_meas_n.sub h_meas_n'
-
-    -- |A_n| ≤ 1 and |A_{n'}| ≤ 1 ⇒ |A_n − A_{n'}| ≤ 2
-    have h_bdd :
-        ∀ᵐ ω ∂μ, |blockAvg f X 0 n ω - blockAvg f X 0 n' ω| ≤ 2 := by
-      apply ae_of_all
-      intro ω
-      have hn  : |blockAvg f X 0 n  ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n  ω
-      have hn' : |blockAvg f X 0 n' ω| ≤ 1 := blockAvg_abs_le_one f X hf_bdd 0 n' ω
-      calc
-        |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
-            ≤ |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω|
-              := by
-                   have := abs_add_le (blockAvg f X 0 n ω) (-(blockAvg f X 0 n' ω))
-                   simpa [sub_eq_add_neg, abs_neg] using this
-        _ ≤ 1 + 1 := add_le_add hn hn'
-        _ = 2 := by norm_num
-
-    -- bounded ⇒ MemLp ⇒ eLpNorm < ⊤
-    have h_mem :
-        MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ :=
-      memLp_of_abs_le_const h_meas_diff h_bdd 2 (by norm_num) (by norm_num)
-
-    -- The goal for this branch is just finiteness (ε = ⊤)
+    have h_mem : MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ :=
+      (blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n).sub
+        (blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n')
     rw [hε_top]
     exact MemLp.eLpNorm_lt_top h_mem
 
@@ -578,82 +533,10 @@ private lemma cesaro_cauchy_rho_lt
   -- Step 8: Convert integral bound to eLpNorm bound
   -- Goal: eLpNorm (blockAvg f X 0 n - blockAvg f X 0 n') 2 μ < ε
 
-  -- First show blockAvg difference is in L²
-  have h_diff_memLp : MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ := by
-    -- Strategy: blockAvg is bounded by 1, so difference is bounded by 2
-    -- Use memLp_of_abs_le_const from LpNormHelpers
-
-    -- Show measurability
-    have h_meas_n : Measurable (fun ω => blockAvg f X 0 n ω) := by fun_prop
-
-    have h_meas_n' : Measurable (fun ω => blockAvg f X 0 n' ω) := by fun_prop
-
-    have h_meas_diff : Measurable (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) :=
-      h_meas_n.sub h_meas_n'
-
-    -- Show boundedness: |blockAvg f X 0 n| ≤ 1 and |blockAvg f X 0 n'| ≤ 1
-    -- implies |diff| ≤ 2
-    have h_bdd : ∀ᵐ ω ∂μ, |blockAvg f X 0 n ω - blockAvg f X 0 n' ω| ≤ 2 := by
-      apply ae_of_all
-      intro ω
-      -- Each blockAvg is bounded by 1 (average of values bounded by 1)
-      have hn_bdd : |blockAvg f X 0 n ω| ≤ 1 := by
-        simp only [blockAvg]
-        -- Strategy: |n⁻¹ * ∑ f_i| ≤ n⁻¹ * ∑ |f_i| ≤ n⁻¹ * n = 1
-        rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n))]
-        have h_sum_bound : |(Finset.range n).sum (fun k => f (X (0 + k) ω))| ≤ n := by
-          calc |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-              ≤ (Finset.range n).sum (fun k => |f (X (0 + k) ω)|) := by
-                exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (Finset.range n).sum (fun k => 1) := by
-                apply Finset.sum_le_sum
-                intro k _
-                simp only [zero_add]
-                exact hf_bdd (X k ω)
-            _ = n := by
-                simp only [Finset.sum_const, Finset.card_range, nsmul_one]
-        calc (n : ℝ)⁻¹ * |(Finset.range n).sum (fun k => f (X (0 + k) ω))|
-            ≤ (n : ℝ)⁻¹ * n := by
-              apply mul_le_mul_of_nonneg_left
-              · exact_mod_cast h_sum_bound
-              · exact inv_nonneg.mpr (Nat.cast_nonneg n)
-          _ = 1 := by
-              field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn_pos)]
-      have hn'_bdd : |blockAvg f X 0 n' ω| ≤ 1 := by
-        simp only [blockAvg]
-        -- Same strategy as hn_bdd
-        rw [abs_mul, abs_of_nonneg (inv_nonneg.mpr (Nat.cast_nonneg n'))]
-        have h_sum_bound : |(Finset.range n').sum (fun k => f (X (0 + k) ω))| ≤ n' := by
-          calc |(Finset.range n').sum (fun k => f (X (0 + k) ω))|
-              ≤ (Finset.range n').sum (fun k => |f (X (0 + k) ω)|) := by
-                exact Finset.abs_sum_le_sum_abs _ _
-            _ ≤ (Finset.range n').sum (fun k => 1) := by
-                apply Finset.sum_le_sum
-                intro k _
-                simp only [zero_add]
-                exact hf_bdd (X k ω)
-            _ = n' := by
-                simp only [Finset.sum_const, Finset.card_range, nsmul_one]
-        calc (n' : ℝ)⁻¹ * |(Finset.range n').sum (fun k => f (X (0 + k) ω))|
-            ≤ (n' : ℝ)⁻¹ * n' := by
-              apply mul_le_mul_of_nonneg_left
-              · exact_mod_cast h_sum_bound
-              · exact inv_nonneg.mpr (Nat.cast_nonneg n')
-          _ = 1 := by
-              field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn'_pos)]
-      calc |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
-          ≤ |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω| := by
-            -- Triangle inequality: |a - b| ≤ |a| + |b|
-            -- Derive from |a + b| ≤ |a| + |b| by writing a - b = a + (-b)
-            calc |blockAvg f X 0 n ω - blockAvg f X 0 n' ω|
-                = |blockAvg f X 0 n ω + (-(blockAvg f X 0 n' ω))| := by rw [sub_eq_add_neg]
-              _ ≤ |blockAvg f X 0 n ω| + |-(blockAvg f X 0 n' ω)| := abs_add_le _ _
-              _ = |blockAvg f X 0 n ω| + |blockAvg f X 0 n' ω| := by rw [abs_neg]
-        _ ≤ 1 + 1 := add_le_add hn_bdd hn'_bdd
-        _ = 2 := by norm_num
-
-    -- Apply memLp_of_abs_le_const
-    exact memLp_of_abs_le_const h_meas_diff h_bdd 2 (by norm_num) (by norm_num)
+  -- First show blockAvg difference is in L².
+  have h_diff_memLp : MemLp (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ :=
+    (blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n).sub
+      (blockAvg_memLp_two_of_abs_le_one f X hf_meas hX_meas hf_bdd 0 n')
 
   -- Now apply the conversion: eLpNorm² → integral
   -- From h_integral_lt_ε_sq: ∫ diff² < ε²
@@ -675,19 +558,19 @@ private lemma cesaro_cauchy_rho_lt
 
     This wrapper prevents expensive elaboration timeouts when `blockAvg` appears
     inside `eLpNorm` goals, by using pre-proved lemmas instead of unfolding. -/
-def blockAvgFrozen {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) : Ω → ℝ :=
+private def blockAvgFrozen {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) : Ω → ℝ :=
   fun ω => blockAvg f X 0 n ω
 
-lemma blockAvgFrozen_def {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
+private lemma blockAvgFrozen_def {Ω : Type*} (f : ℝ → ℝ) (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
     blockAvgFrozen f X n ω = blockAvg f X 0 n ω :=
   rfl
 
 
-/-- Helper lemma: Block averages form a Cauchy sequence in L² (Step 1 of main proof).
-
-Given contractable X and bounded f, the block averages form a Cauchy sequence in L².
-This uses the L² contractability bound and uniform covariance structure. -/
-lemma blockAvg_cauchy_in_L2
+/-- Internal version of `blockAvg_cauchy_in_L2` stated against `blockAvgFrozen`
+to keep the elaborator from unfolding `blockAvg` inside `eLpNorm` during the
+covariance bookkeeping. The public statement below restates the same fact in
+terms of `blockAvg` directly. -/
+private lemma blockAvgFrozen_cauchy_in_L2
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     {X : ℕ → Ω → ℝ} (hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
@@ -1070,5 +953,18 @@ lemma blockAvg_cauchy_in_L2
     rw [h_norm_zero]
     exact hε
 
+/-- **Block averages form a Cauchy sequence in L².**
+
+Given contractable `X` and bounded `f`, the block Cesàro averages
+`blockAvg f X 0 n` form a Cauchy sequence in L²(μ). The proof goes through
+the L² contractability bound (no full exchangeability assumed). -/
+lemma blockAvg_cauchy_in_L2
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} (hX_contract : Contractable μ X)
+    (hX_meas : ∀ i, Measurable (X i))
+    (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
+    ∀ ε > 0, ∃ N, ∀ {n n'}, n ≥ N → n' ≥ N →
+      eLpNorm (fun ω => blockAvg f X 0 n ω - blockAvg f X 0 n' ω) 2 μ < ε :=
+  blockAvgFrozen_cauchy_in_L2 hX_contract hX_meas f hf_meas hf_bdd
 
 end Exchangeability.DeFinetti.ViaL2

@@ -26,6 +26,7 @@ Exchangeability.DeFinetti.ViaL2.blockAvg
 Exchangeability.DeFinetti.ViaL2.contractable_covariance_structure
 Exchangeability.DeFinetti.L2Approach.l2_contractability_bound
 Exchangeability.DeFinetti.ViaL2.kallenberg_L2_bound
+Exchangeability.DeFinetti.ViaL2.blockAvg_cauchy_in_L2
 Exchangeability.DeFinetti.ViaL2.cesaro_to_condexp_L2
 Exchangeability.DeFinetti.ViaL2.cesaro_to_condexp_L1
 Exchangeability.DeFinetti.ViaL2.directing_measure_isProbabilityMeasure
