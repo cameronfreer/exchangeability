@@ -100,25 +100,8 @@ lemma alphaIic_measurable
   refine Measurable.max measurable_const ?_
   refine Measurable.min measurable_const h_limit_meas
 
-/-- 0 ≤ α_{Iic t} ≤ 1. The α is an L¹-limit of averages of indicators in [0,1].
-
-DESIGN NOTE: This lemma requires pointwise bounds on alphaIic, but alphaIic is defined
-as an L¹ limit witness via .choose, which only determines the function up to a.e. equivalence.
-
-The mathematically standard resolution is one of:
-1. Modify alphaIic's definition to explicitly take a representative in [0,1]:
-   `alphaIic t ω := max 0 (min 1 (original_limit t ω))`
-   This preserves measurability and a.e. equality, hence L¹ properties.
-
-2. Strengthen weighted_sums_converge_L1 to provide a witness with pointwise bounds
-   when the input function is bounded (requires modifying the existential).
-
-3. Accept as a property of the construction: Since each Cesàro average
-   (1/m) Σ_{i<m} indIic(X_i ω) ∈ [0,1] pointwise, and these converge in L¹ to alphaIic,
-   we can choose a representative of the equivalence class that is in [0,1] pointwise.
-
-For the proof to proceed, we adopt approach (3) as an axiom of the construction.
--/
+/-- 0 ≤ α_{Iic t} ≤ 1. Follows immediately from the
+`max 0 (min 1 (·))` clipping in the definition of `alphaIic`. -/
 lemma alphaIic_bound
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)

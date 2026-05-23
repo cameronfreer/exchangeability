@@ -22,7 +22,6 @@ forward martingales, then apply the upcrossing inequality.
 ## Main Results
 
 - `revCEFinite_martingale`: The reversed process is a forward martingale
-- `eLpNorm_one_condExp_le_of_integrable`: L¹ boundedness of conditional expectations
 -/
 
 open Filter MeasureTheory
@@ -83,14 +82,5 @@ lemma revCEFinite_martingale
       have : N - j ≤ N - i := tsub_le_tsub_left hij N
       exact h_antitone this
     exact condExp_condExp_of_le this (h_le (N - j))
-
-/-- L¹ boundedness of conditional expectations.
-
-This is a standard property: `‖μ[f | m]‖₁ ≤ ‖f‖₁`. -/
-@[nolint unusedArguments]
-lemma eLpNorm_one_condExp_le_of_integrable
-    {m : MeasurableSpace Ω} (f : Ω → ℝ) (_hf : Integrable f μ) :
-    eLpNorm (μ[f | m]) 1 μ ≤ eLpNorm f 1 μ :=
-  eLpNorm_one_condExp_le_eLpNorm f
 
 end Exchangeability.Probability
