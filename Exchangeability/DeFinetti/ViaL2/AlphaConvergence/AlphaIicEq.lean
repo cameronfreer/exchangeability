@@ -32,6 +32,28 @@ open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-- Cesàro averages of `indIic t`-valued sequences are bounded by `1` in absolute value.
+
+Internal helper: the proof body bound `|(1/m) · ∑ k : Fin m, indIic t (h k)| ≤ 1` recurred
+at five sites inside `alphaIic_ae_eq_alphaIicCE`, each as the same calc chain (`abs_mul` →
+`Finset.abs_sum_le_sum_abs` → indicator-by-cases bound → `field_simp`). Pulled out so the
+five callers can collapse their integrability blocks to a one-liner. -/
+private lemma abs_avg_indIic_le_one {m : ℕ} (t : ℝ) (h : Fin m → ℝ) :
+    |(1 / (m : ℝ)) * ∑ k : Fin m, indIic t (h k)| ≤ 1 := by
+  by_cases hm : m = 0
+  · simp [hm]
+  · have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
+    calc |(1 / (m : ℝ)) * ∑ k : Fin m, indIic t (h k)|
+        = (1 / (m : ℝ)) * |∑ k : Fin m, indIic t (h k)| := by
+              rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos)]
+      _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, |indIic t (h k)| := by
+            gcongr; exact Finset.abs_sum_le_sum_abs _ _
+      _ ≤ (1 / (m : ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
+            gcongr with k
+            unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
+      _ = (1 / (m : ℝ)) * m := by simp [Finset.sum_const]
+      _ = 1 := by field_simp
+
 /-- **Identification lemma**: alphaIic equals alphaIicCE almost everywhere.
 
 **Proof strategy:**
@@ -136,21 +158,8 @@ lemma alphaIic_ae_eq_alphaIicCE
       have hA_meas_nm : Measurable (A n m) := by fun_prop
       refine Integrable.of_bound hA_meas_nm.aestronglyMeasurable 1 ?_
       filter_upwards with ω
-      unfold A
-      simp only [Real.norm_eq_abs]
-      by_cases hm : m = 0
-      · simp [hm]
-      · have hm_pos : 0 < (m : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hm)
-        calc |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (n + k.val + 1) ω)|
-            = (1/(m:ℝ)) * |∑ k : Fin m, indIic t (X (n + k.val + 1) ω)| := by
-                rw [abs_mul, abs_of_pos (one_div_pos.mpr hm_pos)]
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, |indIic t (X (n + k.val + 1) ω)| := by
-                gcongr; exact Finset.abs_sum_le_sum_abs _ _
-          _ ≤ (1/(m:ℝ)) * ∑ k : Fin m, (1 : ℝ) := by
-                gcongr with k
-                unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-          _ = (1/(m:ℝ)) * m := by simp [Finset.sum_const]
-          _ = 1 := by field_simp [hm]
+      rw [Real.norm_eq_abs]
+      exact abs_avg_indIic_le_one t (fun k : Fin m => X (n + k.val + 1) ω)
 
     -- Prove integrability of alpha (from weighted_sums_converge_L1)
     have halpha_meas : Measurable alpha :=
@@ -251,24 +260,16 @@ lemma alphaIic_ae_eq_alphaIicCE
                        (Finset.range m).sum (fun i => indIic t (X i ω)) :=
           Fin.sum_univ_eq_sum_range (fun i => indIic t (X i ω)) m
 
-        -- Prove telescoping: ∑_{k<m} f(k+1) - ∑_{i<m} f(i) = f(m) - f(0)
+        -- Telescoping: ∑_{k<m} f(k+1) - ∑_{i<m} f(i) = f(m) - f(0).
+        -- Two mathlib lemmas applied with `linarith`:
+        --   `sum_range_succ'`: ∑_{k<m+1} f(k) = ∑_{k<m} f(k+1) + f(0)
+        --   `sum_range_succ`:  ∑_{i<m+1} f(i) = ∑_{i<m} f(i) + f(m)
         have h_telescope_sum : (Finset.range m).sum (fun k => indIic t (X (k + 1) ω)) -
                                 (Finset.range m).sum (fun i => indIic t (X i ω)) =
                                 indIic t (X m ω) - indIic t (X 0 ω) := by
-          clear h_left h_right hm_pos -- Don't use outer context
-          induction m with
-          | zero => simp
-          | succ m' ih =>
-              rw [Finset.sum_range_succ (f := fun k => indIic t (X (k + 1) ω))]
-              rw [Finset.sum_range_succ (f := fun i => indIic t (X i ω))]
-              --  Goal: (∑ x < m', f(x+1)) + f(m'+1) - ((∑ x < m', f(x)) + f(m')) = f(m'+1) - f(0)
-              -- Simplify LHS algebraically to expose the IH pattern
-              have : (∑ x ∈ Finset.range m', indIic t (X (x + 1) ω)) + indIic t (X (m' + 1) ω) -
-                     ((∑ x ∈ Finset.range m', indIic t (X x ω)) + indIic t (X m' ω))
-                   = (∑ x ∈ Finset.range m', indIic t (X (x + 1) ω)) - (∑ x ∈ Finset.range m', indIic t (X x ω))
-                     + (indIic t (X (m' + 1) ω) - indIic t (X m' ω)) := by ring
-              rw [this, ih]
-              ring
+          have h1 := Finset.sum_range_succ' (fun i => indIic t (X i ω)) m
+          have h2 := Finset.sum_range_succ (fun i => indIic t (X i ω)) m
+          linarith
 
         -- Now apply to our goal: ∑ k : Fin m, f(k+1) - ∑ i : Fin m, f(i) = f(m) - f(0)
         -- Use h_left and h_right to convert Fin sums to range sums, then apply h_telescope_sum
@@ -385,18 +386,10 @@ lemma alphaIic_ae_eq_alphaIicCE
       have h_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)) :=
         Measurable.const_mul (Finset.measurable_sum _ (fun k _ =>
           ((indIic_measurable t).comp (hX_meas _)))) _
-      apply Integrable.of_bound h_meas.aestronglyMeasurable 1
+      refine Integrable.of_bound h_meas.aestronglyMeasurable 1 ?_
       filter_upwards with ω
-      simp [Real.norm_eq_abs]
-      calc (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-        _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-              gcongr; exact Finset.abs_sum_le_sum_abs _ _
-        _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
-              gcongr with k
-              unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-        _ = (1/(m:ℝ)) * m := by
-              rw [← one_div]; simp [Finset.sum_const]
-        _ = 1 := by field_simp
+      rw [Real.norm_eq_abs]
+      exact abs_avg_indIic_le_one t (fun k : Fin m => X (k.val + 1) ω)
 
     -- Factor out the integrability of B m (used 4× below).
     have hB_int : Integrable (B m) μ := by
@@ -404,16 +397,10 @@ lemma alphaIic_ae_eq_alphaIicCE
       have h_meas : Measurable (fun ω => (1/(m:ℝ)) * ∑ i : Fin m, indIic t (X i ω)) :=
         Measurable.const_mul (Finset.measurable_sum _ (fun i _ =>
           ((indIic_measurable t).comp (hX_meas _)))) _
-      apply Integrable.of_bound h_meas.aestronglyMeasurable 1
-      filter_upwards with ω; simp [Real.norm_eq_abs]
-      calc (m:ℝ)⁻¹ * |∑ i : Fin m, indIic t (X i ω)|
-        _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, |indIic t (X i ω)| := by
-              gcongr; exact Finset.abs_sum_le_sum_abs _ _
-        _ ≤ (m:ℝ)⁻¹ * ∑ i : Fin m, (1 : ℝ) := by
-              gcongr with i
-              unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-        _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const]
-        _ = 1 := by field_simp
+      refine Integrable.of_bound h_meas.aestronglyMeasurable 1 ?_
+      filter_upwards with ω
+      rw [Real.norm_eq_abs]
+      exact abs_avg_indIic_le_one t (fun i : Fin m => X i.val ω)
 
     -- Triangle inequality for integrals
     calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
@@ -491,23 +478,8 @@ lemma alphaIic_ae_eq_alphaIicCE
       · -- A is a Cesàro average of indicators, bounded by 1
         refine Integrable.of_bound (hA_meas 0 m) 1 ?_
         filter_upwards with ω
-        -- A n m ω = (1/m) * ∑_{k<m} indIic t (X (n+k+1) ω)
-        -- Each indIic t x ∈ {0, 1}, so the sum is in [0, m]
-        -- Therefore A n m ω ∈ [0, 1]
-        unfold A
-        simp only [Real.norm_eq_abs, zero_add]
-        by_cases hm : m = 0
-        · simp [hm]
-        · calc |1 / (m:ℝ) * ∑ k : Fin m, indIic t (X (k.val + 1) ω)|
-                = (m:ℝ)⁻¹ * |∑ k : Fin m, indIic t (X (k.val + 1) ω)| := by
-                      rw [one_div, abs_mul, abs_of_pos]; positivity
-              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, |indIic t (X (k.val + 1) ω)| := by
-                    gcongr; exact Finset.abs_sum_le_sum_abs _ _
-              _ ≤ (m:ℝ)⁻¹ * ∑ k : Fin m, (1 : ℝ) := by
-                    gcongr with k
-                    unfold indIic; simp [Set.indicator]; split_ifs <;> norm_num
-              _ = (m:ℝ)⁻¹ * m := by simp [Finset.sum_const]
-              _ = 1 := by field_simp [hm]
+        rw [Real.norm_eq_abs]
+        exact abs_avg_indIic_le_one t (fun k : Fin m => X (0 + k.val + 1) ω)
       · -- f is bounded by hypothesis hf_bdd
         exact Integrable.of_bound hf_meas 1 hf_bdd
 
