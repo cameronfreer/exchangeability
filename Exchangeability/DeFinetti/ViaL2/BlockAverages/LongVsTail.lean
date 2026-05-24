@@ -333,7 +333,7 @@ lemma l2_bound_long_vs_tail
               · congr 1
                 ext j
                 simp only
-                ring
+                ring_nf
               -- Prove injectivity
               · intro j₁ _ j₂ _ h
                 simp only [Fin.mk.injEq] at h
