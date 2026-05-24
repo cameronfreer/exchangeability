@@ -664,7 +664,7 @@ lemma cesaro_to_condexp_L2
     -- Step (i): Exchangeability implies equal set integrals on tail events
     --   Claim: ∀ A ∈ tailSigma, ∀ j, ∫_A f(X_j) dμ = ∫_A f(X_0) dμ
     --   Proof: Use Exchangeability.Contractable + tail invariance under permutations
-    --   Alternative: Use condExp_shift_eq_condExp axiom from ShiftInvariance.lean
+    --   Alternative: Use condExp_shift_eq_condExp lemma from CondExpShiftInvariance.lean
     --
     -- Step (ii): Block averages have constant set integral on tail events
     --   Claim: ∀ A ∈ tailSigma, ∫_A blockAvg_n dμ = ∫_A f(X_0) dμ for all n
@@ -687,7 +687,7 @@ lemma cesaro_to_condexp_L2
     --
     -- INFRASTRUCTURE REQUIREMENTS:
     -- 1. Contractable/Exchangeable → set integral invariance on tail events
-    --    Key: Use condExp_shift_eq_condExp axiom from ShiftInvariance.lean
+    --    Key: Use condExp_shift_eq_condExp lemma from CondExpShiftInvariance.lean
     --    ∫_A f(X_j) dμ = ∫ 1_A · μ[f(X_j)|tail] dμ = ∫ 1_A · μ[f(X_0)|tail] dμ = ∫_A f(X_0) dμ
     -- 2. L² → set integral convergence (Hölder: |∫_A g dμ| ≤ μ(A)^{1/2} · ‖g‖₂)
     --    Use: tendsto_setIntegral_of_L1 or norm_setIntegral_le_of_norm_le_const_ae

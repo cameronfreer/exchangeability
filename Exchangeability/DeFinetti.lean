@@ -23,22 +23,28 @@ including the tail σ-algebra definition and the main theorem statements.
 
 ## Three proof approaches (Kallenberg 2005)
 
-This formalization keeps track of all three proofs of Theorem 1.1 highlighted by
-Kallenberg. The **complete proofs** are in separate files to manage dependencies:
+All three proofs of Theorem 1.1 from Kallenberg are formalized. They differ in
+machinery and target type:
 
-1. **First proof** (`ViaKoopman.lean`): Uses the Mean Ergodic Theorem via the
-   Koopman operator on L²(μ). Heavy dependencies (ergodic theory).
+1. **Martingale proof** (`ViaMartingale.lean`, re-exported by `DeFinetti.Theorem`
+   as the default): Aldous' reverse martingale argument with tail σ-algebra
+   factorization. The directing kernel is built via mathlib's `condExpKernel`.
+   Handles general standard Borel target spaces.
 
-2. **Second proof** (`ViaL2.lean`): Uses an elementary L² contractability bound
-   (Lemma 1.2). **Lightest dependencies** - this is the default.
+2. **L² proof** (`ViaL2.lean`): Uses the elementary L² contractability bound
+   (Kallenberg Lemma 1.2). Lightest dependencies among the three. Currently
+   stated for real-valued sequences via the Stieltjes-based directing-measure
+   construction.
 
-3. **Third proof** (`ViaMartingale.lean`) ✅ **COMPLETE**: Follows Aldous' 
-   martingale argument with reverse martingale convergence and tail σ-algebra 
-   factorization. Medium dependencies (directing measure axiomatized).
+3. **Koopman proof** (`ViaKoopman.lean`): Uses the Mean Ergodic Theorem via the
+   Koopman operator on L²(μ). Heavier ergodic-theory dependencies. Currently
+   stated for real-valued sequences.
 
-**To use the theorem**: `import Exchangeability.DeFinetti.Theorem` (gets the default proof).
+**To use the theorem**: `import Exchangeability.DeFinetti.Theorem` (gets the
+martingale proof).
 
-**To see a specific proof**: `import Exchangeability.DeFinetti.ViaL2` (or `ViaKoopman`, `ViaMartingale`).
+**To see a specific proof**: `import Exchangeability.DeFinetti.ViaL2`,
+`ViaKoopman`, or `ViaMartingale`.
 
 ## References
 
@@ -120,8 +126,8 @@ automatically.
 - **(iii) → (ii)**: `exchangeable_of_conditionallyIID` ✓ **PROVED** in `ConditionallyIID.lean`
 - **(ii) → (i)**: `contractable_of_exchangeable` ✓ **PROVED** in `Contractability.lean`
 
-**Main theorems are proved in `Exchangeability.DeFinetti.Theorem`** (default L² proof).
-Import that file to use the completed theorems.
+**Main theorems are proved in `Exchangeability.DeFinetti.Theorem`** (which re-exports
+the martingale proof as the default). Import that file to use the completed theorems.
 -/
 
 end Probability

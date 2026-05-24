@@ -136,16 +136,6 @@ lemma alphaIic_ae_tendsto_one_at_top
   filter_upwards [h_ae_eq, h_CE_conv] with ω h_eq h_conv
   exact h_conv.congr (fun n => (h_eq n).symm)
 
--- **Note on `cdf_from_alpha_limits`:**
--- The axiom in MoreL2Helpers.lean requires the CDF limits to hold for ALL ω.
--- However, from the L¹ construction, we can only prove a.e. convergence:
--- - `alphaIic_ae_tendsto_zero_at_bot`: a.e. convergence to 0 as t → -∞
--- - `alphaIic_ae_tendsto_one_at_top`: a.e. convergence to 1 as t → +∞
---
--- The axiom should be weakened to an a.e. statement, and the `directing_measure`
--- construction should handle the null set by using a default probability measure
--- for ω outside the "good" set. This is a standard technique in probability theory.
-
 /-!
 ## Directing Measure Definition
 
