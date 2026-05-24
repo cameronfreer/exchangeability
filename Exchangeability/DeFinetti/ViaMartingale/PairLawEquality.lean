@@ -357,9 +357,6 @@ lemma comap_consRV_eq_sup
     -- σ(t) ≤ σ(consRV x t)
     · exact comap_le_comap_consRV x t
 
--- NOTE: A lemma `pair_law_Xr_eq_of_contractable` was removed from here because it had
--- type errors (different codomain types). The correct pair law is `pair_law_eq_of_contractable`.
-
 /-- **Conditional expectation drop-info for X_r-indicator via true contraction.**
 
 This is the key lemma for restructuring block_coord_condIndep.
