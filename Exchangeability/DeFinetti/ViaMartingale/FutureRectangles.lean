@@ -30,7 +30,7 @@ open MeasureTheory
 
 namespace Exchangeability.DeFinetti.ViaMartingale
 
-open MartingaleHelpers
+open MartingaleHelpers Exchangeability.PathSpace
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
@@ -267,16 +267,16 @@ lemma measure_ext_of_future_rectangles
         refine ⟨0, A, hA, (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
         ext ⟨a, f⟩
         simp only [Set.mem_prod, Set.mem_univ, and_true]
-        show a ∈ A ↔ a ∈ A ∧ f ∈ MartingaleHelpers.cylinder 0 (fun _ => Set.univ)
-        rw [MartingaleHelpers.cylinder]
+        show a ∈ A ↔ a ∈ A ∧ f ∈ PathSpace.cylinder 0 (fun _ => Set.univ)
+        rw [PathSpace.cylinder]
         simp
 
       have h_snd : ∀ (r : ℕ) (C : Fin r → Set α),
           (∀ i, MeasurableSet (C i)) →
-          MeasurableSet[MeasurableSpace.generateFrom S] (Prod.snd ⁻¹' MartingaleHelpers.cylinder r C) := by
+          MeasurableSet[MeasurableSpace.generateFrom S] (Prod.snd ⁻¹' PathSpace.cylinder r C) := by
         intro r C hC
-        have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' MartingaleHelpers.cylinder r C
-            = Set.univ ×ˢ MartingaleHelpers.cylinder r C := by
+        have : (Prod.snd : α × (ℕ → α) → ℕ → α) ⁻¹' PathSpace.cylinder r C
+            = Set.univ ×ˢ PathSpace.cylinder r C := by
           ext ⟨a, f⟩
           simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ, true_and]
         rw [this]
@@ -304,9 +304,9 @@ lemma measure_ext_of_future_rectangles
               let C : Fin r → Set α := fun j => if j.val = i then A else Set.univ
               have hC_meas : ∀ j, MeasurableSet (C j) := fun j => by
                 simp only [C]; split_ifs <;> [exact hA; exact MeasurableSet.univ]
-              have h_eq : ((fun f : ℕ → α => f i) ⁻¹' A) = MartingaleHelpers.cylinder r C := by
+              have h_eq : ((fun f : ℕ → α => f i) ⁻¹' A) = PathSpace.cylinder r C := by
                 ext f
-                simp only [C, r, Set.mem_preimage, MartingaleHelpers.cylinder]
+                simp only [C, r, Set.mem_preimage, PathSpace.cylinder]
                 constructor
                 · intro hf j
                   by_cases h : j.val = i
@@ -359,7 +359,7 @@ lemma measure_ext_of_future_rectangles
     refine ⟨0, Set.univ, MeasurableSet.univ,
       (fun _ => Set.univ), (fun _ => MeasurableSet.univ), ?_⟩
     ext ⟨a, f⟩
-    simp only [Bseq, Set.mem_prod, Set.mem_univ, true_and, MartingaleHelpers.cylinder]
+    simp only [Bseq, Set.mem_prod, Set.mem_univ, true_and, PathSpace.cylinder]
     simp
   have hμB : ∀ n, μ (Bseq n) ≠ ⊤ := fun n => by simp only [Bseq]; exact measure_ne_top μ Set.univ
 
