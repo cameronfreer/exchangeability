@@ -74,7 +74,6 @@ omit [MeasurableSpace Ω] in
 /-- The contraction property: σ(tailRV t) ≤ σ(t).
 
 This is the key property for Kallenberg 1.3: tail gives a coarser σ-algebra. -/
-@[nolint unusedArguments]
 lemma comap_tailRV_le {t : Ω → ℕ → α} :
     MeasurableSpace.comap (tailRV t) inferInstance ≤
     MeasurableSpace.comap t inferInstance := by
@@ -88,7 +87,6 @@ omit [MeasurableSpace Ω] in
 /-- For W' = consRV x W, we have σ(W) ≤ σ(W').
 
 This is the contraction for Kallenberg 1.3 when W' = cons(X_r, W). -/
-@[nolint unusedArguments]
 lemma comap_le_comap_consRV (x : Ω → α) (t : Ω → ℕ → α) :
     MeasurableSpace.comap t inferInstance ≤
     MeasurableSpace.comap (consRV x t) inferInstance := by

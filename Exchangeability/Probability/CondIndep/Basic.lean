@@ -96,7 +96,6 @@ def CondIndep {Ω α β γ : Type*}
 
 If Y ⊥⊥_W Z, then Z ⊥⊥_W Y. This follows immediately from commutativity of multiplication.
 -/
-@[nolint unusedArguments]
 theorem condIndep_symm (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ) :
     CondIndep μ Y Z W ↔ CondIndep μ Z Y W := by

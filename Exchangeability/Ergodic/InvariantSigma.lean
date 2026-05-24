@@ -89,7 +89,6 @@ variable {α : Type*} [MeasurableSpace α]
 
 /-- Functions that are `AEStronglyMeasurable` with respect to the invariant σ-algebra are
 almost everywhere fixed by the shift. -/
-@[nolint unusedArguments]
 lemma shiftInvariantSigma_aestronglyMeasurable_ae_shift_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {f : Ω[α] → ℝ}

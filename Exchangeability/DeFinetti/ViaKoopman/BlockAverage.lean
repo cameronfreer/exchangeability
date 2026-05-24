@@ -60,7 +60,6 @@ def blockAvg (m n : ℕ) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) : ℝ :=
   else (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j)))
 
 omit [MeasurableSpace α] in
-@[nolint unusedArguments]
 lemma blockAvg_pos_n {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α → ℝ) (ω : ℕ → α) :
     blockAvg m n k f ω = (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω (k.val * n + j))) := by
   simp [blockAvg, Nat.pos_iff_ne_zero.mp hn]
@@ -99,7 +98,6 @@ omit [MeasurableSpace α] in
 
 If |f x| ≤ C for all x, then |blockAvg m n k f ω| ≤ C for all ω.
 This follows because blockAvg is a convex combination of values of f. -/
-@[nolint unusedArguments]
 lemma blockAvg_abs_le {m n : ℕ} (k : Fin m) {f : α → ℝ} {C : ℝ} (hC : 0 ≤ C)
     (hf_bd : ∀ x, |f x| ≤ C) (ω : Ω[α]) :
     |blockAvg m n k f ω| ≤ C := by
@@ -268,7 +266,6 @@ Given strict monotone k : Fin m → ℕ, contractability says:
 `∫ ∏ᵢ fᵢ(ωᵢ) dμ = ∫ ∏ᵢ fᵢ(ω(k(i))) dμ`
 
 This is the fundamental identity that lets us swap between original and reindexed coordinates. -/
-@[nolint unusedArguments]
 lemma integral_prod_reindex_of_contractable
     (hContract : ∀ (m' : ℕ) (k : Fin m' → ℕ), StrictMono k →
         Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m') => ω i.val) μ)
@@ -313,7 +310,6 @@ This is proved by:
 1. For each j : Fin m → Fin n, contractability gives ∫ ∏ fᵢ(ωᵢ) = ∫ ∏ fᵢ(ω(ρⱼ(i)))
 2. Sum over all j and divide by n^m to get block averages
 -/
-@[nolint unusedArguments]
 lemma integral_prod_eq_integral_blockAvg
     (_hσ : MeasurePreserving shift μ μ)
     (hContract : ∀ (m' : ℕ) (k : Fin m' → ℕ), StrictMono k →

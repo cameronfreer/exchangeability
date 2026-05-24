@@ -50,7 +50,6 @@ in current mathlib (dealing with representatives that differ on null sets for di
 - Kallenberg (2005), *Foundations of Modern Probability*, for general treatment
 - The result follows from properties of L² projections onto closed subspaces
 -/
-@[nolint unusedArguments]
 lemma aestronglyMeasurable_iInf_antitone
     {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
     {m : ℕ → MeasurableSpace α}
@@ -128,7 +127,6 @@ then `g` is AEStronglyMeasurable[m] (with the witness being the limsup, which is
 
 This is the key lemma for "closedness" of L²[m] under L² limits:
 we extract an a.e.-convergent subsequence and apply this. -/
-@[nolint unusedArguments]
 lemma aestronglyMeasurable_sub_of_tendsto_ae
     {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
     {m : MeasurableSpace α} (_hm : m ≤ m₀)

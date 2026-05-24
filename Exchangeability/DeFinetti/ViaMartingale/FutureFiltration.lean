@@ -85,7 +85,6 @@ lemma tailSigma_le {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
   iInf_le_of_le 0 (revFiltration_le X hX 0)
 
 /-- Tail σ-algebra is sub-σ-algebra of future filtration. -/
-@[nolint unusedArguments]
 lemma tailSigma_le_futureFiltration {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     (X : ℕ → Ω → α) (m : ℕ) :
     tailSigma X ≤ futureFiltration X m :=

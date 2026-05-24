@@ -56,7 +56,6 @@ lemma blockAvg_measurable
   unfold blockAvg
   fun_prop
 
-@[nolint unusedArguments]
 lemma blockAvg_abs_le_one
     {Ω α : Type*} [MeasurableSpace Ω]
     (f : α → ℝ) (X : ℕ → Ω → α)
