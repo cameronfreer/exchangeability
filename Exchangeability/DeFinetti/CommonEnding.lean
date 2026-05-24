@@ -219,10 +219,6 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     _ = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := h_bridge
     _ = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := rhs_eq
 
--- Note: rectangles_isPiSystem has been moved to Exchangeability.Probability.MeasureKernels
-
--- Note: rectangles_generate_pi_sigma has been moved to Exchangeability.Probability.MeasureKernels
-
 /-- Pushforward of a measure through coordinate selection equals the marginal distribution.
 This connects the map in the ConditionallyIID definition to the probability of events.
 
@@ -237,8 +233,6 @@ lemma map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ 
   rw [Measure.map_apply h_meas hB]
   -- The preimage is definitionally equal to the set we want
   rfl
-
--- Note: aemeasurable_measure_pi has been moved to Exchangeability.Probability.MeasureKernels
 
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
