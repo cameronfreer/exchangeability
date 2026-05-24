@@ -396,7 +396,6 @@ If the measure is invariant under reindexing (μ = μ ∘ reindexBlock⁻¹) and
 under reindexing (s = reindexBlock⁻¹(s)), then ∫_s f ∘ reindexBlock = ∫_s f.
 
 This is the key lemma that replaces "conditional contractability". -/
-@[nolint unusedArguments]
 lemma setIntegral_comp_reindexBlock_eq
     (hμ : Measure.map (reindexBlock (α := α) m n j) μ = μ)
     {s : Set (Ω[α])} (hs_meas : MeasurableSet s)

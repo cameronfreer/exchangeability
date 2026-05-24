@@ -123,7 +123,6 @@ end Directing
 
 /-- General form: All `X_n` have the same conditional law `ν`.
 This follows from `extreme_members_equal_on_tail`. -/
-@[nolint unusedArguments]
 lemma conditional_law_eq_of_X0_marginal
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]

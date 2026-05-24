@@ -100,7 +100,6 @@ set_option linter.unusedVariables false in
 
 This shows that multiplying an integrable function by a bounded function preserves integrability.
 The bound `|f * g| ≤ C * |g|` follows from `|f| ≤ C`. -/
-@[nolint unusedArguments]
 lemma Integrable.of_abs_bounded {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
     {f g : Ω → ℝ} (hg : Integrable g μ) (C : ℝ) (hC : 0 ≤ C)
     (h_bound : ∀ ω, |f ω| ≤ C)
@@ -380,7 +379,6 @@ These lemmas support the L¹ Cesàro convergence framework. -/
 
 /-- If `Z` is a.e.-bounded and measurable and `Y` is integrable,
     then `Z*Y` is integrable (finite measure suffices). -/
-@[nolint unusedArguments]
 lemma integrable_mul_of_ae_bdd_left
     {μ : Measure (Ω[α])} [IsFiniteMeasure μ]
     {Z Y : Ω[α] → ℝ}

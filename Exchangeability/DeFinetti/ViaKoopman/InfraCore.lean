@@ -55,7 +55,6 @@ noncomputable section
 
 /-- Coercion of finite sums in Lp is almost everywhere equal to pointwise sums.
     This is the measure-space analogue of lp.coeFn_sum (which is for sequence spaces). -/
-@[nolint unusedArguments]
 lemma coeFn_finset_sum
   {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
   {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]

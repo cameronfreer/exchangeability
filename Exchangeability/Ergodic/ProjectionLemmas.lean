@@ -110,7 +110,6 @@ private lemma comp_idem_to_elem (P : E →L[𝕜] E) (hP_idem : P.comp P = P) :
   change P * P = P
   simpa [ContinuousLinearMap.mul_def] using hP_idem
 
-@[nolint unusedArguments]
 theorem orthogonalProjections_same_range_eq
     [CompleteSpace E]
     (P Q : E →L[𝕜] E)
@@ -160,7 +159,6 @@ orthogonality of the projection.
 to verify they are symmetric. This lemma provides that verification for projections
 constructed via orthogonal projection onto a subspace.
 -/
-@[nolint unusedArguments]
 theorem subtypeL_comp_orthogonalProjection_isSymmetric
     [CompleteSpace E]
     (S : Submodule 𝕜 E) [S.HasOrthogonalProjection] :

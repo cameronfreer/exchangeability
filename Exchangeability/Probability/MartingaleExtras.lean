@@ -37,7 +37,6 @@ variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
 /-- Fatou's lemma on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit.
 
 If `u n x → g x` a.e., then `∫⁻ ‖g‖ ≤ liminf (∫⁻ ‖u n‖)`. -/
-@[nolint unusedArguments]
 lemma lintegral_fatou_ofReal_norm
   {α β : Type*} [MeasurableSpace α] {μ : Measure α}
   [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]

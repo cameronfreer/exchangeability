@@ -48,7 +48,6 @@ namespace TailSigma
 @[reducible] def tailSigma := @Exchangeability.Tail.tailProcess
 
 -- Re-export the lemmas for backward compatibility
-@[nolint unusedArguments]
 lemma antitone_tailFamily {Ω β : Type*} [MeasurableSpace Ω] [MeasurableSpace β]
     (X : ℕ → Ω → β) : Antitone (tailFamily X) :=
   Exchangeability.Tail.tailFamily_antitone X
