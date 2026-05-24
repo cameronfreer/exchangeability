@@ -32,6 +32,24 @@ open Exchangeability
 
 variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
+/-- Clipping `b` to `[0,1]` can only bring it closer to anything already in `[0,1]`.
+
+Internal helper: factors out the case analysis that previously appeared in
+`alphaIic_ae_eq_alphaIicCE`. The cleanest route is via mathlib's
+`LipschitzWith.projIcc`: `Set.projIcc 0 1` is `1`-Lipschitz, equals
+`max 0 (min 1 ·)` after coercion, and fixes any input already in `[0,1]`. -/
+private lemma abs_sub_clip01_le_of_mem {a b : ℝ} (ha : a ∈ Set.Icc (0 : ℝ) 1) :
+    |a - max 0 (min 1 b)| ≤ |a - b| := by
+  have h_proj_a : ((Set.projIcc (0:ℝ) 1 zero_le_one a) : ℝ) = a :=
+    congrArg Subtype.val (Set.projIcc_of_mem zero_le_one ha)
+  have h_proj_b : ((Set.projIcc (0:ℝ) 1 zero_le_one b) : ℝ) = max 0 (min 1 b) := by
+    simp [Set.projIcc]
+  have h_lip :=
+    (LipschitzWith.projIcc (a := (0:ℝ)) (b := 1) zero_le_one).dist_le_mul a b
+  simp only [NNReal.coe_one, one_mul, Real.dist_eq, Subtype.dist_eq] at h_lip
+  rw [h_proj_a, h_proj_b] at h_lip
+  exact h_lip
+
 /-- Cesàro averages of `indIic t`-valued sequences are bounded by `1` in absolute value.
 
 Internal helper: the proof body bound `|(1/m) · ∑ k : Fin m, indIic t (h k)| ≤ 1` recurred
@@ -128,30 +146,9 @@ lemma alphaIic_ae_eq_alphaIicCE
             _ = (1 / (m : ℝ)) * m := by simp
             _ = 1 := by field_simp [hm_cast.ne']
 
-    -- Use the fact that clipping can only make things closer when A n m ∈ [0,1]
-    -- Since A n m ∈ [0,1], we have |A - clip(alpha)| ≤ |A - alpha| for all alpha
-    have h_clip_le : ∀ ω, |A n m ω - max 0 (min 1 (alpha ω))| ≤ |A n m ω - alpha ω| := by
-      intro ω
-      obtain ⟨hA0, hA1⟩ := hA_in_01 ω
-      by_cases halpha : alpha ω < 0
-      · calc |A n m ω - max 0 (min 1 (alpha ω))|
-            = |A n m ω - max 0 (alpha ω)| := by rw [min_eq_right (by linarith : alpha ω ≤ 1)]
-          _ = |A n m ω - 0| := by rw [max_eq_left (by linarith : 0 ≥ alpha ω)]
-          _ = A n m ω := by rw [sub_zero, abs_of_nonneg hA0]
-          _ ≤ A n m ω - alpha ω := by linarith
-          _ ≤ |A n m ω - alpha ω| := le_abs_self _
-      · by_cases halpha1 : 1 < alpha ω
-        · calc |A n m ω - max 0 (min 1 (alpha ω))|
-              = |A n m ω - max 0 1| := by rw [min_eq_left (by linarith : 1 ≤ alpha ω)]
-            _ = |A n m ω - 1| := by rw [max_eq_right (by linarith : (0 : ℝ) ≤ 1)]
-            _ = 1 - A n m ω := by
-                rw [abs_of_nonpos (by linarith : A n m ω - 1 ≤ 0)]
-                ring
-            _ ≤ alpha ω - A n m ω := by linarith
-            _ ≤ |A n m ω - alpha ω| := by rw [abs_sub_comm]; exact le_abs_self _
-        · -- alpha ∈ [0,1], so clipping does nothing
-          push Not at halpha halpha1
-          rw [min_comm, min_eq_left halpha1, max_eq_right halpha]
+    -- Clipping `alpha` to [0,1] can only bring it closer to A n m ω (which is in [0,1]).
+    have h_clip_le : ∀ ω, |A n m ω - max 0 (min 1 (alpha ω))| ≤ |A n m ω - alpha ω| :=
+      fun ω => abs_sub_clip01_le_of_mem (hA_in_01 ω)
 
     -- Prove integrability of A n m
     have hA_int : Integrable (A n m) μ := by
