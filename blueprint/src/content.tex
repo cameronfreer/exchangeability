@@ -96,7 +96,7 @@ We formalize \emph{all three proofs} from Kallenberg (2005):
   The (one-sided) shift-invariant $\sigma$-algebra on path space $\mathbb{N} \to \alpha$
   consists of measurable sets $S$ such that $\theta^{-1}(S) = S$, where $\theta$ is the
   left shift. A two-sided counterpart on $\mathbb{Z} \to \alpha$,
-  \texttt{ViaKoopman.shiftInvariantSigmaℤ}, is introduced separately as scaffolding for
+  \texttt{ViaKoopman.shiftInvariantSigma}$\mathbb{Z}$, is introduced separately as scaffolding for
   the Koopman route's lag-constancy lemmas.
 \end{definition}
 
@@ -322,15 +322,13 @@ with $L^2$ integrability (i.e., $\mathbb{E}[X_i^2] < \infty$ for all $i$).
 
 \subsection{Cesaro Convergence}
 
-\begin{remark}[Recorded Kallenberg L$^2$ bound]
-  \label{rem:kallenberg_L2_bound}
-  Kallenberg's Lemma 1.2 gives an L$^2$ distance bound for weighted averages of an
-  \emph{exchangeable} sequence. It is recorded in the Lean library as
-  \texttt{Exchangeability.DeFinetti.ViaL2.kallenberg\_L2\_bound} for completeness, but it
-  is not on the active proof path — the route below uses the contractability-only
-  variant \ref{lem:l2_bound} so that the proof of Contractable $\Rightarrow$
-  Conditionally i.i.d.\ does not assume exchangeability.
-\end{remark}
+\paragraph{Recorded Kallenberg L$^2$ bound.}
+Kallenberg's Lemma 1.2 gives an L$^2$ distance bound for weighted averages of an
+\emph{exchangeable} sequence. It is recorded in the Lean library as
+\texttt{Exchangeability.DeFinetti.ViaL2.kallenberg\_L2\_bound} for completeness, but it
+is not on the active proof path — the route below uses the contractability-only
+variant \ref{lem:l2_bound} so that the proof of Contractable $\Rightarrow$
+Conditionally i.i.d.\ does not assume exchangeability.
 
 \begin{lemma}[Block averages are Cauchy in L$^2$]
   \label{lem:blockAvg_cauchy_in_L2}
