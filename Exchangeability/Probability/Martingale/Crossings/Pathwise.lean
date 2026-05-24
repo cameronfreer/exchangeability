@@ -40,12 +40,6 @@ variable {𝔽 : ℕ → MeasurableSpace Ω}
 -- `negProcess` and `revProcess` are imported from
 -- Exchangeability.Probability.TimeReversalCrossing
 
-@[simp] lemma revProcess_apply {Ω : Type*} (X : ℕ → Ω → ℝ) (N n : ℕ) (ω : Ω) :
-  revProcess X N n ω = X (N - n) ω := rfl
-
-@[simp] lemma negProcess_apply {Ω : Type*} (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) :
-  negProcess X n ω = - X n ω := rfl
-
 /-- Downcrossings before N: defined as upcrossings of negated process with flipped interval.
 Returns a random variable Ω → ℕ. -/
 noncomputable def downcrossingsBefore {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) (N : ℕ) : Ω → ℕ :=
@@ -61,13 +55,13 @@ lemma up_neg_flip_eq_down {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   upcrossings (-b) (-a) (negProcess X) = downcrossings a b X := by
   funext ω; simp [upcrossings, downcrossings, downcrossingsBefore]
 
-/-- Double negation is identity. -/
-@[simp] lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
+/-- Double negation is identity (used by `simp` below). -/
+@[simp] private lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
     negProcess (negProcess X) = X := by ext; simp [negProcess]
 
 /-- **Identity 2:** Downcrossings of negated process = upcrossings of original.
 Negation flips crossing direction: down(-b, -a, -X) = up(a, b, X). -/
-lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
+private lemma down_neg_flip_eq_up {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
   downcrossings (-b) (-a) (negProcess X) = upcrossings a b X := by
   unfold downcrossings downcrossingsBefore upcrossings; simp
 

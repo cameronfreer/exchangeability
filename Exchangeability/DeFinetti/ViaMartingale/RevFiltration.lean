@@ -56,11 +56,6 @@ lemma revFiltration_le (X : ℕ → Ω → α) (hX : ∀ n, Measurable (X n)) (m
   ⨅ m, revFiltration X m
 
 omit [MeasurableSpace Ω] in
-@[simp]
-lemma tailSigma_eq_iInf_rev (X : ℕ → Ω → α) :
-    tailSigma X = ⨅ m, revFiltration X m := rfl
-
-omit [MeasurableSpace Ω] in
 /-- Bridge to canonical tail definition: ViaMartingale's `revFiltration` matches the pattern
     required by `Tail.tailProcess_eq_iInf_revFiltration`. -/
 lemma revFiltration_eq_tailFamily (X : ℕ → Ω → α) (m : ℕ) :

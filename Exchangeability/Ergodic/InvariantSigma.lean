@@ -247,7 +247,7 @@ noncomputable abbrev metProjectionShift
     (hσ : MeasurePreserving shift μ μ) : Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
   metProjection shift hσ
 
-lemma metProjectionShift_apply
+private lemma metProjectionShift_apply
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
     let hclosed := fixedSubspace_closed (μ := μ) hσ
@@ -259,7 +259,7 @@ lemma metProjectionShift_apply
   -- Now definitionally equal since fixedSubspace = fixedSpace (koopman shift hσ)
   rfl
 
-lemma metProjectionShift_mem
+private lemma metProjectionShift_mem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) (f : Lp ℝ 2 μ) :
     metProjectionShift (μ := μ) hσ f ∈ fixedSubspace hσ := by
@@ -271,7 +271,7 @@ lemma metProjectionShift_mem
   rw [metProjectionShift_apply]
   simp
 
-lemma metProjectionShift_fixed
+private lemma metProjectionShift_fixed
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) {g : Lp ℝ 2 μ}
     (hg : g ∈ fixedSubspace hσ) :
@@ -290,7 +290,7 @@ lemma metProjectionShift_fixed
   rw [metProjectionShift_apply]
   simp [hproj_val]
 
-lemma metProjectionShift_idem
+private lemma metProjectionShift_idem
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     (metProjectionShift (μ := μ) hσ).comp (metProjectionShift (μ := μ) hσ) =
@@ -302,7 +302,7 @@ lemma metProjectionShift_idem
   simp [ContinuousLinearMap.coe_comp', Function.comp_apply,
     metProjectionShift_fixed (μ := μ) hσ hf_mem]
 
-lemma metProjectionShift_range
+private lemma metProjectionShift_range
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     Set.range (metProjectionShift (μ := μ) hσ) =
@@ -319,7 +319,7 @@ lemma metProjectionShift_range
     refine ⟨x, ?_⟩
     simpa using metProjectionShift_fixed (μ := μ) hσ hx
 
-lemma metProjectionShift_isSymmetric
+private lemma metProjectionShift_isSymmetric
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ) :
     (metProjectionShift (μ := μ) hσ).IsSymmetric := by

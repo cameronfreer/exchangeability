@@ -13,7 +13,6 @@ import Mathlib.Probability.Independence.Kernel.IndepFun
 import Exchangeability.Ergodic.KoopmanMeanErgodic
 import Exchangeability.Ergodic.InvariantSigma
 import Exchangeability.Ergodic.ProjectionLemmas
-import Exchangeability.Ergodic.BirkhoffAvgCLM
 import Exchangeability.DeFinetti.CommonEnding
 import Exchangeability.DeFinetti.MartingaleHelpers
 import Exchangeability.ConditionallyIID
