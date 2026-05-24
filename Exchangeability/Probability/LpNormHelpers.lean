@@ -18,7 +18,6 @@ dependencies.
 
 * `eLpNorm_two_sq_eq_integral_sq`: For real functions in L², eLpNorm² equals integral of square
 * `eLpNorm_lt_of_integral_sq_lt`: If ∫ f² < r², then eLpNorm f 2 < r
-* `memLp_of_abs_le_const`: Bounded functions are in Lp on finite measures
 
 These lemmas bridge the gap between the ENNReal-valued eLpNorm and Real-valued integrals,
 which is essential for applying analysis results in probability theory.
@@ -146,37 +145,18 @@ lemma eLpNorm_lt_of_integral_sq_lt
 
 /-! ### Membership in Lp Spaces -/
 
-/-- **Functions bounded by a constant are in Lp.**
-
-If |f| ≤ M almost everywhere, then f ∈ Lp for any p ∈ [1, ∞) on a finite measure space.
-
-This is a standard result used to show block averages of bounded functions are in L². -/
-lemma memLp_of_abs_le_const
-    [IsFiniteMeasure μ] {f : Ω → ℝ} {M : ℝ}
-    (hf_meas : Measurable f)
-    (hf_bdd : ∀ᵐ ω ∂μ, |f ω| ≤ M)
-    (p : ℝ≥0∞) (_ : 1 ≤ p) (_ : p ≠ ∞) :
-    MemLp f p μ := by
-  -- Use MemLp.of_bound from mathlib
-  apply MemLp.of_bound hf_meas.aestronglyMeasurable M
-  apply Filter.Eventually.mono hf_bdd
-  intro ω hω
-  exact (Real.norm_eq_abs _).le.trans hω
-
 /-- **Block average of bounded function is in L².**
 
-Special case: If f is bounded by M, then f is in L² on a probability space.
-This is used repeatedly in Cesàro convergence proofs. -/
+If `|f| ≤ M` everywhere on a probability space, then `f ∈ L²`. Used repeatedly in
+Cesàro convergence proofs. -/
 lemma memLp_two_of_bounded
     [IsProbabilityMeasure μ] {f : Ω → ℝ} {M : ℝ}
     (hf_meas : Measurable f)
     (hf_bdd : ∀ ω, |f ω| ≤ M) :
     MemLp f 2 μ := by
-  apply memLp_of_abs_le_const (M := M) hf_meas
-  · filter_upwards []
-    exact hf_bdd
-  · norm_num
-  · norm_num
+  refine MemLp.of_bound hf_meas.aestronglyMeasurable M ?_
+  filter_upwards with ω
+  exact (Real.norm_eq_abs _).le.trans (hf_bdd ω)
 
 end MeasureTheory
 

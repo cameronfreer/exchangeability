@@ -110,54 +110,7 @@ lemma firstRSigma_le_ambient
   obtain ⟨t, ht, rfl⟩ := hs
   exact (measurable_firstRMap X r hX) ht
 
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- The empty cylinder (r = 0) is the whole space. -/
-@[simp]
-lemma firstRCylinder_zero (X : ℕ → Ω → α) (C : Fin 0 → Set α) :
-    firstRCylinder X 0 C = Set.univ := by
-  ext ω
-  simp [firstRCylinder]
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- Cylinder membership characterization. -/
-lemma mem_firstRCylinder_iff (X : ℕ → Ω → α) (r : ℕ) (C : Fin r → Set α) (ω : Ω) :
-    ω ∈ firstRCylinder X r C ↔ ∀ i : Fin r, X i ω ∈ C i :=
-  Iff.rfl
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- firstRCylinder on universal sets is the whole space. -/
-lemma firstRCylinder_univ (X : ℕ → Ω → α) (r : ℕ) :
-    firstRCylinder X r (fun _ => Set.univ) = Set.univ := by
-  ext ω; simp [firstRCylinder]
-
-omit [MeasurableSpace Ω] [MeasurableSpace α] in
-/-- Intersection of firstRCylinders equals coordinate-wise intersection. -/
-lemma firstRCylinder_inter (X : ℕ → Ω → α) {r : ℕ} {C D : Fin r → Set α} :
-    firstRCylinder X r C ∩ firstRCylinder X r D = firstRCylinder X r (fun i => C i ∩ D i) := by
-  ext ω
-  simp [firstRCylinder, Set.mem_inter_iff]
-  constructor
-  · intro ⟨hC, hD⟩ i
-    exact ⟨hC i, hD i⟩
-  · intro h
-    exact ⟨fun i => (h i).1, fun i => (h i).2⟩
-
 end FirstBlockCylinder
-
-section CylinderBridge
-
-variable {α : Type*} [MeasurableSpace α]
-
-omit [MeasurableSpace α] in
-@[simp] lemma mem_cylinder_iff {r : ℕ} {C : Fin r → Set α} {f : ℕ → α} :
-    f ∈ cylinder (α:=α) r C ↔ ∀ i : Fin r, f i ∈ C i := Iff.rfl
-
-omit [MeasurableSpace α] in
-/-- Empty cylinder is the whole space. -/
-@[simp] lemma cylinder_zero : cylinder (α:=α) 0 (fun _ => Set.univ) = Set.univ := by
-  ext f; simp [cylinder]
-
-end CylinderBridge
 
 end PathSpace
 end Exchangeability

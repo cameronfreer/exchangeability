@@ -38,7 +38,7 @@ variable [MeasurableSpace Ω] [MeasurableSpace α] [MeasurableSpace β] [Measura
 
 For φ = c • 1_A and ψ = d • 1_B, the factorization follows by extracting scalars
 and applying the CondIndep definition. -/
-lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
+private lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)
     (c : ℝ) (A : Set α) (hA : MeasurableSet A)
@@ -97,7 +97,7 @@ lemma condIndep_indicator (μ : Measure Ω) [IsProbabilityMeasure μ]
 If Y ⊥⊥_W Z for indicators, extend to simple functions via linearity.
 Uses single induction avoiding nested complexity. -/
 -- Helper lemma: φ = c • 1_A with arbitrary ψ
-lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
+private lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)
     (c : ℝ) (A : Set α) (hA : MeasurableSet A)
@@ -171,7 +171,7 @@ lemma condIndep_indicator_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
             exact SimpleFunc.integrable_of_isFiniteMeasure ψ2
           exact Filter.EventuallyEq.mul Filter.EventuallyEq.rfl (condExp_add hψ1_int hψ2_int _).symm
 
-lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
+private lemma condIndep_simpleFunc (μ : Measure Ω) [IsProbabilityMeasure μ]
     (Y : Ω → α) (Z : Ω → β) (W : Ω → γ)
     (hCI : CondIndep μ Y Z W)
     (φ : SimpleFunc α ℝ) (ψ : SimpleFunc β ℝ)

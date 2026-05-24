@@ -109,7 +109,7 @@ lemma gRep_measurable {g0 : Ω[α] → ℝ} (hg0 : Measurable g0) :
   simpa [gRep, gLimsupE] using this
 
 omit [MeasurableSpace α] in
-lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
+private lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
     ∀ ω, gRep g0 (shift ω) = gRep g0 ω := by
   intro ω
   have hlimsupEq :
@@ -121,7 +121,7 @@ lemma gRep_shiftInvariant {g0 : Ω[α] → ℝ} :
     using congrArg EReal.toReal hlimsupEq
 
 omit [MeasurableSpace α] in
-lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
+private lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
     (hconst : ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 ω = g0 ω := by
   have hlim :
@@ -134,7 +134,7 @@ lemma gRep_eq_of_constant_orbit {g0 : Ω[α] → ℝ} {ω : Ω[α]}
     simp [hfunext, limsup_const]
   simpa [gRep, gLimsupE] using congrArg EReal.toReal hlim
 
-lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
+private lemma gRep_ae_eq_of_constant_orbit {g0 : Ω[α] → ℝ}
     {μ : Measure (Ω[α])}
     (hconst : ∀ᵐ ω ∂μ, ∀ n : ℕ, g0 (shift^[n] ω) = g0 ω) :
     gRep g0 =ᵐ[μ] g0 := by

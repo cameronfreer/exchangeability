@@ -295,7 +295,7 @@ The key observation: For antitone 𝔽 (𝔽 n decreases as n increases):
 - Hence Xlim is F_inf-measurable (up to a.e. equality)
 
 This is crucial for showing that reverse martingale limits satisfy μ[Xlim | F_inf] = Xlim. -/
-lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
+private lemma aestronglyMeasurable_iInf_of_tendsto_ae_antitone
     {𝔽 : ℕ → MeasurableSpace Ω} (h_antitone : Antitone 𝔽)
     (h_le : ∀ n, 𝔽 n ≤ (inferInstance : MeasurableSpace Ω))
     {g : ℕ → Ω → ℝ} {Xlim : Ω → ℝ}
