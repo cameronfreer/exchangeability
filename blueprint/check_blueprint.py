@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Blueprint consistency checks.
 
-Runs three checks against `blueprint/src/content.tex` and `blueprint/lean_decls`:
+Runs four checks against `blueprint/src/content.tex` and `blueprint/lean_decls`:
 
   1. Every `\\lean{X}` in content.tex has X listed in `blueprint/lean_decls`.
   2. Every entry in `blueprint/lean_decls` is `\\lean{}`-cited from content.tex.
   3. Every `\\ref{Y}` / `\\uses{Y, Z, ...}` target resolves to a `\\label{Y}`
      defined in content.tex.
-
-Plus a duplicate-label check.
+  4. No duplicate `\\label{}` definitions.
 
 Exits 0 on clean, 1 on any drift. Designed to run in CI alongside
 `lake exe checkdecls blueprint/lean_decls`.

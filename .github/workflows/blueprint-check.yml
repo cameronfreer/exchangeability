@@ -7,6 +7,7 @@ on:
       - 'blueprint/lean_decls'
       - 'blueprint/check_blueprint.py'
       - '.github/workflows/blueprint-check.yml'
+      - '.github/workflows/blueprint.yml'
 
 permissions:
   contents: read
