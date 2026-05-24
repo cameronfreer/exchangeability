@@ -53,7 +53,7 @@ Concretely: `directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)
 noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    {α : Type*} [MeasurableSpace α] [StandardBorelSpace α] [Nonempty α]
+    {α : Type*} [MeasurableSpace α]
     (X : ℕ → Ω → α) (_hX : ∀ n, Measurable (X n)) (ω : Ω) : Measure α :=
   (ProbabilityTheory.condExpKernel μ (tailSigma X) ω).map (X 0)
 
