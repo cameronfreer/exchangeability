@@ -194,9 +194,12 @@ lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpac
 
 /-- AE-measurable version of `measurable_measure_pi`.
 
-This is the version originally proved in `CommonEnding.lean`. The measurable version
-`measurable_measure_pi` is stronger and generally more useful, but this AE version
-is kept for compatibility.
+`measurable_measure_pi` is the stronger result; this AE form is what the
+`Measure.bind_apply` consumers actually want (see
+`CommonEnding.conditional_iid_from_directing_measure`,
+`ViaMartingale/FiniteProduct.bind_apply_univ_pi`, and
+`BridgeProperty.indicator_product_bridge_contractable`). Not a compatibility
+shim — these call sites need the AE form directly.
 
 Note: The hypothesis only requires measurability for **measurable** sets, matching
 what `Kernel.measurable_coe` provides. This is the standard requirement in measure theory.

@@ -18,9 +18,6 @@ These are general-purpose utilities for:
 - Sequence shifting and manipulation
 - Finset ordering and monotonicity
 - Indicator algebra
-- Re-exports from PathSpace.CylinderHelpers for backward compatibility
-
-All lemmas are complete (no sorries) and have been validated for code quality.
 
 ## Main sections
 
@@ -28,7 +25,6 @@ All lemmas are complete (no sorries) and have been validated for code quality.
 * `SequenceShift`: Sequence shifting operations
 * `FinsetOrder`: Finset ordering and strict monotonicity lemmas
 * `IndicatorAlgebra`: Helper lemmas for indicator functions
-* Re-exports from `PathSpace.CylinderHelpers` for compatibility
 -/
 
 noncomputable section
@@ -37,13 +33,6 @@ open scoped MeasureTheory
 namespace Exchangeability
 namespace DeFinetti
 namespace MartingaleHelpers
-
--- Re-export cylinder infrastructure from PathSpace for backward compatibility
-export PathSpace (cylinder cylinder_measurable firstRMap firstRSigma firstRCylinder
-  firstRCylinder_measurable_in_firstRSigma firstRCylinder_measurable_ambient
-  measurable_firstRMap firstRSigma_le_ambient firstRCylinder_zero
-  mem_firstRCylinder_iff firstRCylinder_univ firstRCylinder_inter mem_cylinder_iff
-  cylinder_zero)
 
 open MeasureTheory
 
