@@ -295,8 +295,8 @@ lemma optionB_Step4b_AB_close
     -- A n ω - B n ω = S/(n+1) + g(ω n)/(n+1) - S/n
     --               = -S/(n(n+1)) + g(ω n)/(n+1)
     calc |1 / (↑n + 1) * (S + g (ω n)) - 1 / ↑n * S|
-        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring
-      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by field_simp; ring
+        = |S / (↑n + 1) + g (ω n) / (↑n + 1) - S / ↑n| := by ring_nf
+      _ = |-S / (↑n * (↑n + 1)) + g (ω n) / (↑n + 1)| := by field_simp; ring_nf
       _ ≤ |-S / (↑n * (↑n + 1))| + |g (ω n) / (↑n + 1)| := by
             -- triangle inequality |x + y| ≤ |x| + |y|
             exact abs_add_le _ _

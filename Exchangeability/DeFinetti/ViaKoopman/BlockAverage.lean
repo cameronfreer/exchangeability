@@ -81,7 +81,7 @@ lemma blockAvg_eq_cesaro_shifted {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α �
   rw [shift_iterate_apply]
   congr 1
   -- j + k.val * n = k.val * n + j
-  ring
+  ring_nf
 
 /-! ### Measurability of Block Averages -/
 
