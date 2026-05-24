@@ -114,40 +114,28 @@ private lemma alphaIicCE_L1_tendsto_one_atTop
     rw [← ENNReal.toReal_zero]
     exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
-  -- Step 2: L¹ contraction - ‖condExp f - condExp 1‖₁ ≤ ‖f - 1‖₁
-  -- Since condExp 1 = 1, get ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁
+  -- Step 2: L¹ contraction — apply the central `condExp_L1_lipschitz` with
+  -- `f = indIic n ∘ X 0`, `g = (fun _ => 1)`. The constant on the RHS lands inside
+  -- `condExp` and is rewritten back to `1` via `condExp_const`.
   have h_contraction : ∀ n : ℕ,
       ∫ ω, |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| ∂μ
       ≤ ∫ ω, |(indIic (n : ℝ)) (X 0 ω) - 1| ∂μ := by
     intro n
-    -- Use linearity: alphaIicCE - 1 = condExp(indicator) - condExp(1) = condExp(indicator - 1)
-    have h_const : (fun _ : Ω => (1 : ℝ)) =ᵐ[μ]
-        μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] :=
-      (condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)).symm.eventuallyEq
-    have h_ae : (fun ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1)
-        =ᵐ[μ] μ[(fun ω => (indIic (n : ℝ)) (X 0 ω) - 1) | TailSigma.tailSigma X] := by
-      unfold alphaIicCE
-      have h_int : Integrable ((indIic (n : ℝ)) ∘ (X 0)) μ := by
-        have : indIic (n : ℝ) = Set.indicator (Set.Iic (n : ℝ)) (fun _ => (1 : ℝ)) := rfl
-        rw [this]
-        exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
-      filter_upwards [h_const, condExp_sub (μ := μ) (m := TailSigma.tailSigma X)
-        h_int (integrable_const (1 : ℝ))] with ω h_const_ω h_sub_ω
-      simp only [Pi.sub_apply] at h_sub_ω ⊢
-      -- h_const_ω : 1 = μ[fun _ => 1|...] ω
-      -- h_sub_ω : μ[indIic n ∘ X 0 - fun x => μ[fun x => 1|...] ω|...] ω = ...
-      -- After substitution, we get the equality we need
-      calc alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1
-          = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - 1 := rfl
-        _ = μ[indIic (n : ℝ) ∘ X 0|TailSigma.tailSigma X] ω - μ[(fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_const_ω]
-        _ = μ[indIic (n : ℝ) ∘ X 0 - (fun _ => 1)|TailSigma.tailSigma X] ω := by rw [← h_sub_ω]
-        _ = μ[(fun ω => indIic (n : ℝ) (X 0 ω) - 1)|TailSigma.tailSigma X] ω := by congr
+    have h_int : Integrable ((indIic (n : ℝ)) ∘ (X 0)) μ :=
+      Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
+    have h_const : μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] =ᵐ[μ] (fun _ : Ω => (1 : ℝ)) :=
+      (condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)).eventuallyEq
     have h_ae_abs : (fun ω => |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1|)
-        =ᵐ[μ] (fun ω => |μ[(fun ω => (indIic (n : ℝ)) (X 0 ω) - 1) | TailSigma.tailSigma X] ω|) := by
-      filter_upwards [h_ae] with ω hω
-      rw [hω]
+        =ᵐ[μ] (fun ω => |μ[((indIic (n : ℝ)) ∘ (X 0)) | TailSigma.tailSigma X] ω
+                         - μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] ω|) := by
+      filter_upwards [h_const] with ω hω
+      show |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| =
+        |μ[((indIic (n : ℝ)) ∘ (X 0)) | TailSigma.tailSigma X] ω
+         - μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] ω|
+      rw [hω]; rfl
     rw [integral_congr_ae h_ae_abs]
-    exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
+    exact Exchangeability.Probability.condExp_L1_lipschitz
+      (μ := μ) (m := TailSigma.tailSigma X) h_int (integrable_const 1)
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
