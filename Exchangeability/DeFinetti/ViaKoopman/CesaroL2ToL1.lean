@@ -123,7 +123,7 @@ omit [StandardBorelSpace α] in
     implies L¹ convergence of chosen representatives.  This version is robust to
     older mathlib snapshots (no `Subtype.aestronglyMeasurable`, no `tendsto_iff_*`,
     and `snorm` is fully qualified). -/
-lemma optionB_Step3b_L2_to_L1
+private lemma optionB_Step3b_L2_to_L1
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (hσ : MeasurePreserving shift μ μ)
     (fL2 : Lp ℝ 2 μ)
@@ -266,7 +266,7 @@ omit [StandardBorelSpace α] in
 /-- **Step 4b helper**: A_n and B_n differ negligibly.
 
 For bounded g, shows |A_n ω - B_n ω| ≤ 2·Cg/(n+1) → 0 via dominated convergence. -/
-lemma optionB_Step4b_AB_close
+private lemma optionB_Step4b_AB_close
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (hg_meas : Measurable g) (Cg : ℝ) (hCg_bd : ∀ x, |g x| ≤ Cg)
     (A B : ℕ → Ω[α] → ℝ)
@@ -428,7 +428,7 @@ omit [StandardBorelSpace α] in
 /-- **Step 4c helper**: Triangle inequality to combine convergences.
 
 Given ∫|B_n - Y| → 0 and ∫|A_n - B_n| → 0, proves ∫|A_n - Y| → 0 via squeeze theorem. -/
-lemma optionB_Step4c_triangle
+private lemma optionB_Step4c_triangle
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
     (g : α → ℝ) (hg_meas : Measurable g) (hg_bd : ∃ Cg, ∀ x, |g x| ≤ Cg)
     (A B : ℕ → Ω[α] → ℝ) (Y : Ω[α] → ℝ) (G : Ω[α] → ℝ)

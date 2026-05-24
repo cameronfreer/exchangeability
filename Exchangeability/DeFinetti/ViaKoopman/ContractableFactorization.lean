@@ -92,7 +92,7 @@ For functions bounded by C > 0:
   |∏ A - ∏ B| ≤ C^{m-1} * ∑ |A_i - B_i|
 
 This is derived from abs_prod_sub_prod_le by dividing by C. -/
-lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC : 0 < C)
+private lemma abs_prod_sub_prod_le_general {m : ℕ} (A B : Fin m → ℝ) {C : ℝ} (hC : 0 < C)
     (hA : ∀ i, |A i| ≤ C) (hB : ∀ i, |B i| ≤ C) :
     |∏ i, A i - ∏ i, B i| ≤ C^(m - 1) * ∑ i, |A i - B i| := by
   by_cases hm : m = 0
@@ -346,7 +346,7 @@ variable {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
 Given contractability (finite marginals on `{k(0), ..., k(m-1)}` equal marginals on `{0, ..., m-1}`),
 we show that the pushforward under reindexing by any strictly monotone ρ equals the original
 measure. This is the π-λ argument: finite marginal equality → full measure equality. -/
-lemma measure_map_reindexBlock_eq_of_contractable
+private lemma measure_map_reindexBlock_eq_of_contractable
     (hContract : ∀ (m : ℕ) (k : Fin m → ℕ), StrictMono k →
         Measure.map (fun ω i => ω (k i)) μ = Measure.map (fun ω (i : Fin m) => ω i.val) μ)
     {m n : ℕ} (hn : 0 < n) (j : Fin m → Fin n) :
@@ -396,7 +396,7 @@ If the measure is invariant under reindexing (μ = μ ∘ reindexBlock⁻¹) and
 under reindexing (s = reindexBlock⁻¹(s)), then ∫_s f ∘ reindexBlock = ∫_s f.
 
 This is the key lemma that replaces "conditional contractability". -/
-lemma setIntegral_comp_reindexBlock_eq
+private lemma setIntegral_comp_reindexBlock_eq
     (hμ : Measure.map (reindexBlock (α := α) m n j) μ = μ)
     {s : Set (Ω[α])} (hs_meas : MeasurableSet s)
     (hs_inv : reindexBlock m n j ⁻¹' s = s)
