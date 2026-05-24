@@ -11,7 +11,7 @@ import Exchangeability.DeFinetti.ViaL2.AlphaConvergence.EndpointAtTop
 # Alpha Convergence: Endpoint Limits for `alphaIicCE`
 
 Umbrella module re-exporting the endpoint-limit results for `alphaIicCE`.
-Contents are split across three subfiles, grouped by natural proof topic:
+Contents are split across topic-named subfiles:
 
 * `AlphaConvergence/AlphaIicEq.lean` — identification
   (`alphaIic_ae_eq_alphaIicCE`).
@@ -19,6 +19,9 @@ Contents are split across three subfiles, grouped by natural proof topic:
   (`alphaIicCE_ae_tendsto_zero_atBot`, plus a private L¹ stepping stone).
 * `AlphaConvergence/EndpointAtTop.lean` — limit at `+∞`
   (`alphaIicCE_ae_tendsto_one_atTop`, plus a private L¹ stepping stone).
+* `AlphaConvergence/EndpointCommon.lean` — the shared measure-theoretic helper
+  `ae_tendsto_const_of_ae_convergent_of_L1_const` consumed by both endpoint files
+  (identifies a pointwise a.e. limit with the L¹-limit constant).
 
 Downstream consumers (`DirectingMeasureIic`, `DirectingMeasureCore`) can
 import this umbrella module unchanged.
