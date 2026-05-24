@@ -60,12 +60,6 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
     TailSigma.tailSigma_le X hX_meas
   haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
-  -- For each n, alphaIicCE (-(n:ℝ)) = μ[(indIic (-(n:ℝ))) ∘ X 0 | tailSigma]
-  have h_def : ∀ n, alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ))
-      = μ[(indIic (-(n : ℝ))) ∘ (X 0) | TailSigma.tailSigma X] := by
-    intro n
-    rfl
-
   -- Step 1: Show ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
   -- Indicator integral = measure of set {X 0 ≤ -n} → 0 by continuity
   have h_indicator_tendsto : Tendsto (fun n : ℕ =>
@@ -122,7 +116,6 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
       simp only [h_empty, measure_empty] at this
       simpa [Function.comp] using this
     -- Convert from ENNReal to Real using continuity of toReal at 0
-    have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Iic (-(n : ℝ))) ≠ ⊤ := fun n => measure_ne_top μ _
     have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
     rw [← ENNReal.toReal_zero]
     exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal

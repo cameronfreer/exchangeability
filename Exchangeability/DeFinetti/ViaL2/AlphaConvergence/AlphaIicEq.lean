@@ -106,12 +106,6 @@ lemma alphaIic_ae_eq_alphaIicCE
             _ = (1 / (m : ℝ)) * m := by simp
             _ = 1 := by field_simp [hm_cast.ne']
 
-    -- Since A n m ∈ [0,1], we have max 0 (min 1 (A n m)) = A n m
-    have hA_clip_eq : ∀ ω, max 0 (min 1 (A n m ω)) = A n m ω := by
-      intro ω
-      obtain ⟨h0, h1⟩ := hA_in_01 ω
-      rw [min_comm, min_eq_left h1, max_eq_right h0]
-
     -- Use the fact that clipping can only make things closer when A n m ∈ [0,1]
     -- Since A n m ∈ [0,1], we have |A - clip(alpha)| ≤ |A - alpha| for all alpha
     have h_clip_le : ∀ ω, |A n m ω - max 0 (min 1 (alpha ω))| ≤ |A n m ω - alpha ω| := by
