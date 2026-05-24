@@ -808,21 +808,13 @@ end KernelIndependence
 
 /-! ### Bridge to CommonEnding
 
-The bridge lemma `indicator_product_bridge_contractable` would connect the CE-based
-factorization in this file to the `ConditionallyIID` definition required by
-`CommonEnding.conditional_iid_from_directing_measure`.
-
-The key insight is:
-- For injective k, sort to get StrictMono ρ with permutation σ such that k = ρ ∘ σ
-- Apply contractability to get integral equality
-- Use CE factorization and the ν ↔ CE relationship
-
-This bridge is needed to complete the sorry at line 178 of TheoremViaKoopman.lean,
-which proves `Contractable μ X → Exchangeable μ X ∧ ConditionallyIID μ X`.
-
-**Status**: Incomplete. The path-space proof in `ViaKoopman.lean` is complete;
-the original-space bridge requires additional work to match the `ConditionallyIID`
-definition's bind-based formula.
+The CE-based factorization above feeds `indicator_product_bridge_contractable`
+(in `Exchangeability/DeFinetti/BridgeProperty.lean`), which converts it into the
+shape consumed by `CommonEnding.conditional_iid_from_directing_measure`. The
+construction is: for injective `k`, sort to obtain a strictly-monotone `ρ` with
+permutation `σ` such that `k = ρ ∘ σ`, apply contractability to get integral
+equality, and combine with the CE factorization via the `ν` ↔ conditional
+expectation identification.
 -/
 
 end Exchangeability.DeFinetti.ViaKoopman
