@@ -110,7 +110,6 @@ private lemma alphaIicCE_L1_tendsto_one_atTop
       simp only [h_empty, measure_empty] at this
       simpa [Function.comp] using this
     -- Convert from ENNReal to Real using continuity of toReal at 0
-    have h_ne_top : ∀ n, μ (X 0 ⁻¹' Set.Ioi (n : ℝ)) ≠ ⊤ := fun n => measure_ne_top μ _
     have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
     rw [← ENNReal.toReal_zero]
     exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
