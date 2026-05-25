@@ -73,34 +73,8 @@ This follows from contractability by taking the singleton subsequence `{i}`.
 
 This is used to establish uniform covariance structure across all pairs of coordinates. -/
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
-    Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ := by
-  classical
-  -- `k` selects the singleton subsequence `{i}`.
-  let k : Fin 1 → ℕ := fun _ => i
-  have hk : StrictMono k := by
-    intro a b hab
-    simp_all [Fin.eq_zero a, Fin.eq_zero b]
-  have h_map := hX_contract 1 k hk
-  let eval : (Fin 1 → ℝ) → ℝ := fun g => g fin1Zero
-  have h_eval_meas : Measurable eval := measurable_eval_fin1
-  have h_meas_k : Measurable fun ω => fun j : Fin 1 => X (k j) ω := by
-    fun_prop
-  have h_meas_std : Measurable fun ω => fun j : Fin 1 => X j.val ω := by
-    fun_prop
-  have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
-  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
-  have h_eval := congrArg (Measure.map eval) h_map
-  have h_comp := h_left.trans (h_eval.trans h_right)
-  -- Evaluate the compositions explicitly.
-  have h_comp_simp :
-      (fun ω => eval (fun j : Fin 1 => X (k j) ω)) = fun ω => X i ω := by
-    funext ω
-    simp [eval, k, fin1Zero]
-  have h_comp_simp' :
-      (fun ω => eval (fun j : Fin 1 => X j.val ω)) = fun ω => X 0 ω := by
-    funext ω
-    simp [eval, fin1Zero]
-  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+    Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ :=
+  Exchangeability.Contractable.map_single hX_contract hX_meas i
 
 /-- **Strict monotonicity for two-point subsequence selection.**
 
