@@ -69,12 +69,12 @@ noncomputable def alphaIicCE
     (t : ℝ) : Ω → ℝ := by
   classical
   -- Set up the tail σ-algebra and its sub-σ-algebra relation
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   -- Create the Fact instance for the sub-σ-algebra relation
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
   -- Now we can call condExp with the tail σ-algebra
-  exact μ[(indIic t) ∘ (X 0) | TailSigma.tailSigma X]
+  exact μ[(indIic t) ∘ (X 0) | Exchangeability.Tail.tailProcess X]
 
 /-- Measurability of alphaIicCE.
 
@@ -93,7 +93,7 @@ lemma alphaIicCE_measurable
   unfold alphaIicCE
   -- The conditional expectation μ[f|m] is strongly measurable w.r.t. m
   -- Since m ≤ ambient, measurability w.r.t. m implies measurability w.r.t. ambient
-  have hm_le := TailSigma.tailSigma_le X hX_meas
+  have hm_le := Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   refine Measurable.mono stronglyMeasurable_condExp.measurable hm_le le_rfl
 
 /-- alphaIicCE is monotone nondecreasing in t (for each fixed ω). -/
@@ -111,9 +111,9 @@ lemma alphaIicCE_mono
   intro s t hst
 
   -- Set up tail σ-algebra infrastructure
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Show indIic s ≤ indIic t pointwise
   have h_ind_mono : (indIic s) ∘ (X 0) ≤ᵐ[μ] (indIic t) ∘ (X 0) := by
@@ -141,7 +141,7 @@ lemma alphaIicCE_mono
 
   -- Apply condExp_mono
   unfold alphaIicCE
-  exact condExp_mono (μ := μ) (m := TailSigma.tailSigma X) h_int_s h_int_t h_ind_mono
+  exact condExp_mono (μ := μ) (m := Exchangeability.Tail.tailProcess X) h_int_s h_int_t h_ind_mono
 
 /-- alphaIicCE is bounded in [0,1] almost everywhere. -/
 lemma alphaIicCE_nonneg_le_one
@@ -156,9 +156,9 @@ lemma alphaIicCE_nonneg_le_one
   -- Since 0 ≤ indIic t ≤ 1, we have 0 ≤ condExp(...) ≤ 1 a.e.
 
   -- Set up tail σ-algebra infrastructure
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Nonnegativity: 0 ≤ indIic t ∘ X 0 implies 0 ≤ condExp
   have h₀ : 0 ≤ᵐ[μ] alphaIicCE X hX_contract hX_meas hX_L2 t := by
@@ -169,7 +169,7 @@ lemma alphaIicCE_nonneg_le_one
       simp [indIic, Set.indicator]
       split_ifs <;> norm_num
     unfold alphaIicCE
-    convert condExp_nonneg (μ := μ) (m := TailSigma.tailSigma X) this using 2
+    convert condExp_nonneg (μ := μ) (m := Exchangeability.Tail.tailProcess X) this using 2
 
   -- Upper bound: indIic t ∘ X 0 ≤ 1 implies condExp ≤ 1
   have h₁ : alphaIicCE X hX_contract hX_meas hX_L2 t ≤ᵐ[μ] fun _ => (1 : ℝ) := by
@@ -186,9 +186,9 @@ lemma alphaIicCE_nonneg_le_one
       rw [this]
       exact Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
     unfold alphaIicCE
-    have h_mono := condExp_mono (μ := μ) (m := TailSigma.tailSigma X)
+    have h_mono := condExp_mono (μ := μ) (m := Exchangeability.Tail.tailProcess X)
       h_int (integrable_const (1 : ℝ)) h_le
-    rw [condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)] at h_mono
+    rw [condExp_const (μ := μ) (m := Exchangeability.Tail.tailProcess X) hm_le (1 : ℝ)] at h_mono
     exact h_mono
 
   filter_upwards [h₀, h₁] with ω h0 h1
@@ -281,9 +281,9 @@ lemma alphaIicCE_right_continuous_at
   -- - alphaIicCE_mono
 
   -- Set up tail σ-algebra infrastructure
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI h_fact : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI h_fact : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
   haveI h_sf : SigmaFinite (μ.trim hm_le) := inferInstance
 
   -- Step 1: Get decreasing rational sequence u_n → t with u_n > t
@@ -512,9 +512,9 @@ lemma alphaIicCE_iInf_rat_gt_eq
         alphaIicCE X hX_contract hX_meas hX_L2 (r : ℝ) ω =
         alphaIicCE X hX_contract hX_meas hX_L2 (q : ℝ) ω := by
   -- Set up tail σ-algebra infrastructure
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Use ae_all_iff to reduce to proving for each rational q
   rw [ae_all_iff]

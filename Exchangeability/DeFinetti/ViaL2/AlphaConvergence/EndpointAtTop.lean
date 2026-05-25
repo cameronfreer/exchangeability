@@ -49,9 +49,9 @@ private lemma alphaIicCE_L1_tendsto_one_atTop
   -- So ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
 
   -- Set up the tail σ-algebra Fact instance (needed for condExp)
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Step 1: Show ∫ |(indIic (n:ℝ)) ∘ X 0 - 1| → 0
   -- Integral of |indicator - 1| = μ(X 0 > n) → 0 by continuity
@@ -124,19 +124,19 @@ private lemma alphaIicCE_L1_tendsto_one_atTop
     intro n
     have h_int : Integrable ((indIic (n : ℝ)) ∘ (X 0)) μ :=
       Exchangeability.Probability.integrable_indicator_comp (hX_meas 0) measurableSet_Iic
-    have h_const : μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] =ᵐ[μ] (fun _ : Ω => (1 : ℝ)) :=
-      (condExp_const (μ := μ) (m := TailSigma.tailSigma X) hm_le (1 : ℝ)).eventuallyEq
+    have h_const : μ[(fun _ : Ω => (1 : ℝ)) | Exchangeability.Tail.tailProcess X] =ᵐ[μ] (fun _ : Ω => (1 : ℝ)) :=
+      (condExp_const (μ := μ) (m := Exchangeability.Tail.tailProcess X) hm_le (1 : ℝ)).eventuallyEq
     have h_ae_abs : (fun ω => |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1|)
-        =ᵐ[μ] (fun ω => |μ[((indIic (n : ℝ)) ∘ (X 0)) | TailSigma.tailSigma X] ω
-                         - μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] ω|) := by
+        =ᵐ[μ] (fun ω => |μ[((indIic (n : ℝ)) ∘ (X 0)) | Exchangeability.Tail.tailProcess X] ω
+                         - μ[(fun _ : Ω => (1 : ℝ)) | Exchangeability.Tail.tailProcess X] ω|) := by
       filter_upwards [h_const] with ω hω
       show |alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω - 1| =
-        |μ[((indIic (n : ℝ)) ∘ (X 0)) | TailSigma.tailSigma X] ω
-         - μ[(fun _ : Ω => (1 : ℝ)) | TailSigma.tailSigma X] ω|
+        |μ[((indIic (n : ℝ)) ∘ (X 0)) | Exchangeability.Tail.tailProcess X] ω
+         - μ[(fun _ : Ω => (1 : ℝ)) | Exchangeability.Tail.tailProcess X] ω|
       rw [hω]; rfl
     rw [integral_congr_ae h_ae_abs]
     exact Exchangeability.Probability.condExp_L1_lipschitz
-      (μ := μ) (m := TailSigma.tailSigma X) h_int (integrable_const 1)
+      (μ := μ) (m := Exchangeability.Tail.tailProcess X) h_int (integrable_const 1)
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE - 1‖₁ ≤ ‖indicator - 1‖₁ → 0
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
@@ -162,8 +162,8 @@ lemma alphaIicCE_ae_tendsto_one_atTop
   set f : ℕ → Ω → ℝ := fun n ω => alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ) ω
     with hf_def
   set U : Ω → ℝ := fun ω => ⨆ (n : ℕ), f n ω with hU_def
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   -- (1) Each f n is AEStronglyMeasurable (conditional expectation).
   have hf_meas : ∀ n, AEStronglyMeasurable (f n) μ := fun n => by
     show AEStronglyMeasurable (alphaIicCE X hX_contract hX_meas hX_L2 (n : ℝ)) μ

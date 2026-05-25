@@ -139,23 +139,9 @@ omit [MeasurableSpace α] in
 @[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
     extendByZero (α := α) ω ↑n = ω n := by simp [extendByZero]
 
-omit [MeasurableSpace α] in
-lemma restrictNonneg_shiftℤ (ω : Ωℤ[α]) :
-    restrictNonneg (α := α) (shiftℤ (α := α) ω)
-      = shift (restrictNonneg (α := α) ω) := by ext; simp [restrictNonneg, shiftℤ, shift]
-
-omit [MeasurableSpace α] in
-lemma restrictNonneg_shiftℤInv (ω : Ωℤ[α]) :
-    restrictNonneg (α := α) (shiftℤInv (α := α) ω)
-      = fun n => ω (Int.ofNat n - 1) := by ext; simp [restrictNonneg, shiftℤInv]
-
 @[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   unfold shiftℤ; fun_prop
-
-@[measurability, fun_prop]
-lemma measurable_shiftℤInv : Measurable (shiftℤInv (α := α)) := by
-  unfold shiftℤInv; fun_prop
 
 /-- Two-sided shift-invariant sets. A set is shift-invariant if it is measurable and equals its preimage under the shift. -/
 def IsShiftInvariantℤ (S : Set (Ωℤ[α])) : Prop :=

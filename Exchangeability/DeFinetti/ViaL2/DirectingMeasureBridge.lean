@@ -34,10 +34,10 @@ theorem directing_measure_ae_eq_condExpKernel_map
       =ᵐ[μ]
     (fun ω =>
       Measure.map (X 0)
-        (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) := by
+        (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) := by
   classical
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   have hX0 : Measurable (X 0) := hX_meas 0
   -- For each rational q, the Iic-q values agree a.e. via the existing local Iic-integral
   -- identity on the LHS and condExpKernel_ae_eq_condExp on the RHS, both equal to
@@ -45,7 +45,7 @@ theorem directing_measure_ae_eq_condExpKernel_map
   have h_each_q : ∀ q : ℚ, ∀ᵐ ω ∂μ,
       (directing_measure X hX_contract hX_meas hX_L2 ω) (Iic (q : ℝ))
         = (Measure.map (X 0)
-            (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) (Iic (q : ℝ)) := by
+            (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) (Iic (q : ℝ)) := by
     intro q
     set t : ℝ := (q : ℝ) with ht_def
     have hIic_meas : MeasurableSet (Iic t) := measurableSet_Iic
@@ -59,11 +59,11 @@ theorem directing_measure_ae_eq_condExpKernel_map
     -- RHS in real form: (condExpKernel μ m ω).real (X 0 ⁻¹' Iic t)
     --   =ᵐ μ[(X 0 ⁻¹' Iic t).indicator 1 | tailSigma X] ω
     have h_rhs_real :
-        (fun ω => (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω).real
+        (fun ω => (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω).real
                     (X 0 ⁻¹' Iic t))
           =ᵐ[μ]
         μ[(X 0 ⁻¹' Iic t).indicator (fun _ => (1:ℝ))
-            | TailSigma.tailSigma X] :=
+            | Exchangeability.Tail.tailProcess X] :=
       condExpKernel_ae_eq_condExp hm_le hpreim_meas
     -- The set indicator (X 0 ⁻¹' Iic t).indicator 1 equals indIic t ∘ X 0 as functions.
     have h_fun_eq :
@@ -77,14 +77,14 @@ theorem directing_measure_ae_eq_condExpKernel_map
       directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
     haveI : IsProbabilityMeasure
         (Measure.map (X 0)
-          (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) :=
+          (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) :=
       Measure.isProbabilityMeasure_map hX0.aemeasurable
     -- alphaIicCE := μ[indIic t ∘ X 0 | tailSigma X]; via h_fun_eq it equals the indicator form.
     have h_alpha_eq_condProb :
         alphaIicCE X hX_contract hX_meas hX_L2 t ω
           = μ[(X 0 ⁻¹' Iic t).indicator (fun _ => (1:ℝ))
-              | TailSigma.tailSigma X] ω := by
-      show μ[(indIic t) ∘ X 0 | TailSigma.tailSigma X] ω = _
+              | Exchangeability.Tail.tailProcess X] ω := by
+      show μ[(indIic t) ∘ X 0 | Exchangeability.Tail.tailProcess X] ω = _
       rw [← h_fun_eq]
     -- Both sides have the same `.toReal`: equal to alphaIicCE t ω.
     have h_lhs_toReal :
@@ -94,12 +94,12 @@ theorem directing_measure_ae_eq_condExpKernel_map
       exact (integral_indicator_one hIic_meas).symm
     have h_rhs_toReal :
         ((Measure.map (X 0)
-            (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) (Iic t)).toReal
+            (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) (Iic t)).toReal
           = alphaIicCE X hX_contract hX_meas hX_L2 t ω := by
       rw [Measure.map_apply hX0 hIic_meas]
-      have : ((condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)
+      have : ((condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)
                 (X 0 ⁻¹' Iic t)).toReal
-              = (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω).real
+              = (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω).real
                   (X 0 ⁻¹' Iic t) := rfl
       rw [this, hω_rhs, ← h_alpha_eq_condProb]
     -- Lift .toReal equality back to ENNReal values (both measures are finite/probability).
@@ -108,7 +108,7 @@ theorem directing_measure_ae_eq_condExpKernel_map
       measure_ne_top _ _
     have h_rhs_ne_top :
         (Measure.map (X 0)
-          (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) (Iic t) ≠ ⊤ :=
+          (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) (Iic t) ≠ ⊤ :=
       measure_ne_top _ _
     rw [← ENNReal.ofReal_toReal h_lhs_ne_top, ← ENNReal.ofReal_toReal h_rhs_ne_top,
         h_lhs_toReal, h_rhs_toReal]
@@ -116,7 +116,7 @@ theorem directing_measure_ae_eq_condExpKernel_map
   have h_all_q : ∀ᵐ ω ∂μ, ∀ q : ℚ,
       (directing_measure X hX_contract hX_meas hX_L2 ω) (Iic (q : ℝ))
         = (Measure.map (X 0)
-            (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) (Iic (q : ℝ)) :=
+            (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) (Iic (q : ℝ)) :=
     ae_all_iff.mpr h_each_q
   -- For each such ω, both measures are probability, agreeing on the rational Iic π-system
   -- that generates the Borel σ-algebra. Hence equal.
@@ -125,7 +125,7 @@ theorem directing_measure_ae_eq_condExpKernel_map
       (directing_measure X hX_contract hX_meas hX_L2 ω) :=
     directing_measure_isProbabilityMeasure X hX_contract hX_meas hX_L2 ω
   haveI : IsProbabilityMeasure
-      (Measure.map (X 0) (condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω)) :=
+      (Measure.map (X 0) (condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω)) :=
     Measure.isProbabilityMeasure_map hX0.aemeasurable
   refine MeasureTheory.ext_of_generate_finite
       (⋃ a : ℚ, {Iic (a : ℝ)})

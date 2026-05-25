@@ -179,7 +179,7 @@ lemma l2_bound_long_vs_tail
 
   have hξ_L2 : ∀ i, MemLp (fun ω => ξ i ω - mf) 2 μ := by
     intro i
-    -- Reconstruct MemLp from boundedness (M, hM already available from line 1690)
+    -- Reconstruct MemLp from boundedness (M, hM already available above)
     have : MemLp (fun ω => f (X (n + i.val + 1) ω)) 2 μ := by
       apply MemLp.of_bound (hf_meas.comp (hX_meas (n + i.val + 1))).aestronglyMeasurable M
       filter_upwards with ω
