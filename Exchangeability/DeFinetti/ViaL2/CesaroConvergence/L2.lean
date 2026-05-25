@@ -46,7 +46,7 @@ lemma blockAvg_measurable_tailFamily
     {f : ℝ → ℝ} (hf : Measurable f)
     {X : ℕ → Ω → ℝ}
     (m n : ℕ) :
-    Measurable[TailSigma.tailFamily X m] (blockAvg f X m n) := by
+    Measurable[Exchangeability.Tail.tailFamily X m] (blockAvg f X m n) := by
   -- blockAvg f X m n = (n⁻¹) * ∑_{k<n} f(X_{m+k})
   unfold blockAvg
   -- Each X (m + k) is measurable w.r.t. tailFamily X m by definition
@@ -242,7 +242,7 @@ private lemma tail_measurability_of_blockAvg
     (hX_meas : ∀ i, Measurable (X i))
     (α_f : Ω → ℝ) (hα_memLp : MemLp α_f 2 μ)
     (hα_limit : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)) :
-    AEStronglyMeasurable[TailSigma.tailSigma X] α_f μ := by
+    AEStronglyMeasurable[Exchangeability.Tail.tailProcess X] α_f μ := by
   -- PROOF STRATEGY:
   -- 1. For each N, show α_f is AEStronglyMeasurable[tailFamily X N]
   --    (using closedness of L² measurable functions and blockAvg_shift_tendsto)
@@ -252,21 +252,21 @@ private lemma tail_measurability_of_blockAvg
   -- and tailSigma X = ⨅ N, tailFamily X N by definition.
 
   -- Step 1: Show α_f is AEStronglyMeasurable[tailFamily X N] for each N
-  have h_aesm_each : ∀ N, AEStronglyMeasurable[TailSigma.tailFamily X N] α_f μ := by
+  have h_aesm_each : ∀ N, AEStronglyMeasurable[Exchangeability.Tail.tailFamily X N] α_f μ := by
     intro N
     -- The block averages starting at N converge to α_f in L²
     -- Each blockAvg f X N m is Measurable[tailFamily X N]
     -- By closedness of L²(tailFamily X N), the limit α_f is also in it
 
     -- Step 1a: blockAvg f X N m is Measurable[tailFamily X N] for all m
-    have h_block_meas : ∀ m, @Measurable Ω ℝ (TailSigma.tailFamily X N) _ (blockAvg f X N m) :=
+    have h_block_meas : ∀ m, @Measurable Ω ℝ (Exchangeability.Tail.tailFamily X N) _ (blockAvg f X N m) :=
       fun m => blockAvg_measurable_tailFamily hf_meas N m
 
     -- Step 1b: blockAvg f X N m → α_f in L² (by blockAvg_shift_tendsto)
     have h_L2_conv := blockAvg_shift_tendsto f hf_meas hf_bdd hX_meas α_f hα_memLp hα_limit N
 
     -- Step 1c: tailFamily X N ≤ ambient σ-algebra (for measure compatibility)
-    have h_tf_le : TailSigma.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
+    have h_tf_le : Exchangeability.Tail.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
       refine iSup_le (fun k => ?_)
       exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas (N + k))
 
@@ -287,12 +287,12 @@ private lemma tail_measurability_of_blockAvg
     exact aestronglyMeasurable_sub_of_tendsto_ae h_tf_le (fun k => h_block_meas (ns k)) h_ae_conv
 
   -- Step 2: Apply the axiom to descend to the infimum
-  have h_anti : Antitone (TailSigma.tailFamily X) := TailSigma.antitone_tailFamily X
+  have h_anti : Antitone (Exchangeability.Tail.tailFamily X) := Exchangeability.Tail.tailFamily_antitone X
 
   -- Each tailFamily X N ≤ ambient measurable space
   -- This follows from: tailFamily X N = ⨆ k, comap (X (N+k)) _
   -- and comap f ≤ ambient when f is measurable
-  have h_le : ∀ N, TailSigma.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
+  have h_le : ∀ N, Exchangeability.Tail.tailFamily X N ≤ (inferInstance : MeasurableSpace Ω) := by
     intro N
     -- tailFamily X N consists of sets measurable wrt X_{N+k} for k ∈ ℕ
     -- Each such set is in the ambient σ-algebra when X_k are measurable
@@ -300,7 +300,7 @@ private lemma tail_measurability_of_blockAvg
     exact MeasurableSpace.comap_le_iff_le_map.mpr (hX_meas (N + k))
 
   -- tailSigma X = ⨅ N, tailFamily X N (by definition in TailSigma module)
-  have h_eq : TailSigma.tailSigma X = ⨅ N, TailSigma.tailFamily X N := rfl
+  have h_eq : Exchangeability.Tail.tailProcess X = ⨅ N, Exchangeability.Tail.tailFamily X N := rfl
 
   rw [h_eq]
   exact aestronglyMeasurable_iInf_antitone h_anti h_le α_f h_aesm_each
@@ -343,9 +343,9 @@ lemma cesaro_to_condexp_L2
     (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
     ∃ (α_f : Ω → ℝ), MemLp α_f 2 μ ∧
-      AEStronglyMeasurable[TailSigma.tailSigma X] α_f μ ∧
+      AEStronglyMeasurable[Exchangeability.Tail.tailProcess X] α_f μ ∧
       Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0) ∧
-      α_f =ᵐ[μ] μ[(f ∘ X 0) | TailSigma.tailSigma X] := by
+      α_f =ᵐ[μ] μ[(f ∘ X 0) | Exchangeability.Tail.tailProcess X] := by
   -- Step 1: Show block averages form a Cauchy sequence in L² (via `Cauchy.lean`).
   have hCauchy := blockAvg_cauchy_in_L2 hX_contract hX_meas f hf_meas hf_bdd
 
@@ -446,12 +446,12 @@ lemma cesaro_to_condexp_L2
   --                 = E[α_f 1_A] (by L² convergence)
   -- Therefore α_f is the conditional expectation
   · -- Identification as conditional expectation
-    -- The key relationship: TailSigma.tailSigma X = tailProcess X
+    -- The key relationship: Exchangeability.Tail.tailProcess X = tailProcess X
     -- This follows from the re-export in BlockAverages.lean
 
     -- Step 1: Sub-σ-algebra condition
-    have hm : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-      TailSigma.tailSigma_le X hX_meas
+    have hm : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+      Exchangeability.Tail.tailProcess_le_ambient X hX_meas
 
     -- Step 2: SigmaFinite for trimmed measure (automatic for probability measures)
     haveI h_finite : IsFiniteMeasure (μ.trim hm) := by
@@ -482,7 +482,7 @@ lemma cesaro_to_condexp_L2
 
     -- Condition 2: Set integrals are equal
     · intro A hA hμA
-      -- Convert MeasurableSet from TailSigma.tailSigma to tailProcess
+      -- Convert MeasurableSet from Exchangeability.Tail.tailProcess to tailProcess
       -- (They are definitionally equal via the re-export in BlockAverages.lean)
       have hA_tail : MeasurableSet[Exchangeability.Tail.tailProcess X] A := hA
 

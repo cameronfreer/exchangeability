@@ -56,9 +56,9 @@ lemma directing_measure_integral_eq_condExp
     (hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∃ M, ∀ x, |f x| ≤ M) :
     (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
-      =ᵐ[μ] μ[fun ω => f (X 0 ω) | TailSigma.tailSigma X] := by
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
+      =ᵐ[μ] μ[fun ω => f (X 0 ω) | Exchangeability.Tail.tailProcess X] := by
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   obtain ⟨M, hM⟩ := hf_bdd
   -- `f ∘ X 0` is integrable on the probability space (bounded measurable).
   have hfX0_int : Integrable (fun ω => f (X 0 ω)) μ := by
@@ -73,7 +73,7 @@ lemma directing_measure_integral_eq_condExp
   -- against the kernel at `ω`, by `integral_map`.
   have h_push : (fun ω => ∫ x, f x ∂(directing_measure X hX_contract hX_meas hX_L2 ω))
       =ᵐ[μ] fun ω => ∫ y, f (X 0 y)
-          ∂(condExpKernel (μ := μ) (m := TailSigma.tailSigma X) ω) := by
+          ∂(condExpKernel (μ := μ) (m := Exchangeability.Tail.tailProcess X) ω) := by
     filter_upwards [h_bridge] with ω hω
     rw [hω]
     exact integral_map (hX_meas 0).aemeasurable hf_meas.aestronglyMeasurable

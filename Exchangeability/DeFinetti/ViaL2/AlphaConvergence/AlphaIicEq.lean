@@ -211,7 +211,7 @@ lemma alphaIic_ae_eq_alphaIicCE
     have hε_half : ε/2 > 0 := by linarith
     have h_axiom : ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
         ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, indIic t (X i ω) -
-              (μ[(indIic t ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε/2 :=
+              (μ[(indIic t ∘ X 0) | Exchangeability.Tail.tailProcess X] ω)| ∂μ < ε/2 :=
       cesaro_to_condexp_L1 hX_contract hX_meas (indIic t) (indIic_measurable t) (indIic_bdd t) (ε/2) hε_half
     obtain ⟨M₁, hM₁⟩ := h_axiom
 
@@ -365,7 +365,7 @@ lemma alphaIic_ae_eq_alphaIicCE
         _ = ε/2 := by field_simp; ring
 
     -- Apply the axiom
-    have hB_conv : ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ < ε/2 := by
+    have hB_conv : ∫ ω, |B m ω - μ[indIic t ∘ X 0|Exchangeability.Tail.tailProcess X] ω| ∂μ < ε/2 := by
       convert hM₁ m (Nat.cast_le.mp h1) using 2
 
     -- Apply h_diff_small
@@ -401,9 +401,9 @@ lemma alphaIic_ae_eq_alphaIicCE
 
     -- Triangle inequality for integrals
     calc ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) -
-               μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ
+               μ[indIic t ∘ X 0|Exchangeability.Tail.tailProcess X] ω| ∂μ
         ≤ ∫ ω, |(1/(m:ℝ)) * ∑ k : Fin m, indIic t (X (k.val + 1) ω) - B m ω| ∂μ +
-          ∫ ω, |B m ω - μ[indIic t ∘ X 0|TailSigma.tailSigma X] ω| ∂μ := by
+          ∫ ω, |B m ω - μ[indIic t ∘ X 0|Exchangeability.Tail.tailProcess X] ω| ∂μ := by
             -- Use pointwise triangle inequality: |a - c| ≤ |a - b| + |b - c|
             rw [← integral_add]
             · apply integral_mono

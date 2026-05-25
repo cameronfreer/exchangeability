@@ -57,9 +57,9 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
   -- First show ‖(indIic (-(n:ℝ))) ∘ X 0‖₁ → 0 by dominated convergence
 
   -- Set up the tail σ-algebra Fact instance (needed for condExp)
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
-  haveI : Fact (TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
+  haveI : Fact (Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω)) := ⟨hm_le⟩
 
   -- Step 1: Show ∫ |(indIic (-(n:ℝ))) ∘ X 0| → 0
   -- Indicator integral = measure of set {X 0 ≤ -n} → 0 by continuity
@@ -128,7 +128,7 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
     intro n
     -- alphaIicCE is conditional expectation, so use integral_abs_condExp_le
     unfold alphaIicCE
-    exact integral_abs_condExp_le (μ := μ) (m := TailSigma.tailSigma X) _
+    exact integral_abs_condExp_le (μ := μ) (m := Exchangeability.Tail.tailProcess X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE‖₁ ≤ ‖indicator‖₁ → 0
   refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
@@ -155,8 +155,8 @@ lemma alphaIicCE_ae_tendsto_zero_atBot
   set f : ℕ → Ω → ℝ := fun n ω => alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ)) ω
     with hf_def
   set L : Ω → ℝ := fun ω => ⨅ (n : ℕ), f n ω with hL_def
-  have hm_le : TailSigma.tailSigma X ≤ (inferInstance : MeasurableSpace Ω) :=
-    TailSigma.tailSigma_le X hX_meas
+  have hm_le : Exchangeability.Tail.tailProcess X ≤ (inferInstance : MeasurableSpace Ω) :=
+    Exchangeability.Tail.tailProcess_le_ambient X hX_meas
   -- (1) Each f n is AEStronglyMeasurable (conditional expectation).
   have hf_meas : ∀ n, AEStronglyMeasurable (f n) μ := fun n => by
     show AEStronglyMeasurable (alphaIicCE X hX_contract hX_meas hX_L2 (-(n : ℝ))) μ

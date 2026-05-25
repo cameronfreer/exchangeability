@@ -249,13 +249,13 @@ lemma directing_measure_bridge
       (fun ω => (ν ω B).toReal) =ᵐ[μ]
         μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
     intro n B hB
-    have h_tail_eq : ViaMartingale.tailSigma X = TailSigma.tailSigma X :=
+    have h_tail_eq : ViaMartingale.tailSigma X = Exchangeability.Tail.tailProcess X :=
       ViaMartingale.tailSigma_eq_canonical X
     have hf_meas : Measurable (Set.indicator B (fun _ => (1 : ℝ))) :=
       measurable_const.indicator hB
     -- Base case n=0: directing_measure_integral_eq_condExp gives ∫ 1_B dν =ᵐ E[1_B ∘ X 0 | tail]
     have h_n0 : (fun ω => (ν ω B).toReal) =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := by
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | Exchangeability.Tail.tailProcess X] := by
       have h_eq := directing_measure_integral_eq_condExp X hX_contract hX_meas hX_L2
         (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
         ⟨1, fun x => by simp only [Set.indicator]; split_ifs <;> norm_num⟩
@@ -266,14 +266,14 @@ lemma directing_measure_bridge
         rw [h1, integral_indicator_one hB]; rfl
       filter_upwards [h_eq] with ω hω; rw [← h_integral ω, hω]; rfl
     -- Shift invariance: E[1_B ∘ X n | tail] =ᵐ E[1_B ∘ X 0 | tail]
-    have h_shift : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] :=
+    have h_shift : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | Exchangeability.Tail.tailProcess X] =ᵐ[μ]
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | Exchangeability.Tail.tailProcess X] :=
       Exchangeability.Tail.ShiftInvariance.condExp_shift_eq_condExp X hX_contract hX_meas
         (Set.indicator B (fun _ => (1 : ℝ))) hf_meas
         ((integrable_const 1).indicator (hX_meas 0 hB)) n
     calc (fun ω => (ν ω B).toReal) =ᵐ[μ]
-        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | TailSigma.tailSigma X] := h_n0
-      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | TailSigma.tailSigma X] := h_shift.symm
+        μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X 0) | Exchangeability.Tail.tailProcess X] := h_n0
+      _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | Exchangeability.Tail.tailProcess X] := h_shift.symm
       _ =ᵐ[μ] μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | ViaMartingale.tailSigma X] := by
           rw [h_tail_eq]
   exact indicator_product_bridge X hX_contract hX_meas ν hν_prob hν_meas hν_law k hk B hB

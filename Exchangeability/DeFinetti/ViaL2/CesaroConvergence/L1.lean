@@ -44,7 +44,7 @@ lemma cesaro_to_condexp_L1
     (f : ℝ → ℝ) (hf_meas : Measurable f) (hf_bdd : ∀ x, |f x| ≤ 1) :
     ∀ ε > 0, ∃ (M : ℕ), ∀ (m : ℕ), m ≥ M →
       ∫ ω, |(1 / (m : ℝ)) * ∑ i : Fin m, f (X i ω) -
-             (μ[(f ∘ X 0) | TailSigma.tailSigma X] ω)| ∂μ < ε := by
+             (μ[(f ∘ X 0) | Exchangeability.Tail.tailProcess X] ω)| ∂μ < ε := by
   -- Get L² convergence from cesaro_to_condexp_L2
   obtain ⟨α_f, hα_L2, hα_tail, hα_conv, hα_eq⟩ := cesaro_to_condexp_L2 hX_contract hX_meas f hf_meas hf_bdd
 
@@ -57,9 +57,9 @@ lemma cesaro_to_condexp_L1
   -- Available from cesaro_to_condexp_L2:
   -- • α_f : Ω → ℝ - the L² limit
   -- • hα_L2 : MemLp α_f 2 μ - α_f is in L²
-  -- • hα_tail : Measurable[TailSigma.tailSigma X] α_f - α_f is tail-measurable
+  -- • hα_tail : Measurable[Exchangeability.Tail.tailProcess X] α_f - α_f is tail-measurable
   -- • hα_conv : Tendsto (fun n => eLpNorm (blockAvg f X 0 n - α_f) 2 μ) atTop (𝓝 0)
-  -- • hα_eq : α_f =ᵐ[μ] μ[f ∘ X 0 | TailSigma.tailSigma X]
+  -- • hα_eq : α_f =ᵐ[μ] μ[f ∘ X 0 | Exchangeability.Tail.tailProcess X]
 
   -- STEP 1: Convert eLpNorm convergence to plain integral form
   -- eLpNorm g 2 μ = (∫ |g|² ∂μ)^(1/2), so squaring both sides and using continuity
