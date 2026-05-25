@@ -94,9 +94,12 @@ lemma firstRCylinder_measurable_ambient
   simp only [firstRCylinder, Set.setOf_forall]
   exact MeasurableSet.iInter fun i => (hX i) (hC i)
 
-/-- The firstRMap is measurable when all coordinates are measurable. -/
+/-- The firstRMap is measurable when all coordinates are measurable.
+File-private — the only caller is `firstRSigma_le_ambient` directly below;
+if a future external file needs this, lift the privacy and re-register the
+`@[measurability, fun_prop]` attributes. -/
 @[measurability, fun_prop]
-lemma measurable_firstRMap
+private lemma measurable_firstRMap
     (X : ℕ → Ω → α) (r : ℕ) (hX : ∀ i, Measurable (X i)) :
     Measurable (firstRMap X r) := by
   unfold firstRMap; fun_prop
