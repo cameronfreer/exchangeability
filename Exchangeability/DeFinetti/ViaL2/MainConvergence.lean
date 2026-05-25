@@ -479,7 +479,7 @@ theorem weighted_sums_converge_L1
     rcases halpha_0_conv (ε / 2) hε2_pos with ⟨M₁, hM₁⟩
 
     -- Get uniform bound constant (already computed above, reuse it)
-    -- Note: Cf, mf, σSqf, ρf are already in scope from line 2186
+    -- Note: Cf, mf, σSqf, ρf are already in scope
 
     -- Choose M₂ large enough that √(Cf/M₂) < ε/2
     -- This means Cf/M₂ < ε²/4, so M₂ > 4Cf/ε²

@@ -345,8 +345,10 @@ variable {α : Type*} [MeasurableSpace α]
 variable {Ω : Type*} [MeasurableSpace Ω]
 
 /-- **Step 1:** Centering reduction - when coefficients sum to zero, we can replace
-variables with centered variables in weighted sums. -/
-lemma integral_sq_weighted_sum_eq_centered {μ : Measure Ω}
+variables with centered variables in weighted sums.
+File-private — only callers are in `integral_sq_weighted_sum_via_covariance` in the
+same file. -/
+private lemma integral_sq_weighted_sum_eq_centered {μ : Measure Ω}
     {n : ℕ} (ξ : Fin n → Ω → ℝ) (c : Fin n → ℝ) (m : ℝ)
     (hc_sum : ∑ i, c i = 0) :
     ∫ ω, (∑ i, c i * ξ i ω)^2 ∂μ = ∫ ω, (∑ i, c i * (ξ i ω - m))^2 ∂μ := by
@@ -356,8 +358,10 @@ lemma integral_sq_weighted_sum_eq_centered {μ : Measure Ω}
   ring
 
 /-- **Step 2:** Expand L² norm as bilinear form - converts integral of square to
-double sum of covariances. -/
-lemma integral_sq_weighted_sum_eq_double_sum {μ : Measure Ω}
+double sum of covariances.
+File-private — only callers are in `integral_sq_weighted_sum_via_covariance` in the
+same file. -/
+private lemma integral_sq_weighted_sum_eq_double_sum {μ : Measure Ω}
     {n : ℕ} (η : Fin n → Ω → ℝ) (c : Fin n → ℝ)
     (h_integrable : ∀ i j, Integrable (fun ω => η i ω * η j ω) μ) :
     ∫ ω, (∑ i, c i * η i ω)^2 ∂μ =

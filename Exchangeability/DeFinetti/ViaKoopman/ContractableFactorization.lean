@@ -186,8 +186,8 @@ lemma product_blockAvg_L1_convergence
   --   Finite sum of things → 0 is → 0 (by tendsto_finset_sum).
   --
   -- **Key ingredients from MoreL2Helpers.lean**:
-  --   - abs_prod_sub_prod_le (line 4624): |∏ f - ∏ g| ≤ ∑ |f_i - g_i| for |f|, |g| ≤ 1
-  --   - prod_tendsto_L1_of_L1_tendsto (line 4670): Alternative direct approach
+  --   - abs_prod_sub_prod_le: |∏ f - ∏ g| ≤ ∑ |f_i - g_i| for |f|, |g| ≤ 1
+  --   - prod_tendsto_L1_of_L1_tendsto: Alternative direct approach
 
   -- Handle m = 0 case first
   by_cases hm : m = 0
