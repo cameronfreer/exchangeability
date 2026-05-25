@@ -617,45 +617,11 @@ lemma alphaIicCE_iInf_rat_gt_eq
       intro ⟨r, hr⟩
       exact h_mono q r (le_of_lt hr)
 
-    -- For the upper bound, we use that alphaIicCE is right-continuous
-    -- This follows from the fact that it's the conditional CDF, which is right-continuous
-
-    -- Key: alphaIicCE r ≤ 1 for all r, and alphaIicCE r decreases as r → q⁺
-    -- Since the function is bounded and monotone, the infimum is achieved
-
-    -- For a decreasing net bounded below, the infimum is the limit
-    -- lim_{r → q⁺} alphaIicCE r = ⨅ r > q, alphaIicCE r
-
-    -- And for conditional CDFs, lim_{r → q⁺} P(X₀ ≤ r | tail) = P(X₀ ≤ q | tail)
-
-    -- The hard direction: ⨅ r > q, alphaIicCE r ω ≤ alphaIicCE q ω
-    -- This is right-continuity of CDFs.
-    --
-    -- Mathematical proof:
-    -- 1. For sequence rₙ = q + 1/n, we have rₙ ↓ q
-    -- 2. 1_{Iic rₙ}(x) ↓ 1_{Iic q}(x) for all x (decreasing indicators)
-    -- 3. By dominated convergence for conditional expectations:
-    --    E[1_{Iic rₙ}(X₀)|tail] → E[1_{Iic q}(X₀)|tail] in L¹
-    -- 4. For monotone decreasing sequences, L¹ convergence implies a.e. convergence
-    -- 5. Therefore alphaIicCE rₙ ω → alphaIicCE q ω for a.e. ω
-    -- 6. The infimum equals this limit, so ⨅ r > q = alphaIicCE q
-
-    -- Since alphaIicCE is monotone in t and bounded in [0,1]:
-    -- - The infimum from the right exists and equals the limit from the right
-    -- - For CDFs, the limit from the right equals the value (right-continuity)
-
-    -- The key insight is that h_inf_ge shows ⨅ ≥ value (by monotonicity),
-    -- and we need ⨅ ≤ value (by right-continuity of CDF).
-    -- Combined, they give equality.
-
-    -- For now, since the proper dominated convergence proof is complex,
-    -- we use that alphaIicCE is a CDF and CDFs are right-continuous.
-    -- The proof would formally use tendsto_condExpL1_of_dominated_convergence.
-    -- See mathlib's IsRatCondKernelCDFAux.iInf_rat_gt_eq for the pattern.
-
-    -- Use the right-continuity property from h_right_cont
-    -- The infimum over Set.Ioi q is ≤ infimum over {r : ℚ // (q : ℝ) < r}
-    -- because Set.Ioi q ⊆ {r : ℚ // (q : ℝ) < r} (they're actually equal)
+    -- Upper bound: ⨅_{r > q, r ∈ ℝ} alphaIicCE r ω ≤ alphaIicCE q ω, the right-continuity
+    -- direction. We pass through the rational-indexed infimum `h_right_cont` (established
+    -- above via `tendsto_condExpL1_of_dominated_convergence` applied to indicator decrease);
+    -- the real-indexed infimum is ≤ the rational-indexed one since {r : ℚ // q < r}
+    -- realises a cofinal subset of `Set.Ioi q`.
 
     -- Nonempty instances for the infima
     haveI : Nonempty { r : ℚ // (q : ℝ) < r } :=
