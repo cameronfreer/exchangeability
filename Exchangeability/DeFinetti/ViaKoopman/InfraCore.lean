@@ -97,31 +97,11 @@ notation "Ωℤ[" α "]" => Ωℤ α
 /-- The two-sided shift on bi-infinite sequences. -/
 def shiftℤ (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n + 1)
 
-omit [MeasurableSpace α] in
-@[simp] lemma shiftℤ_apply (ω : Ωℤ[α]) (n : ℤ) :
-    shiftℤ (α := α) ω n = ω (n + 1) := rfl
-
 /-- The inverse shift on bi-infinite sequences. -/
 def shiftℤInv (ω : Ωℤ[α]) : Ωℤ[α] := fun n => ω (n - 1)
 
-omit [MeasurableSpace α] in
-@[simp] lemma shiftℤInv_apply (ω : Ωℤ[α]) (n : ℤ) :
-    shiftℤInv (α := α) ω n = ω (n - 1) := rfl
-
-omit [MeasurableSpace α] in
-@[simp] lemma shiftℤ_comp_shiftℤInv (ω : Ωℤ[α]) :
-    shiftℤ (α := α) (shiftℤInv (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
-
-omit [MeasurableSpace α] in
-@[simp] lemma shiftℤInv_comp_shiftℤ (ω : Ωℤ[α]) :
-    shiftℤInv (α := α) (shiftℤ (α := α) ω) = ω := by ext; simp [shiftℤ, shiftℤInv]
-
 /-- Restrict a bi-infinite path to its nonnegative coordinates. -/
 def restrictNonneg (ω : Ωℤ[α]) : Ω[α] := fun n => ω (Int.ofNat n)
-
-omit [MeasurableSpace α] in
-@[simp] lemma restrictNonneg_apply (ω : Ωℤ[α]) (n : ℕ) :
-    restrictNonneg (α := α) ω n = ω (Int.ofNat n) := rfl
 
 /-- Extend a one-sided path to the bi-infinite path space by duplicating the zeroth
 coordinate on the negative side. This is a convenient placeholder when we only need
@@ -130,14 +110,6 @@ def extendByZero (ω : Ω[α]) : Ωℤ[α] :=
   fun
   | Int.ofNat n => ω n
   | Int.negSucc _ => ω 0
-
-omit [MeasurableSpace α] in
-@[simp] lemma restrictNonneg_extendByZero (ω : Ω[α]) :
-    restrictNonneg (α := α) (extendByZero (α := α) ω) = ω := by ext; simp [extendByZero]
-
-omit [MeasurableSpace α] in
-@[simp] lemma extendByZero_apply_nat (ω : Ω[α]) (n : ℕ) :
-    extendByZero (α := α) ω ↑n = ω n := by simp [extendByZero]
 
 @[measurability, fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by

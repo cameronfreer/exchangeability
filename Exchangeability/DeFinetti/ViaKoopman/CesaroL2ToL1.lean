@@ -95,8 +95,9 @@ lemma eventuallyEq_comp_measurePreserving {f g : Ω[α] → ℝ}
   hT.quasiMeasurePreserving.ae_eq_comp hfg
 
 omit [MeasurableSpace α] [StandardBorelSpace α] in
-/-- General evaluation formula for shift iteration. -/
-lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
+/-- General evaluation formula for shift iteration. File-private — only caller
+is `iterate_shift_eval0'` directly below. -/
+private lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) n = ω (k + n) := by
   induction k generalizing n with
   | zero => simp
@@ -107,8 +108,9 @@ lemma iterate_shift_eval' (k n : ℕ) (ω : Ω[α]) :
       ac_rfl
 
 omit [MeasurableSpace α] [StandardBorelSpace α] in
-/-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. -/
-lemma iterate_shift_eval0' (k : ℕ) (ω : Ω[α]) :
+/-- Evaluate the k-th shift at 0: shift^[k] ω 0 = ω k. File-private — only
+in-file caller. -/
+private lemma iterate_shift_eval0' (k : ℕ) (ω : Ω[α]) :
     (shift^[k] ω) 0 = ω k := by
   rw [iterate_shift_eval']
   simp
