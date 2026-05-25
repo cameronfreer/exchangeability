@@ -314,6 +314,23 @@ lemma Contractable.shift_and_select {μ : Measure Ω} {X : ℕ → Ω → α}
       Measure.map (fun ω i => X i.val ω) μ :=
   hX m (fun i => offset + k i) (fun _ _ hij => Nat.add_lt_add_left (hk hij) offset)
 
+/-- **Marginal law equality.** For a contractable sequence, the law of any
+coordinate `X i` equals the law of `X 0`.
+
+Proof: instantiate the contractability axiom at the length-1 singleton
+subsequence `{i}`, then push forward by the evaluation map `g ↦ g 0`. -/
+lemma Contractable.map_single
+    {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) (i : ℕ) :
+    Measure.map (X i) μ = Measure.map (X 0) μ := by
+  have hk : StrictMono (fun _ : Fin 1 => i) := fun a b hab => by
+    simp_all [Fin.eq_zero a, Fin.eq_zero b]
+  have h_map := hX 1 (fun _ => i) hk
+  have e := congrArg (Measure.map (fun g : Fin 1 → α => g 0)) h_map
+  rwa [Measure.map_map (measurable_pi_apply 0) (by fun_prop : Measurable fun ω _ => X i ω),
+       Measure.map_map (measurable_pi_apply 0)
+         (by fun_prop : Measurable fun ω (j : Fin 1) => X j.val ω)] at e
+
 /--
 Helper lemma: All values of a strictly monotone function are bounded by its last value plus one.
 

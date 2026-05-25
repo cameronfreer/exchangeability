@@ -77,30 +77,8 @@ lemma condExp_shift_eq_condExp
     -- Integrability of f ∘ X (n+1)
     have hf_int_n : Integrable (f ∘ X (n + 1)) μ := by
       -- By contractability, X (n+1) has the same distribution as X 0
-      have h_shift := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (n + 1)
-      have h_meas_comp : Measurable (f ∘ X (n + 1)) := hf_meas.comp (hX_meas (n + 1))
-      -- The distributions are equal
-      have h_map_eq : Measure.map (X (n + 1)) μ = Measure.map (X 0) μ := by
-        have h1 := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (n + 1)
-        ext s hs
-        let S : Set (Fin 1 → α) := {f | f 0 ∈ s}
-        have hS : MeasurableSet S := measurable_pi_apply 0 hs
-        have h_preimage_n1 : X (n + 1) ⁻¹' s = (fun ω (i : Fin 1) => X ((n + 1) + i.val) ω) ⁻¹' S := by
-          ext ω
-          simp only [Set.mem_preimage, Set.mem_setOf_eq, S, Fin.val_zero, add_zero]
-        have h_preimage_0 : X 0 ⁻¹' s = (fun ω (i : Fin 1) => X i.val ω) ⁻¹' S := by
-          ext ω
-          simp only [Set.mem_preimage, Set.mem_setOf_eq, S, Fin.val_zero]
-        have h_meas_n1 : Measurable (fun ω (i : Fin 1) => X ((n + 1) + i.val) ω) := by
-          fun_prop
-        have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) := by
-          fun_prop
-        rw [Measure.map_apply (hX_meas (n + 1)) hs, Measure.map_apply (hX_meas 0) hs]
-        rw [h_preimage_n1, h_preimage_0]
-        have h_eq := congrFun (congrArg (·.toOuterMeasure) h1) S
-        simp only [Measure.coe_toOuterMeasure] at h_eq
-        rw [Measure.map_apply h_meas_n1 hS, Measure.map_apply h_meas_0 hS] at h_eq
-        exact h_eq
+      have h_map_eq : Measure.map (X (n + 1)) μ = Measure.map (X 0) μ :=
+        Exchangeability.Contractable.map_single hX_contract hX_meas (n + 1)
       have hf_aesm_0 : AEStronglyMeasurable f (Measure.map (X 0) μ) :=
         hf_meas.aestronglyMeasurable
       have h_int_map : Integrable f (Measure.map (X 0) μ) :=

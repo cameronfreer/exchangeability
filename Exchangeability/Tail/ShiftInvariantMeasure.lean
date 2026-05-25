@@ -154,27 +154,8 @@ lemma setIntegral_comp_shift_eq
     have h_shift := tailSigma_shift_invariant_for_contractable X hX_contract hX_meas
 
     -- X_{k+1} and X_0 have the same distribution (from contractability)
-    have hX_k1_eq_X0 : Measure.map (X (k + 1)) μ = Measure.map (X 0) μ := by
-      have h1 := Exchangeability.Contractable.shift_segment_eq hX_contract 1 (k + 1)
-      ext s hs
-      let S : Set (Fin 1 → α) := {g | g 0 ∈ s}
-      have hS : MeasurableSet S := measurable_pi_apply 0 hs
-      have h_meas_k1 : Measurable (fun ω (i : Fin 1) => X ((k + 1) + i.val) ω) := by
-        fun_prop
-      have h_meas_0 : Measurable (fun ω (i : Fin 1) => X i.val ω) := by
-        fun_prop
-      rw [Measure.map_apply (hX_meas (k + 1)) hs, Measure.map_apply (hX_meas 0) hs]
-      have h_pre_k1 : X (k + 1) ⁻¹' s = (fun ω (i : Fin 1) => X ((k + 1) + i.val) ω) ⁻¹' S := by
-        ext ω
-        simp only [Set.mem_preimage, Set.mem_setOf_eq, S, Fin.val_zero, add_zero]
-      have h_pre_0 : X 0 ⁻¹' s = (fun ω (i : Fin 1) => X i.val ω) ⁻¹' S := by
-        ext ω
-        simp only [Set.mem_preimage, Set.mem_setOf_eq, S, Fin.val_zero]
-      rw [h_pre_k1, h_pre_0]
-      have h_eq := congrFun (congrArg (·.toOuterMeasure) h1) S
-      simp only [Measure.coe_toOuterMeasure] at h_eq
-      rw [Measure.map_apply h_meas_k1 hS, Measure.map_apply h_meas_0 hS] at h_eq
-      exact h_eq
+    have hX_k1_eq_X0 : Measure.map (X (k + 1)) μ = Measure.map (X 0) μ :=
+      Exchangeability.Contractable.map_single hX_contract hX_meas (k + 1)
 
     -- Integrability transfer
     have hf_int_k1 : Integrable (f ∘ X (k + 1)) μ := by
