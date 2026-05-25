@@ -209,6 +209,5 @@ lemma condExp_indicator_eq_of_law_eq_of_comap_le
 
   -- (μ₂ - μ₁)² = 0 implies μ₂ = μ₁
   filter_upwards [h_diff_zero] with ω hω
-  have : μ₂ ω - μ₁ ω = 0 := by nlinarith [sq_nonneg (μ₂ ω - μ₁ ω)]
-  linarith
+  nlinarith [sq_nonneg (μ₂ ω - μ₁ ω)]
 

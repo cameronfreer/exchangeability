@@ -44,7 +44,6 @@ lemma upcrossings_bdd_uniform
   -- The L¹ norm of revCEFinite is uniformly bounded by ‖f‖₁
   have hL1_bdd : ∀ N n, eLpNorm (revCEFinite (μ := μ) f 𝔽 N n) 1 μ ≤ eLpNorm f 1 μ := by
     intro N n
-    simp only [revCEFinite]
     exact eLpNorm_one_condExp_le_eLpNorm f
 
   -- For each N, revCEFinite is a martingale, hence a submartingale

@@ -38,11 +38,9 @@ lemma marginal_law_eq_of_pair_law
     (hX : Measurable X) (hW : Measurable W) (hW' : Measurable W')
     (h_law : Measure.map (fun ω => (X ω, W ω)) μ = Measure.map (fun ω => (X ω, W' ω)) μ) :
     Measure.map W μ = Measure.map W' μ := by
-  have h1 : Measure.map W μ = Measure.map Prod.snd (Measure.map (fun ω => (X ω, W ω)) μ) := by
-    rw [Measure.map_map measurable_snd (hX.prodMk hW)]; rfl
-  have h2 : Measure.map W' μ = Measure.map Prod.snd (Measure.map (fun ω => (X ω, W' ω)) μ) := by
-    rw [Measure.map_map measurable_snd (hX.prodMk hW')]; rfl
-  rw [h1, h_law, ← h2]
+  simpa [Measure.map_map measurable_snd (hX.prodMk hW),
+         Measure.map_map measurable_snd (hX.prodMk hW')] using
+    congrArg (Measure.map Prod.snd) h_law
 
 /-- Helper for Kallenberg 1.3: Square integrals are equal via Doob-Dynkin factorization.
 

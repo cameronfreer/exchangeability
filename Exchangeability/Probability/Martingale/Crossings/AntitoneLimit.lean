@@ -347,10 +347,8 @@ lemma ae_limit_is_condexp_iInf
   set F_inf := iInf 𝔽 with hF_inf_def
 
   -- Tower property: For every n, μ[μ[f | 𝔽 n] | F_inf] = μ[f | F_inf]
-  have h_tower : ∀ n, μ[μ[f | 𝔽 n] | F_inf] =ᵐ[μ] μ[f | F_inf] := by
-    intro n
-    have : F_inf ≤ 𝔽 n := iInf_le 𝔽 n
-    exact condExp_condExp_of_le this (h_le n)
+  have h_tower : ∀ n, μ[μ[f | 𝔽 n] | F_inf] =ᵐ[μ] μ[f | F_inf] :=
+    fun n => condExp_condExp_of_le (iInf_le 𝔽 n) (h_le n)
 
   -- Final identification: Xlim = μ[f | F_inf]
   -- Strategy: Use L¹-continuity of condExp (non-circular approach)
@@ -366,12 +364,7 @@ lemma ae_limit_is_condexp_iInf
 
   -- First, relate hL1_conv to Xn notation
   have hL1_conv_Xn : Tendsto (fun n => eLpNorm (Xlim - Xn n) 1 μ) atTop (𝓝 0) := by
-    have : ∀ n, eLpNorm (Xlim - Xn n) 1 μ = eLpNorm (μ[f | 𝔽 n] - Xlim) 1 μ := by
-      intro n
-      simp only [hXn_def]
-      rw [eLpNorm_sub_comm]
-    simp only [this]
-    exact hL1_conv
+    simpa [hXn_def, eLpNorm_sub_comm] using hL1_conv
 
   -- Key inequality: ‖μ[Xlim | F_inf] - Y‖₁ ≤ ‖Xlim - Xn n‖₁ for all n
   have h_bound (n : ℕ) : eLpNorm (μ[Xlim | F_inf] - Y) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := by

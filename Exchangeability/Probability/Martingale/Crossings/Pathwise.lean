@@ -52,8 +52,7 @@ noncomputable def downcrossings {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ
 /-- **Identity 1:** Upcrossings of negated process = downcrossings of original.
 Negation flips crossing direction: up(-b, -a, -X) = down(a, b, X). -/
 lemma up_neg_flip_eq_down {Ω : Type*} (a b : ℝ) (X : ℕ → Ω → ℝ) :
-  upcrossings (-b) (-a) (negProcess X) = downcrossings a b X := by
-  funext ω; simp [upcrossings, downcrossings, downcrossingsBefore]
+  upcrossings (-b) (-a) (negProcess X) = downcrossings a b X := rfl
 
 /-- Double negation is identity (used by `simp` below). -/
 @[simp] private lemma negProcess_negProcess {Ω : Type*} (X : ℕ → Ω → ℝ) :
@@ -123,11 +122,7 @@ private lemma upperCrossingTime_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω
 lemma upcrossingsBefore_congr {Ω : Type*} {a b : ℝ} {f g : ℕ → Ω → ℝ} {N : ℕ} {ω : Ω}
     (h : ∀ n ≤ N, f n ω = g n ω) :
     upcrossingsBefore a b f N ω = upcrossingsBefore a b g N ω := by
-  simp only [upcrossingsBefore]
-  congr 1
-  ext k
-  simp only [Set.mem_setOf_eq]
-  rw [upperCrossingTime_congr h]
+  simp [upcrossingsBefore, upperCrossingTime_congr h]
 
 /-- Index is bounded by completion time when upperCrossingTime < N.
 If the n-th crossing completes before time N, then n < N. -/

@@ -76,10 +76,7 @@ lemma revCEFinite_martingale
     intro i j hij
     simp only [revCEFinite, revFiltration]
     -- Tower: E[μ[f | 𝔽_{N-j}] | 𝔽_{N-i}] = μ[f | 𝔽_{N-i}]
-    -- Need: 𝔽_{N-i} ≤ 𝔽_{N-j} (since i ≤ j ⟹ N-j ≤ N-i ⟹ 𝔽(N-i) ≤ 𝔽(N-j))
-    have : 𝔽 (N - i) ≤ 𝔽 (N - j) := by
-      have : N - j ≤ N - i := tsub_le_tsub_left hij N
-      exact h_antitone this
-    exact condExp_condExp_of_le this (h_le (N - j))
+    -- 𝔽_{N-i} ≤ 𝔽_{N-j} since i ≤ j ⟹ N-j ≤ N-i and 𝔽 is antitone.
+    exact condExp_condExp_of_le (h_antitone (tsub_le_tsub_left hij N)) (h_le (N - j))
 
 end Exchangeability.Probability
