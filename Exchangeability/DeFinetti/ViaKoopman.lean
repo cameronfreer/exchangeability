@@ -176,9 +176,7 @@ lemma pathSpace_shift_preserving_of_contractable
         fun_prop
     rw [Measure.map_map shift_measurable hφ_meas]
     -- shift ∘ φ = (fun ω i => X (i+1) ω)
-    have h_comp : shift ∘ (fun ω' i => X i ω') = fun ω' i => X (i + 1) ω' := by
-      ext ω i
-      simp [shift]
+    have h_comp : shift ∘ (fun ω' i => X i ω') = fun ω' i => X (i + 1) ω' := rfl
     rw [h_comp]
     -- Apply the helper lemma
     exact measure_map_shift_eq_of_contractable X hX_meas hContract

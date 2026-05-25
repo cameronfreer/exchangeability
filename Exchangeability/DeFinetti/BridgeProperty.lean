@@ -78,7 +78,7 @@ lemma measure_eq_implies_lintegral_prod_eq
 
   -- Preimage characterization
   have hpre : (fun ω => fun i : Fin m => X (k i) ω) ⁻¹' S = ⋂ i : Fin m, (X (k i)) ⁻¹' (B i) := by
-    ext ω; simp only [S, mem_preimage, mem_pi, mem_univ, true_implies, mem_iInter]
+    ext ω; simp [S]
 
   -- Measurability of preimage
   have hpre_meas : MeasurableSet (⋂ i : Fin m, (X (k i)) ⁻¹' (B i)) :=
@@ -89,8 +89,8 @@ lemma measure_eq_implies_lintegral_prod_eq
     measurability
 
   -- Characterization: ω in preimage ↔ ∀ i, X (k i) ω ∈ B i
-  have hpre_mem : ∀ ω, ω ∈ ⋂ i : Fin m, (X (k i)) ⁻¹' (B i) ↔ ∀ i, X (k i) ω ∈ B i := by
-    intro ω; simp only [mem_iInter, mem_preimage]
+  have hpre_mem : ∀ ω, ω ∈ ⋂ i : Fin m, (X (k i)) ⁻¹' (B i) ↔ ∀ i, X (k i) ω ∈ B i :=
+    fun ω => by simp [Set.mem_iInter, Set.mem_preimage]
 
   -- LHS: Compute map measure on the rectangle S
   have hL : (Measure.map (fun ω => fun i : Fin m => X (k i) ω) μ) S
