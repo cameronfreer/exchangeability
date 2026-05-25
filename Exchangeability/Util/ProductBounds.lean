@@ -14,14 +14,14 @@ These are used in the contractability-based proof of de Finetti's theorem.
 
 ## Main results
 
-* `abs_prod_le_one`: |∏ f| ≤ 1 when all |f i| ≤ 1
 * `abs_prod_sub_prod_le`: |∏ f - ∏ g| ≤ ∑ |f_j - g_j| when factors bounded by 1
 -/
 
 namespace Exchangeability.Util
 
-/-- Helper: |∏ f| ≤ 1 when all |f i| ≤ 1. -/
-lemma abs_prod_le_one {n : ℕ} (f : Fin n → ℝ) (hf : ∀ i, |f i| ≤ 1) : |∏ i, f i| ≤ 1 := by
+/-- Helper: |∏ f| ≤ 1 when all |f i| ≤ 1. File-private — only caller is
+`abs_prod_sub_prod_le` directly below. -/
+private lemma abs_prod_le_one {n : ℕ} (f : Fin n → ℝ) (hf : ∀ i, |f i| ≤ 1) : |∏ i, f i| ≤ 1 := by
   rw [Finset.abs_prod]
   have h1 : ∏ i, |f i| ≤ ∏ _i : Fin n, (1 : ℝ) := by
     apply Finset.prod_le_prod
