@@ -84,10 +84,8 @@ lemma aestronglyMeasurable_iInf_antitone
     rw [h_shift]
     -- Now show liminf of g (n + N) is Measurable[m N]
     -- Each g (n + N) is Measurable[m (n + N)], and m (n + N) ≤ m N by antitonicity
-    have hg_meas_shifted : ∀ n, @Measurable α ℝ (m N) _ (g (n + N)) := by
-      intro n
-      have h_le_N : m (n + N) ≤ m N := h_anti (Nat.le_add_left N n)
-      exact Measurable.mono (hg_meas (n + N)) h_le_N le_rfl
+    have hg_meas_shifted : ∀ n, @Measurable α ℝ (m N) _ (g (n + N)) :=
+      fun n => (hg_meas (n + N)).mono (h_anti (Nat.le_add_left N n)) le_rfl
     haveI : MeasurableSpace α := m N
     exact Measurable.liminf hg_meas_shifted
 
@@ -100,17 +98,10 @@ lemma aestronglyMeasurable_iInf_antitone
   -- Step 4: Show f =ᵐ h
   -- On the set where f = g N for all N, we have h = f
   have h_ae_eq : f =ᵐ[μ] h := by
-    -- Countable intersection of full-measure sets is full-measure
-    have h_all_eq : ∀ᵐ x ∂μ, ∀ N, f x = g N x := by
-      rw [MeasureTheory.ae_all_iff]
-      intro N
-      exact hg_ae N
+    have h_all_eq : ∀ᵐ x ∂μ, ∀ N, f x = g N x := MeasureTheory.ae_all_iff.mpr hg_ae
     filter_upwards [h_all_eq] with x hx
     -- At x, f x = g N x for all N, so liminf (g N x) = f x
-    simp only [h]
-    have h_const : ∀ N, g N x = f x := fun N => (hx N).symm
-    simp_rw [h_const]
-    exact (Filter.liminf_const (f x)).symm
+    simp [h, fun N => (hx N).symm, Filter.liminf_const]
 
   -- Step 5: Convert Measurable to StronglyMeasurable (for ℝ)
   have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ (⨅ N, m N) h := by

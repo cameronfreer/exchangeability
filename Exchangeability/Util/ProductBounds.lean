@@ -22,13 +22,8 @@ namespace Exchangeability.Util
 /-- Helper: |∏ f| ≤ 1 when all |f i| ≤ 1. File-private — only caller is
 `abs_prod_sub_prod_le` directly below. -/
 private lemma abs_prod_le_one {n : ℕ} (f : Fin n → ℝ) (hf : ∀ i, |f i| ≤ 1) : |∏ i, f i| ≤ 1 := by
-  rw [Finset.abs_prod]
-  have h1 : ∏ i, |f i| ≤ ∏ _i : Fin n, (1 : ℝ) := by
-    apply Finset.prod_le_prod
-    · intro i _; exact abs_nonneg _
-    · intro i _; exact hf i
-  simp at h1
-  exact h1
+  simpa [Finset.abs_prod] using
+    Finset.prod_le_prod (fun i _ => abs_nonneg (f i)) (fun i _ => hf i)
 
 /-- Telescoping bound: |∏ f - ∏ g| ≤ ∑ |f_j - g_j| when factors are bounded by 1.
 

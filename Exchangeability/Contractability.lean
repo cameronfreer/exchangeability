@@ -426,9 +426,7 @@ theorem contractable_of_exchangeable {μ : Measure Ω} {X : ℕ → Ω → α}
         simpa [ι] using hσ i
       simp [proj, Function.comp_apply, hσi]
 
-    have hrhs_eq : (proj ∘ fun ω j => X j.val ω) = (fun ω i => X i.val ω) := by
-      ext ω i
-      simp [proj, Function.comp_apply, ι]
+    have hrhs_eq : (proj ∘ fun ω j => X j.val ω) = (fun ω i => X i.val ω) := rfl
 
     rwa [hlhs_eq, hrhs_eq] at hproj_eq
 

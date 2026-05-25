@@ -261,9 +261,7 @@ lemma directing_measure_bridge
         ⟨1, fun x => by simp only [Set.indicator]; split_ifs <;> norm_num⟩
       have h_integral : ∀ ω, ∫ x, Set.indicator B (fun _ => (1 : ℝ)) x ∂(ν ω) = (ν ω B).toReal := by
         intro ω
-        have h1 : Set.indicator B (fun _ => (1 : ℝ)) = B.indicator 1 := by
-          ext x; simp only [Set.indicator, Pi.one_apply]
-        rw [h1, integral_indicator_one hB]; rfl
+        simpa using integral_indicator_one hB
       filter_upwards [h_eq] with ω hω; rw [← h_integral ω, hω]; rfl
     -- Shift invariance: E[1_B ∘ X n | tail] =ᵐ E[1_B ∘ X 0 | tail]
     have h_shift : μ[Set.indicator B (fun _ => (1 : ℝ)) ∘ (X n) | Exchangeability.Tail.tailProcess X] =ᵐ[μ]

@@ -116,23 +116,15 @@ lemma contractable_shift_invariant_law {Ω : Type*} [MeasurableSpace Ω]
   let k : Fin n → ℕ := fun i => i.val + 1
   have hk_strictMono : StrictMono k := fun i j hij => Nat.add_lt_add_right hij 1
 
-  -- Show both maps equal the standard forms
-  -- Note: goal has (prefixProj ∘ shift) ∘ pathify X, so match that form
+  -- Show both maps equal the standard forms; both equalities hold definitionally.
   have h_lhs : ((Exchangeability.prefixProj ℝ n ∘ shift) ∘ pathify X)
-      = (fun ω i => X (k i) ω) := by
-    funext ω i
-    simp only [Function.comp_apply, Exchangeability.prefixProj, shift_apply, pathify, k]
-
+      = (fun ω i => X (k i) ω) := rfl
   have h_rhs : (Exchangeability.prefixProj ℝ n ∘ pathify X)
-      = (fun ω i => X i.val ω) := by
-    funext ω i
-    simp only [Function.comp_apply, Exchangeability.prefixProj, pathify]
+      = (fun ω i => X i.val ω) := rfl
 
-  rw [h_lhs, h_rhs]
-
-  -- Apply contractability: k is strictly monotone, so distributions match
-  -- hX n k hk_strictMono : Measure.map (fun ω i => X (k i) ω) μ = Measure.map (fun ω i => X i.val ω) μ
-  rw [hX n k hk_strictMono]
+  -- Apply contractability: hX n k hk_strictMono equates the two pushforward measures,
+  -- so applying both sides at S gives the desired equality of measures on S.
+  simpa [h_lhs, h_rhs] using congrArg (fun ν => ν S) (hX n k hk_strictMono)
 
 /-- **Bridge 1'.** Package the previous lemma as `MeasurePreserving` for MET. -/
 lemma measurePreserving_shift_path {Ω : Type*} [MeasurableSpace Ω]
