@@ -16,16 +16,6 @@ This directory contains active work plans, progress tracking, and development re
 ### Resources
 - **[MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md](MATHLIB_RESOURCES_FOR_EXCHANGEABILITY.md)** - Catalog of relevant mathlib lemmas and theories
 
-## Deprecated Documents
-
-Historical work plans, session notes, and superseded documents have been moved to [`Deprecated/`](Deprecated/):
-- ViaKoopman planning documents
-- DeFinetti-specific session notes
-- Proof exploration notes
-- Old implementation guides
-
-See [`Deprecated/README.md`](Deprecated/README.md) for details.
-
 ## Current Project Status
 
 **As of January 2026:**
