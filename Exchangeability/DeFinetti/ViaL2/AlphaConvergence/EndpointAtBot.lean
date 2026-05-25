@@ -113,11 +113,13 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
       use 0
       exact measure_ne_top μ _
     have h_tendsto_ennreal : Tendsto (fun (n : ℕ) => μ (X 0 ⁻¹' Set.Iic (-(n : ℝ)))) atTop (𝓝 0) := by
-      simpa [h_empty, Function.comp] using
-        tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+      have := tendsto_measure_iInter_atTop (μ := μ) h_meas h_antitone h_fin
+      simp only [h_empty, measure_empty] at this
+      simpa [Function.comp] using this
     -- Convert from ENNReal to Real using continuity of toReal at 0
-    simpa using
-      (ENNReal.continuousAt_toReal (by norm_num : (0 : ENNReal) ≠ ⊤)).tendsto.comp h_tendsto_ennreal
+    have h_zero_ne_top : (0 : ENNReal) ≠ ⊤ := by norm_num
+    rw [← ENNReal.toReal_zero]
+    exact (ENNReal.continuousAt_toReal h_zero_ne_top).tendsto.comp h_tendsto_ennreal
 
   -- Step 2: L¹ contraction - ‖condExp f‖₁ ≤ ‖f‖₁
   have h_contraction : ∀ n : ℕ,
@@ -129,8 +131,9 @@ private lemma alphaIicCE_L1_tendsto_zero_atBot
     exact integral_abs_condExp_le (μ := μ) (m := Exchangeability.Tail.tailProcess X) _
 
   -- Apply squeeze theorem: 0 ≤ ‖alphaIicCE‖₁ ≤ ‖indicator‖₁ → 0
-  exact tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto
-    (fun _ => integral_nonneg (fun _ => abs_nonneg _)) h_contraction
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds h_indicator_tendsto ?_ h_contraction
+  intro n
+  exact integral_nonneg (fun ω => abs_nonneg _)
 
 /-- **A.e. pointwise endpoint limit at -∞**.
 

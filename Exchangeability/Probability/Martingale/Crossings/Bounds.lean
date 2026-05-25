@@ -75,9 +75,9 @@ lemma upcrossings_bdd_uniform
             -- Convert lintegral to eLpNorm and use hL1_bdd
             have : ∫⁻ ω, ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| ∂μ =
                    eLpNorm (revCEFinite (μ := μ) f 𝔽 N M) 1 μ := by
-              simpa [Real.enorm_eq_ofReal_abs] using
-                (MeasureTheory.eLpNorm_one_eq_lintegral_enorm
-                  (f := revCEFinite (μ := μ) f 𝔽 N M) (μ := μ)).symm
+              rw [eLpNorm_one_eq_lintegral_enorm]
+              congr 1; ext ω
+              exact (Real.enorm_eq_ofReal_abs _).symm
             rw [this]
             calc eLpNorm (revCEFinite (μ := μ) f 𝔽 N M) 1 μ
                 ≤ eLpNorm f 1 μ := hL1_bdd N M
