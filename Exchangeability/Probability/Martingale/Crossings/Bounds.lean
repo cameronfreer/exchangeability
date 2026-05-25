@@ -67,11 +67,9 @@ lemma upcrossings_bdd_uniform
                     simp only [le_abs_self, max_le_iff, abs_nonneg, and_self]
               _ ≤ |revCEFinite (μ := μ) f 𝔽 N M ω| + |a| := abs_sub _ _
       _ = ∫⁻ ω, (ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| + ENNReal.ofReal |a|) ∂μ := by
-            congr 1; ext ω
-            exact ENNReal.ofReal_add (abs_nonneg _) (abs_nonneg _)
+            simp [ENNReal.ofReal_add]
       _ = ∫⁻ ω, ENNReal.ofReal |revCEFinite (μ := μ) f 𝔽 N M ω| ∂μ + ENNReal.ofReal |a| := by
-            rw [lintegral_add_right _ measurable_const, lintegral_const]
-            simp [IsProbabilityMeasure.measure_univ]
+            simp [lintegral_add_right, lintegral_const, IsProbabilityMeasure.measure_univ]
       _ ≤ ENNReal.ofReal (eLpNorm f 1 μ).toReal + ENNReal.ofReal |a| := by
             gcongr
             -- Convert lintegral to eLpNorm and use hL1_bdd

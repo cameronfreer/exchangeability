@@ -104,8 +104,7 @@ lemma ae_tendsto_const_of_ae_convergent_of_L1_const
     exact h_int_zero
   -- Combine: hf_ae gives Tendsto _ (𝓝 (L ω)); h_abs_zero gives L ω = c a.e.
   filter_upwards [hf_ae, h_abs_zero] with ω h_ae h_eq
-  have h_diff_zero : L ω - c = 0 := by simpa using h_eq
-  have : L ω = c := by linarith
-  rwa [this] at h_ae
+  have : L ω = c := sub_eq_zero.mp (abs_eq_zero.mp h_eq)
+  simpa [this] using h_ae
 
 end Exchangeability.DeFinetti.ViaL2

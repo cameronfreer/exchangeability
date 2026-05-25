@@ -62,9 +62,7 @@ lemma condExp_exists_ae_limit_antitone
     · -- Measurability
       exact stronglyMeasurable_condExp.measurable.mono (h_le n) le_rfl
     · -- Bound
-      calc eLpNorm (μ[f | 𝔽 n]) 1 μ
-          ≤ eLpNorm f 1 μ := hL1_bdd n
-        _ = R := hR
+      simpa [hR] using hL1_bdd n
 
   -- Step 2: Show finite upcrossings using L¹-boundedness. The expected number of
   -- upcrossings on `[a, b]` is bounded by a finite constant via
@@ -101,8 +99,7 @@ lemma condExp_exists_ae_limit_antitone
 
       -- Recognize that revProcess of condExp = revCEFinite
       have h_rev_eq : negProcess (revProcess (fun n => μ[f | 𝔽 n]) N)
-                    = negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) := by
-        ext n ω'; simp [negProcess, revProcess, revCEFinite]
+                    = negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n) := rfl
 
       -- Pick index (N+1) from the supremum definition of upcrossings
       have h_to_iSup :
@@ -155,16 +152,8 @@ lemma condExp_exists_ae_limit_antitone
                       simp only [negProcess, revCEFinite]
                       exact (condExp_neg f (𝔽 (N - n))).symm
                     filter_upwards [h_ae_eq] with ω hω
-                    -- upcrossings = ⨆ M, upcrossingsBefore M. Use that upcrossingsBefore_congr
-                    -- gives equality when processes agree pointwise.
-                    unfold upcrossings
-                    congr 1
-                    ext M
-                    congr 1
-                    -- Apply upcrossingsBefore_congr: need ∀ k ≤ M, processes agree
-                    apply upcrossingsBefore_congr
-                    intro k _
-                    exact hω k
+                    simp [MeasureTheory.upcrossings,
+                          upcrossingsBefore_congr (fun k _ => hω k)]
               _ ≤ C_down := hC_down N
               _ ≤ C := le_max_right C_up C_down
 
@@ -235,9 +224,7 @@ lemma condExp_exists_ae_limit_antitone
         have : StronglyMeasurable[𝔽 n] (μ[f | 𝔽 n]) := stronglyMeasurable_condExp
         exact this.mono (h_le n) |>.aestronglyMeasurable
       · filter_upwards [h_ae_conv] with ω hω
-        simp only [Xlim]
-        rw [dif_pos hω]
-        exact Classical.choose_spec hω
+        simpa [Xlim, hω] using Classical.choose_spec hω
 
     -- By Fatou: ‖Xlim‖₁ ≤ liminf ‖μ[f | 𝔽 n]‖₁ ≤ ‖f‖₁ < ∞
     have hXlim_norm : HasFiniteIntegral Xlim μ := by
@@ -245,9 +232,7 @@ lemma condExp_exists_ae_limit_antitone
       -- Apply Fatou for ofReal ‖·‖
       have h_ae_tendsto : ∀ᵐ ω ∂μ, Tendsto (fun n => μ[f | 𝔽 n] ω) atTop (𝓝 (Xlim ω)) := by
         filter_upwards [h_ae_conv] with ω hω
-        simp only [Xlim]
-        rw [dif_pos hω]
-        exact Classical.choose_spec hω
+        simpa [Xlim, hω] using Classical.choose_spec hω
       -- Measurability proofs (separated to avoid timeout)
       have hmeas_n : ∀ n, AEMeasurable (fun ω => ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖) μ := fun n =>
         ((stronglyMeasurable_condExp (f := f) (m := 𝔽 n) (μ := μ)).mono (h_le n)).norm.measurable.ennreal_ofReal.aemeasurable
@@ -279,9 +264,7 @@ lemma condExp_exists_ae_limit_antitone
 
   · -- A.e. convergence to Xlim
     filter_upwards [h_ae_conv] with ω hω
-    simp only [Xlim]
-    rw [dif_pos hω]
-    exact Classical.choose_spec hω
+    simpa [Xlim, hω] using Classical.choose_spec hω
 
 /-- **Key lemma: A.e. limit of adapted sequence for antitone filtration is F_inf-AEStronglyMeasurable.**
 
