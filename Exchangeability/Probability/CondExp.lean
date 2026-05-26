@@ -227,7 +227,6 @@ when calling `condexp` with sub-σ-algebras. -/
 
 This wrapper "freezes" the conditioning σ-algebra and installs the necessary
 sigma-finite instances before calling `μ[f | m]`, avoiding typeclass metavariable issues. -/
-@[nolint unusedArguments]
 noncomputable
 def condExpWith {Ω : Type*} {m₀ : MeasurableSpace Ω}
     (μ : Measure Ω) [IsFiniteMeasure μ]

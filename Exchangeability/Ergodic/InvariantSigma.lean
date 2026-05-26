@@ -361,7 +361,6 @@ lemma metProjectionShift_tendsto
 
 This is the orthogonal projection onto the subspace of shift-invariant L² functions,
 implemented using mathlib's `condExpL2`. -/
-@[nolint unusedArguments]
 noncomputable def condexpL2 {μ : Measure (Ω[α])} [IsProbabilityMeasure μ] :
     Lp ℝ 2 μ →L[ℝ] Lp ℝ 2 μ :=
   -- Apply mathlib's conditional expectation to get projection onto lpMeas

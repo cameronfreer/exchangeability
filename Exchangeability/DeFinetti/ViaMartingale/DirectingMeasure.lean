@@ -49,7 +49,6 @@ at ω to get a measure on Ω, then push forward along X₀.
 
 Concretely: `directingMeasure ω = (condExpKernel μ (tailSigma X) ω).map (X 0)`
 -/
-@[nolint unusedArguments]
 noncomputable def directingMeasure
     {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω]
     {μ : Measure Ω} [IsProbabilityMeasure μ]
