@@ -48,132 +48,35 @@ variable (X : ℕ → Ω → ℝ)
 variable (hX_contract : Contractable μ X)
 variable (hX_meas : ∀ i, Measurable (X i))
 
-/-- The unique element of Fin 1. -/
-private def fin1Zero : Fin 1 := ⟨0, by decide⟩
-/-- First element of Fin 2. -/
-private def fin2Zero : Fin 2 := ⟨0, by decide⟩
-/-- Second element of Fin 2. -/
-private def fin2One : Fin 2 := ⟨1, by decide⟩
-
-/-- Evaluation at fin1Zero is measurable. -/
-private lemma measurable_eval_fin1 :
-    Measurable fun g : (Fin 1 → ℝ) => g (fin1Zero) :=
-  measurable_pi_apply _
-
-/-- Evaluation at any element of Fin 2 is measurable. -/
-private lemma measurable_eval_fin2 {i : Fin 2} :
-    Measurable fun g : (Fin 2 → ℝ) => g i :=
-  measurable_pi_apply _
-
 omit [IsProbabilityMeasure μ] in
 /-- **All marginals have the same distribution in a contractable sequence.**
 
 For a contractable sequence, the law of each coordinate agrees with the law of `X 0`.
-This follows from contractability by taking the singleton subsequence `{i}`.
-
-This is used to establish uniform covariance structure across all pairs of coordinates. -/
+Thin wrapper around `Exchangeability.Contractable.map_single`. -/
 lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
     Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ :=
   Exchangeability.Contractable.map_single hX_contract hX_meas i
-
-/-- **Strict monotonicity for two-point subsequence selection.**
-
-For `i < j`, the function mapping `0 ↦ i, 1 ↦ j` is strictly monotone on Fin 2. -/
-private lemma strictMono_two {i j : ℕ} (hij : i < j) :
-    StrictMono fun t : Fin 2 => if t = fin2Zero then i else j := by
-  classical
-  intro a b hlt
-  -- Reduce to: a.val = 0, b.val = 1 (only possibility in Fin 2 with a < b)
-  have hval : a.val < b.val := Fin.lt_def.mp hlt
-  have hb_val_le : b.val ≤ 1 := Nat.lt_succ_iff.mp (show b.val < 2 by simp [b.is_lt])
-  have hb_ne_zero : b.val ≠ 0 := by intro hb; simp [hb] at hval
-  have hb_val : b.val = 1 :=
-    le_antisymm hb_val_le (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hb_ne_zero))
-  have ha_val : a.val = 0 :=
-    Nat.lt_one_iff.mp (by simp only [hb_val] at hval; exact hval)
-  -- Apply to conclusion
-  have ha : a = fin2Zero := by ext; simp [fin2Zero, ha_val]
-  have hb : b = fin2One := by ext; simp [fin2One, hb_val]
-  subst ha; subst hb
-  simp [fin2Zero, fin2One, hij]
 
 omit [IsProbabilityMeasure μ] in
 /-- **All bivariate marginals have the same distribution in a contractable sequence.**
 
 For a contractable sequence, every increasing pair `(i,j)` with `i < j` has the same
-joint law as `(X 0, X 1)`. This follows from contractability by taking the two-point
-subsequence `{i, j}`.
-
-Combined with `contractable_map_single`, this establishes that covariances are uniform:
-Cov(X_i, X_j) depends only on whether i = j, giving the covariance structure needed
-for the L² contractability bound. -/
+joint law as `(X 0, X 1)`. Thin wrapper around `Exchangeability.Contractable.map_pair`. -/
 lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     {i j : ℕ} (hij : i < j) :
     Measure.map (fun ω => (X i ω, X j ω)) μ =
-      Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
-  classical
-  -- Define the two-point subsequence.
-  let k : Fin 2 → ℕ := fun t => if t = fin2Zero then i else j
-  have hk : StrictMono k := strictMono_two hij
-  have h_map := hX_contract 2 k hk
-  let eval : (Fin 2 → ℝ) → ℝ × ℝ :=
-    fun g => (g fin2Zero, g fin2One)
-  have h_eval_meas : Measurable eval := by
-    refine (measurable_eval_fin2 (i := fin2Zero)).prodMk ?_
-    exact measurable_eval_fin2 (i := fin2One)
-  have h_meas_k : Measurable fun ω => fun t : Fin 2 => X (k t) ω := by
-    fun_prop
-  have h_meas_std : Measurable fun ω => fun t : Fin 2 => X t.val ω := by
-    fun_prop
-  have h_left := (Measure.map_map h_eval_meas h_meas_k (μ := μ)).symm
-  have h_right := Measure.map_map h_eval_meas h_meas_std (μ := μ)
-  have h_eval := congrArg (Measure.map eval) h_map
-  have h_comp := h_left.trans (h_eval.trans h_right)
-  have h_comp_simp :
-      (fun ω => eval (fun t : Fin 2 => X (k t) ω)) = fun ω => (X i ω, X j ω) := by
-    funext ω
-    simp [eval, k, fin2Zero, fin2One]
-  have h_comp_simp' :
-      (fun ω => eval (fun t : Fin 2 => X t.val ω)) = fun ω => (X 0 ω, X 1 ω) := by
-    funext ω
-    simp [eval, fin2Zero, fin2One]
-  simpa [Function.comp, h_comp_simp, h_comp_simp'] using h_comp
+      Measure.map (fun ω => (X 0 ω, X 1 ω)) μ :=
+  Exchangeability.Contractable.map_pair hX_contract hX_meas hij
 
 omit [IsProbabilityMeasure μ] in
 /-- **Contractability is preserved under measurable postcomposition.**
 
 If X is a contractable sequence and f is measurable, then `f ∘ X` is also contractable.
-This allows transferring contractability from one sequence to another via measurable
-transformations, which is useful for studying bounded functions of contractable sequences. -/
+Thin wrapper around `Exchangeability.Contractable.comp`. -/
 lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
     (f : ℝ → ℝ) (hf_meas : Measurable f) :
-    Contractable μ (fun n ω => f (X n ω)) := by
-  intro n k hk
-  classical
-  have h_base := hX_contract n k hk
-  set Φ : (Fin n → ℝ) → (Fin n → ℝ) := fun g i => f (g i)
-  have hΦ_meas : Measurable Φ := by
-    fun_prop
-  have h_meas_k : Measurable fun ω => fun i : Fin n => X (k i) ω := by
-    fun_prop
-  have h_meas_std : Measurable fun ω => fun i : Fin n => X i.val ω := by
-    fun_prop
-  have h_left := (Measure.map_map hΦ_meas h_meas_k (μ := μ)).symm
-  have h_right := Measure.map_map hΦ_meas h_meas_std (μ := μ)
-  have h_apply := congrArg (Measure.map Φ) h_base
-  -- Evaluate the compositions explicitly.
-  have h_left_eval :
-      (fun ω => Φ (fun i : Fin n => X (k i) ω)) =
-        fun ω => fun i : Fin n => f (X (k i) ω) := by
-    funext ω i
-    simp [Φ]
-  have h_right_eval :
-      (fun ω => Φ (fun i : Fin n => X i.val ω)) =
-        fun ω => fun i : Fin n => f (X i.val ω) := by
-    funext ω i
-    simp [Φ]
-  simpa [Function.comp, Φ, h_left_eval, h_right_eval] using
-    h_left.trans (h_apply.trans h_right)
+    Contractable μ (fun n ω => f (X n ω)) :=
+  Exchangeability.Contractable.comp hX_contract hX_meas f hf_meas
 
 end CovarianceHelpers
 /-!

@@ -331,6 +331,52 @@ lemma Contractable.map_single
        Measure.map_map (measurable_pi_apply 0)
          (by fun_prop : Measurable fun ω (j : Fin 1) => X j.val ω)] at e
 
+/-- **Bivariate marginal equality.** For a contractable sequence and any pair
+`i < j`, the joint law of `(X i, X j)` equals the joint law of `(X 0, X 1)`.
+
+Proof: instantiate the contractability axiom at the two-point subsequence
+`k(0) = i, k(1) = j`, then push forward by the evaluation map `g ↦ (g 0, g 1)`. -/
+lemma Contractable.map_pair
+    {μ : Measure Ω} {X : ℕ → Ω → α}
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
+    {i j : ℕ} (hij : i < j) :
+    Measure.map (fun ω => (X i ω, X j ω)) μ =
+      Measure.map (fun ω => (X 0 ω, X 1 ω)) μ := by
+  classical
+  let k : Fin 2 → ℕ := fun t => if t.val = 0 then i else j
+  have hk : StrictMono k := by
+    intro a b hab; fin_cases a <;> fin_cases b <;> simp_all [k]
+  have h_map := hX 2 k hk
+  have h_eval_meas : Measurable (fun g : Fin 2 → α => (g 0, g 1)) :=
+    (measurable_pi_apply 0).prodMk (measurable_pi_apply 1)
+  have e := congrArg (Measure.map (fun g : Fin 2 → α => (g 0, g 1))) h_map
+  rwa [Measure.map_map h_eval_meas
+         (by fun_prop : Measurable fun ω => fun t : Fin 2 => X (k t) ω),
+       Measure.map_map h_eval_meas
+         (by fun_prop : Measurable fun ω => fun t : Fin 2 => X t.val ω)] at e
+
+/-- **Contractability is preserved under measurable postcomposition.**
+
+If `X` is a contractable sequence and `f : α → β` is measurable, then the
+sequence `fun n ω => f (X n ω)` is also contractable.
+
+Proof: contractability says any strictly monotone reindexing leaves the joint
+law unchanged. Push the equality forward through `Φ g i := f (g i)`. -/
+lemma Contractable.comp
+    {μ : Measure Ω} {X : ℕ → Ω → α} {β : Type*} [MeasurableSpace β]
+    (hX : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
+    (f : α → β) (hf : Measurable f) :
+    Contractable μ (fun n ω => f (X n ω)) := by
+  classical
+  intro n k hk
+  have h_base := hX n k hk
+  have hΦ_meas : Measurable (fun g : Fin n → α => fun i => f (g i)) := by fun_prop
+  have e := congrArg (Measure.map (fun g : Fin n → α => fun i => f (g i))) h_base
+  rwa [Measure.map_map hΦ_meas
+         (by fun_prop : Measurable fun ω => fun i : Fin n => X (k i) ω),
+       Measure.map_map hΦ_meas
+         (by fun_prop : Measurable fun ω => fun i : Fin n => X i.val ω)] at e
+
 /--
 Helper lemma: All values of a strictly monotone function are bounded by its last value plus one.
 
