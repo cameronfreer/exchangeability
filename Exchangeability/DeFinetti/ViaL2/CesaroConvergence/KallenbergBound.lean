@@ -224,9 +224,9 @@ lemma kallenberg_L2_bound
         have hZ0_L2 : MemLp (Z 0) 2 μ := by
           by_cases h : k = 0
           · subst h; exact hZk_L2
-          · -- Use contractable_map_single to show Z k and Z 0 have same distribution
+          · -- Use Contractable.map_single to show Z k and Z 0 have same distribution
             -- Then transfer MemLp via equal eLpNorm
-            have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+            have h_dist := Contractable.map_single
               (X := Z) hZ_contract hZ_meas (i := k)
             -- h_dist : Measure.map (Z k) μ = Measure.map (Z 0) μ
             -- Transfer eLpNorm: show eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ
@@ -247,12 +247,12 @@ lemma kallenberg_L2_bound
         have hZ1_L2 : MemLp (Z 1) 2 μ := by
           by_cases h : k = 1
           · subst h; exact hZk_L2
-          · -- Use contractable_map_single to show Z k and Z 1 have same distribution
+          · -- Use Contractable.map_single to show Z k and Z 1 have same distribution
             -- Then transfer MemLp via equal eLpNorm
-            have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+            have h_dist := Contractable.map_single
               (X := Z) hZ_contract hZ_meas (i := k)
             -- h_dist : Measure.map (Z k) μ = Measure.map (Z 0) μ
-            have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+            have h_dist1 := Contractable.map_single
               (X := Z) hZ_contract hZ_meas (i := 1)
             -- h_dist1 : Measure.map (Z 1) μ = Measure.map (Z 0) μ
             -- Transfer eLpNorm: show eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ
@@ -284,7 +284,7 @@ lemma kallenberg_L2_bound
                 -- Use equal distributions: Z 1 has same variance as Z 0
                 congr 1
                 -- Use contractability: Z 1 has same distribution as Z 0
-                have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                have h_dist := Contractable.map_single
                   (X := Z) hZ_contract hZ_meas (i := 1)
                 rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 1) m,
                     h_dist,
@@ -311,7 +311,7 @@ lemma kallenberg_L2_bound
   have hmean : ∀ k : Fin n, ∫ ω, ξ k ω ∂μ = m := by
     intro k
     -- ξ k = Z (enum k).val, and all Z i have the same distribution by contractability
-    have h_same_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+    have h_same_dist := Contractable.map_single
       (X := Z) hZ_contract hZ_meas (i := (enum k).val)
     -- Equal distributions → equal integrals
     simp only [ξ, m]
@@ -333,7 +333,7 @@ lemma kallenberg_L2_bound
   have hvar : ∀ k : Fin n, ∫ ω, (ξ k ω - m)^2 ∂μ = σSq := by
     intro k
     -- Same distribution → same variance
-    have h_same_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+    have h_same_dist := Contractable.map_single
       (X := Z) hZ_contract hZ_meas (i := (enum k).val)
     simp only [ξ, σSq]
     -- Use integral_pushforward_sq_diff
@@ -344,7 +344,7 @@ lemma kallenberg_L2_bound
   -- Prove all covariances equal σ²ρ
   have hcov : ∀ i j : Fin n, i ≠ j → ∫ ω, (ξ i ω - m) * (ξ j ω - m) ∂μ = σSq * ρ := by
     intro i j hij
-    -- Use contractable_map_pair to show all pairs have same distribution as (Z 0, Z 1)
+    -- Use Contractable.map_pair to show all pairs have same distribution as (Z 0, Z 1)
     simp only [ξ, σSq, ρ, covOffDiag]
 
     -- Get the indices from enum
@@ -361,8 +361,8 @@ lemma kallenberg_L2_bound
 
     -- Case split on ordering
     rcases hij'.lt_or_gt with h_lt | h_lt
-    · -- Case i' < j': Use contractable_map_pair directly
-      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+    · -- Case i' < j': Use Contractable.map_pair directly
+      have h_dist := Contractable.map_pair
         (X := Z) hZ_contract hZ_meas h_lt
       -- Use integral_map to transfer the integral
       have h_prod_meas : Measurable (fun ω => (Z i' ω, Z j' ω)) :=
@@ -394,7 +394,7 @@ lemma kallenberg_L2_bound
                 have hZ0_L2_local : MemLp (Z 0) 2 μ := by
                   by_cases h' : k = 0
                   · subst h'; exact hZk_L2
-                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                  · have h_dist := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := k)
                     have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
                       symm
@@ -411,9 +411,9 @@ lemma kallenberg_L2_bound
                 have hZ1_L2_local : MemLp (Z 1) 2 μ := by
                   by_cases h' : k = 1
                   · subst h'; exact hZk_L2
-                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                  · have h_dist := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := k)
-                    have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                    have h_dist1 := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := 1)
                     have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
                       calc eLpNorm (Z 1) 2 μ
@@ -439,7 +439,7 @@ lemma kallenberg_L2_bound
                 exact abs_eq_zero.mp (le_antisymm cs (abs_nonneg _))
               · simp [h]; field_simp
     · -- Case j' < i': Use symmetry of multiplication
-      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_pair
+      have h_dist := Contractable.map_pair
         (X := Z) hZ_contract hZ_meas h_lt
       -- Note: (Z i' - m) * (Z j' - m) = (Z j' - m) * (Z i' - m)
       have h_prod_meas : Measurable (fun ω => (Z j' ω, Z i' ω)) :=
@@ -473,7 +473,7 @@ lemma kallenberg_L2_bound
                 have hZ0_L2_local : MemLp (Z 0) 2 μ := by
                   by_cases h' : k = 0
                   · subst h'; exact hZk_L2
-                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                  · have h_dist := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := k)
                     have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
                       symm
@@ -490,9 +490,9 @@ lemma kallenberg_L2_bound
                 have hZ1_L2_local : MemLp (Z 1) 2 μ := by
                   by_cases h' : k = 1
                   · subst h'; exact hZk_L2
-                  · have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                  · have h_dist := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := k)
-                    have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+                    have h_dist1 := Contractable.map_single
                       (X := Z) hZ_contract hZ_meas (i := 1)
                     have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
                       calc eLpNorm (Z 1) 2 μ
@@ -596,7 +596,7 @@ lemma kallenberg_L2_bound
       · subst h; exact hZk_L2
       · -- Use that Z 0 has same distribution as Z k via contractability
         -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-        have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+        have h_dist := Contractable.map_single
           (X := Z) hZ_contract hZ_meas (i := k)
         -- Transfer eLpNorm using equal distributions
         have h_Lpnorm_eq : eLpNorm (Z 0) 2 μ = eLpNorm (Z k) 2 μ := by
@@ -617,9 +617,9 @@ lemma kallenberg_L2_bound
       · subst h; exact hZk_L2
       · -- Use that Z 1 has same distribution as Z k via contractability
         -- Equal distributions imply equal eLpNorm, hence MemLp transfers
-        have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+        have h_dist := Contractable.map_single
           (X := Z) hZ_contract hZ_meas (i := k)
-        have h_dist1 := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+        have h_dist1 := Contractable.map_single
           (X := Z) hZ_contract hZ_meas (i := 1)
         -- Transfer eLpNorm using equal distributions
         have h_Lpnorm_eq : eLpNorm (Z 1) 2 μ = eLpNorm (Z k) 2 μ := by
@@ -669,7 +669,7 @@ lemma kallenberg_L2_bound
     -- First prove Z 1 has same variance as Z 0
     have hvar1 : ∫ ω, (Z 1 ω - m)^2 ∂μ = σSq := by
       -- Use contractability: Z 1 has same distribution as Z 0
-      have h_dist := Exchangeability.DeFinetti.L2Helpers.contractable_map_single
+      have h_dist := Contractable.map_single
         (X := Z) hZ_contract hZ_meas (i := 1)
       simp only [σSq]
       rw [← Exchangeability.Probability.IntegrationHelpers.integral_pushforward_sq_diff (hZ_meas 1) m,

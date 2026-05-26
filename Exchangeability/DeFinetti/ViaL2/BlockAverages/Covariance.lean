@@ -71,7 +71,7 @@ lemma contractable_covariance_structure
   have hmean : ∀ k, ∫ ω, X k ω ∂μ = m := by
     intro k
     -- X_k has the same distribution as X_0 by contractability (singleton subsequence)
-    have h_eq_dist := contractable_map_single (X := X) hX_contract hX_meas (i := k)
+    have h_eq_dist := Contractable.map_single hX_contract hX_meas k
     -- Transfer integral via equal distributions
     have h_int_k : ∫ ω, X k ω ∂μ = ∫ x, x ∂(Measure.map (X k) μ) := by
       have h_ae : AEStronglyMeasurable (id : ℝ → ℝ) (Measure.map (X k) μ) :=
@@ -90,7 +90,7 @@ lemma contractable_covariance_structure
   have hvar : ∀ k, ∫ ω, (X k ω - m)^2 ∂μ = σSq := by
     intro k
     -- Use equal distribution to transfer the variance integral
-    have h_eq_dist := contractable_map_single (X := X) hX_contract hX_meas (i := k)
+    have h_eq_dist := Contractable.map_single hX_contract hX_meas k
     have hmean_k := hmean k
     -- The variance with k's mean equals variance with m (since they're equal)
     show ∫ ω, (X k ω - m)^2 ∂μ = σSq
@@ -120,8 +120,8 @@ lemma contractable_covariance_structure
       intro i j hij
       -- Apply contractability to get equal distributions for pairs
       by_cases h_ord : i < j
-      · -- Case i < j: use contractable_map_pair directly
-        have h_eq_dist := contractable_map_pair (X := X) hX_contract hX_meas h_ord
+      · -- Case i < j: use Contractable.map_pair directly
+        have h_eq_dist := Contractable.map_pair hX_contract hX_meas h_ord
         -- Transfer the covariance integral via measure map
         have h_int_ij : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X i ω, X j ω)) μ) := by
@@ -152,7 +152,7 @@ lemma contractable_covariance_structure
       · -- Case j < i: use symmetry
         push Not at h_ord
         have h_ji : j < i := Nat.lt_of_le_of_ne h_ord (Ne.symm hij)
-        have h_eq_dist := contractable_map_pair (X := X) hX_contract hX_meas h_ji
+        have h_eq_dist := Contractable.map_pair hX_contract hX_meas h_ji
         have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X j ω, X i ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))

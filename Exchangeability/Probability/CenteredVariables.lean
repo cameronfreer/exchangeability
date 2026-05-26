@@ -66,9 +66,9 @@ lemma centered_uniform_covariance
   -- Step 2: Show Z is contractable
   -- Z = f ∘ X - m, and contractability is preserved under composition + constant shift
   have hZ_contract : Contractable μ Z := by
-    -- First show f ∘ X is contractable using contractable_comp
+    -- First show f ∘ X is contractable using Contractable.comp
     have hfX_contract : Contractable μ (fun i ω => f (X i ω)) :=
-      Exchangeability.DeFinetti.L2Helpers.contractable_comp (X := X) hX_contract hX_meas f hf_meas
+      Exchangeability.Contractable.comp hX_contract hX_meas f hf_meas
     -- Subtracting a constant preserves contractability
     intro n k hk
     -- Need: map (fun ω i => Z (k i) ω) μ = map (fun ω i => Z i ω) μ
@@ -112,7 +112,7 @@ lemma centered_uniform_covariance
     intro i
     -- From contractability: map (Z i) μ = map (Z 0) μ
     have h_map_eq : Measure.map (Z i) μ = Measure.map (Z 0) μ :=
-      Exchangeability.DeFinetti.L2Helpers.contractable_map_single (X := Z) hZ_contract hZ_meas (i := i)
+      Exchangeability.Contractable.map_single (X := Z) hZ_contract hZ_meas (i := i)
 
     -- Strategy: Use integral_map to rewrite both sides
     -- ∫ (Z i ω)² dμ = ∫ x² d(map (Z i) μ) [by integral_map]
@@ -146,12 +146,12 @@ lemma centered_uniform_covariance
     rw [integral_sub hfX_int (integrable_const m)]
     -- Now show ∫ f(X i) = m, so that ∫ f(X i) - m = m - m = 0
 
-    -- Strategy: contractable_map_single gives map (X i) μ = map (X 0) μ
+    -- Strategy: Contractable.map_single gives map (X i) μ = map (X 0) μ
     -- Then integral_map gives: ∫ f(X i) dμ = ∫ f d(map (X i) μ) = ∫ f d(map (X 0) μ) = ∫ f(X 0) dμ = m
 
     -- Use contractability to get measure equality
     have h_map_eq : Measure.map (X i) μ = Measure.map (X 0) μ :=
-      Exchangeability.DeFinetti.L2Helpers.contractable_map_single (X := X) hX_contract hX_meas (i := i)
+      Exchangeability.Contractable.map_single (X := X) hX_contract hX_meas (i := i)
 
     -- f is measurable and bounded, so we can apply integral_map
     have hXi_meas : AEMeasurable (X i) μ := (hX_meas i).aemeasurable
@@ -172,13 +172,13 @@ lemma centered_uniform_covariance
   have hZ_cov_uniform : ∀ i j, i ≠ j →
       ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z 0 ω * Z 1 ω ∂μ := by
     intro i j hij
-    -- Strategy: If i < j, use contractable_map_pair directly
-    --           If i > j, use contractable_map_pair on (j,i) + symmetry of multiplication
+    -- Strategy: If i < j, use Contractable.map_pair directly
+    --           If i > j, use Contractable.map_pair on (j,i) + symmetry of multiplication
     by_cases h_lt : i < j
-    · -- Case i < j: use contractable_map_pair directly
+    · -- Case i < j: use Contractable.map_pair directly
       have h_map_eq : Measure.map (fun ω => (Z i ω, Z j ω)) μ =
           Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
-        Exchangeability.DeFinetti.L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas h_lt
+        Exchangeability.Contractable.map_pair (X := Z) hZ_contract hZ_meas h_lt
 
       -- The function (x, y) ↦ x * y is continuous, hence measurable
       have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
@@ -200,17 +200,17 @@ lemma centered_uniform_covariance
       rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable,
           ← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable, h_map_eq]
 
-    · -- Case i > j: use contractable_map_pair on (j,i) + symmetry
+    · -- Case i > j: use Contractable.map_pair on (j,i) + symmetry
       have hji : j < i := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h_lt) (hij.symm)
 
       -- Symmetry of multiplication: Z i * Z j = Z j * Z i
       have h_sym_ij : ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z j ω * Z i ω ∂μ := by
         congr 1; ext ω; ring
 
-      -- Now use contractable_map_pair on (j, i)
+      -- Now use Contractable.map_pair on (j, i)
       have h_map_eq : Measure.map (fun ω => (Z j ω, Z i ω)) μ =
           Measure.map (fun ω => (Z 0 ω, Z 1 ω)) μ :=
-        Exchangeability.DeFinetti.L2Helpers.contractable_map_pair (X := Z) hZ_contract hZ_meas hji
+        Exchangeability.Contractable.map_pair (X := Z) hZ_contract hZ_meas hji
 
       -- The function (x, y) ↦ x * y is continuous, hence measurable
       have h_mul_meas : Measurable (fun p : ℝ × ℝ => p.1 * p.2) :=
