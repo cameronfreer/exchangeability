@@ -133,9 +133,7 @@ lemma aestronglyMeasurable_sub_of_tendsto_ae
     haveI : MeasurableSpace α := m
     exact Measurable.limsup hf_meas
   -- h = g a.e. because on the convergence set, limsup = lim = g
-  have h_ae_eq : h =ᵐ[μ] g := by
-    filter_upwards [hlim] with x hx
-    exact Filter.Tendsto.limsup_eq hx
+  have h_ae_eq : h =ᵐ[μ] g := hlim.mono fun _ hx => Filter.Tendsto.limsup_eq hx
   -- Convert Measurable[m] h to StronglyMeasurable[m] h (for ℝ)
   have h_sm : @MeasureTheory.StronglyMeasurable α ℝ _ m h := by
     haveI : MeasurableSpace α := m

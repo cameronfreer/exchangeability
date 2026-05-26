@@ -157,8 +157,8 @@ lemma eLpNorm_two_from_integral_sq_le
   (h : ∫ ω, (g ω)^2 ∂μ ≤ C) :
   eLpNorm g 2 μ ≤ ENNReal.ofReal (Real.sqrt C) := by
   -- For real-valued g, use ‖g‖ = |g| and sq_abs
-  have h_sq_eq : ∀ ω, ‖g ω‖^2 = (g ω)^2 := by
-    intro ω; rw [Real.norm_eq_abs, sq_abs]
+  have h_sq_eq : ∀ ω, ‖g ω‖^2 = (g ω)^2 :=
+    fun _ => by rw [Real.norm_eq_abs, sq_abs]
   -- Get integral bound in terms of ‖g‖^2
   have h_int_le : ∫ ω, ‖g ω‖^2 ∂μ ≤ C := by
     have : (fun ω => ‖g ω‖^2) = fun ω => (g ω)^2 := funext h_sq_eq

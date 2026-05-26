@@ -60,9 +60,8 @@ lemma eLpNorm_two_sq_eq_integral_sq
   -- 3. Convert lintegral to integral: ∫⁻ ‖f‖² = ↑(∫ |f|²) = ↑(∫ f²)
 
   -- For real functions, ‖f‖² = |f|² = f²
-  have h_norm_eq : ∀ ω, ‖f ω‖ ^ 2 = (f ω) ^ 2 := by
-    intro ω
-    rw [Real.norm_eq_abs, sq_abs]
+  have h_norm_eq : ∀ ω, ‖f ω‖ ^ 2 = (f ω) ^ 2 :=
+    fun _ => by rw [Real.norm_eq_abs, sq_abs]
 
   -- Use the fundamental relationship for p = 2
   -- eLpNorm f p μ ^ p = ∫⁻ ‖f‖^p when p ≠ 0, ∞
