@@ -92,8 +92,8 @@ lemma alphaIic_measurable
   -- alphaIic is max 0 (min 1 limit) where limit is measurable
   unfold alphaIic
   have h_limit_meas : Measurable (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
-            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose := by
-    exact (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
+            (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose :=
+    (weighted_sums_converge_L1 X hX_contract hX_meas hX_L2
             (indIic t) (indIic_measurable t) ⟨1, indIic_bdd t⟩).choose_spec.1
   -- max and min preserve measurability: max 0 (min 1 limit)
   -- Build: min limit 1, then max 0 result

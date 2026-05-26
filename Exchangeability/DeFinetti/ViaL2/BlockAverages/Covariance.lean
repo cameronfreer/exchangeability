@@ -124,8 +124,8 @@ lemma contractable_covariance_structure
         have h_int_ij : ∫ ω, (X i ω - m) * (X j ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X i ω, X j ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X i ω, X j ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X i ω, X j ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X i ω - m) * (X j ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X i ω, X j ω)) := rfl
@@ -134,8 +134,8 @@ lemma contractable_covariance_structure
         have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
@@ -154,8 +154,8 @@ lemma contractable_covariance_structure
         have h_int_ji : ∫ ω, (X j ω - m) * (X i ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X j ω, X i ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X j ω, X i ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X j ω, X i ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X j ω - m) * (X i ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X j ω, X i ω)) := rfl
@@ -164,8 +164,8 @@ lemma contractable_covariance_structure
         have h_int_01 : ∫ ω, (X 0 ω - m) * (X 1 ω - m) ∂μ
             = ∫ p : ℝ × ℝ, (p.1 - m) * (p.2 - m) ∂(Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
           have h_ae : AEStronglyMeasurable (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m))
-              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) := by
-            exact ((continuous_fst.sub continuous_const).mul
+              (Measure.map (fun ω => (X 0 ω, X 1 ω)) μ) :=
+            ((continuous_fst.sub continuous_const).mul
               (continuous_snd.sub continuous_const)).aestronglyMeasurable
           have h_comp : (fun ω => (X 0 ω - m) * (X 1 ω - m))
               = (fun p : ℝ × ℝ => (p.1 - m) * (p.2 - m)) ∘ (fun ω => (X 0 ω, X 1 ω)) := rfl
