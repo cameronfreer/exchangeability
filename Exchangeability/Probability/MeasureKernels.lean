@@ -208,10 +208,6 @@ lemma aemeasurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSp
     {μ : Measure Ω} {m : ℕ}
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))
     (hν_meas : ∀ s, MeasurableSet s → Measurable (fun ω => ν ω s)) :
-    AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ := by
-  -- The measurable version immediately implies AE-measurability
-  have h_meas : Measurable fun ω => Measure.pi fun _ : Fin m => ν ω := by
-    apply measurable_measure_pi ν hν_prob
-    exact hν_meas
-  exact h_meas.aemeasurable
+    AEMeasurable (fun ω => Measure.pi fun _ : Fin m => ν ω) μ :=
+  (measurable_measure_pi ν hν_prob hν_meas).aemeasurable
 
