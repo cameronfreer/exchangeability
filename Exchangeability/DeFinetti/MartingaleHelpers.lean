@@ -74,9 +74,7 @@ lemma strictMono_fin_cases
   | succ i =>
     cases j using Fin.cases with
     | zero =>
-      have : (Fin.succ i : Fin (n + 1)).1 < 0 := by
-        set_option linter.unnecessarySimpa false in
-        simpa [Fin.lt_def] using hij
+      have : (Fin.succ i : Fin (n + 1)).1 < 0 := Fin.lt_def.mp hij
       exact absurd this (Nat.not_lt.mpr (Nat.zero_le _))
     | succ j =>
       have hij' : i < j := (Fin.succ_lt_succ_iff).1 hij

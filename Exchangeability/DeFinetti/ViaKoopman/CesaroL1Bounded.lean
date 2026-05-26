@@ -262,9 +262,7 @@ lemma L1_cesaro_convergence
       have h_each_int : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := by
         intro j _
         have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
-          funext ω
-          congr 1
-          exact (shift_iterate_apply_zero j ω).symm
+          simp [shift_iterate_apply_zero]
         rw [h_eq]
         have h_shiftj_pres : MeasurePreserving (shift^[j]) μ μ := hσ.iterate j
         exact h_shiftj_pres.integrable_comp_of_integrable hg_int
@@ -319,7 +317,7 @@ lemma L1_cesaro_convergence
                     refine integrable_finset_sum _ (fun j _ => ?_)
                     have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
                       have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
-                        funext ω; congr 1; exact (shift_iterate_apply_zero j ω).symm
+                        simp [shift_iterate_apply_zero]
                       rw [h_eq]
                       exact (hσ.iterate j).integrable_comp_of_integrable hg_int
                     have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
@@ -337,7 +335,7 @@ lemma L1_cesaro_convergence
                 intro j _
                 have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
                   have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
-                    funext ω; congr 1; exact (shift_iterate_apply_zero j ω).symm
+                    simp [shift_iterate_apply_zero]
                   rw [h_eq]
                   exact (hσ.iterate j).integrable_comp_of_integrable hg_int
                 have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
