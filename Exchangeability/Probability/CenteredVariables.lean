@@ -125,9 +125,8 @@ lemma centered_uniform_covariance
 
     -- Apply integral_map on both sides and use measure equality
     -- The function x ↦ x² is continuous, hence strongly measurable
-    rw [← integral_map hZi_meas (continuous_pow 2).aestronglyMeasurable]
-    rw [← integral_map hZ0_meas (continuous_pow 2).aestronglyMeasurable]
-    rw [h_map_eq]
+    rw [← integral_map hZi_meas (continuous_pow 2).aestronglyMeasurable,
+        ← integral_map hZ0_meas (continuous_pow 2).aestronglyMeasurable, h_map_eq]
 
   -- Step 4: Show mean of Z is zero
   have hZ_mean_zero : ∀ i, ∫ ω, Z i ω ∂μ = 0 := by
@@ -160,9 +159,8 @@ lemma centered_uniform_covariance
 
     -- Apply integral_map to show ∫ f(X i) = ∫ f(X 0)
     have h_int_eq : ∫ ω, f (X i ω) ∂μ = ∫ ω, f (X 0 ω) ∂μ := by
-      rw [← integral_map hXi_meas hf_meas.aestronglyMeasurable]
-      rw [← integral_map hX0_meas hf_meas.aestronglyMeasurable]
-      rw [h_map_eq]
+      rw [← integral_map hXi_meas hf_meas.aestronglyMeasurable,
+          ← integral_map hX0_meas hf_meas.aestronglyMeasurable, h_map_eq]
 
     -- From h_int_eq: ∫ f(X i) = ∫ f(X 0) = m
     -- So ∫ f(X i) - m = m - m = 0
@@ -199,18 +197,15 @@ lemma centered_uniform_covariance
         hZ0_meas.prodMk hZ1_meas
 
       -- Apply integral_map
-      rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable]
-      rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
-      rw [h_map_eq]
+      rw [← integral_map h_prod_ij h_mul_meas.aestronglyMeasurable,
+          ← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable, h_map_eq]
 
     · -- Case i > j: use contractable_map_pair on (j,i) + symmetry
       have hji : j < i := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h_lt) (hij.symm)
 
       -- Symmetry of multiplication: Z i * Z j = Z j * Z i
       have h_sym_ij : ∫ ω, Z i ω * Z j ω ∂μ = ∫ ω, Z j ω * Z i ω ∂μ := by
-        congr 1
-        ext ω
-        ring
+        congr 1; ext ω; ring
 
       -- Now use contractable_map_pair on (j, i)
       have h_map_eq : Measure.map (fun ω => (Z j ω, Z i ω)) μ =
@@ -234,10 +229,8 @@ lemma centered_uniform_covariance
         hZ0_meas.prodMk hZ1_meas
 
       -- Apply integral_map and symmetry
-      rw [h_sym_ij]
-      rw [← integral_map h_prod_ji h_mul_meas.aestronglyMeasurable]
-      rw [← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable]
-      rw [h_map_eq]
+      rw [h_sym_ij, ← integral_map h_prod_ji h_mul_meas.aestronglyMeasurable,
+          ← integral_map h_prod_01 h_mul_meas.aestronglyMeasurable, h_map_eq]
 
   -- Combine all results
   exact ⟨hZ_meas, hZ_contract, hZ_var_uniform, hZ_mean_zero, hZ_cov_uniform⟩
