@@ -145,9 +145,8 @@ private lemma timeReversal_crossing_bound_strong
       exact this
 
     have hX_τ_le_a : X τ ω ≤ a := by
-      have := stoppedValue_lowerCrossingTime (f := X) (n := j - 1) h_neq_τ
-      simp only [stoppedValue] at this
-      exact this
+      simpa [stoppedValue] using
+        stoppedValue_lowerCrossingTime (f := X) (n := j - 1) h_neq_τ
 
     -- Y's level conditions at bijected times
     have hY_Nσ_le_negb : Y (N - σ) ω ≤ -b := by
@@ -160,8 +159,7 @@ private lemma timeReversal_crossing_bound_strong
 
     -- lowerCrossingTime X j ≥ σ (hitting starts from σ)
     have h_lct_ge : lowerCrossingTime a b X N j ω ≥ σ := by
-      simp only [lowerCrossingTime, hσ_def]
-      exact le_hittingBtwn (Nat.le_of_lt hσ_lt_N) ω
+      simpa [lowerCrossingTime, hσ_def] using le_hittingBtwn (Nat.le_of_lt hσ_lt_N) ω
 
     -- From IH: upperCrossingTime Y m' ≤ N - lowerCrossingTime X j ≤ N - σ
     have h_uct_le_Nσ : upperCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
@@ -174,8 +172,8 @@ private lemma timeReversal_crossing_bound_strong
     have hY_Nσ_in_Iic : Y (N - σ) ω ∈ Set.Iic (-b) := hY_Nσ_le_negb
 
     have h_lctY_le_Nσ : lowerCrossingTime (-b) (-a) Y (N+1) m' ω ≤ N - σ := by
-      simp only [lowerCrossingTime]
-      exact hittingBtwn_le_of_mem h_uct_le_Nσ h_Nσ_le_N1 hY_Nσ_in_Iic
+      simpa [lowerCrossingTime] using
+        hittingBtwn_le_of_mem h_uct_le_Nσ h_Nσ_le_N1 hY_Nσ_in_Iic
 
     -- N - σ < N - τ and lowerCrossingTime Y m' < N - τ
     have hNσ_lt_Nτ : N - σ < N - τ := Nat.sub_lt_sub_left hτ_lt_N hτ_lt_σ
@@ -204,6 +202,5 @@ lemma timeReversal_crossing_bound
     {Ω : Type*} (X : ℕ → Ω → ℝ) (a b : ℝ) (hab : a < b) (N k : ℕ) (ω : Ω)
     (h_k : upperCrossingTime a b X N k ω < N) :
     upperCrossingTime (-b) (-a) (negProcess (revProcess X N)) (N+1) k ω ≤ N := by
-  have h := timeReversal_crossing_bound_strong X a b hab N k k ω (le_refl k) h_k
-  simp only [Nat.sub_self] at h
-  exact le_trans h (Nat.sub_le N _)
+  have h := timeReversal_crossing_bound_strong X a b hab N k k ω le_rfl h_k
+  exact le_trans (by simpa using h) (Nat.sub_le N _)
