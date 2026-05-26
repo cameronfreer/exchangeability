@@ -219,21 +219,6 @@ lemma fidi_eq_avg_product {μ : Measure Ω} [IsProbabilityMeasure μ]
     _ = ∫⁻ ω, ∏ i : Fin m, ν ω (B i) ∂μ := h_bridge
     _ = ∫⁻ ω, (Measure.pi fun i : Fin m => ν ω) {x | ∀ i, x i ∈ B i} ∂μ := rhs_eq
 
-/-- Pushforward of a measure through coordinate selection equals the marginal distribution.
-This connects the map in the ConditionallyIID definition to the probability of events.
-
-This is a direct application of `Measure.map_apply` from mathlib. -/
-lemma map_coords_apply {μ : Measure Ω} (X : ℕ → Ω → α) (hX_meas : ∀ i, Measurable (X i))
-  (m : ℕ) (k : Fin m → ℕ) (B : Set (Fin m → α)) (hB : MeasurableSet B) :
-    (Measure.map (fun ω i => X (k i) ω) μ) B = μ {ω | (fun i => X (k i) ω) ∈ B} := by
-  -- The function (fun ω i => X (k i) ω) is measurable as a composition of measurable functions
-  have h_meas : Measurable (fun ω i => X (k i) ω) := by
-    fun_prop
-  -- Apply Measure.map_apply
-  rw [Measure.map_apply h_meas hB]
-  -- The preimage is definitionally equal to the set we want
-  rfl
-
 /-- The bind of a probability measure with the product measure kernel equals the integral
 of the product measure. This is the other side of the ConditionallyIID equation.
 
@@ -422,10 +407,10 @@ theorem conditional_iid_from_directing_measure
       -- S is a rectangle, so S = {x | ∀ i, x i ∈ B i} for some B
       obtain ⟨B, hB_meas, rfl⟩ := hS
 
-      -- LHS: μ_map {x | ∀ i, x i ∈ B i}
+      -- LHS: μ_map {x | ∀ i, x i ∈ B i} = μ ((fun ω i => X (k i) ω) ⁻¹' …)
       have lhs_eq : μ_map {x | ∀ i, x i ∈ B i} = μ {ω | ∀ i, X (k i) ω ∈ B i} := by
         have hB := rectangle_as_pi_measurable m B hB_meas
-        exact map_coords_apply X hX_meas m k _ hB
+        exact Measure.map_apply (by fun_prop) hB
 
       -- RHS: μ_bind {x | ∀ i, x i ∈ B i}
       have rhs_eq : μ_bind {x | ∀ i, x i ∈ B i} =

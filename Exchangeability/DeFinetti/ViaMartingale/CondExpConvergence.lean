@@ -168,7 +168,6 @@ abbrev 𝔽 (m : ℕ) : MeasurableSpace Ω := futureFiltration X m
 The reverse martingale sequence for the indicator of X_k in B.
 
 Uses `condExpWith` from CondExp.lean to manage typeclass instances properly. -/
-@[nolint unusedArguments]
 noncomputable
 def M (hX_meas : ∀ n, Measurable (X n)) (k : ℕ) (B : Set α) (_hB : MeasurableSet B) :
     ℕ → Ω → ℝ :=
