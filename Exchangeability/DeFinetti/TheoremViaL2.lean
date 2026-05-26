@@ -138,7 +138,6 @@ theorem conditionallyIID_of_contractable_viaL2
     (X : ℕ → Ω → ℝ) (hX_meas : ∀ i, Measurable (X i))
     (hContract : Contractable μ X)
     (hX_L2 : ∀ i, MemLp (X i) 2 μ) :
-    ConditionallyIID μ X := by
-  exact (deFinetti_RyllNardzewski_equivalence_viaL2 μ X hX_meas hX_L2).mp hContract |>.2
+    ConditionallyIID μ X := (deFinetti_RyllNardzewski_equivalence_viaL2 μ X hX_meas hX_L2).mp hContract |>.2
 
 end Exchangeability.DeFinetti

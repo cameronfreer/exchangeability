@@ -214,12 +214,10 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
         exact measurableSet_preimage (Measurable.of_comap_le le_rfl) (hB.prod hC)
 
       -- By setIntegral_condExp on mZW
-      have h1 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mZW]) x ∂μ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := by
-        exact setIntegral_condExp hmZW_le hf_int hrect
+      have h1 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mZW]) x ∂μ = ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, f x ∂μ := setIntegral_condExp hmZW_le hf_int hrect
 
       -- By tower property: E[E[f|mZW]|mW] = E[f|mW] (since mW ≤ mZW)
-      have h2 : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := by
-        exact condExp_condExp_of_le hle hmZW_le
+      have h2 : μ[μ[f | mZW] | mW] =ᵐ[μ] μ[f | mW] := condExp_condExp_of_le hle hmZW_le
 
       -- So ∫_{rectangle} E[f|mW] = ∫_{rectangle} E[E[f|mZW]|mW]
       have h3 : ∫ x in Z ⁻¹' B ∩ W ⁻¹' C, (μ[f | mW]) x ∂μ =
@@ -251,8 +249,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
           -- Gives: E[1_A(Y) · 1_B(Z) | σ(W)] =ᵐ E[1_A(Y) | σ(W)] · E[1_B(Z) | σ(W)]
 
           -- W⁻¹C is σ(W)-measurable
-          have hC_meas : MeasurableSet[mW] (W ⁻¹' C) := by
-            exact measurableSet_preimage (Measurable.of_comap_le le_rfl) hC
+          have hC_meas : MeasurableSet[mW] (W ⁻¹' C) := measurableSet_preimage (Measurable.of_comap_le le_rfl) hC
 
           -- Integrability of gB (already defined at top of rectangle case)
           have hint_B : Integrable gB μ := by
@@ -318,8 +315,7 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
                           (setIntegral_condExp (μ := μ) (m := mW)
                             (hm := hmW_le) (hs := hCpre) (hf := hint_prod))
                       exact h_set_eq.symm
-                  _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[gB | mW]) x ∂μ := by
-                      exact setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
+                  _ = ∫ x in W ⁻¹' C, ((μ[f | mW]) * μ[gB | mW]) x ∂μ := setIntegral_congr_ae (hmW_le _ hC_meas) (by filter_upwards [h_pull] with x hx _; exact hx)
             _ = ∫ x in W ⁻¹' C, (μ[f * gB | mW]) x ∂μ := by
                 -- Reverse CondIndep factorization: E[f|mW] · E[gB|mW] =ᵐ E[f · gB|mW]
                 -- Use hCI which states: μ[f · gB | mW] =ᵐ μ[f | mW] · μ[gB | mW]
@@ -346,10 +342,8 @@ lemma condExp_project_of_condIndep (μ : Measure Ω) [IsProbabilityMeasure μ]
     · -- Complement
       intro t htm ht_ind
       -- For complement: ∫_{t} g + ∫_{tᶜ} g = ∫_Ω g, so ∫_{tᶜ} g = ∫_Ω g - ∫_t g
-      have h_add : ∫ x in t, (μ[f | mW]) x ∂μ + ∫ x in tᶜ, (μ[f | mW]) x ∂μ = ∫ x, (μ[f | mW]) x ∂μ := by
-        exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet integrable_condExp
-      have h_add' : ∫ x in t, f x ∂μ + ∫ x in tᶜ, f x ∂μ = ∫ x, f x ∂μ := by
-        exact integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet hf_int
+      have h_add : ∫ x in t, (μ[f | mW]) x ∂μ + ∫ x in tᶜ, (μ[f | mW]) x ∂μ = ∫ x, (μ[f | mW]) x ∂μ := integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet integrable_condExp
+      have h_add' : ∫ x in t, f x ∂μ + ∫ x in tᶜ, f x ∂μ = ∫ x, f x ∂μ := integral_add_compl₀ (hmZW_le _ htm).nullMeasurableSet hf_int
       -- ht_ind is the equality for t, use it to substitute in h_add
       rw [ht_ind] at h_add
       -- Now we have: ∫_t f + ∫_{tᶜ} E[f|mW] = ∫ E[f|mW]

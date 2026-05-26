@@ -312,8 +312,7 @@ private lemma optionB_Step4b_AB_close
           gcongr
           -- |S| ≤ n * Cg since |g(ω k)| ≤ Cg for all k
           calc |S|
-              ≤ (Finset.range n).sum (fun j => |g (ω j)|) := by
-                exact Finset.abs_sum_le_sum_abs _ _
+              ≤ (Finset.range n).sum (fun j => |g (ω j)|) := Finset.abs_sum_le_sum_abs _ _
             _ ≤ (Finset.range n).sum (fun j => Cg) :=
                 Finset.sum_le_sum fun j _ => hCg_bd (ω j)
             _ = n * Cg := by rw [Finset.sum_const, Finset.card_range]; ring
@@ -676,8 +675,7 @@ theorem optionB_L1_convergence_bounded
       have hk_pres := hσ.iterate k
       -- Pull hfL2_eq back along shift^[k] using measure-preserving property
       have hpull : (fun ω => (fL2 : Ω[α] → ℝ) (shift^[k] ω)) =ᵐ[μ]
-          (fun ω => G (shift^[k] ω)) := by
-        exact hk_pres.quasiMeasurePreserving.ae_eq_comp hfL2_eq
+          (fun ω => G (shift^[k] ω)) := hk_pres.quasiMeasurePreserving.ae_eq_comp hfL2_eq
       -- Now use iterate_shift_eval0': shift^[k] ω 0 = ω k
       have heval : (fun ω => G (shift^[k] ω)) =ᵐ[μ] (fun ω => g (ω k)) :=
         ae_of_all _ fun ω => congr_arg g (iterate_shift_eval0' k ω)
@@ -736,8 +734,7 @@ theorem optionB_L1_convergence_bounded
     -- Use helper lemma: condexpL2 = condExp a.e.
     have h1 := condexpL2_ae_eq_condExp fL2
     -- condExp preserves a.e. equality
-    have h2 : μ[fL2 | mSI] =ᵐ[μ] μ[G | mSI] := by
-      exact MeasureTheory.condExp_congr_ae hfL2_eq
+    have h2 : μ[fL2 | mSI] =ᵐ[μ] μ[G | mSI] := MeasureTheory.condExp_congr_ae hfL2_eq
     simp only [Y]
     exact h1.trans h2
 

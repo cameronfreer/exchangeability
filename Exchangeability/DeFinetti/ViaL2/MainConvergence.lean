@@ -96,8 +96,7 @@ theorem weighted_sums_converge_L1
             by_cases hm : m = 0
             · simp [hm]
             · have hm_pos : 0 < (m : ℝ) := by exact_mod_cast Nat.pos_of_ne_zero hm
-              have h_inv_pos : 0 < 1 / (m : ℝ) := by
-                exact div_pos (by norm_num) hm_pos
+              have h_inv_pos : 0 < 1 / (m : ℝ) := div_pos (by norm_num) hm_pos
               have h_abs_sum :
                   |∑ k : Fin m, f (X (n + k.val + 1) ω)|
                     ≤ ∑ k : Fin m, |f (X (n + k.val + 1) ω)| :=
@@ -560,8 +559,7 @@ theorem weighted_sums_converge_L1
     calc eLpNorm (fun ω => A n m ω - alpha_0 ω) 1 μ
         ≤ eLpNorm (fun ω => A n m ω - A 0 m ω) 1 μ +
             eLpNorm (fun ω => A 0 m ω - alpha_0 ω) 1 μ := h_triangle
-      _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 2) := by
-            exact ENNReal.add_lt_add h_term1 h_term2
+      _ < ENNReal.ofReal (ε / 2) + ENNReal.ofReal (ε / 2) := ENNReal.add_lt_add h_term1 h_term2
       _ = ENNReal.ofReal ε := by
             rw [← ENNReal.ofReal_add hε2_pos.le hε2_pos.le]; norm_num
 

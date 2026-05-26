@@ -237,8 +237,7 @@ lemma kallenberg_L2_bound
                       symm
                       exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                 _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                _ = eLpNorm (Z 0) 2 μ := by
-                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                _ = eLpNorm (Z 0) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
             -- Now transfer MemLp using equal eLpNorm
             have : eLpNorm (Z 0) 2 μ < ⊤ := by
               rw [h_Lpnorm_eq]
@@ -263,8 +262,7 @@ lemma kallenberg_L2_bound
                       exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                 _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                 _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                _ = eLpNorm (Z k) 2 μ := by
-                      exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                _ = eLpNorm (Z k) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
             -- Now transfer MemLp using equal eLpNorm
             have : eLpNorm (Z 1) 2 μ < ⊤ := by
               rw [h_Lpnorm_eq]
@@ -278,8 +276,7 @@ lemma kallenberg_L2_bound
 
         -- Apply Cauchy-Schwarz
         calc |∫ ω, (Z 0 ω - m) * (Z 1 ω - m) ∂μ|
-            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
-                exact Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
+            ≤ (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 1 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hf hg
           _ = (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) * (∫ ω, (Z 0 ω - m) ^ 2 ∂μ) ^ (1/2 : ℝ) := by
                 -- Use equal distributions: Z 1 has same variance as Z 0
                 congr 1
@@ -402,8 +399,7 @@ lemma kallenberg_L2_bound
                           = eLpNorm id 2 (Measure.map (Z k) μ) := by
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                        _ = eLpNorm (Z 0) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                        _ = eLpNorm (Z 0) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
                     have : eLpNorm (Z 0) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -421,8 +417,7 @@ lemma kallenberg_L2_bound
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                         _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                        _ = eLpNorm (Z k) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm (Z k) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                     have : eLpNorm (Z 1) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -481,8 +476,7 @@ lemma kallenberg_L2_bound
                           = eLpNorm id 2 (Measure.map (Z k) μ) := by
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-                        _ = eLpNorm (Z 0) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+                        _ = eLpNorm (Z 0) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
                     have : eLpNorm (Z 0) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -500,8 +494,7 @@ lemma kallenberg_L2_bound
                               symm; exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
                         _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
                         _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-                        _ = eLpNorm (Z k) 2 μ := by
-                              exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+                        _ = eLpNorm (Z k) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
                     have : eLpNorm (Z 1) 2 μ < ⊤ := by
                       rw [h_Lpnorm_eq]
                       exact hZk_L2.eLpNorm_lt_top
@@ -606,8 +599,7 @@ lemma kallenberg_L2_bound
                   symm
                   exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
             _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist]
-            _ = eLpNorm (Z 0) 2 μ := by
-                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
+            _ = eLpNorm (Z 0) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 0).aemeasurable
         have : eLpNorm (Z 0) 2 μ < ⊤ := by
           rw [h_Lpnorm_eq]
           exact hZk_L2.eLpNorm_lt_top
@@ -629,8 +621,7 @@ lemma kallenberg_L2_bound
                   exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas 1).aemeasurable
             _ = eLpNorm id 2 (Measure.map (Z 0) μ) := by rw [h_dist1]
             _ = eLpNorm id 2 (Measure.map (Z k) μ) := by rw [← h_dist]
-            _ = eLpNorm (Z k) 2 μ := by
-                  exact eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
+            _ = eLpNorm (Z k) 2 μ := eLpNorm_map_measure aestronglyMeasurable_id (hZ_meas k).aemeasurable
         have : eLpNorm (Z 1) 2 μ < ⊤ := by
           rw [h_Lpnorm_eq]
           exact hZk_L2.eLpNorm_lt_top

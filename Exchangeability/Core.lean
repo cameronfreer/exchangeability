@@ -390,8 +390,7 @@ private lemma pathLaw_map_prefix_perm (μ : Measure Ω) (X : ℕ → Ω → α)
         rw [Measure.map_map (measurable_prefixProj (α:=α) (n:=n)) hreindex]
     _ = Measure.map (prefixProj (α:=α) n ∘ reindex (α:=α) π)
         (Measure.map (fun ω => fun i : ℕ => X i ω) μ) := by rw [pathLaw]
-    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ := by
-        exact Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) (by fun_prop)
+    _ = Measure.map ((prefixProj (α:=α) n ∘ reindex (α:=α) π) ∘ fun ω => fun i : ℕ => X i ω) μ := Measure.map_map ((measurable_prefixProj (α:=α) (n:=n)).comp hreindex) (by fun_prop)
     _ = Measure.map (fun ω => fun i : Fin n => X (π i) ω) μ := rfl
 
 /--

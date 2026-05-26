@@ -96,12 +96,10 @@ lemma contractable_covariance_structure
     show ∫ ω, (X k ω - m)^2 ∂μ = σSq
     -- Transform X_k integral to X_0 integral via measure map
     have h_int_k : ∫ ω, (X k ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X k) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X k) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
+      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X k) μ) := (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
       exact (integral_map (hX_meas k).aemeasurable h_ae).symm
     have h_int_0 : ∫ ω, (X 0 ω - m)^2 ∂μ = ∫ x, (x - m)^2 ∂(Measure.map (X 0) μ) := by
-      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X 0) μ) := by
-        exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
+      have h_ae : AEStronglyMeasurable (fun x : ℝ => (x - m)^2) (Measure.map (X 0) μ) := (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
       exact (integral_map (hX_meas 0).aemeasurable h_ae).symm
     rw [h_int_k, h_eq_dist, ← h_int_0]
 
