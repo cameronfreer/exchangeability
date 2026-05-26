@@ -49,8 +49,7 @@ private lemma reindexed_weights_prob
           (fun i : Fin nS => wS ((eβ i).1))
           (fun b => wS b.1) (by intro i; rfl)
       have h_sum_attach :
-          ∑ b : {t // t ∈ S}, wS b.1 = ∑ t ∈ S, wS t := by
-        exact Finset.sum_attach (s := S) (f := fun t => wS t)
+          ∑ b : {t // t ∈ S}, wS b.1 = ∑ t ∈ S, wS t := Finset.sum_attach (s := S) (f := fun t => wS t)
       have h_sum_w :
           ∑ i : Fin nS, w i = ∑ i : Fin nS, wS ((eβ i).1) := by
         refine Finset.sum_congr rfl fun i _ => ?_

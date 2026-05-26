@@ -113,8 +113,7 @@ lemma condExp_exists_ae_limit_antitone
 
       calc ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω)
           ≤ ↑(upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
-                (negProcess (revProcess (fun n => μ[f | 𝔽 n]) N)) (N + 1) ω) := by
-              exact Nat.cast_le.mpr h_orig_le
+                (negProcess (revProcess (fun n => μ[f | 𝔽 n]) N)) (N + 1) ω) := Nat.cast_le.mpr h_orig_le
         _ = ↑(upcrossingsBefore (- (↑b : ℝ)) (- (↑a : ℝ))
                 (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) (N + 1) ω) := by rw [h_rev_eq]
         _ ≤ upcrossings (- (↑b : ℝ)) (- (↑a : ℝ))
@@ -124,8 +123,7 @@ lemma condExp_exists_ae_limit_antitone
     have h_N_bound : ∀ N, ∫⁻ ω, ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω) ∂μ ≤ C := by
       intro N
       calc ∫⁻ ω, ↑(upcrossingsBefore (↑a) (↑b) (fun n => μ[f | 𝔽 n]) N ω) ∂μ
-          ≤ ∫⁻ ω, upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := by
-            exact lintegral_mono (h_le_key N)
+          ≤ ∫⁻ ω, upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω ∂μ := lintegral_mono (h_le_key N)
         _ = ∫⁻ ω, downcrossings (↑a) (↑b) (fun n => revCEFinite (μ := μ) f 𝔽 N n) ω ∂μ := by
             -- Use identity: up(-b, -a, -X) = down(a, b, X)
             rw [show (fun ω => upcrossings (- (↑b : ℝ)) (- (↑a : ℝ)) (negProcess (fun n => revCEFinite (μ := μ) f 𝔽 N n)) ω)
@@ -184,8 +182,7 @@ lemma condExp_exists_ae_limit_antitone
         measurable_from_top.comp (h_adapted.measurable_upcrossingsBefore hab')
 
       -- Apply monotone convergence theorem
-      have h_iSup : ∫⁻ ω, (⨆ N, U N ω) ∂μ = ⨆ N, ∫⁻ ω, U N ω ∂μ := by
-        exact lintegral_iSup hU_meas hU_mono
+      have h_iSup : ∫⁻ ω, (⨆ N, U N ω) ∂μ = ⨆ N, ∫⁻ ω, U N ω ∂μ := lintegral_iSup hU_meas hU_mono
 
       -- Bound the supremum of integrals
       have : (⨆ N, ∫⁻ ω, U N ω ∂μ) ≤ C := iSup_le h_N_bound
@@ -373,8 +370,7 @@ lemma ae_limit_is_condexp_iInf
     -- First term ≤ ‖Xlim - Xn‖₁ by L¹-contraction + linearity (condExp_sub)
     have hfirst : eLpNorm (μ[Xlim | F_inf] - μ[Xn n | F_inf]) 1 μ ≤ eLpNorm (Xlim - Xn n) 1 μ := by
       -- linearity a.e.: μ[Xlim|F_inf] - μ[Xn|F_inf] = μ[Xlim - Xn | F_inf]
-      have hsub : μ[Xlim | F_inf] - μ[Xn n | F_inf] =ᵐ[μ] μ[Xlim - Xn n | F_inf] := by
-        exact (condExp_sub hXlimint integrable_condExp F_inf).symm
+      have hsub : μ[Xlim | F_inf] - μ[Xn n | F_inf] =ᵐ[μ] μ[Xlim - Xn n | F_inf] := (condExp_sub hXlimint integrable_condExp F_inf).symm
       -- contraction: ‖μ[g|F]‖₁ ≤ ‖g‖₁
       rw [eLpNorm_congr_ae hsub]
       exact eLpNorm_one_condExp_le_eLpNorm _
