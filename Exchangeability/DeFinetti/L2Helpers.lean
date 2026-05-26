@@ -41,44 +41,6 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 open scoped BigOperators
 
-section CovarianceHelpers
-
-variable {μ : Measure Ω} [IsProbabilityMeasure μ]
-variable (X : ℕ → Ω → ℝ)
-variable (hX_contract : Contractable μ X)
-variable (hX_meas : ∀ i, Measurable (X i))
-
-omit [IsProbabilityMeasure μ] in
-/-- **All marginals have the same distribution in a contractable sequence.**
-
-For a contractable sequence, the law of each coordinate agrees with the law of `X 0`.
-Thin wrapper around `Exchangeability.Contractable.map_single`. -/
-lemma contractable_map_single (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i)) {i : ℕ} :
-    Measure.map (fun ω => X i ω) μ = Measure.map (fun ω => X 0 ω) μ :=
-  Exchangeability.Contractable.map_single hX_contract hX_meas i
-
-omit [IsProbabilityMeasure μ] in
-/-- **All bivariate marginals have the same distribution in a contractable sequence.**
-
-For a contractable sequence, every increasing pair `(i,j)` with `i < j` has the same
-joint law as `(X 0, X 1)`. Thin wrapper around `Exchangeability.Contractable.map_pair`. -/
-lemma contractable_map_pair (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
-    {i j : ℕ} (hij : i < j) :
-    Measure.map (fun ω => (X i ω, X j ω)) μ =
-      Measure.map (fun ω => (X 0 ω, X 1 ω)) μ :=
-  Exchangeability.Contractable.map_pair hX_contract hX_meas hij
-
-omit [IsProbabilityMeasure μ] in
-/-- **Contractability is preserved under measurable postcomposition.**
-
-If X is a contractable sequence and f is measurable, then `f ∘ X` is also contractable.
-Thin wrapper around `Exchangeability.Contractable.comp`. -/
-lemma contractable_comp (hX_contract : Contractable μ X) (hX_meas : ∀ i, Measurable (X i))
-    (f : ℝ → ℝ) (hf_meas : Measurable f) :
-    Contractable μ (fun n ω => f (X n ω)) :=
-  Exchangeability.Contractable.comp hX_contract hX_meas f hf_meas
-
-end CovarianceHelpers
 /-!
 ## Lp utility lemmas
 
