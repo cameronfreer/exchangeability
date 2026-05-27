@@ -12,12 +12,17 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt JS actions into the Node.js 24 runtime ahead of the 2026-06-16 default
+  # switchover; mirrors `blueprint.yml`.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run blueprint consistency check
         run: |
