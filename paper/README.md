@@ -1,6 +1,6 @@
 # AFM Paper: Formalizing de Finetti's Theorem
 
-## Current Status (January 2026)
+## Current Status (May 2026)
 
 | Proof Approach | Status | Ready for Paper? |
 |---------------|--------|------------------|

@@ -35,7 +35,7 @@ We formalize **all three proofs** from Kallenberg (2005):
 
 | Graph | Description |
 |-------|-------------|
-| [Modules (SVG)]({{ site.url }}/blueprint/import_graph_colored.svg) | 104 files, clickable links to docs |
+| [Modules (SVG)]({{ site.url }}/blueprint/import_graph_colored.svg) | 105 files, clickable links to docs |
 | [Modules (interactive)]({{ site.url }}/blueprint/import_graph_colored.html) | Draggable, zoomable |
 | [All declarations]({{ site.url }}/blueprint/import_graph_full_declarations.html) | Searchable |
 | [Blueprint only]({{ site.url }}/blueprint/dep_graph_document.html) | Documented items |
