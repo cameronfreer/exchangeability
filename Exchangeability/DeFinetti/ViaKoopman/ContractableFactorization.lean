@@ -266,9 +266,8 @@ lemma product_blockAvg_L1_convergence
       let R : NNReal := Real.toNNReal C
       have hR_eq : (R : ℝ) = C := Real.coe_toNNReal C (le_of_lt hC_pos)
       -- The function fs i ∘ (· 0) is bounded by C pointwise
-      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) := by
-        rw [hR_eq]
-        exact Eventually.of_forall (fun ω' => hC_bd i _)
+      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) :=
+        hR_eq.symm ▸ Eventually.of_forall (fun ω' => hC_bd i _)
       -- Apply ae_bdd_condExp_of_ae_bdd with explicit type annotations
       have h_condexp_bd : ∀ᵐ ω ∂μ, |(μ[(fun ω' => fs i (ω' 0)) | mSI]) ω| ≤ (R : ℝ) :=
         ae_bdd_condExp_of_ae_bdd h_fs_bdd
@@ -518,9 +517,8 @@ theorem condexp_product_factorization_contractable
       intro i
       let R : NNReal := Real.toNNReal C
       have hR_eq : (R : ℝ) = C := Real.coe_toNNReal C (le_of_lt hC_pos)
-      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) := by
-        rw [hR_eq]
-        exact Eventually.of_forall (fun ω' => hC_bd i _)
+      have h_fs_bdd : ∀ᵐ ω' ∂μ, |fs i (ω' 0)| ≤ (R : ℝ) :=
+        hR_eq.symm ▸ Eventually.of_forall (fun ω' => hC_bd i _)
       have h_condexp_bd : ∀ᵐ ω ∂μ, |(μ[(fun ω' => fs i (ω' 0)) | mSI]) ω| ≤ (R : ℝ) :=
         ae_bdd_condExp_of_ae_bdd h_fs_bdd
       simp only [hR_eq] at h_condexp_bd
@@ -610,12 +608,9 @@ theorem condexp_product_factorization_contractable
         have hμ_inv : Measure.map (reindexBlock m (n + 1) j) μ = μ :=
           measure_map_reindexBlock_eq_of_contractable hContract hn1_pos j
         -- Set invariance for mSI sets
-        -- Note: reindexBlock m n j = fun ω => ω ∘ blockInjection m n j
-        have h_preimage_eq : reindexBlock m (n + 1) j ⁻¹' s =
-            (fun ω => ω ∘ blockInjection m (n + 1) j) ⁻¹' s := rfl
-        have hs_reindex_inv : reindexBlock m (n + 1) j ⁻¹' s = s := by
-          rw [h_preimage_eq]
-          exact reindex_blockInjection_preimage_shiftInvariant hn1_pos j s hs_inv
+        -- Note: reindexBlock m n j = fun ω => ω ∘ blockInjection m n j definitionally
+        have hs_reindex_inv : reindexBlock m (n + 1) j ⁻¹' s = s :=
+          reindex_blockInjection_preimage_shiftInvariant hn1_pos j s hs_inv
         -- f is measurable
         have hf_meas : Measurable f := Finset.measurable_prod _ (fun i _ =>
           (hfs_meas i).comp (measurable_pi_apply _))

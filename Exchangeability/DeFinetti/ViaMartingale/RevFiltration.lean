@@ -88,9 +88,8 @@ lemma revFiltration_antitone (X : ℕ → Ω → α) :
   -- Need to show: revFiltration X n ≤ revFiltration X m when m ≤ n
   -- Strategy: shiftRV X n = shiftSeq (n - m) ∘ shiftRV X m
   simp only [revFiltration]
-  let k := n - m
-  -- Show shiftRV X n = shiftSeq k ∘ shiftRV X m
-  have h_comp : shiftRV X n = shiftSeq k ∘ shiftRV X m := by
+  -- Show shiftRV X n = shiftSeq (n - m) ∘ shiftRV X m
+  have h_comp : shiftRV X n = shiftSeq (n - m) ∘ shiftRV X m := by
     funext ω i
     simp only [shiftRV, shiftSeq, Function.comp_apply]
     congr 1

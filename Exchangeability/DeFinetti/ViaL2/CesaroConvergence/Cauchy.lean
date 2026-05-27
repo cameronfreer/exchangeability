@@ -602,13 +602,11 @@ private lemma blockAvgFrozen_cauchy_in_L2
     have hρ_bd := correlation_coefficient_bounded Z hZ_meas 2 hZ_bdd
         σSq hσ_pos rfl covZ rfl ρ rfl hZ_var_uniform
 
-    let Cf := 2 * σSq * (1 - ρ)
-
     by_cases hρ_lt : ρ < 1
     · -- Standard case: ρ < 1
       exact cesaro_cauchy_rho_lt hX_contract hX_meas f hf_meas hf_bdd
         m rfl Z hZ_def hZ_meas hZ_contract hZ_var_uniform hZ_mean_zero hZ_cov_uniform
-        σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt Cf rfl ε hε
+        σSq hσ_pos rfl ρ hρ_bd rfl hρ_lt (2 * σSq * (1 - ρ)) rfl ε hε
 
     · -- Edge case: ρ = 1 (perfect correlation) → blockAvg values are ae-equal
       have hρ_eq : ρ = 1 := le_antisymm hρ_bd.2 (not_lt.mp hρ_lt)
