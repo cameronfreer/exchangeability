@@ -10,23 +10,23 @@ import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
 /-!
 # Helper Lemmas for L² de Finetti Proof
 
-This file contains auxiliary lemmas used in the L² approach to de Finetti's theorem
-(`ViaL2.lean`). All lemmas here are complete (no sorries) and compile cleanly.
+This file contains auxiliary lemmas used in the L² approach to de Finetti's theorem.
+All lemmas here are complete (no sorries) and compile cleanly.
 
 ## Contents
 
-1. **CovarianceHelpers**: Lemmas about contractable sequences and covariance structure
-2. **Lp Utility Lemmas**: Standard Lp space and ENNReal conversion helpers
-3. **FinIndexHelpers**: Fin reindexing lemmas for two-window bounds
+1. **Lp Utility Lemmas**: Standard Lp space and ENNReal conversion helpers
+2. **FinIndexHelpers**: Fin reindexing lemmas for two-window bounds
 
 ## Key Results
 
-- `contractable_map_single`: All marginals have the same distribution
-- `contractable_map_pair`: All bivariate marginals have the same joint distribution
-- `contractable_comp`: Contractability preserved under measurable postcomposition
 - `dist_toLp_eq_eLpNorm_sub`: Distance in L^p equals norm of difference
-- Various arithmetic bounds for convergence rates
+- Various arithmetic bounds for convergence rates (e.g. `sqrt_div_lt_half_eps_of_nat`)
 - Fin index reindexing lemmas for filtered sums
+
+The contractability/covariance helpers that previously lived here have moved to the
+canonical `Exchangeability.Contractable.{map_single, map_pair, comp}` API in
+`Exchangeability/Contractability.lean`.
 
 -/
 

@@ -1,8 +1,17 @@
 # de Finetti's Theorem via Reverse Martingales
 
 This document describes the **martingale approach** to proving de Finetti's theorem,
-as implemented in `Exchangeability/DeFinetti/ViaMartingale.lean`. This is Aldous' elegant
+implemented under `Exchangeability/DeFinetti/ViaMartingale/`. This is Aldous' elegant
 proof, presented by Kallenberg (2005) as the "Third proof" of Theorem 1.1.
+
+> **Historical architecture note.** The "File Structure and Dependencies" and "Key
+> Technical Lemmas" sections below describe the *monolithic* `ViaMartingale.lean`
+> (a single ~5,000-line file) as it existed up through ~Jan 2026. The proof has
+> since been split into a directory `Exchangeability/DeFinetti/ViaMartingale/`
+> with 12 files (see `README.md` for the current structure); line-number
+> references in the tables below no longer resolve. The mathematical content
+> (proof strategy, time-reversal crossing bound, Kallenberg Lemma 1.3, etc.) is
+> unchanged.
 
 ## Status
 

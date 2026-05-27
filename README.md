@@ -16,18 +16,18 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 1. **Martingale Approach** (Default)
    - Kallenberg's "third proof" (after Aldous)
    - Elegant probabilistic argument using reverse martingales
-   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (13 files)
+   - [`Exchangeability/DeFinetti/ViaMartingale/`](Exchangeability/DeFinetti/ViaMartingale/) (12 files)
 
 2. **L² Approach**
    - Kallenberg's "second proof" - Elementary L² contractability bounds
    - Lightest dependencies (no ergodic theory required)
    - Formalized for ℝ-valued sequences with L² integrability
-   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (12 files)
+   - [`Exchangeability/DeFinetti/ViaL2/`](Exchangeability/DeFinetti/ViaL2/) (24 files)
 
 3. **Koopman Approach**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (18 files)
+   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (16 files)
 
 ### Import Graph
 
@@ -92,9 +92,9 @@ Exchangeability/
 │   └── ...
 ├── DeFinetti/                   # Three proofs of de Finetti
 │   ├── Theorem.lean            # Public API (exports ViaMartingale)
-│   ├── ViaMartingale/          # Martingale proof (13 files)
-│   ├── ViaL2/                  # L² proof (12 files)
-│   ├── ViaKoopman/             # Ergodic proof (18 files)
+│   ├── ViaMartingale/          # Martingale proof (12 files)
+│   ├── ViaL2/                  # L² proof (24 files)
+│   ├── ViaKoopman/             # Ergodic proof (16 files)
 │   ├── CommonEnding.lean       # Shared final step
 │   └── L2Helpers.lean          # L² contractability lemmas
 ├── Ergodic/                     # Ergodic theory (for Koopman)

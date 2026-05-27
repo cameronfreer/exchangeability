@@ -2,7 +2,7 @@
 
 This directory contains active work plans, progress tracking, and development resources for the exchangeability formalization project.
 
-**Last Updated:** January 2026
+**Last Updated:** May 2026
 
 ## Active Documents
 
@@ -18,7 +18,7 @@ This directory contains active work plans, progress tracking, and development re
 
 ## Current Project Status
 
-**As of January 2026:**
+**As of May 2026:**
 
 | Proof | Status | Sorries |
 |-------|--------|---------|

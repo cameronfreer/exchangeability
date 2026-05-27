@@ -1,16 +1,19 @@
 # Project Status: de Finetti Theorem Formalization
 
-**Last Updated:** 2026-01-12
+**Last Updated:** 2026-05-27
 
 ## Executive Summary
 
+LOC counts below cover the `Exchangeability/` library tree (excluding the top-level
+`Exchangeability.lean` umbrella and `Main.lean`):
+
 | Proof Approach | Lines | Build | Status |
 |---------------|------:|-------|--------|
-| **ViaMartingale** | 3,770 | Pass | **COMPLETE** |
-| **ViaL2** | 12,476 | Pass | **COMPLETE** |
-| **ViaKoopman** | 6,893 | Pass | **COMPLETE** |
-| *Shared infrastructure* | 20,373 | — | — |
-| **Total** | **43,512** | Pass | **COMPLETE** |
+| **ViaMartingale** | 2,804 | Pass | **COMPLETE** |
+| **ViaL2** | 7,444 | Pass | **COMPLETE** |
+| **ViaKoopman** | 5,402 | Pass | **COMPLETE** |
+| *Shared infrastructure* | 11,117 | — | — |
+| **Total** | **26,767** | Pass | **COMPLETE** |
 
 **All three proofs complete.**
 
@@ -21,7 +24,7 @@
 ### ViaMartingale (Default)
 - Kallenberg's "third proof" (after Aldous)
 - Reverse martingale convergence
-- **Main theorem:** `deFinetti_viaMartingale`
+- **Main theorem:** `deFinetti` (re-exported from `Exchangeability.DeFinetti.Theorem`)
 
 ### ViaL2
 - Kallenberg's "second proof"
@@ -48,7 +51,7 @@ lake build Exchangeability.DeFinetti.ViaL2
 lake build Exchangeability.DeFinetti.ViaKoopman
 
 # Check axioms for a theorem
-lake env lean -c 'import Exchangeability; #print axioms deFinetti_viaMartingale'
+printf 'import Exchangeability\n#print axioms deFinetti\n' | lake env lean --stdin
 ```
 
 ---

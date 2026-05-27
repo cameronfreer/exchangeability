@@ -2,6 +2,16 @@
 
 Detailed storylines for the AFM paper on formalizing de Finetti's theorem.
 
+> **Historical note (drafted Jan 2026).** The quantitative numbers below — per-proof
+> LOC, file counts, "largest module" line counts, and ViaMartingale's monolithic
+> structure — reflect the codebase as of January 2026. The library has been
+> substantially restructured and golfed since (current totals are roughly 2.8K /
+> 7.4K / 5.4K LOC for ViaMartingale / ViaL2 / ViaKoopman respectively, and
+> `ViaMartingale.lean` is now a 12-file directory rather than a single 5K-line
+> module). The qualitative insights — three-proof comparison, equation
+> archaeology, condExpWith pattern, contractability framing — remain accurate.
+> Numbers will be refreshed when the paper is drafted from these notes.
+
 ---
 
 ## Storyline 1: Three-Proof Comparative Study
