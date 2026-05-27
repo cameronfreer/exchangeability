@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <script>
-  MathJax = { 
+  MathJax = {
     tex: {
 		    inlineMath: [['$','$'], ['\\(','\\)']]
 	} }
@@ -148,19 +148,19 @@
 <p>The L²/Koopman ending (<a href="sect0005.html#thm:condIndep_extension">49</a>, in <span class="ttfamily">CommonEnding.lean</span>) and the martingale ending (<a href="sect0004.html#lem:finite_product_formula">24</a>, in <span class="ttfamily">ViaMartingale/FiniteProduct.lean</span>) are similar in total length and both finish with a rectangle \(\pi \)-system extension via <span class="ttfamily">MeasureTheory.ext_of_generate_finite</span>. The substantive difference is the <em>shape of the bridge condition</em> each accepts about the directing kernel \(\nu \). </p>
 <table class="tabular">
   <tr>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> <b class="bfseries">Route</b> </p>
 
     </td>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> <b class="bfseries">Bridge shape</b> </p>
 
     </td>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> <b class="bfseries">How the route produces it</b> </p>
@@ -168,19 +168,19 @@
     </td>
   </tr>
   <tr>
-    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left" 
+    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left"
         rowspan=""
         colspan="">
       <p>Martingale </p>
 
     </td>
-    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left" 
+    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left"
         rowspan=""
         colspan="">
       <p> Per-coordinate conditional-expectation equality: \((\omega \mapsto \nu (\omega )(B).\mathrm{toReal}) \,  =^{\mathrm{a.e.}} \,  \mathbb {E}[\mathbf{1}_B \circ X_n \mid \mathcal{T}]\) for every \(n\), \(B\) (see <a href="sect0004.html#lem:conditional_law_eq_directingMeasure">23</a>). </p>
 
     </td>
-    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left" 
+    <td  style="border-top-style:solid; border-top-color:black; border-top-width:1px; text-align:left"
         rowspan=""
         colspan="">
       <p> Falls out directly from mathlib’s <span class="ttfamily">condExpKernel</span> applied to the tail \(\sigma \)-algebra. </p>
@@ -188,19 +188,19 @@
     </td>
   </tr>
   <tr>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> L²/Koopman </p>
 
     </td>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> Joint integral equality on the whole \(m\)-tuple: for every injective \(k : \mathrm{Fin}\, m \to \mathbb {N}\) and rectangle \(B\), \(\int ^- \prod _i \mathbf{1}_{X_{k\, i} \in B_i}\, d\mu = \int ^- \prod _i \nu (\omega )(B_i)\, d\mu .\) </p>
 
     </td>
-    <td  style="text-align:left" 
+    <td  style="text-align:left"
         rowspan=""
         colspan="">
       <p> Falls out of Cesàro / ergodic averaging — both sides are limits of the same averaged sequence. </p>
@@ -219,15 +219,15 @@
     <span class="lemma_thmtitle">\(\pi \)-system uniqueness</span>
     <div class="thm_header_extras">
 
-    
+
     ✓
         </div>
     <div class="thm_header_hidden_extras">
 
     <a class="icon proof" href="sect0005.html#lem:pi_system">#</a>
-    
-    
-    
+
+
+
     <button class="modal lean">L∃∀N</button>
         <div class="modal-container">
       <div class="modal-content">
@@ -236,17 +236,17 @@
           <button class="closebtn"><svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
 </button>
         </header>
-        
+
         <ul class="uses">
-          
+
           <li><a href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.measure_eq_of_fin_marginals_eq" class="lean_decl">Exchangeability.measure_eq_of_fin_marginals_eq</a></li>
-          
+
         </ul>
-    
+
       </div>
     </div>
 
-    
+
         </div>
   </div>
   <div class="lemma_thmcontent">
@@ -263,14 +263,14 @@
     <span class="theorem_thmtitle">Monotone class theorem</span>
     <div class="thm_header_extras">
 
-    
+
     ✓
         </div>
     <div class="thm_header_hidden_extras">
 
     <a class="icon proof" href="sect0005.html#thm:monotone_class">#</a>
-    
-    
+
+
     <button class="modal"><svg  class="icon icon-mindmap "><use xlink:href="symbol-defs.svg#icon-mindmap"></use></svg>
 </button>
         <div class="modal-container">
@@ -280,18 +280,18 @@
           <button class="closebtn"><svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
 </button>
         </header>
-        
+
         <ul class="uses">
-          
+
           <li><a href="sect0005.html#lem:pi_system">Lemma 47</a></li>
-          
+
         </ul>
-    
+
       </div>
     </div>
 
-    
-    
+
+
     <button class="modal lean">L∃∀N</button>
         <div class="modal-container">
       <div class="modal-content">
@@ -300,17 +300,17 @@
           <button class="closebtn"><svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
 </button>
         </header>
-        
+
         <ul class="uses">
-          
+
           <li><a href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/MeasurableSpace.induction_on_inter" class="lean_decl">MeasurableSpace.induction_on_inter</a></li>
-          
+
         </ul>
-    
+
       </div>
     </div>
 
-    
+
         </div>
   </div>
   <div class="theorem_thmcontent">
@@ -327,14 +327,14 @@
     <span class="theorem_thmtitle">Conditional independence extension</span>
     <div class="thm_header_extras">
 
-    
+
     ✓
         </div>
     <div class="thm_header_hidden_extras">
 
     <a class="icon proof" href="sect0005.html#thm:condIndep_extension">#</a>
-    
-    
+
+
     <button class="modal"><svg  class="icon icon-mindmap "><use xlink:href="symbol-defs.svg#icon-mindmap"></use></svg>
 </button>
         <div class="modal-container">
@@ -344,20 +344,20 @@
           <button class="closebtn"><svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
 </button>
         </header>
-        
+
         <ul class="uses">
-          
+
           <li><a href="sect0005.html#thm:monotone_class">Theorem 48</a></li>
-          
+
           <li><a href="sect0005.html#lem:pi_system">Lemma 47</a></li>
-          
+
         </ul>
-    
+
       </div>
     </div>
 
-    
-    
+
+
     <button class="modal lean">L∃∀N</button>
         <div class="modal-container">
       <div class="modal-content">
@@ -366,17 +366,17 @@
           <button class="closebtn"><svg  class="icon icon-cross "><use xlink:href="symbol-defs.svg#icon-cross"></use></svg>
 </button>
         </header>
-        
+
         <ul class="uses">
-          
+
           <li><a href="https://cameronfreer.github.io/exchangeability/docs/find/#doc/Exchangeability.DeFinetti.CommonEnding.conditional_iid_from_directing_measure" class="lean_decl">Exchangeability.DeFinetti.CommonEnding.conditional_iid_from_directing_measure</a></li>
-          
+
         </ul>
-    
+
       </div>
     </div>
 
-    
+
         </div>
   </div>
   <div class="theorem_thmcontent">
