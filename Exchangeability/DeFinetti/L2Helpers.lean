@@ -283,9 +283,8 @@ lemma covariance_formula_zero_sum {n : ℕ} {c : Fin n → ℝ} (σSq ρ : ℝ)
 /-- **Step 5:** Sum of squares bounded by L¹ norm times supremum. -/
 lemma sum_sq_le_sum_abs_mul_sup {n : ℕ} {c : Fin n → ℝ} :
     ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|) := by
-  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-    intro y ⟨k, hk⟩; rw [← hk]
-    exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, fun _ ⟨k, hk⟩ =>
+    hk ▸ Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
   apply Finset.sum_le_sum; intro i _
   calc (c i)^2 = |c i|^2 := (sq_abs _).symm
      _ = |c i| * |c i| := sq _
@@ -299,9 +298,8 @@ lemma l2_bound_from_steps {n : ℕ} {c p q : Fin n → ℝ} (σSq ρ : ℝ)
     (hc_abs_sum : ∑ i, |c i| ≤ 2)
     (step5 : ∑ i, (c i)^2 ≤ ∑ i, |c i| * (⨆ j, |c j|)) :
     σSq * (1 - ρ) * ∑ i, (c i)^2 ≤ 2 * σSq * (1 - ρ) * (⨆ i, |p i - q i|) := by
-  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, by
-    intro y ⟨k, hk⟩; rw [← hk]
-    exact Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
+  have hbdd : BddAbove (Set.range fun j : Fin n => |c j|) := ⟨∑ k, |c k|, fun _ ⟨k, hk⟩ =>
+    hk ▸ Finset.single_le_sum (fun i _ => abs_nonneg (c i)) (Finset.mem_univ k)⟩
   have hσ_1ρ_nonneg : 0 ≤ σSq * (1 - ρ) := mul_nonneg hσSq_nonneg (by linarith)
   have hsup_nonneg : 0 ≤ ⨆ j, |c j| := by
     by_cases h : Nonempty (Fin n)

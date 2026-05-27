@@ -140,9 +140,8 @@ lemma measure_map_shift_eq_of_contractable
   -- LHS marginal: μ.map(i < n ↦ X(i+1))
   -- RHS marginal: μ.map(i < n ↦ X i)
   -- By contractability with k(i) = i+1 (strictly monotone): these are equal
-  have hk : StrictMono (fun i : Fin n => (i.val + 1 : ℕ)) := by
-    intro i j hij
-    exact Nat.add_lt_add_right hij 1
+  have hk : StrictMono (fun i : Fin n => (i.val + 1 : ℕ)) :=
+    fun _ _ hij => Nat.add_lt_add_right hij 1
   -- The marginal projection
   have h_proj_L : Measure.map (Exchangeability.prefixProj α n) (Measure.map (fun ω' i => X (i + 1) ω') μ)
       = Measure.map (fun ω' (i : Fin n) => X (i.val + 1) ω') μ := by

@@ -188,8 +188,8 @@ lemma setIntegral_comp_shift_eq
 
     let π : Set (Set Ω) := piiUnionInter (fun j => {s | MeasurableSet[m j] s}) Set.univ
 
-    have hπ_isPiSystem : IsPiSystem π := by
-      exact isPiSystem_piiUnionInter (fun j => {s | MeasurableSet[m j] s})
+    have hπ_isPiSystem : IsPiSystem π :=
+      isPiSystem_piiUnionInter (fun j => {s | MeasurableSet[m j] s})
         (fun j => @MeasurableSpace.isPiSystem_measurableSet Ω (m j)) Set.univ
 
     have h_gen : tailFamily X N = MeasurableSpace.generateFrom π := by
