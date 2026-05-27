@@ -51,7 +51,7 @@ lake build Exchangeability.DeFinetti.ViaL2
 lake build Exchangeability.DeFinetti.ViaKoopman
 
 # Check axioms for a theorem
-printf 'import Exchangeability\n#print axioms deFinetti\n' | lake env lean --stdin
+printf 'import Exchangeability\n#print axioms Exchangeability.DeFinetti.deFinetti\n' | lake env lean --stdin
 ```
 
 ---

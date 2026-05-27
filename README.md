@@ -96,7 +96,7 @@ Exchangeability/
 │   ├── ViaL2/                  # L² proof (24 files)
 │   ├── ViaKoopman/             # Ergodic proof (16 files)
 │   ├── CommonEnding.lean       # Shared final step
-│   └── L2Helpers.lean          # L² contractability lemmas
+│   └── L2Helpers.lean          # L² utility and Fin index lemmas
 ├── Ergodic/                     # Ergodic theory (for Koopman)
 │   ├── KoopmanMeanErgodic.lean
 │   ├── InvariantSigma.lean
