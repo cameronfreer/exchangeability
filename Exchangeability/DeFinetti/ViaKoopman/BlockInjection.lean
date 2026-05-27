@@ -172,7 +172,6 @@ private lemma shift_iterate_preimage_of_shiftInvariant (C : ℕ) (s : Set (Ω[α
   | zero => simp
   | succ k ih => rw [Function.iterate_succ', Set.preimage_comp, hs_shift, ih]
 
-set_option linter.unusedVariables false in
 /-- Reindexing by blockInjection preserves membership in shift-invariant sets.
 
 The key insight is that blockInjection is eventually a constant shift:
@@ -180,13 +179,17 @@ for i ≥ m, blockInjection(i) = i + (m*n - m).
 
 For shift-invariant sets s (where shift⁻¹(s) = s), membership is determined by
 the eventual behavior of the sequence. Since blockInjection only permutes
-finitely many coordinates and then shifts, it preserves membership in s. -/
-lemma reindex_blockInjection_preimage_shiftInvariant {m n : ℕ} (hn : 0 < n)
+finitely many coordinates and then shifts, it preserves membership in s.
+
+The `_hn : 0 < n` hypothesis is unused by the current proof but retained in the
+signature: callers (e.g. `ContractableFactorization`) already track it and the
+hypothesis is informative for readers. -/
+lemma reindex_blockInjection_preimage_shiftInvariant {m n : ℕ} (_hn : 0 < n)
     (j : Fin m → Fin n) (s : Set (Ω[α]))
     (hs : isShiftInvariant s) :
     (fun ω => ω ∘ blockInjection m n j) ⁻¹' s = s := by
-  -- hs gives: MeasurableSet s and shift ⁻¹' s = s
-  obtain ⟨hs_meas, hs_shift⟩ := hs
+  -- hs gives shift⁻¹(s) = s; the measurability component isn't needed here.
+  obtain ⟨_, hs_shift⟩ := hs
   ext ω
   simp only [Set.mem_preimage]
   -- Need: ω ∈ s ↔ (ω ∘ blockInjection m n j) ∈ s

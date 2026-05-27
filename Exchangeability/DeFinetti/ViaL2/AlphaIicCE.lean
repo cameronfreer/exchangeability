@@ -48,7 +48,6 @@ We now define the **canonical** version using conditional expectation onto the t
 This avoids all pointwise headaches and gives us the endpoint limits for free.
 -/
 
-set_option linter.unusedVariables false in
 /-- **Canonical conditional expectation version** of α_{Iic t}.
 
 This is the conditional expectation of the indicator function `1_{(-∞,t]}∘X_0` with respect
@@ -59,12 +58,14 @@ existential `alphaIic` almost everywhere.
 - Has pointwise bounds `0 ≤ alphaIicCE ≤ 1` everywhere (not just a.e.)
 - Monotone in `t` almost everywhere (from positivity of conditional expectation)
 - Endpoint limits follow from L¹ contraction and dominated convergence
--/
+
+The `_hX_contract` and `_hX_L2` binders are retained for API uniformity with the
+`alphaIicCE_*` lemmas that *do* depend on them; this def itself only needs `hX_meas`. -/
 noncomputable def alphaIicCE
     {μ : Measure Ω} [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
+    (X : ℕ → Ω → ℝ) (_hX_contract : Contractable μ X)
     (hX_meas : ∀ i, Measurable (X i))
-    (hX_L2 : ∀ i, MemLp (X i) 2 μ)
+    (_hX_L2 : ∀ i, MemLp (X i) 2 μ)
     (t : ℝ) : Ω → ℝ := by
   classical
   -- Set up the tail σ-algebra and its sub-σ-algebra relation
