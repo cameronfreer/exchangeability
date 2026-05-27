@@ -244,9 +244,8 @@ lemma setIntegral_map_preimage
     ∫ x in g ⁻¹' s, (f ∘ g) x ∂ μ' = ∫ x in s, f x ∂ μ := by
   -- Use setIntegral_map which requires AEStronglyMeasurable
   -- For ℝ, AEMeasurable implies AEStronglyMeasurable (second countable topology)
-  have hf_aesm : AEStronglyMeasurable f (Measure.map g μ') := by
-    rw [← hpush] at hf
-    exact hf.aestronglyMeasurable
+  have hf_aesm : AEStronglyMeasurable f (Measure.map g μ') :=
+    hpush.symm ▸ hf.aestronglyMeasurable
   have hg_ae : AEMeasurable g μ' := hg.aemeasurable
   simp only [Function.comp]
   rw [← setIntegral_map hs hf_aesm hg_ae, hpush]
