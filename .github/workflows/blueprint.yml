@@ -15,12 +15,19 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  # Opt all JavaScript actions (including those pinned to older versions inside
+  # `leanprover/lean-action` and `leanprover-community/docgen-action`) into the
+  # Node.js 24 runtime ahead of the 2026-06-02 default switchover. Drop this
+  # block once all transitively-used actions ship Node.js 24 builds.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Full history for doc generation
 
