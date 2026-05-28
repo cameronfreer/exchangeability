@@ -28,9 +28,10 @@ def make_svg_clickable(svg_content: str) -> str:
     while i < len(lines):
         line = lines[i]
 
-        # Check if this is a node start (comment line with module name)
-        # Pattern: <!-- Exchangeability.Module.Name -->
-        node_comment_match = re.match(r'^<!-- (Exchangeability\.[^\s]+) -->$', line.strip())
+        # Check if this is a node start (comment line with module name).
+        # Patterns: `<!-- Exchangeability.Module.Name -->` and the bare
+        # umbrella `<!-- Exchangeability -->`.
+        node_comment_match = re.match(r'^<!-- (Exchangeability(?:\.[^\s]+)?) -->$', line.strip())
 
         if node_comment_match:
             module_name = node_comment_match.group(1)
