@@ -154,8 +154,6 @@ Exchangeability/
 
 ## Acknowledgments
 
-This formalization was developed with assistance from:
-- **Claude** (Anthropic) - Sonnet 4, Sonnet 4.5, Opus 4.5
-- **GPT** (OpenAI) - GPT-5.\*-Codex, GPT-5.\* Pro
+This formalization was developed with assistance from Claude and GPT models, using [lean4-skills](https://github.com/cameronfreer/lean4-skills).
 
 Built with [Lean 4](https://leanprover.github.io/) and [Mathlib](https://github.com/leanprover-community/mathlib4).
