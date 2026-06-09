@@ -425,8 +425,6 @@ theorem conditional_iid_from_directing_measure
       exact fidi_eq_avg_product X hX_meas ν hν_prob hν_meas m k B hB_meas
         (h_bridge (k := k) hk_strict.injective (B := B) hB_meas)
 
--- *Monotone-class remark.*  Earlier drafts included an explicit monotone-class lemma
--- (`monotone_class_product_extension`) proving the π-λ step described above.  The sole
--- remaining use of that lemma is captured abstractly by the `h_bridge` hypothesis, so the
--- sketch is retained only as commentary.
+-- *Monotone-class remark.*  The π-λ step described above is captured abstractly by the
+-- `h_bridge` hypothesis, so no explicit monotone-class lemma is needed here.
 end Exchangeability.DeFinetti.CommonEnding
