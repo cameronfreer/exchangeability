@@ -1,6 +1,6 @@
 # Project Status: de Finetti Theorem Formalization
 
-**Last Updated:** 2026-05-27
+**Last Updated:** 2026-06-09
 
 ## Executive Summary
 
@@ -10,10 +10,10 @@ LOC counts below cover the `Exchangeability/` library tree (excluding the top-le
 | Proof Approach | Lines | Build | Status |
 |---------------|------:|-------|--------|
 | **ViaMartingale** | 2,804 | Pass | **COMPLETE** |
-| **ViaL2** | 7,444 | Pass | **COMPLETE** |
-| **ViaKoopman** | 5,402 | Pass | **COMPLETE** |
-| *Shared infrastructure* | 11,117 | — | — |
-| **Total** | **26,767** | Pass | **COMPLETE** |
+| **ViaL2** | 7,443 | Pass | **COMPLETE** |
+| **ViaKoopman** | 5,305 | Pass | **COMPLETE** |
+| *Shared infrastructure* | 11,111 | — | — |
+| **Total** | **26,663** | Pass | **COMPLETE** |
 
 **All three proofs complete.**
 
