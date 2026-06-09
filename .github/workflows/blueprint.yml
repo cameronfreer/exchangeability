@@ -44,6 +44,15 @@ jobs:
         run: |
           lake build
 
+      - name: Check axioms
+        run: |
+          printf 'import Exchangeability\n#print axioms Exchangeability.DeFinetti.deFinetti\n' \
+            | lake env lean --stdin > /tmp/axioms.out
+          # Exact full-output comparison: an extra axiom or extra line fails the step.
+          diff /tmp/axioms.out - <<'EOF'
+          'Exchangeability.DeFinetti.deFinetti' depends on axioms: [propext, Classical.choice, Quot.sound]
+          EOF
+
       - name: Check declarations
         run: |
           ~/.elan/bin/lake exe checkdecls blueprint/lean_decls
