@@ -5,6 +5,7 @@ Authors: Cameron Freer
 -/
 import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.MeasureTheory.Function.LpSeminorm.Basic
+import Mathlib.MeasureTheory.Function.LpSeminorm.CompareExp
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!
@@ -156,6 +157,44 @@ lemma memLp_two_of_bounded
   refine MemLp.of_bound hf_meas.aestronglyMeasurable M ?_
   filter_upwards with ω
   exact (Real.norm_eq_abs _).le.trans (hf_bdd ω)
+
+/-- On a finite measure space, a bounded measurable real function is integrable.
+
+Unlike mathlib's `Integrable.of_bound`, this takes `Measurable` and a pointwise
+absolute-value bound, the shape produced by the block-average constructions. -/
+lemma integrable_of_bounded_measurable
+    [IsFiniteMeasure μ]
+    {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
+    Integrable f μ :=
+  ⟨hf_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (by
+    filter_upwards with ω; simpa [Real.norm_eq_abs] using hf_bd ω)⟩
+
+/-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
+We assume `MemLp f 2 μ` so the right-hand side is finite; this matches the uses
+where the function is bounded (hence in L²). -/
+lemma eLpNorm_one_le_eLpNorm_two_toReal
+    [IsProbabilityMeasure μ]
+    (f : Ω → ℝ) (hL1 : Integrable f μ) (hL2 : MemLp f 2 μ) :
+    (∫ ω, |f ω| ∂μ) ≤ (eLpNorm f 2 μ).toReal := by
+  -- Step 1: Connect ∫|f| to eLpNorm f 1 μ using norm
+  have h_eq : ENNReal.ofReal (∫ ω, |f ω| ∂μ) = eLpNorm f 1 μ := by
+    have h_norm : ∫ ω, |f ω| ∂μ = ∫ ω, ‖f ω‖ ∂μ :=
+      integral_congr_ae (ae_of_all μ (fun ω => (Real.norm_eq_abs (f ω)).symm))
+    rw [h_norm, ofReal_integral_norm_eq_lintegral_enorm hL1]
+    exact eLpNorm_one_eq_lintegral_enorm.symm
+  -- Step 2: eLpNorm f 1 μ ≤ eLpNorm f 2 μ on probability spaces
+  have h_mono : eLpNorm f 1 μ ≤ eLpNorm f 2 μ := by
+    have h_ae : AEStronglyMeasurable f μ := hL1.aestronglyMeasurable
+    refine eLpNorm_le_eLpNorm_of_exponent_le ?_ h_ae
+    norm_num
+  -- Step 3: Convert to toReal inequality
+  have h_fin : eLpNorm f 2 μ ≠ ⊤ := hL2.eLpNorm_ne_top
+  have h_nonneg : 0 ≤ ∫ ω, |f ω| ∂μ := integral_nonneg (fun ω => abs_nonneg _)
+  calc (∫ ω, |f ω| ∂μ)
+      = (ENNReal.ofReal (∫ ω, |f ω| ∂μ)).toReal := by
+        rw [ENNReal.toReal_ofReal h_nonneg]
+    _ = (eLpNorm f 1 μ).toReal := by rw [h_eq]
+    _ ≤ (eLpNorm f 2 μ).toReal := ENNReal.toReal_mono h_fin h_mono
 
 end MeasureTheory
 

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
 import Exchangeability.DeFinetti.ViaKoopman.Infrastructure
-import Exchangeability.DeFinetti.ViaKoopman.LpCondExpHelpers
+import Exchangeability.Probability.LpNormHelpers
 
 /-! # Cesàro Helper Lemmas
 
@@ -36,6 +36,25 @@ variable {α : Type*} [MeasurableSpace α]
 -- Short notation for shift-invariant σ-algebra (used throughout this file)
 local notation "mSI" => shiftInvariantSigma (α := α)
 
+/-- Finite sum linearity of conditional expectation, stated with the sum applied
+pointwise (`fun ω => ∑ i ∈ s, f i ω`) as it appears in the Cesàro averages below.
+η-expands to mathlib's `condExp_finset_sum`. -/
+private lemma condExp_sum_finset
+    {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
+    {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
+    {ι : Type*} (s : Finset ι) (f : ι → Ω → ℝ)
+    (hint : ∀ i ∈ s, Integrable (f i) μ) :
+    μ[(fun ω => s.sum (fun i => f i ω)) | m]
+      =ᵐ[μ] (fun ω => s.sum (fun i => μ[f i | m] ω)) := by
+  classical
+  have h_sum_eta : (fun ω => ∑ i ∈ s, f i ω) = ∑ i ∈ s, f i := by
+    funext ω
+    simp only [Finset.sum_apply]
+  have h_ce_sum_eta : (fun ω => ∑ i ∈ s, μ[f i | m] ω) = ∑ i ∈ s, μ[f i | m] := by
+    funext ω
+    simp only [Finset.sum_apply]
+  rw [h_sum_eta, h_ce_sum_eta]
+  exact condExp_finset_sum hint m
 
 lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]
@@ -321,8 +340,8 @@ lemma product_ce_constant_of_lag_const
          = (fun ω => (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) := by
       funext ω; simp [A, Finset.mul_sum, mul_comm, mul_left_comm, mul_assoc]
     rw [this]
-    exact condExp_const_mul (shiftInvariantSigma_le (α := α))
-      (1 / ((n + 1) : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j)))
+    simpa [Pi.mul_apply, smul_eq_mul] using condExp_smul (μ := μ)
+      (1 / ((n + 1) : ℝ)) (fun ω => (Finset.range (n + 1)).sum (fun j => f (ω 0) * g (ω j))) mSI
 
   -- Push CE through the finite sum
   have h_sum :
@@ -460,8 +479,8 @@ lemma product_ce_constant_of_lag_const_from_one
          = (fun ω => (1 / (n : ℝ)) * (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) := by
       funext ω; simp [A', Finset.mul_sum, mul_left_comm]
     rw [this]
-    exact condExp_const_mul (shiftInvariantSigma_le (α := α))
-      (1 / (n : ℝ)) (fun ω => (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1))))
+    simpa [Pi.mul_apply, smul_eq_mul] using condExp_smul (μ := μ)
+      (1 / (n : ℝ)) (fun ω => (Finset.range n).sum (fun j => f (ω 0) * g (ω (j + 1)))) mSI
 
   -- Push CE through the finite sum
   have h_sum :
