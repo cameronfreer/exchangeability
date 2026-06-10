@@ -417,44 +417,6 @@ lemma condExp_L1_lipschitz [IsFiniteMeasure μ]
     _ ≤ ∫ ω, |(f - g) ω| ∂μ := integral_abs_condExp_le (f - g)
     _ = ∫ ω, |f ω - g ω| ∂μ := rfl
 
-/-- Conditional expectation pull-out property for bounded measurable functions.
-
-If g is m-measurable and bounded, then E[f·g|m] = E[f|m]·g a.e. -/
-lemma condExp_mul_pullout {Ω : Type*} {m₀ : MeasurableSpace Ω} {μ : Measure Ω}
-    [IsFiniteMeasure μ]
-    {m : MeasurableSpace Ω} (hm : m ≤ m₀)
-    {f g : Ω → ℝ} (hf : Integrable f μ)
-    (hg_meas : @Measurable Ω ℝ m _ g)
-    (hg_bd : ∃ C, ∀ ω, |g ω| ≤ C) :
-    μ[f * g|m] =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-  -- Use mathlib's condExp_stronglyMeasurable_mul_of_bound with explicit instance management
-  -- following the pattern from condExpWith above.
-
-  -- g is m-measurable, so it's m-strongly measurable
-  have hg_strong : StronglyMeasurable[m] g := hg_meas.stronglyMeasurable
-
-  -- g is bounded
-  obtain ⟨C, hC⟩ := hg_bd
-  have hg_bound : ∀ᵐ ω ∂μ, ‖g ω‖ ≤ C := ae_of_all μ fun ω => (Real.norm_eq_abs _).le.trans (hC ω)
-
-  -- Provide typeclass instances explicitly (IsFiniteMeasure is automatic via mathlib)
-  haveI : SigmaFinite (μ.trim hm) := inferInstance
-
-  -- Now condExp_stronglyMeasurable_mul_of_bound can resolve instances
-  have h := condExp_stronglyMeasurable_mul_of_bound hm hg_strong hf C hg_bound
-
-  -- Commute to get μ[f * g|m] = μ[f|m] * g
-  calc μ[f * g|m]
-      =ᵐ[μ] μ[g * f|m] := by
-          apply condExp_congr_ae
-          filter_upwards with ω
-          simp only [Pi.mul_apply]
-          ring
-    _ =ᵐ[μ] fun ω => g ω * μ[f|m] ω := h
-    _ =ᵐ[μ] fun ω => μ[f|m] ω * g ω := by
-          filter_upwards with ω
-          ring
-
 end OperatorTheoretic
 
 end Exchangeability.Probability
