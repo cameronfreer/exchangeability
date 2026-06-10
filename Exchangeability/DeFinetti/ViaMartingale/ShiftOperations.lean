@@ -58,12 +58,12 @@ lemma tailRV_consRV (x : Ω → α) (t : Ω → ℕ → α) : tailRV (consRV x t
 /-! ### Measurable combinators -/
 
 /-- A process viewed as a full path is measurable. -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_path {X : ℕ → Ω → α} (hX : ∀ n, Measurable (X n)) : Measurable (path X) := by
   unfold path; fun_prop
 
 /-- Consing a head to a sequence is measurable if both pieces are measurable. -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_consRV (x : Ω → α) (t : Ω → ℕ → α) :
     Measurable x → Measurable t → Measurable (consRV x t) := by
   intro hx ht
@@ -97,7 +97,7 @@ lemma comap_le_comap_consRV (x : Ω → α) (t : Ω → ℕ → α) :
 
 variable {X : ℕ → Ω → α}
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_shiftRV (hX : ∀ n, Measurable (X n)) {m : ℕ} :
     Measurable (shiftRV X m) := by
   simpa [shiftRV, path] using (measurable_path (fun n => hX (m + n)))

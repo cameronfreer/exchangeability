@@ -346,7 +346,7 @@ private lemma optionB_Step4b_AB_close
         have h_sum :
             Integrable (fun ω =>
               (Finset.range (n+1)).sum (fun i => g (ω i))) μ :=
-          integrable_finset_sum (Finset.range (n+1)) (fun i hi => h_i i hi)
+          integrable_finsetSum (Finset.range (n+1)) (fun i hi => h_i i hi)
         -- A n is (1/(n+1)) • (sum …)
         have h_smul :
             Integrable (fun ω =>
@@ -376,7 +376,7 @@ private lemma optionB_Step4b_AB_close
           have h_sum :
               Integrable (fun ω =>
                 (Finset.range n).sum (fun i => g (ω i))) μ :=
-            integrable_finset_sum (Finset.range n) (fun i hi => h_i i hi)
+            integrable_finsetSum (Finset.range n) (fun i hi => h_i i hi)
           have h_smul :
               Integrable (fun ω =>
                 (1 / (n : ℝ)) •

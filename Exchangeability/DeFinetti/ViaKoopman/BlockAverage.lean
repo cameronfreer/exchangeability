@@ -84,7 +84,7 @@ lemma blockAvg_eq_cesaro_shifted {m n : ℕ} (hn : 0 < n) (k : Fin m) (f : α �
 
 /-! ### Measurability of Block Averages -/
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_blockAvg {m n : ℕ} (k : Fin m) {f : α → ℝ} (hf : Measurable f) :
     Measurable (blockAvg (α := α) m n k f) := by
   unfold blockAvg
@@ -447,7 +447,7 @@ lemma integral_prod_eq_integral_blockAvg
   rw [integral_const_mul]
 
   -- ∫ ∑_j ... = ∑_j ∫ ... (Fubini for finite sum)
-  rw [integral_finset_sum]
+  rw [integral_finsetSum]
   · -- Goal: ∫ ∏ fs(ωᵢ) = (1/n^m) * ∑_j ∫ ∏ fs(ω(i*n + j(i)))
     --
     -- By h_each_j: each ∫ ∏ fs(ω(i*n + j(i))) = ∫ ∏ fs(ωᵢ)

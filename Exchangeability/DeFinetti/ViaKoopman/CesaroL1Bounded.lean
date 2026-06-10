@@ -266,7 +266,7 @@ lemma L1_cesaro_convergence
         rw [h_eq]
         have h_shiftj_pres : MeasurePreserving (shift^[j]) μ μ := hσ.iterate j
         exact h_shiftj_pres.integrable_comp_of_integrable hg_int
-      exact integrable_finset_sum (Finset.range (n + 1)) h_each_int
+      exact integrable_finsetSum (Finset.range (n + 1)) h_each_int
     exact h_int_sum.const_mul (1 / ((n + 1) : ℝ))
 
   have h_int_AM : Integrable A_M₀ μ := by
@@ -277,7 +277,7 @@ lemma L1_cesaro_convergence
         obtain ⟨C, hC⟩ := hg_M_bd M₀
         refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
         exact (hg_M_meas M₀).comp (measurable_pi_apply j)
-      exact integrable_finset_sum (Finset.range (n + 1)) h_each_int
+      exact integrable_finsetSum (Finset.range (n + 1)) h_each_int
     exact h_int_sum.const_mul (1 / ((n + 1) : ℝ))
 
   have h_int_diff1 : Integrable (fun ω => |A n ω - A_M₀ ω|) μ := (h_int_A.sub h_int_AM).abs
@@ -314,7 +314,7 @@ lemma L1_cesaro_convergence
                 refine integral_mono_ae ?_ ?_ ?_
                 · exact (h_int_A.sub h_int_AM).abs
                 · have h_sum_int : Integrable (fun ω => ∑ j ∈ Finset.range (n + 1), |g (ω j) - g_M M₀ (ω j)|) μ := by
-                    refine integrable_finset_sum _ (fun j _ => ?_)
+                    refine integrable_finsetSum _ (fun j _ => ?_)
                     have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
                       have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
                         simp [shift_iterate_apply_zero]
@@ -331,7 +331,7 @@ lemma L1_cesaro_convergence
                   rw [← mul_sub_left_distrib, ← Finset.sum_sub_distrib, abs_mul, abs_of_pos (by positivity : 0 < 1 / (↑n + 1 : ℝ))]
                   exact mul_le_mul_of_nonneg_left (Finset.abs_sum_le_sum_abs _ _) (by positivity)
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω j) - g_M M₀ (ω j)| ∂μ := by
-                rw [integral_const_mul, integral_finset_sum]
+                rw [integral_const_mul, integral_finsetSum]
                 intro j _
                 have h_int_gj : Integrable (fun ω => g (ω j)) μ := by
                   have h_eq : (fun ω => g (ω j)) = (fun ω => g ((shift^[j] ω) 0)) := by
@@ -406,7 +406,7 @@ lemma ce_lipschitz_convergence
   obtain ⟨Cg, hCg⟩ := hg_bd
 
   have hA_int : ∀ n, Integrable (A n) μ := fun n =>
-    (integrable_finset_sum (Finset.range (n + 1)) fun j _ =>
+    (integrable_finsetSum (Finset.range (n + 1)) fun j _ =>
       integrable_of_bounded_measurable
         (hg_meas.comp (measurable_pi_apply j)) Cg fun ω => hCg (ω j)).smul (1 / ((n + 1) : ℝ))
 

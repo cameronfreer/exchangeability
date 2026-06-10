@@ -36,7 +36,7 @@ def productCylinder {m : ℕ} (fs : Fin m → α → ℝ) : (ℕ → α) → ℝ
   fun ω => ∏ k : Fin m, fs k (ω k.val)
 
 /-- Measurability of product cylinders. -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_productCylinder {m : ℕ} {fs : Fin m → α → ℝ}
     (hmeas : ∀ k, Measurable (fs k)) :
     Measurable (productCylinder fs) := by

@@ -148,7 +148,7 @@ This is a key lemma for proving the ConditionallyIID property in de Finetti's th
 yield measurable kernels, which is essential for disintegration theory and
 conditional independence.
 -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_measure_pi {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
     {m : ℕ}
     (ν : Ω → Measure α) (hν_prob : ∀ ω, IsProbabilityMeasure (ν ω))

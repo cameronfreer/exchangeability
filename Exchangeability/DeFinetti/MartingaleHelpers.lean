@@ -43,7 +43,7 @@ variable {β : Type*} [MeasurableSpace β]
 /-- Shift a sequence by dropping the first `d` entries. -/
 def shiftSeq (d : ℕ) (f : ℕ → β) : ℕ → β := fun n => f (n + d)
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_shiftSeq {d : ℕ} :
     Measurable (shiftSeq (β:=β) d) := by
   unfold shiftSeq; fun_prop

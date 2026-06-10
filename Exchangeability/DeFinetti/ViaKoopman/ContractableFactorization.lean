@@ -183,7 +183,7 @@ lemma product_blockAvg_L1_convergence
   --
   -- **Step 5**: Apply blockAvg_tendsto_condExp for each i.
   --   Each term ∫ |blockAvg_i - CE_i| → 0 by blockAvg_tendsto_condExp.
-  --   Finite sum of things → 0 is → 0 (by tendsto_finset_sum).
+  --   Finite sum of things → 0 is → 0 (by tendsto_finsetSum).
   --
   -- **Key ingredients from MoreL2Helpers.lean**:
   --   - abs_prod_sub_prod_le: |∏ f - ∏ g| ≤ ∑ |f_i - g_i| for |f|, |g| ≤ 1
@@ -213,7 +213,7 @@ lemma product_blockAvg_L1_convergence
     -- Sum of limits = limit of sums
     have h_sum_zero : (∑ _ : Fin m, (0 : ℝ)) = 0 := Finset.sum_const_zero
     rw [← h_sum_zero]
-    exact tendsto_finset_sum _ fun i _ =>
+    exact tendsto_finsetSum _ fun i _ =>
       blockAvg_tendsto_condExp hσ m i (hfs_meas i) ⟨C, fun x => hC_bd i x⟩
 
   -- Apply squeeze theorem
@@ -321,10 +321,10 @@ lemma product_blockAvg_L1_convergence
     calc ∫ ω, |∏ i, A i ω - ∏ i, B i ω| ∂μ
       _ ≤ ∫ ω, C^(m - 1) * ∑ i, |A i ω - B i ω| ∂μ :=
           integral_mono_ae (hprodA_int.sub hprodB_int).abs
-            ((integrable_finset_sum _ fun i _ => (hAB_diff_int i).abs).const_mul _) h_pointwise
+            ((integrable_finsetSum _ fun i _ => (hAB_diff_int i).abs).const_mul _) h_pointwise
       _ = C^(m - 1) * ∫ ω, ∑ i, |A i ω - B i ω| ∂μ := integral_const_mul _ _
       _ = C^(m - 1) * ∑ i, ∫ ω, |A i ω - B i ω| ∂μ := by
-          congr 1; exact integral_finset_sum _ fun i _ => (hAB_diff_int i).abs
+          congr 1; exact integral_finsetSum _ fun i _ => (hAB_diff_int i).abs
       _ = upper n := rfl
   · exact h_upper_tendsto
 
@@ -670,7 +670,7 @@ theorem condexp_product_factorization_contractable
       rw [h_rhs_eq]
 
       -- Swap finite sum and integral (integrability check below)
-      rw [integral_finset_sum Finset.univ]
+      rw [integral_finsetSum Finset.univ]
       · -- Now: ∫_s f = (1/(n+1)^m) * ∑_j ∫_s ∏_i fs_i(ω(i*(n+1) + j(i)))
         -- Use h_each_j_setIntegral and blockInjection_val_lt
         have h_each_term : ∀ j : Fin m → Fin (n + 1),

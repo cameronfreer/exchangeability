@@ -81,7 +81,7 @@ noncomputable def alphaIicCE
 The conditional expectation is strongly measurable with respect to the tail σ-algebra
 (`stronglyMeasurable_condExp`), and `Measurable.mono` lifts this to the ambient
 σ-algebra via `tailProcess_le_ambient`. -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma alphaIicCE_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]
     (X : ℕ → Ω → ℝ) (hX_contract : Contractable μ X)
