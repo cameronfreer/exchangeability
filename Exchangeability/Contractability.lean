@@ -290,10 +290,8 @@ lemma exists_perm_extending_strictMono {m n : ℕ} (k : Fin m → ℕ)
   -- and `g` = the strictly monotone embedding via `k`.
   let f : Fin m → Fin n := Fin.castLE hmn
   let g : Fin m → Fin n := fun i => ⟨k i, hk_bound i⟩
-  have hf : Function.Injective f := Fin.castLE_injective hmn
-  have hg : Function.Injective g := fun i j hij =>
-    hk_mono.injective (Fin.mk.inj hij)
-  obtain ⟨σ, hσ⟩ := Equiv.Perm.exists_extending_pair f g hf hg
+  obtain ⟨σ, hσ⟩ := Equiv.Perm.exists_extending_pair f g (Fin.castLE_injective hmn)
+    (fun i j hij => hk_mono.injective (Fin.mk.inj hij))
   exact ⟨σ, fun i => congrArg Fin.val (hσ i)⟩
 
 /- Helper: relabeling coordinates by a finite permutation is measurable as a map
@@ -385,9 +383,8 @@ This follows from monotonicity and the fact that any `i` is at most `last`.
 -/
 private lemma strictMono_all_lt_succ_last {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k)
     (i : Fin m) (last : Fin m) (h_last : ∀ j, j ≤ last) :
-    k i ≤ k last := by
-  apply StrictMono.monotone hk
-  exact h_last i
+    k i ≤ k last :=
+  hk.monotone (h_last i)
 
 /--
 Helper lemma: The length of the domain is bounded by the maximum value plus one.
@@ -398,9 +395,8 @@ This uses the fact that strictly monotone functions satisfy `i ≤ k(i)` for all
 private lemma strictMono_length_le_max_succ {m : ℕ} (k : Fin m → ℕ) (hk : StrictMono k)
     (last : Fin m) (h_last_is_max : last.val + 1 = m) :
     m ≤ k last + 1 := by
-  have h_mono : last.val ≤ k last := strictMono_Fin_ge_id hk last
   calc m = last.val + 1 := h_last_is_max.symm
-       _ ≤ k last + 1 := Nat.add_le_add_right h_mono 1
+       _ ≤ k last + 1 := Nat.add_le_add_right (strictMono_Fin_ge_id hk last) 1
 
 /--
 **Main theorem:** Every exchangeable sequence is contractable.

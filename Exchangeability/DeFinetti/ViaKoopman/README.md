@@ -32,7 +32,6 @@ This directory contains Kallenberg's "first proof" of de Finetti's theorem, usin
 | `BlockInjection.lean` | Block injection lemmas |
 | `KernelBridge.lean` | Bridge lemma for kernel measures |
 | `CylinderFunctions.lean` | Cylinder function definitions |
-| `LpCondExpHelpers.lean` | Lᵖ conditional expectation helpers |
 | `DirectingKernel.lean` | Directing measure from CE kernel |
 | `Quantization.lean` | Quantization machinery |
 | `Infrastructure.lean` | Basic definitions |

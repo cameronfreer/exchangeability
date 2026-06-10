@@ -44,8 +44,8 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 The proof routes through the kernel-level bridge
 `directing_measure_ae_eq_condExpKernel_map` and mathlib's
-`condExp_ae_eq_integral_condExpKernel`, replacing what was previously a hand-built
-monotone-class extension from `Iic` indicators.
+`condExp_ae_eq_integral_condExpKernel`, so no monotone-class extension from `Iic`
+indicators is needed.
 
 The `[StandardBorelSpace Ω]` assumption comes from `condExpKernel`. -/
 lemma directing_measure_integral_eq_condExp

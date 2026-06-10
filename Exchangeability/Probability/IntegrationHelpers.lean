@@ -193,4 +193,30 @@ lemma integral_pushforward_sq_diff
   rw [integral_map hf.aemeasurable]
   exact (continuous_id.sub continuous_const).pow 2 |>.aestronglyMeasurable
 
+/-! ## Fatou-Type Lemmas -/
+
+/-- Fatou's lemma on `ENNReal.ofReal ∘ ‖·‖` along an a.e. pointwise limit.
+
+If `u n x → g x` a.e., then `∫⁻ ‖g‖ ≤ liminf (∫⁻ ‖u n‖)`. -/
+lemma lintegral_fatou_ofReal_norm
+  {α β : Type*} [MeasurableSpace α] {μ : Measure α}
+  [MeasurableSpace β] [NormedAddCommGroup β] [BorelSpace β]
+  {u : ℕ → α → β} {g : α → β}
+  (hae : ∀ᵐ x ∂μ, Tendsto (fun n => u n x) atTop (nhds (g x)))
+  (hu_meas : ∀ n, AEMeasurable (fun x => ENNReal.ofReal ‖u n x‖) μ)
+  (_hg_meas : AEMeasurable (fun x => ENNReal.ofReal ‖g x‖) μ) :
+  ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
+    ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop := by
+  have hae_ofReal :
+      ∀ᵐ x ∂μ,
+        Tendsto (fun n => ENNReal.ofReal ‖u n x‖) atTop
+                (nhds (ENNReal.ofReal ‖g x‖)) :=
+    hae.mono (fun x hx =>
+      ((ENNReal.continuous_ofReal.comp continuous_norm).tendsto _).comp hx)
+  calc ∫⁻ x, ENNReal.ofReal ‖g x‖ ∂μ
+      = ∫⁻ x, liminf (fun n => ENNReal.ofReal ‖u n x‖) atTop ∂μ :=
+          lintegral_congr_ae (hae_ofReal.mono fun x hx => hx.liminf_eq.symm)
+    _ ≤ liminf (fun n => ∫⁻ x, ENNReal.ofReal ‖u n x‖ ∂μ) atTop :=
+          lintegral_liminf_le' hu_meas
+
 end Exchangeability.Probability.IntegrationHelpers

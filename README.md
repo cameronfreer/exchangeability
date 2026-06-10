@@ -27,7 +27,7 @@ We implement **all three proofs** from Kallenberg (2005) of the key implication 
 3. **Koopman Approach**
    - Kallenberg's "first proof" - Mean Ergodic Theorem
    - Deep connection to dynamical systems and ergodic theory
-   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (16 files)
+   - [`Exchangeability/DeFinetti/ViaKoopman/`](Exchangeability/DeFinetti/ViaKoopman/) (15 files)
 
 ### Import Graph
 
@@ -94,7 +94,7 @@ Exchangeability/
 │   ├── Theorem.lean            # Public API (exports ViaMartingale)
 │   ├── ViaMartingale/          # Martingale proof (12 files)
 │   ├── ViaL2/                  # L² proof (24 files)
-│   ├── ViaKoopman/             # Ergodic proof (16 files)
+│   ├── ViaKoopman/             # Ergodic proof (15 files)
 │   ├── CommonEnding.lean       # Shared final step
 │   └── L2Helpers.lean          # L² utility and Fin index lemmas
 ├── Ergodic/                     # Ergodic theory (for Koopman)

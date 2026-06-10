@@ -5,7 +5,7 @@ Authors: Cameron Freer
 -/
 
 import Mathlib.Probability.Martingale.Convergence
-import Exchangeability.Probability.MartingaleExtras
+import Exchangeability.Probability.IntegrationHelpers
 import Exchangeability.Probability.SigmaAlgebraHelpers
 import Exchangeability.Probability.Martingale.Crossings.Bounds
 
@@ -238,7 +238,7 @@ lemma condExp_exists_ae_limit_antitone
       calc
         ∫⁻ ω, ENNReal.ofReal ‖Xlim ω‖ ∂μ
             ≤ liminf (fun n => ∫⁻ ω, ENNReal.ofReal ‖μ[f | 𝔽 n] ω‖ ∂μ) atTop :=
-              lintegral_fatou_ofReal_norm h_ae_tendsto hmeas_n hmeas_lim
+              IntegrationHelpers.lintegral_fatou_ofReal_norm h_ae_tendsto hmeas_n hmeas_lim
         _ ≤ ↑R := by
               rw [liminf_le_iff]
               intro b hb

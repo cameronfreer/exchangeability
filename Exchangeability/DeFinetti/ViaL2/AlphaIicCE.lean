@@ -78,10 +78,9 @@ noncomputable def alphaIicCE
 
 /-- Measurability of alphaIicCE.
 
-Note: Previously had BorelSpace typeclass instance resolution issues.
-The conditional expectation `condExp μ (tailSigma X) f` is measurable by
-`stronglyMeasurable_condExp.measurable`, but Lean can't synthesize the required
-`BorelSpace` instance automatically. This should be straightforward to fix. -/
+The conditional expectation is strongly measurable with respect to the tail σ-algebra
+(`stronglyMeasurable_condExp`), and `Measurable.mono` lifts this to the ambient
+σ-algebra via `tailProcess_le_ambient`. -/
 @[measurability, fun_prop]
 lemma alphaIicCE_measurable
     {μ : Measure Ω} [IsProbabilityMeasure μ]

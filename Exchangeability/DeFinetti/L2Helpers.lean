@@ -24,8 +24,8 @@ All lemmas here are complete (no sorries) and compile cleanly.
 - Various arithmetic bounds for convergence rates (e.g. `sqrt_div_lt_half_eps_of_nat`)
 - Fin index reindexing lemmas for filtered sums
 
-The contractability/covariance helpers that previously lived here have moved to the
-canonical `Exchangeability.Contractable.{map_single, map_pair, comp}` API in
+For contractability/covariance helpers, see the canonical
+`Exchangeability.Contractable.{map_single, map_pair, comp}` API in
 `Exchangeability/Contractability.lean`.
 
 -/

@@ -1,6 +1,7 @@
 # Development Chronology
 
-A narrative history of this Lean 4 formalization, based on 4,024 commits (3,166 non-merge) from Sept 29, 2025 - Jan 8, 2026.
+A narrative history of this Lean 4 formalization, based on 4,247 commits (3,373 non-merge,
+counted on `main` including merges in the total) from Sept 29, 2025 - June 8, 2026.
 
 ## Phase 0: Project Initialization (Sept 29 - Oct 1, 2025)
 
@@ -149,6 +150,25 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 1. Demonstrates confidence in correctness (touching presentation, not logic)
 2. Prepares for potential mathlib integration
 3. Professional code quality standards
+
+## Phase 11: Maintenance & Hardening (Jan 9 - June 8, 2026)
+
+**226 commits (208 non-merge, `--since="2026-01-09 00:00"` on `main`) of post-completion upkeep**
+
+- `886550af` Toolchain upgrade to Lean 4.27.0-rc1, then `8ab88df2` to v4.30.0-rc2 with
+  matching mathlib
+- Cross-tree dead-code sweeps, e.g. `b642382e` (−1,713 lines) and follow-ups — several
+  thousand lines of abandoned scaffolding removed
+- Linter hygiene: `3c40bcbf` cleared all 44 remaining linter warnings; suppressions pruned
+  in stages until `3e7b30d7` dropped the last ones (0 remaining)
+- Term-mode golf batches, e.g. `ef4e47b1` collapsing 32 `by exact` wrappers
+- `93961e6f` Canonical `Contractable.{comp, map_pair}` API; call sites migrated and the old
+  L2Helpers wrappers dropped
+- Blueprint/CI: `8f848259` PR-triggered blueprint consistency check; web + pdf artifact
+  refreshes; `289affe8` doc count/date refresh ahead of the v1.3 release
+
+**Pattern:** With all three proofs complete, work shifted from proving to curation —
+keeping the tree warning-free, current with mathlib, and honest in its documentation.
 
 ---
 

@@ -34,8 +34,8 @@ variable {Ω α : Type*} [MeasurableSpace Ω] [MeasurableSpace α]
 
 /-- Clipping `b` to `[0,1]` can only bring it closer to anything already in `[0,1]`.
 
-Internal helper: factors out the case analysis that previously appeared in
-`alphaIic_ae_eq_alphaIicCE`. The cleanest route is via mathlib's
+Internal helper for the case analysis in `alphaIic_ae_eq_alphaIicCE`.
+The cleanest route is via mathlib's
 `LipschitzWith.projIcc`: `Set.projIcc 0 1` is `1`-Lipschitz, equals
 `max 0 (min 1 ·)` after coercion, and fixes any input already in `[0,1]`. -/
 private lemma abs_sub_clip01_le_of_mem {a b : ℝ} (ha : a ∈ Set.Icc (0 : ℝ) 1) :
