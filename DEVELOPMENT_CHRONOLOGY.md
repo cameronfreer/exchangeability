@@ -153,7 +153,7 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 
 ## Phase 11: Maintenance & Hardening (Jan 9 - June 8, 2026)
 
-**172 commits (165 non-merge) of post-completion upkeep**
+**226 commits (208 non-merge, `--since="2026-01-09 00:00"` on `main`) of post-completion upkeep**
 
 - `886550af` Toolchain upgrade to Lean 4.27.0-rc1, then `8ab88df2` to v4.30.0-rc2 with
   matching mathlib
