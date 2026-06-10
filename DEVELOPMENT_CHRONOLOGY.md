@@ -156,7 +156,7 @@ Created `DirectingMeasure.lean` infrastructure for the identification chain: a s
 **226 commits (208 non-merge, `--since="2026-01-09 00:00"` on `main`) of post-completion upkeep**
 
 - `886550af` Toolchain upgrade to Lean 4.27.0-rc1, then `8ab88df2` to v4.30.0-rc2 with
-  matching mathlib
+  matching mathlib, then `f5c0dfa4` (June 2026) to the stable v4.30.0 tags
 - Cross-tree dead-code sweeps, e.g. `b642382e` (−1,713 lines) and follow-ups — several
   thousand lines of abandoned scaffolding removed
 - Linter hygiene: `3c40bcbf` cleared all 44 remaining linter warnings; suppressions pruned
