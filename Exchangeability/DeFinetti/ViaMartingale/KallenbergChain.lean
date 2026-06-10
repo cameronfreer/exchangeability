@@ -69,7 +69,7 @@ as a strictly increasing subsequence of X.
 def projectPairSeq : (ℕ → α) → α × (ℕ → α) :=
   fun f => (f 0, fun n => f (n + 1))
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma projectPairSeq_measurable : Measurable (projectPairSeq : (ℕ → α) → α × (ℕ → α)) :=
   by
     refine Measurable.prod (measurable_pi_apply (0 : ℕ)) ?_

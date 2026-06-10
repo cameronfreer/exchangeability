@@ -65,12 +65,12 @@ lemma shift_apply (ξ : ℕ → α) (n : ℕ) : shift ξ n = ξ (n + 1) := rfl
 Since `(shift ξ) i = ξ (i + 1)`, this is the projection onto coordinate `(i + 1)`,
 which is measurable by definition of the product σ-algebra.
 -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma shift_measurable [MeasurableSpace α] : Measurable (@shift α) := by
   unfold shift; fun_prop
 
 /- Alternative name for `shift_measurable` (used in ergodic theory contexts). -/
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_shift [MeasurableSpace α] : Measurable (@shift α) := shift_measurable
 
 /-- A set in the path space is **shift-invariant** if it equals its preimage under the shift.

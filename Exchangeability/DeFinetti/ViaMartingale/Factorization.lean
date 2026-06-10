@@ -388,7 +388,7 @@ lemma tail_factorization_from_future
                   μ[Set.indicator (C i) (fun _ => (1 : ℝ)) ∘ (X 0) | tailSigma X] ω)) := by
     -- Product of tendsto gives tendsto of product (finitely many factors)
     filter_upwards [ae_all_iff.mpr h_rev] with ω hω
-    exact tendsto_finset_prod _ (fun i _ => hω i)
+    exact tendsto_finsetProd _ (fun i _ => hω i)
 
   -- Both LHS and RHS converge, and they're equal at each finite level for large m
   -- Therefore their limits are equal

@@ -111,7 +111,7 @@ def extendByZero (ω : Ω[α]) : Ωℤ[α] :=
   | Int.ofNat n => ω n
   | Int.negSucc _ => ω 0
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_shiftℤ : Measurable (shiftℤ (α := α)) := by
   unfold shiftℤ; fun_prop
 

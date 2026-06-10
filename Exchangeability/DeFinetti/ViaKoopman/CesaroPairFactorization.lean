@@ -177,7 +177,7 @@ private theorem h_tower_of_lagConst_from_one
         intro m hm
         simp only [A', if_neg (Nat.ne_of_gt hm)]
         have h_sum : Integrable (fun ω => (Finset.range m).sum (fun j => g (ω (j + 1)))) μ :=
-          integrable_finset_sum (Finset.range m) (fun j _ =>
+          integrable_finsetSum (Finset.range m) (fun j _ =>
             integrable_of_bounded_measurable
               (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1))))
         exact h_sum.smul (1 / (m : ℝ))

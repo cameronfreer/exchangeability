@@ -38,7 +38,7 @@ local notation "mSI" => shiftInvariantSigma (α := α)
 
 /-- Finite sum linearity of conditional expectation, stated with the sum applied
 pointwise (`fun ω => ∑ i ∈ s, f i ω`) as it appears in the Cesàro averages below.
-η-expands to mathlib's `condExp_finset_sum`. -/
+η-expands to mathlib's `condExp_finsetSum`. -/
 private lemma condExp_sum_finset
     {Ω : Type*} [mΩ : MeasurableSpace Ω] {μ : Measure Ω} [IsFiniteMeasure μ]
     {m : MeasurableSpace Ω} (_hm : m ≤ mΩ)
@@ -54,7 +54,7 @@ private lemma condExp_sum_finset
     funext ω
     simp only [Finset.sum_apply]
   rw [h_sum_eta, h_ce_sum_eta]
-  exact condExp_finset_sum hint m
+  exact condExp_finsetSum hint m
 
 lemma condexp_precomp_iterate_eq
     {μ : Measure (Ω[α])} [IsProbabilityMeasure μ]

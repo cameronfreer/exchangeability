@@ -213,11 +213,11 @@ private lemma integral_sq_weighted_sum_eq_double_sum {μ : Measure Ω}
           intro i _; apply Finset.sum_congr rfl
           intro j _; ring
     _ = ∑ i, ∑ j, ∫ ω, (c i * c j) * (η i ω * η j ω) ∂μ := by
-          rw [integral_finset_sum _ (fun i _ => ?_)]
+          rw [integral_finsetSum _ (fun i _ => ?_)]
           congr 1; ext i
-          rw [integral_finset_sum _ (fun j _ => ?_)]
+          rw [integral_finsetSum _ (fun j _ => ?_)]
           · exact (h_integrable i j).const_mul (c i * c j)
-          · exact integrable_finset_sum _ (fun j _ => (h_integrable i j).const_mul _)
+          · exact integrable_finsetSum _ (fun j _ => (h_integrable i j).const_mul _)
     _ = ∑ i, ∑ j, c i * c j * ∫ ω, η i ω * η j ω ∂μ := by
           congr 1; ext i; congr 1; ext j
           rw [integral_const_mul]

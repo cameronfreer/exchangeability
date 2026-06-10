@@ -82,7 +82,7 @@ omit [MeasurableSpace α] in
 lemma prefixProj_apply {n : ℕ} (x : ℕ → α) (i : Fin n) :
     prefixProj (α:=α) n x i = x i := rfl
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_prefixProj {n : ℕ} :
     Measurable (prefixProj (α:=α) n) := by
   unfold prefixProj; fun_prop
@@ -167,7 +167,7 @@ section Measurable
 
 
 
-@[measurability, fun_prop]
+@[fun_prop]
 private lemma takePrefix_measurable {m n : ℕ} (hmn : m ≤ n) :
     Measurable (takePrefix (α:=α) hmn) := by
   unfold takePrefix; fun_prop
@@ -343,7 +343,7 @@ omit [MeasurableSpace α] in
 lemma reindex_apply {π : Equiv.Perm ℕ} (x : ℕ → α) (i : ℕ) :
     reindex (α:=α) π x i = x (π i) := rfl
 
-@[measurability, fun_prop]
+@[fun_prop]
 lemma measurable_reindex {π : Equiv.Perm ℕ} :
     Measurable (reindex (α:=α) π) := by
   unfold reindex; fun_prop
