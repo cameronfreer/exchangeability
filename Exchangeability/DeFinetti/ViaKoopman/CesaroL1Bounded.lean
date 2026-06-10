@@ -198,16 +198,16 @@ lemma L1_cesaro_convergence
       have h_integrable_diff : Integrable (fun ω => g (ω 0) - g_M M (ω 0)) μ := by
         have h_g_M_int : Integrable (fun ω => g_M M (ω 0)) μ := by
           obtain ⟨C, hC⟩ := hg_M_bd M
-          refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω 0)⟩
-          exact (hg_M_meas M).comp (measurable_pi_apply 0)
+          exact Integrable.of_bound ((hg_M_meas M).comp (measurable_pi_apply 0)).aestronglyMeasurable
+            C (ae_of_all _ fun ω => hC (ω 0))
         exact hg_int.sub h_g_M_int
       have h_ce_lin : μ[(fun ω => g (ω 0) - g_M M (ω 0)) | mSI] =ᵐ[μ]
           (fun ω => μ[(fun ω => g (ω 0)) | mSI] ω - μ[(fun ω => g_M M (ω 0)) | mSI] ω) := by
         have h_int_g : Integrable (fun ω => g (ω 0)) μ := hg_int
         have h_int_gM : Integrable (fun ω => g_M M (ω 0)) μ := by
           obtain ⟨C, hC⟩ := hg_M_bd M
-          refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω 0)⟩
-          exact (hg_M_meas M).comp (measurable_pi_apply 0)
+          exact Integrable.of_bound ((hg_M_meas M).comp (measurable_pi_apply 0)).aestronglyMeasurable
+            C (ae_of_all _ fun ω => hC (ω 0))
         exact condExp_sub h_int_g h_int_gM mSI
       calc ∫ ω, |μ[(fun ω => g (ω 0)) | mSI] ω - μ[(fun ω => g_M M (ω 0)) | mSI] ω| ∂μ
           = ∫ ω, |μ[(fun ω => g (ω 0) - g_M M (ω 0)) | mSI] ω| ∂μ := by
@@ -252,8 +252,8 @@ lemma L1_cesaro_convergence
   have h_int_ce_g : Integrable (μ[(fun ω => g (ω 0)) | mSI]) μ := integrable_condExp
   have h_int_gM : Integrable (fun ω => g_M M₀ (ω 0)) μ := by
     obtain ⟨C, hC⟩ := hg_M_bd M₀
-    refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω 0)⟩
-    exact (hg_M_meas M₀).comp (measurable_pi_apply 0)
+    exact Integrable.of_bound ((hg_M_meas M₀).comp (measurable_pi_apply 0)).aestronglyMeasurable
+      C (ae_of_all _ fun ω => hC (ω 0))
   have h_int_ce_gM : Integrable (μ[(fun ω => g_M M₀ (ω 0)) | mSI]) μ := integrable_condExp
 
   have h_int_A : Integrable (A n) μ := by
@@ -275,8 +275,8 @@ lemma L1_cesaro_convergence
       have h_each_int : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g_M M₀ (ω j)) μ := by
         intro j _
         obtain ⟨C, hC⟩ := hg_M_bd M₀
-        refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
-        exact (hg_M_meas M₀).comp (measurable_pi_apply j)
+        exact Integrable.of_bound ((hg_M_meas M₀).comp (measurable_pi_apply j)).aestronglyMeasurable
+          C (ae_of_all _ fun ω => hC (ω j))
       exact integrable_finsetSum (Finset.range (n + 1)) h_each_int
     exact h_int_sum.const_mul (1 / ((n + 1) : ℝ))
 
@@ -322,8 +322,8 @@ lemma L1_cesaro_convergence
                       exact (hσ.iterate j).integrable_comp_of_integrable hg_int
                     have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
                       obtain ⟨C, hC⟩ := hg_M_bd M₀
-                      refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
-                      exact (hg_M_meas M₀).comp (measurable_pi_apply j)
+                      exact Integrable.of_bound ((hg_M_meas M₀).comp (measurable_pi_apply j)).aestronglyMeasurable
+                        C (ae_of_all _ fun ω => hC (ω j))
                     exact (h_int_gj.sub h_int_gMj).abs
                   exact h_sum_int.const_mul (1 / ((n + 1) : ℝ))
                 · filter_upwards with ω
@@ -340,8 +340,8 @@ lemma L1_cesaro_convergence
                   exact (hσ.iterate j).integrable_comp_of_integrable hg_int
                 have h_int_gMj : Integrable (fun ω => g_M M₀ (ω j)) μ := by
                   obtain ⟨C, hC⟩ := hg_M_bd M₀
-                  refine Exchangeability.Probability.integrable_of_bounded ?_ ⟨C, fun ω => hC (ω j)⟩
-                  exact (hg_M_meas M₀).comp (measurable_pi_apply j)
+                  exact Integrable.of_bound ((hg_M_meas M₀).comp (measurable_pi_apply j)).aestronglyMeasurable
+                    C (ae_of_all _ fun ω => hC (ω j))
                 exact (h_int_gj.sub h_int_gMj).abs
             _ = (1 / (↑n + 1)) * ∑ j ∈ Finset.range (n + 1), ∫ ω, |g (ω 0) - g_M M₀ (ω 0)| ∂μ := by
                 congr 1
@@ -407,12 +407,13 @@ lemma ce_lipschitz_convergence
 
   have hA_int : ∀ n, Integrable (A n) μ := fun n =>
     (integrable_finsetSum (Finset.range (n + 1)) fun j _ =>
-      integrable_of_bounded_measurable
-        (hg_meas.comp (measurable_pi_apply j)) Cg fun ω => hCg (ω j)).smul (1 / ((n + 1) : ℝ))
+      Integrable.of_bound (f := fun ω : Ω[α] => g (ω j))
+        (hg_meas.comp (measurable_pi_apply j)).aestronglyMeasurable Cg
+        (ae_of_all _ fun ω => hCg (ω j))).smul (1 / ((n + 1) : ℝ))
 
   have hg0_int : Integrable (fun ω => g (ω 0)) μ :=
-    integrable_of_bounded_measurable
-      (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+    Integrable.of_bound (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg
+      (ae_of_all _ fun ω => hCg (ω 0))
 
   have hZ_int : ∀ n, Integrable (fun ω => f (ω 0) * A n ω) μ := fun n =>
     integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))

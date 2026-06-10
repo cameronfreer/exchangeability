@@ -145,30 +145,6 @@ lemma eLpNorm_lt_of_integral_sq_lt
 
 /-! ### Membership in Lp Spaces -/
 
-/-- **Block average of bounded function is in L².**
-
-If `|f| ≤ M` everywhere on a probability space, then `f ∈ L²`. Used repeatedly in
-Cesàro convergence proofs. -/
-lemma memLp_two_of_bounded
-    [IsProbabilityMeasure μ] {f : Ω → ℝ} {M : ℝ}
-    (hf_meas : Measurable f)
-    (hf_bdd : ∀ ω, |f ω| ≤ M) :
-    MemLp f 2 μ := by
-  refine MemLp.of_bound hf_meas.aestronglyMeasurable M ?_
-  filter_upwards with ω
-  exact (Real.norm_eq_abs _).le.trans (hf_bdd ω)
-
-/-- On a finite measure space, a bounded measurable real function is integrable.
-
-Unlike mathlib's `Integrable.of_bound`, this takes `Measurable` and a pointwise
-absolute-value bound, the shape produced by the block-average constructions. -/
-lemma integrable_of_bounded_measurable
-    [IsFiniteMeasure μ]
-    {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
-    Integrable f μ :=
-  ⟨hf_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (by
-    filter_upwards with ω; simpa [Real.norm_eq_abs] using hf_bd ω)⟩
-
 /-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
 We assume `MemLp f 2 μ` so the right-hand side is finite; this matches the uses
 where the function is bounded (hence in L²). -/

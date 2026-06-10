@@ -394,16 +394,6 @@ section OperatorTheoretic
 
 variable {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
 
-/-- Bounded measurable functions are integrable on finite measures.
-
-Wraps `Integrable.of_bound` so callers can pass `⟨C, hC⟩` directly instead of
-destructuring the bound first. -/
-lemma integrable_of_bounded [IsFiniteMeasure μ]
-    {f : Ω → ℝ} (hf : Measurable f) (hbd : ∃ C, ∀ ω, |f ω| ≤ C) :
-    Integrable f μ := by
-  obtain ⟨C, hC⟩ := hbd
-  exact ⟨hf.aestronglyMeasurable, HasFiniteIntegral.of_bounded (ae_of_all μ hC)⟩
-
 /-- **Conditional expectation is L¹-nonexpansive** (load-bearing lemma).
 
 For integrable functions f, g, the conditional expectation is contractive in L¹:
