@@ -144,4 +144,3 @@ lemma aestronglyMeasurable_sub_of_tendsto_ae
     exact h_meas.stronglyMeasurable
   -- Conclude AEStronglyMeasurable[m] g using h as witness
   exact ⟨h, h_sm, h_ae_eq.symm⟩
-
