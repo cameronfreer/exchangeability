@@ -117,7 +117,11 @@ If `f n` are all Measurable[m] where `m ≤ m₀`, and `f n → g` a.e. (wrt a m
 then `g` is AEStronglyMeasurable[m] (with the witness being the limsup, which is Measurable[m]).
 
 This is the key lemma for "closedness" of L²[m] under L² limits:
-we extract an a.e.-convergent subsequence and apply this. -/
+we extract an a.e.-convergent subsequence and apply this.
+
+Note: mathlib's `aestronglyMeasurable_of_tendsto_ae` covers only the `m = m₀` case (its
+`AEStronglyMeasurable` is taken at the measure's own σ-algebra); this sub-σ-algebra version
+has no mathlib equivalent as of v4.30.0. -/
 lemma aestronglyMeasurable_sub_of_tendsto_ae
     {α : Type*} {m₀ : MeasurableSpace α} {μ : @MeasureTheory.Measure α m₀}
     {m : MeasurableSpace α} (_hm : m ≤ m₀)

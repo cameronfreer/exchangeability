@@ -47,68 +47,17 @@ the integral of f²:
   (eLpNorm f 2 μ)² = ∫ f² dμ
 
 This is a fundamental relationship used throughout probability theory, bridging
-the gap between ENNReal-valued Lp norms and Real-valued integrals.
-
-**Proof strategy**: Use the definition of eLpNorm for p = 2, which involves
-lintegral of ‖f‖^2, and convert via toReal. -/
+the gap between ENNReal-valued Lp norms and Real-valued integrals. -/
 lemma eLpNorm_two_sq_eq_integral_sq
-    [IsFiniteMeasure μ] {f : Ω → ℝ}
+    {f : Ω → ℝ}
     (hf : MemLp f 2 μ) :
     (eLpNorm f 2 μ).toReal ^ 2 = ∫ ω, (f ω) ^ 2 ∂μ := by
-  -- Strategy:
-  -- 1. Use eLpNorm definition: eLpNorm f 2 μ = (∫⁻ ‖f‖²)^(1/2)
-  -- 2. Square both sides: (eLpNorm f 2 μ)² = ∫⁻ ‖f‖²
-  -- 3. Convert lintegral to integral: ∫⁻ ‖f‖² = ↑(∫ |f|²) = ↑(∫ f²)
-
-  -- For real functions, ‖f‖² = |f|² = f²
-  have h_norm_eq : ∀ ω, ‖f ω‖ ^ 2 = (f ω) ^ 2 :=
-    fun _ => by rw [Real.norm_eq_abs, sq_abs]
-
-  -- Use the fundamental relationship for p = 2
-  -- eLpNorm f p μ ^ p = ∫⁻ ‖f‖^p when p ≠ 0, ∞
-  rw [eLpNorm_eq_lintegral_rpow_enorm_toReal (by norm_num : (2 : ℝ≥0∞) ≠ 0)
-      (by norm_num : (2 : ℝ≥0∞) ≠ ∞)]
-
-  -- Simplify: ENNReal.toReal 2 = 2, so we have ((∫⁻ ‖f‖² )^(1/2)).toReal²
-  simp only [ENNReal.toReal_ofNat]
-
-  -- Main strategy: Show (∫⁻ ‖f‖²).toReal = ∫ f²
-  -- Then use (a^(1/2))² = a to simplify the LHS
-
-  -- Step 1: Rewrite LHS using ENNReal.toReal_rpow (backwards)
-  -- We have ((∫⁻ ...)^(1/2)).toReal ^ 2 and want (∫⁻ ...).toReal
-  conv_lhs => rw [← ENNReal.toReal_rpow]
-
-  -- Step 2: Simplify (x^(1/2))^2 = x
-  rw [← Real.rpow_natCast _ 2, ← Real.rpow_mul ENNReal.toReal_nonneg]
+  have h0 : 0 ≤ ∫ ω, ‖f ω‖ ^ (2 : ℝ≥0∞).toReal ∂μ :=
+    integral_nonneg fun ω => Real.rpow_nonneg (norm_nonneg _) _
+  rw [hf.eLpNorm_eq_integral_rpow_norm (by norm_num) (by norm_num),
+    ENNReal.toReal_ofReal (Real.rpow_nonneg h0 _),
+    ← Real.rpow_natCast _ 2, ← Real.rpow_mul h0]
   norm_num
-
-  -- Step 3: Convert lintegral to integral for nonnegative functions
-  -- Key: ‖f ω‖ₑ = ↑‖f ω‖₊ where ‖·‖₊ is the nnnorm
-  -- First rewrite the lintegral in terms of ofReal
-  have h_enorm_conv : ∫⁻ (x : Ω), ‖f x‖ₑ ^ 2 ∂μ = ∫⁻ (x : Ω), ENNReal.ofReal (‖f x‖ ^ 2) ∂μ := by
-    congr 1
-    ext ω
-    -- Show ‖f ω‖ₑ ^ 2 = ENNReal.ofReal (‖f ω‖ ^ 2)
-    calc ‖f ω‖ₑ ^ 2
-        = (↑‖f ω‖₊ : ℝ≥0∞) ^ 2 := by rw [enorm_eq_nnnorm]
-      _ = ↑(‖f ω‖₊ ^ 2) := by rw [← ENNReal.coe_pow]
-      _ = ENNReal.ofReal (↑(‖f ω‖₊ ^ 2) : ℝ) := by rw [ENNReal.ofReal_coe_nnreal]
-      _ = ENNReal.ofReal ((↑‖f ω‖₊ : ℝ) ^ 2) := by rw [NNReal.coe_pow]
-      _ = ENNReal.ofReal (‖f ω‖ ^ 2) := by rw [coe_nnnorm]
-  rw [h_enorm_conv]
-  -- Now use the fundamental relationship: (∫⁻ ofReal g).toReal = ∫ g for nonnegative g
-  rw [← integral_eq_lintegral_of_nonneg_ae]
-  · congr 1
-    ext ω
-    exact h_norm_eq ω
-  · -- Nonnegativity: ‖f ω‖ ^ 2 ≥ 0
-    apply ae_of_all
-    intro ω
-    exact sq_nonneg _
-  · -- AE measurability
-    apply AEStronglyMeasurable.pow
-    exact hf.1.norm
 
 /-- **L² norm bound from integral bound.**
 
@@ -144,30 +93,6 @@ lemma eLpNorm_lt_of_integral_sq_lt
   exact ENNReal.ofReal_lt_ofReal_iff hr |>.mpr h_toReal_lt
 
 /-! ### Membership in Lp Spaces -/
-
-/-- **Block average of bounded function is in L².**
-
-If `|f| ≤ M` everywhere on a probability space, then `f ∈ L²`. Used repeatedly in
-Cesàro convergence proofs. -/
-lemma memLp_two_of_bounded
-    [IsProbabilityMeasure μ] {f : Ω → ℝ} {M : ℝ}
-    (hf_meas : Measurable f)
-    (hf_bdd : ∀ ω, |f ω| ≤ M) :
-    MemLp f 2 μ := by
-  refine MemLp.of_bound hf_meas.aestronglyMeasurable M ?_
-  filter_upwards with ω
-  exact (Real.norm_eq_abs _).le.trans (hf_bdd ω)
-
-/-- On a finite measure space, a bounded measurable real function is integrable.
-
-Unlike mathlib's `Integrable.of_bound`, this takes `Measurable` and a pointwise
-absolute-value bound, the shape produced by the block-average constructions. -/
-lemma integrable_of_bounded_measurable
-    [IsFiniteMeasure μ]
-    {f : Ω → ℝ} (hf_meas : Measurable f) (C : ℝ) (hf_bd : ∀ ω, |f ω| ≤ C) :
-    Integrable f μ :=
-  ⟨hf_meas.aestronglyMeasurable, HasFiniteIntegral.of_bounded (by
-    filter_upwards with ω; simpa [Real.norm_eq_abs] using hf_bd ω)⟩
 
 /-- On a probability space, `‖f‖₁ ≤ ‖f‖₂`. Version with real integral on the left.
 We assume `MemLp f 2 μ` so the right-hand side is finite; this matches the uses

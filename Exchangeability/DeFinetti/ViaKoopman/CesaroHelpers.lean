@@ -193,16 +193,18 @@ lemma cesaro_ce_eq_condexp
       (fun ω =>
         (Finset.range (n + 1)).sum (fun j => μ[(fun ω => g (ω j)) | mSI] ω)) := by
     have hint : ∀ j ∈ Finset.range (n + 1), Integrable (fun ω => g (ω j)) μ := fun j _ =>
-      hg_bd.elim fun Cg hCg => integrable_of_bounded_measurable
-        (hg_meas.comp (measurable_pi_apply j)) Cg (fun ω => hCg (ω j))
+      hg_bd.elim fun Cg hCg => Integrable.of_bound
+        (hg_meas.comp (measurable_pi_apply j)).aestronglyMeasurable Cg
+        (ae_of_all _ fun ω => hCg (ω j))
     exact condExp_sum_finset (m := mSI) (_hm := hmSI)
       (Finset.range (n + 1)) (fun j ω => g (ω j)) hint
 
   -- Each term μ[g(ωⱼ)| mSI] =ᵐ μ[g(ω₀)| mSI]
   have h_term : ∀ j, μ[(fun ω => g (ω j)) | mSI] =ᵐ[μ] μ[(fun ω => g (ω 0)) | mSI] := fun j => by
     have hg_0_int : Integrable (fun ω => g (ω 0)) μ :=
-      hg_bd.elim fun Cg hCg => integrable_of_bounded_measurable
-        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      hg_bd.elim fun Cg hCg => Integrable.of_bound
+        (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg
+        (ae_of_all _ fun ω => hCg (ω 0))
     have h_shift : (fun ω => g (shift^[j] ω 0)) = (fun ω => g (ω j)) := by
       ext ω; simp only [shift_iterate_apply, zero_add]
     rw [← h_shift]; exact condexp_precomp_iterate_eq hσ hg_0_int
@@ -355,10 +357,12 @@ lemma product_ce_constant_of_lag_const
       intro j _
       obtain ⟨Cf, hCf⟩ := hf_bd
       obtain ⟨Cg, hCg⟩ := hg_bd
-      exact integrable_of_bounded_measurable
-        (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply j)))
-        (Cf * Cg)
-        (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω j)) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
+      have hmeas : Measurable fun ω : Ω[α] => f (ω 0) * g (ω j) :=
+        (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply j))
+      exact Integrable.of_bound hmeas.aestronglyMeasurable (Cf * Cg)
+        (ae_of_all _ fun ω => by
+          simpa [abs_mul, Real.norm_eq_abs] using mul_le_mul (hCf (ω 0)) (hCg (ω j))
+            (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
     exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
       (Finset.range (n + 1)) (fun j => fun ω => f (ω 0) * g (ω j)) hint
 
@@ -494,10 +498,12 @@ lemma product_ce_constant_of_lag_const_from_one
       intro j _
       obtain ⟨Cf, hCf⟩ := hf_bd
       obtain ⟨Cg, hCg⟩ := hg_bd
-      exact integrable_of_bounded_measurable
-        (hf_meas.comp (measurable_pi_apply 0) |>.mul (hg_meas.comp (measurable_pi_apply (j + 1))))
-        (Cf * Cg)
-        (fun ω => by simpa [abs_mul] using mul_le_mul (hCf (ω 0)) (hCg (ω (j + 1))) (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
+      have hmeas : Measurable fun ω : Ω[α] => f (ω 0) * g (ω (j + 1)) :=
+        (hf_meas.comp (measurable_pi_apply 0)).mul (hg_meas.comp (measurable_pi_apply (j + 1)))
+      exact Integrable.of_bound hmeas.aestronglyMeasurable (Cf * Cg)
+        (ae_of_all _ fun ω => by
+          simpa [abs_mul, Real.norm_eq_abs] using mul_le_mul (hCf (ω 0)) (hCg (ω (j + 1)))
+            (abs_nonneg _) (le_trans (abs_nonneg _) (hCf (ω 0))))
     exact condExp_sum_finset (shiftInvariantSigma_le (α := α))
       (Finset.range n) (fun j => fun ω => f (ω 0) * g (ω (j + 1))) hint
 

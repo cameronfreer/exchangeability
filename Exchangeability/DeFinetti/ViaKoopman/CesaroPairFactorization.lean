@@ -108,8 +108,8 @@ private theorem h_tower_of_lagConst_from_one
       (1 / ((n + 1) : ℝ)) * (Finset.range (n + 1)).sum (fun j => g (ω j))
     -- By L1_cesaro_convergence: A_n → Y in L¹
     have hg_int : Integrable (fun ω => g (ω 0)) μ :=
-      integrable_of_bounded_measurable
-        (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      Integrable.of_bound (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg
+        (ae_of_all _ fun ω => hCg (ω 0))
     have h_A_to_Y := L1_cesaro_convergence hσ g hg_meas hg_int
     -- A'_{n+1}(ω) = A_n(shift ω)
     have h_eq : ∀ n ω, A' (n + 1) ω = A n (shift ω) := by
@@ -161,7 +161,8 @@ private theorem h_tower_of_lagConst_from_one
            - μ[(fun ω' => f (ω' 0) * Y ω') | mSI] ω| ∂μ) atTop (𝓝 0) := by
     -- Use ce_lipschitz_convergence with A' shifted by 1
     have h_int : Integrable (fun ω => g (ω 0)) μ :=
-      integrable_of_bounded_measurable (hg_meas.comp (measurable_pi_apply 0)) Cg (fun ω => hCg (ω 0))
+      Integrable.of_bound (hg_meas.comp (measurable_pi_apply 0)).aestronglyMeasurable Cg
+        (ae_of_all _ fun ω => hCg (ω 0))
     -- A'_{n+1} has the form (1/(n+1)) * Σ_{j=0}^n g(shift ω)_j = A_n(shift ω)
     -- Need to relate to ce_lipschitz_convergence format
     -- ce_lipschitz_convergence needs: A_n defined as (1/(n+1)) * Σ g(ω_j)
@@ -178,8 +179,8 @@ private theorem h_tower_of_lagConst_from_one
         simp only [A', if_neg (Nat.ne_of_gt hm)]
         have h_sum : Integrable (fun ω => (Finset.range m).sum (fun j => g (ω (j + 1)))) μ :=
           integrable_finsetSum (Finset.range m) (fun j _ =>
-            integrable_of_bounded_measurable
-              (hg_meas.comp (measurable_pi_apply (j + 1))) Cg (fun ω => hCg (ω (j + 1))))
+            Integrable.of_bound (hg_meas.comp (measurable_pi_apply (j + 1))).aestronglyMeasurable
+              Cg (ae_of_all _ fun ω => hCg (ω (j + 1))))
         exact h_sum.smul (1 / (m : ℝ))
       have hfA_int : Integrable (fun ω => f (ω 0) * A' (n + 1) ω) μ :=
         integrable_mul_of_ae_bdd_left (hf_meas.comp (measurable_pi_apply 0))

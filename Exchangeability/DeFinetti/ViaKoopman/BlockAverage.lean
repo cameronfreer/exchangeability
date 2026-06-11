@@ -173,7 +173,8 @@ lemma blockAvg_tendsto_condExp
   -- Key fact 2: Y is shift-invariant (CE w.r.t. mSI is constant on shift orbits)
   have hf_int : Integrable (fun ω : Ω[α] => f (ω 0)) μ :=
     let ⟨C, hC⟩ := hf_bd
-    integrable_of_bounded_measurable (hf.comp (measurable_pi_apply 0)) C fun ω => hC (ω 0)
+    Integrable.of_bound (hf.comp (measurable_pi_apply 0)).aestronglyMeasurable C
+      (ae_of_all _ fun ω => hC (ω 0))
 
   have h_Y_shift_inv : ∀ p : ℕ, (fun ω => Y (shift^[p] ω)) =ᵐ[μ] Y := by
     intro p

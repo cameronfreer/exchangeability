@@ -278,13 +278,11 @@ lemma correlation_coefficient_bounded
     (hZ_var_uniform : ∀ i, ∫ ω, (Z i ω)^2 ∂μ = ∫ ω, (Z 0 ω)^2 ∂μ) :
     -1 ≤ ρ ∧ ρ ≤ 1 := by
   -- Z 0 and Z 1 are in L²(μ) since they are bounded by M
-  have hZ0_L2 : MemLp (Z 0) 2 μ := by
-    apply memLp_two_of_bounded (hZ_meas 0)
-    exact hZ_bdd 0
+  have hZ0_L2 : MemLp (Z 0) 2 μ :=
+    MemLp.of_bound (hZ_meas 0).aestronglyMeasurable M (ae_of_all _ (hZ_bdd 0))
 
-  have hZ1_L2 : MemLp (Z 1) 2 μ := by
-    apply memLp_two_of_bounded (hZ_meas 1)
-    exact hZ_bdd 1
+  have hZ1_L2 : MemLp (Z 1) 2 μ :=
+    MemLp.of_bound (hZ_meas 1).aestronglyMeasurable M (ae_of_all _ (hZ_bdd 1))
 
   -- Apply Cauchy-Schwarz: |∫ Z₀·Z₁| ≤ sqrt(∫ Z₀²)·sqrt(∫ Z₁²)
   have h_CS := Exchangeability.Probability.IntegrationHelpers.abs_integral_mul_le_L2 hZ0_L2 hZ1_L2

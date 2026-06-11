@@ -3,9 +3,9 @@ Copyright (c) 2025 Cameron Freer. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Cameron Freer
 -/
+import Mathlib.Data.Fintype.Fin
 import Exchangeability.DeFinetti.ViaL2.BlockAvgDef
 import Exchangeability.Probability.CenteredVariables
-import Exchangeability.Util.FinsetHelpers
 
 /-!
 # Cesàro Cauchy Property: `blockAvg_cauchy_in_L2`
@@ -127,7 +127,7 @@ private lemma cesaro_cauchy_rho_lt
             rw [Finset.sum_const]
         _ = n • (n : ℝ)⁻¹ := by
             congr 1
-            exact Finset.filter_val_lt_card (le_max_left n n')
+            simpa using Fin.card_filter_val_lt.trans (min_eq_right (le_max_left n n'))
         _ = 1 := by
             rw [nsmul_eq_mul]
             field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn_pos)]
@@ -156,7 +156,7 @@ private lemma cesaro_cauchy_rho_lt
             rw [Finset.sum_const]
         _ = n' • (n' : ℝ)⁻¹ := by
             congr 1
-            exact Finset.filter_val_lt_card (le_max_right n n')
+            simpa using Fin.card_filter_val_lt.trans (min_eq_right (le_max_right n n'))
         _ = 1 := by
             rw [nsmul_eq_mul]
             field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn'_pos)]
@@ -184,8 +184,8 @@ private lemma cesaro_cauchy_rho_lt
     simp only [sub_zero, ξ]
     -- Z k.val is bounded, hence in L²
     -- Same proof as for Z 0: |Z k.val| ≤ |f| + |m| ≤ 1 + 1 = 2
-    apply memLp_two_of_bounded (hZ_meas k.val)
-    intro ω
+    refine MemLp.of_bound (hZ_meas k.val).aestronglyMeasurable 2 (ae_of_all _ fun ω => ?_)
+    rw [Real.norm_eq_abs]
     -- Unfold ξ and Z to show |f(X k.val ω) - m| ≤ 2
     have h1 : |f (X k.val ω)| ≤ 1 := hf_bdd (X k.val ω)
     have h2 : |∫ ω', f (X 0 ω') ∂μ| ≤ 1 := by
