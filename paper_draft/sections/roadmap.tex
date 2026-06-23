@@ -1,0 +1,75 @@
+\section{Proof Roadmap}
+\label{sec:roadmap}
+
+This section gives a high-level overview of the proof structure. The three proof routes share common infrastructure and diverge only in proving the hard direction: Contractable $\Rightarrow$ Conditionally IID.
+
+\subsection{The Easy Directions}
+
+\paragraph{Exchangeable $\Rightarrow$ Contractable.}
+Given a strictly increasing sequence $k : \{0, \ldots, m-1\} \to \N$, we extend it to a permutation $\sigma$ of $\{0, \ldots, n-1\}$ for sufficiently large $n$. Exchangeability gives invariance under $\sigma$; projecting to the first $m$ coordinates yields contractability.
+
+The key lemma is:
+\begin{lemma}
+For any strictly increasing $k : \mathrm{Fin}\, m \to \N$ with $k(i) < n$ for all $i$ and $m \le n$, there exists a permutation $\sigma$ of $\mathrm{Fin}\, n$ such that $\sigma(i) = k(i)$ for $i < m$.
+\end{lemma}
+
+\paragraph{Conditionally IID $\Rightarrow$ Exchangeable.}
+Product measures are permutation-invariant: if $(Y_0, \ldots, Y_{n-1})$ are i.i.d.\ with distribution $\nu$, then $(Y_{\sigma(0)}, \ldots, Y_{\sigma(n-1)})$ has the same distribution. Since conditional i.i.d.\ structure asserts that the law is a mixture of product measures, and each product measure is permutation-invariant, the mixture is also permutation-invariant.
+
+\subsection{The Hard Direction: Three Routes}
+
+The main challenge is proving Contractable $\Rightarrow$ Conditionally IID. This requires:
+\begin{enumerate}
+\item Constructing the directing measure $\nu : \Omega \to \mathrm{Measure}(\alpha)$
+\item Proving the finite-dimensional distributions factor as product mixtures
+\end{enumerate}
+
+Kallenberg~\citep{kallenberg2005} presents three proofs:
+
+\begin{center}
+\begin{tabular}{llll}
+\textbf{Route} & \textbf{Key Technique} & \textbf{Dependencies} & \textbf{Generality} \\
+\hline
+Martingale & Reverse martingale convergence & Medium & Standard Borel \\
+$L^2$ & Elementary correlation bounds & Lightest & $\R$-valued, $L^2$ \\
+Koopman & Mean Ergodic Theorem & Heaviest & $\R$-valued, $L^2$ \\
+\end{tabular}
+\end{center}
+
+\paragraph{Martingale route (default).}
+Uses the contraction-independence lemma (Kallenberg's Lemma~1.3) and reverse martingale convergence. The directing measure is constructed as the conditional distribution of $X_0$ given the tail $\sigma$-algebra.
+
+\paragraph{$L^2$ route.}
+Uses Kallenberg's Lemma~1.2 to bound correlations: $|\E[X_i X_j] - \E[X_i]\E[X_j]| \le C/\min(i+1, j+1)$. Block averages converge in $L^2$, and the limit encodes the directing measure.
+
+\paragraph{Koopman route.}
+Interprets the sequence as a dynamical system with the shift operator. The Mean Ergodic Theorem gives $L^2$ convergence of Ces\`{a}ro averages to the projection onto shift-invariant functions.
+
+\paragraph{Conceptual unity.}
+Despite their different machinery, all three proofs share a common structure: each extracts the directing measure $\nu$ via a \emph{limit theorem} applied to some ``asymptotic summary'' of the sequence.
+\begin{itemize}
+\item Martingale: $\nu$ is the limit of conditional laws under reverse martingale convergence.
+\item $L^2$: $\nu$ is built from limits of block averages (an analytic law-of-large-numbers flavor).
+\item Koopman: $\nu$ is built from ergodic projections (Ces\`{a}ro averages converge to invariant functions).
+\end{itemize}
+In each case, symmetry (contractability) provides the regularity that makes the limit exist, and the limit encodes the ``latent parameter'' that governs the mixture.
+
+\subsection{Common Ending}
+
+All three routes establish the product formula for \emph{cylinder sets}---sets determined by finitely many coordinates. The final step uses \textbf{$\pi$-system uniqueness}: since cylinder sets form a $\pi$-system (closed under intersection) that generates the product $\sigma$-algebra, two finite measures agreeing on cylinders must agree everywhere.
+
+\subsection{File Organization}
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Component} & \textbf{Files} \\
+\hline
+Core definitions & \texttt{Contractability.lean}, \texttt{ConditionallyIID.lean} \\
+Easy directions & Same files \\
+Martingale proof & \texttt{DeFinetti/ViaMartingale/*.lean} (14 files) \\
+$L^2$ proof & \texttt{DeFinetti/ViaL2/*.lean} (13 files) \\
+Koopman proof & \texttt{DeFinetti/ViaKoopman/*.lean}, \texttt{Ergodic/*.lean} (19 files) \\
+Common ending & \texttt{DeFinetti/CommonEnding.lean} \\
+Public API & \texttt{DeFinetti/Theorem.lean} \\
+\end{tabular}
+\end{center}

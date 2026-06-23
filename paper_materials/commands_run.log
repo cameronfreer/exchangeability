@@ -1,0 +1,61 @@
+# Commands Run Log
+# Paper Materials Mining for de Finetti Formalization
+# Started: 2026-01-24
+
+[2026-01-24 Session Start]
+
+# Environment setup
+$ git checkout main && git pull origin main
+Your branch is up to date with 'origin/main'.
+Already up to date.
+
+$ lake --version
+Lake version 5.0.0-src+2fcce72 (Lean version 4.27.0-rc1)
+
+$ lean --version
+Lean (version 4.27.0-rc1, arm64-apple-darwin24.6.0, commit 2fcce7258eeb6e324366bc25f9058293b04b7547, Release)
+
+$ git rev-parse HEAD
+aec253b69aaabbd93dd82fe1a7d9bbf34cf90ab5
+
+$ cat lake-manifest.json | grep -A2 '"name": "mathlib"'
+   "name": "mathlib",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "v4.27.0-rc1",
+
+$ git checkout -b paper-mining
+Switched to a new branch 'paper-mining'
+
+$ mkdir -p paper_materials/figures
+(created directory structure)
+
+# Build
+$ time lake build
+Build completed successfully (3296 jobs).
+real    5m12.27s
+
+# Lean file counts
+$ find Exchangeability -name "*.lean" | wc -l
+112
+
+$ wc -l $(find Exchangeability -name "*.lean") | tail -1
+43512 total
+
+# Git info
+$ git log --oneline | wc -l
+4135
+
+$ git log --format="%h %ad %s" --date=short | tail -1
+c33c821 2025-09-29 Initial commit
+
+# Introspection
+$ lake env lean paper_materials/PaperIntrospection.lean
+(captured #check, #print, #print axioms output)
+
+# Figure inventory
+$ find . -name "*.svg" -o -name "*.png" -o -name "*.pdf" | grep -v ".lake"
+./blueprint/web/import_graph_colored.png
+./blueprint/web/symbol-defs.svg
+./blueprint/web/import_graph_colored.svg
+./blueprint/print/print.pdf
+

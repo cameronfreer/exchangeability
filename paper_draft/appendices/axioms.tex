@@ -1,0 +1,43 @@
+\section{Axiom Verification}
+\label{app:axioms}
+
+This appendix documents the axioms used by the formalization.
+
+\subsection{Standard mathlib Axioms}
+
+All theorems in this formalization depend on exactly three standard axioms:
+
+\begin{description}
+\item[\texttt{propext}] \textbf{Propositional extensionality}: Two propositions that are logically equivalent are equal: $(P \leftrightarrow Q) \to (P = Q)$.
+
+\item[\texttt{Classical.choice}] \textbf{Axiom of choice}: For any nonempty type, there exists an element. Essential for measure theory.
+
+\item[\texttt{Quot.sound}] \textbf{Quotient soundness}: If two elements are related by an equivalence relation, their quotient images are equal.
+\end{description}
+
+These are the standard axioms used throughout mathlib. No custom axioms are introduced, and no \texttt{sorry} placeholders appear in any theorem.
+
+\subsection{Verification}
+
+Running \texttt{\#print axioms} on any of the main theorems produces the same result:
+
+\begin{lstlisting}
+#print axioms Exchangeability.DeFinetti.deFinetti
+-- depends on axioms: [propext, Classical.choice, Quot.sound]
+\end{lstlisting}
+
+This applies uniformly to:
+\begin{itemize}
+\item \texttt{deFinetti} (main theorem)
+\item \texttt{deFinetti\_equivalence} (two-way equivalence)
+\item \texttt{deFinetti\_RyllNardzewski\_equivalence} (three-way)
+\item \texttt{conditionallyIID\_of\_contractable\_viaL2} ($L^2$ proof)
+\item \texttt{conditionallyIID\_of\_contractable\_viaKoopman} (Koopman proof)
+\end{itemize}
+
+\subsection{Running the Verification}
+
+To verify axiom hygiene:
+\begin{verbatim}
+lake env lean paper_materials/PaperIntrospection.lean
+\end{verbatim}
